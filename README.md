@@ -10,7 +10,7 @@ library | category | description
 **stb_truetype.h**    | graphics | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | graphics | image writing to disk
 **stb_textedit.h**    | UI       | guts of a text editor for games etc implementing them from scratch
-**stb_dxt.h**         | 3D&nbsp;graphics | Fabian "ryg" Geisen's real-time DXT compressor
+**stb_dxt.h**         | 3D&nbsp;graphics | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h**      | 3D&nbsp;graphics | revised Perlin noise (3D input, 1D output)
 **stb_c_lexer.h**     | parsing | simplify writing parsers for C-like languages
 **stb.h**             | misc | helper functions for C, mostly redundant in C++; basically author's personal stuff
@@ -47,5 +47,29 @@ too rare or if the size of implementation vs. apparent benefit is too low.
 #### Are there other single-file public-domain libraries out there?
 
 Yes. I'll put a list here when people remind me what they are.
+
+#### Do you have any advice on how to create my own single-file library?
+
+Yes. https://github.com/nothings/stb/blob/master/stb_howto.txt
+
+#### Why public domain?
+
+Because more people will use it. Because it's not viral, people
+are not obligated to give back, so you could argue that it hurts
+the *development* of it, and then because it doesn't develop as
+well it's not as good, and then because it's not as good, in the
+long run maybe fewer people will use it. I have total respect for
+that opinion, but I just don't believe it myself for most software.
+
+#### Why C?
+
+Primarily, because I use C, not C++. But it does also make it easier
+for other people to use them from other languages.
+
+#### Why not C99? stdint.h, declare-anywhere, etc.
+
+I still use MSVC 6 (1998) as my IDE because it has better human factors
+for me than later versions of MSVC.
+
 
 
