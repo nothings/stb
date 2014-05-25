@@ -19,9 +19,10 @@
 #define STB_MALLOC_WRAPPER_DEBUG
 #endif
 #define STB_NPTR
+#define STB_DEFINE
 #include "stb.h"
-#include "stb_file.h"
-#include "stb_pixel32.h"
+//#include "stb_file.h"
+//#include "stb_pixel32.h"
 
 //#define DEBUG_BLOCK
 #ifdef DEBUG_BLOCK
@@ -550,101 +551,6 @@ void bst_test(void)
    }
 }
 
-#define BN 800
-unsigned int bloc[BN];
-char *data[BN];
-int   dlen[BN];
-
-int bcheck(stb_blockfile *b, int n)
-{
-   char temp[2048];
-   if (!stb_blockfile_read(b, temp, bloc[n], dlen[n])) {
-      c(0, "blockfile_test read error");
-      bloc[n] = 0;
-      return 0;
-   }
-   if (memcmp(temp, data[n], dlen[n])) {
-      c(0, "blockfile_test read");
-      bloc[n] = 0;
-      return 0;
-   }
-   return 1;
-}
-
-void blockfile_test(void)
-{
-   int inuse=0, max_inuse=0;
-   int i,j,freespace=0;
-   int z;
-   stb_blockfile *b;
-   int o[BN];
-
-   b = stb_blockfile_open("btest.bin", 1);
-
-   for (i=0; i < BN; ++i) {
-      bloc[i] = 0;
-      dlen[i] = stb_rand() % 500 + 50;
-      data[i] = malloc(1024);
-      for (j=0; j < dlen[i]; ++j)
-         data[i][j] = (char) stb_rand();
-   }
-
-   for(z=0; z < 50; ++z) {
-      if (z % 4 == 3) {
-         //if (!b->dirty_flag) stb__dirty(b);
-         stb_blockfile_close(b);
-         b = stb_blockfile_open("btest.bin", 0);
-         //if (!b->dirty_flag) stb__dirty(b);
-      }
-      for (i=0; i < BN; ++i) o[i] = i;
-      stb_shuffle(o, BN, sizeof(o[0]), stb_rand());
-      for (i=0; i < BN; ++i) {
-         int n = o[i];
-         if (bloc[n] > 0) {
-            // first check it
-            if (!bcheck(b,n)) continue;
-            if (stb_rand() % 100 > 75) {
-               stb_blockfile_free(b, bloc[n], dlen[n]);
-               bloc[n] = 0;
-               inuse -= dlen[n];
-            } else if (stb_rand() % 100 > 75) {
-               int olen = dlen[n];
-               dlen[n] = stb_rand() % 500 + 50;
-               for (j=0; j < dlen[n]; ++j)
-                  data[n][j] = (char) stb_rand();
-               bloc[n] = stb_blockfile_rewrite(b, data[n], dlen[n], bloc[n], olen);
-               inuse = inuse + dlen[n] - olen;
-            }
-         } else {
-            if (stb_rand() % 100 > 40) {
-               bloc[n] = stb_blockfile_write(b, data[n], dlen[n]);
-               assert(bloc[n]);
-               inuse += dlen[n];
-            }
-         }
-         if (inuse > max_inuse) max_inuse = inuse;
-      }
-      #ifdef DEBUG_BLOCK
-      printf("Pass %d\n", z+1);
-      stb_block_compact_freelist(b->manager);
-      qsort(b->manager->freelist, b->manager->len, 8, stb__freelist_compare);
-      for (i=0; i < b->manager->len; ++i)
-         printf("%9d %9d\n", b->manager->freelist[i].start, b->manager->freelist[i].len);
-      _getch();
-      #endif
-   }
-
-   freespace = 0;
-   for (i=0; i < b->manager->len; ++i)
-      freespace += b->manager->freelist[i].len;
-
-   printf("Max data: %d; Inuse: %d; freespace: %d (%d)\n", max_inuse, inuse, freespace, b->manager->len);
-   stb_blockfile_close(b);
-
-   for (i=0; i < BN; ++i)
-      free(data[i]);
-}
-
 extern void stu_uninit(void);
 
 stb_define_sort(sort_int, int, *a < *b)
@@ -677,7 +583,6 @@ int main(int argc, char **argv)
    char **s;
    char buf[256], *p;
    int n,len2,*q,i;
-   stb_mml *m;
    stb_matcher *mt=NULL;
 
    if (argc > 1) {
@@ -764,6 +669,7 @@ int main(int argc, char **argv)
 
    c(stb_alloc_count_alloc == stb_alloc_count_free, "stb_alloc 0");
 
+#if 0
    // stb_block
    {
       int inuse=0, freespace=0;
@@ -835,7 +741,8 @@ int main(int argc, char **argv)
       free(x);
    }
 
-//   blockfile_test();
+   blockfile_test();
+#endif
 
    mt = stb_lex_matcher();
    for (i=0; i < 5; ++i)
@@ -1111,6 +1018,7 @@ int main(int argc, char **argv)
    c(s == NULL && n == 0     , "stb_getopt 5");
    stb_getopt_free(s);
 
+#if 0
    c(*stb_csample_int(sample_test[0], 1, 5, 5, 3, -1, -1) ==  1, "stb_csample_int 1");
    c(*stb_csample_int(sample_test[0], 1, 5, 5, 3,  1, -3) ==  2, "stb_csample_int 2");
    c(*stb_csample_int(sample_test[0], 1, 5, 5, 3, 12, -2) ==  5, "stb_csample_int 3");
@@ -1120,6 +1028,7 @@ int main(int argc, char **argv)
    c(*stb_csample_int(sample_test[0], 1, 5, 5, 3, -2,  5) == 11, "stb_csample_int 7");
    c(*stb_csample_int(sample_test[0], 1, 5, 5, 3, -7,  0) ==  1, "stb_csample_int 8");
    c(*stb_csample_int(sample_test[0], 1, 5, 5, 3,  2,  1) ==  8, "stb_csample_int 9");
+#endif
 
    c(!strcmp(stb_splitpath(buf, p1, STB_PATH      ), "foo/bar\\baz/"), "stb_splitpath 1");
    c(!strcmp(stb_splitpath(buf, p1, STB_FILE      ), "test"), "stb_splitpath 2");
@@ -1149,6 +1058,7 @@ int main(int argc, char **argv)
    c(!strcmp(p=stb_dupreplace("abacab", "a", "aba"),                   "abababacabab"            ), "stb_dupreplace 3"); free(p);
 
 
+#if 0
    m = stb_mml_parse("<a><b><c>x</c><d>y</d></b><e>&lt;&amp;f&gt;</e></a>");
    c(m != NULL, "stb_mml_parse 1");
    if (m) {
@@ -1161,6 +1071,7 @@ int main(int argc, char **argv)
    if (stb_alloc_count_alloc != stb_alloc_count_free) {
       printf("%d allocs, %d frees\n", stb_alloc_count_alloc, stb_alloc_count_free);
    }
+#endif
 
    c(stb_linear_remap(3.0f,0,8,1,2) == 1.375, "stb_linear_remap()");
 
