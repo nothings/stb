@@ -40,7 +40,8 @@ library, there's probably no good reason to switch.
 If people submit them, I generally add them, but the goal of stb_image
 is less for applications like image viewer apps (which need to support
 every type of image under the sun) and more for things like games which
-can choose what images to use.
+can choose what images to use, so I may decline to add them if they're
+too rare or if the size of implementation vs. apparent benefit is too low.
 
 #### Are there other single-file public-domain libraries out there?
 
