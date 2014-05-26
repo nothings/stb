@@ -27,9 +27,14 @@
 //       stoiko (Haemimont Games)
 //       Brian Hook 
 //       Walter van Niftrik
+//       David Gow
+//       David Given
+//       Ivan-Assen Ivanov
+//       Anthony Pesch
 //
 // VERSION HISTORY
 //
+//   0.8  (2014-05-25) fix a few more warnings
 //   0.7  (2013-09-25) bugfix: subpixel glyph bug fixed in 0.5 had come back
 //   0.6c (2012-07-24) improve documentation
 //   0.6b (2012-07-20) fix a few more warnings
@@ -223,7 +228,7 @@ void my_stbtt_print(float x, float y, char *text)
    while (*text) {
       if (*text >= 32 && *text < 128) {
          stbtt_aligned_quad q;
-         stbtt_GetBakedQuad(cdata, 512,512, *text-32, &x,&y,&q,1);//1=opengl,0=old d3d
+         stbtt_GetBakedQuad(cdata, 512,512, *text-32, &x,&y,&q,1);//1=opengl & d3d10+,0=d3d9
          glTexCoord2f(q.s0,q.t1); glVertex2f(q.x0,q.y0);
          glTexCoord2f(q.s1,q.t1); glVertex2f(q.x1,q.y0);
          glTexCoord2f(q.s1,q.t0); glVertex2f(q.x1,q.y1);
@@ -292,7 +297,7 @@ int main(int arg, char **argv)
 {
    stbtt_fontinfo font;
    int i,j,ascent,baseline,ch=0;
-   float scale, xpos=0;
+   float scale, xpos=2; // leave a little padding in case the character extends left
    char *text = "Heljo World!";
 
    fread(buffer, 1, 1000000, fopen("c:/windows/fonts/arialbd.ttf", "rb"));
@@ -364,10 +369,15 @@ int main(int arg, char **argv)
    #define STBTT_iceil(x)    ((int) ceil(x))
    #endif
 
+   #ifndef STBTT_sqrt
+   #include <math.h>
+   #define STBTT_sqrt(x)      sqrt(x)
+   #endif
+
    // #define your own functions "STBTT_malloc" / "STBTT_free" to avoid malloc.h
    #ifndef STBTT_malloc
-   #include <malloc.h>
-   #define STBTT_malloc(x,u)  malloc(x)
+   #include <stdlib.h>
+   #define STBTT_malloc(x,u)  ((void)(u),malloc(x))
    #define STBTT_free(x,u)    free(x)
    #endif
 
@@ -532,7 +542,6 @@ extern void stbtt_GetCodepointHMetrics(const stbtt_fontinfo *info, int codepoint
 
 extern int  stbtt_GetCodepointKernAdvance(const stbtt_fontinfo *info, int ch1, int ch2);
 // an additional amount to add to the 'advance' value between ch1 and ch2
-// @TODO; for now always returns 0!
 
 extern int stbtt_GetCodepointBox(const stbtt_fontinfo *info, int codepoint, int *x0, int *y0, int *x1, int *y1);
 // Gets the bounding box of the visible part of the glyph, in unscaled coordinates
@@ -574,6 +583,13 @@ extern int stbtt_GetCodepointShape(const stbtt_fontinfo *info, int unicode_codep
 extern int stbtt_GetGlyphShape(const stbtt_fontinfo *info, int glyph_index, stbtt_vertex **vertices);
 // returns # of vertices and fills *vertices with the pointer to them
 //   these are expressed in "unscaled" coordinates
+//
+// The shape is a series of countours. Each one starts with
+// a STBTT_moveto, then consists of a series of mixed
+// STBTT_lineto and STBTT_curveto segments. A lineto
+// draws a line from previous endpoint to its x,y; a curveto
+// draws a quadratic bezier from previous endpoint to
+// its x,y, using cx,cy as the bezier control point.
 
 extern void stbtt_FreeShape(const stbtt_fontinfo *info, stbtt_vertex *vertices);
 // frees the data allocated above
@@ -916,10 +932,7 @@ int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codepoint)
       // now decrement to bias correctly to find smallest
       search -= 2;
       while (entrySelector) {
-         stbtt_uint16 start, end;
          searchRange >>= 1;
-         start = ttUSHORT(data + search + 2 + segcount*2 + 2);
-         end = ttUSHORT(data + search + 2);
          start = ttUSHORT(data + search + searchRange*2 + segcount*2 + 2);
          end = ttUSHORT(data + search + searchRange*2);
          if (unicode_codepoint > end)
@@ -1224,8 +1237,8 @@ int stbtt_GetGlyphShape(const stbtt_fontinfo *info, int glyph_index, stbtt_verte
          }
          
          // Find transformation scales.
-         m = (float) sqrt(mtx[0]*mtx[0] + mtx[1]*mtx[1]);
-         n = (float) sqrt(mtx[2]*mtx[2] + mtx[3]*mtx[3]);
+         m = (float) STBTT_sqrt(mtx[0]*mtx[0] + mtx[1]*mtx[1]);
+         n = (float) STBTT_sqrt(mtx[2]*mtx[2] + mtx[3]*mtx[3]);
 
          // Get indexed glyph.
          comp_num_verts = stbtt_GetGlyphShape(info, gidx, &comp_verts);
@@ -1248,8 +1261,8 @@ int stbtt_GetGlyphShape(const stbtt_fontinfo *info, int glyph_index, stbtt_verte
                if (comp_verts) STBTT_free(comp_verts, info->userdata);
                return 0;
             }
-            if (num_vertices > 0) memcpy(tmp, vertices, num_vertices*sizeof(stbtt_vertex));
-            memcpy(tmp+num_vertices, comp_verts, comp_num_verts*sizeof(stbtt_vertex));
+            if (num_vertices > 0) STBTT_memcpy(tmp, vertices, num_vertices*sizeof(stbtt_vertex));
+            STBTT_memcpy(tmp+num_vertices, comp_verts, comp_num_verts*sizeof(stbtt_vertex));
             if (vertices) STBTT_free(vertices, info->userdata);
             vertices = tmp;
             STBTT_free(comp_verts, info->userdata);
@@ -1993,14 +2006,16 @@ static int stbtt__matchpair(stbtt_uint8 *fc, stbtt_uint32 nm, stbtt_uint8 *name,
 
          // is this a Unicode encoding?
          if (platform == 0 || (platform == 3 && encoding == 1) || (platform == 3 && encoding == 10)) {
-            stbtt_int32 slen = ttUSHORT(fc+loc+8), off = ttUSHORT(fc+loc+10);
+            stbtt_int32 slen = ttUSHORT(fc+loc+8);
+            stbtt_int32 off = ttUSHORT(fc+loc+10);
 
             // check if there's a prefix match
             stbtt_int32 matchlen = stbtt__CompareUTF8toUTF16_bigendian_prefix(name, nlen, fc+stringOffset+off,slen);
             if (matchlen >= 0) {
                // check for target_id+1 immediately following, with same encoding & language
                if (i+1 < count && ttUSHORT(fc+loc+12+6) == next_id && ttUSHORT(fc+loc+12) == platform && ttUSHORT(fc+loc+12+2) == encoding && ttUSHORT(fc+loc+12+4) == language) {
-                  stbtt_int32 slen = ttUSHORT(fc+loc+12+8), off = ttUSHORT(fc+loc+12+10);
+                  slen = ttUSHORT(fc+loc+12+8);
+                  off = ttUSHORT(fc+loc+12+10);
                   if (slen == 0) {
                      if (matchlen == nlen)
                         return 1;

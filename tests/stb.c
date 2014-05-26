@@ -570,6 +570,7 @@ void rec_print(stb_dirtree2 *d, int depth)
    d->weight = (float) stb_arr_len(d->files);
 }
 
+#ifdef MAIN_TEST
 int main(int argc, char **argv)
 {
    char *z;
@@ -1555,6 +1556,8 @@ int main(int argc, char **argv)
 
    return 0;
 }
+
+#endif
 
 
 
