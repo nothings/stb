@@ -66,7 +66,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /Zi /Od /I ".." /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /GX /Zd /Od /I ".." /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -86,7 +86,19 @@ LINK32=link.exe
 # Name "stb - Win32 Debug"
 # Begin Source File
 
+SOURCE=.\compile_test.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\stb.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_image.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_vorbis.c
 # End Source File
 # End Target
 # End Project
