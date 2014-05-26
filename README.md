@@ -5,14 +5,15 @@ single-file public domain libraries for C/C++
 
 library | category | description
 --------- | --------- | ---------
-**stb_image.c**       | graphics | image loading/decoding from disk/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **stb_vorbis.c**      | audio    | decode ogg vorbis files from memory to float/16-bit signed output
+**stb_image.c**       | graphics | image loading/decoding from disk/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **stb_truetype.h**    | graphics | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | graphics | image writing to disk
 **stb_textedit.h**    | UI       | guts of a text editor for games etc implementing them from scratch
 **stb_dxt.h**         | 3D&nbsp;graphics | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h**      | 3D&nbsp;graphics | revised Perlin noise (3D input, 1D output)
 **stb_c_lexer.h**     | parsing | simplify writing parsers for C-like languages
+**stb_divide.h**      | math | more useful 32-bit modulus e.g. "euclidean divide"
 **stb.h**             | misc | helper functions for C, mostly redundant in C++; basically author's personal stuff
 
 FAQ
@@ -35,6 +36,12 @@ easier to use, and easier to release (single file; good API; no
 attribution requirement). They may be less featureful, slower,
 and/or use more memory. If you're already using an equivalent
 library, there's probably no good reason to switch.
+
+#### Why "stb"? Is this something to do with Set-Top Boxes?
+
+No, they are just the initials for my name, Sean T. Barrett.
+This was not chosen out of egomania, but as a semi-robust
+way of namespacing the filenames and source function names.
 
 #### Will you add more image types to stb_image.c?
 
