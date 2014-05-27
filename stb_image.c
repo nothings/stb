@@ -57,9 +57,10 @@
                                                  John Bartholomew
  Optimizations & bugfixes                        Ken Hamada
     Fabian "ryg" Giesen                          Cort Stratton
-
-                                 
- If your name should be here but isn't, let Sean know.
+                                                 Blazej Dariusz Roszkowski
+                                                 Thibault Reuille
+ If your name should be here but                 Paul Du Bois
+ isn't let Sean know.                            Guillaume George
 
 */
 
@@ -349,6 +350,7 @@ extern void stbi_install_YCbCr_to_RGB(stbi_YCbCr_to_RGB_run func);
 #include <memory.h>
 #include <assert.h>
 #include <stdarg.h>
+#include <stddef.h> // ptrdiff_t on osx
 
 #ifndef _MSC_VER
    #ifdef __cplusplus
@@ -361,12 +363,20 @@ extern void stbi_install_YCbCr_to_RGB(stbi_YCbCr_to_RGB_run func);
 #endif
 
 
-// implementation:
+#ifdef _MSC_VER
 typedef unsigned char  stbi__uint8;
 typedef unsigned short stbi__uint16;
-typedef   signed short  stbi__int16;
+typedef   signed short stbi__int16;
 typedef unsigned int   stbi__uint32;
-typedef   signed int    stbi__int32;
+typedef   signed int   stbi__int32;
+#else
+#include <stdint.h>
+typedef uint8_t  stbi__uint8;
+typedef uint16_t stbi__uint16;
+typedef int16_t  stbi__int16;
+typedef uint32_t stbi__uint32;
+typedef int32_t  stbi__int32;
+#endif
 
 // should produce compiler error if size is wrong
 typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
@@ -727,8 +737,8 @@ static void refill_buffer(stbi *s)
 {
    int n = (s->io.read)(s->io_user_data,(char*)s->buffer_start,s->buflen);
    if (n == 0) {
-      // at end of file, treat same as if from memory, but need
-      // to handle case where s->img_buffer isn't pointing to safe memory
+      // at end of file, treat same as if from memory, but need to handle case
+      // where s->img_buffer isn't pointing to safe memory, e.g. 0-byte file
       s->read_from_callbacks = 0;
       s->img_buffer = s->buffer_start;
       s->img_buffer_end = s->buffer_start+1;
@@ -3014,6 +3024,7 @@ static stbi_uc *bmp_load(stbi *s, int *x, int *y, int *comp, int req_comp)
                   mb = 0xffu <<  0;
                   ma = 0xffu << 24;
                   fake_a = 1; // @TODO: check for cases like alpha value is all 0 and switch it to 255
+                  STBI_UNUSED(fake_a);
                } else {
                   mr = 31u << 10;
                   mg = 31u <<  5;
@@ -3105,9 +3116,9 @@ static stbi_uc *bmp_load(stbi *s, int *x, int *y, int *comp, int req_comp)
          if (!mr || !mg || !mb) { free(out); return epuc("bad masks", "Corrupt BMP"); }
          // right shift amt to put high bit in position #7
          rshift = high_bit(mr)-7; rcount = bitcount(mr);
-         gshift = high_bit(mg)-7; gcount = bitcount(mr);
-         bshift = high_bit(mb)-7; bcount = bitcount(mr);
-         ashift = high_bit(ma)-7; acount = bitcount(mr);
+         gshift = high_bit(mg)-7; gcount = bitcount(mg);
+         bshift = high_bit(mb)-7; bcount = bitcount(mb);
+         ashift = high_bit(ma)-7; acount = bitcount(ma);
       }
       for (j=0; j < (int) s->img_y; ++j) {
          if (easy) {
@@ -3122,7 +3133,7 @@ static stbi_uc *bmp_load(stbi *s, int *x, int *y, int *comp, int req_comp)
             }
          } else {
             for (i=0; i < (int) s->img_x; ++i) {
-               stbi__uint32 v = (bpp == 16 ? get16le(s) : get32le(s));
+               stbi__uint32 v = (stbi_uint32) (bpp == 16 ? get16le(s) : get32le(s));
                int a;
                out[z++] = (stbi__uint8) shiftsigned(v & mr, rshift, rcount);
                out[z++] = (stbi__uint8) shiftsigned(v & mg, gshift, gcount);
@@ -4309,11 +4320,11 @@ static float *hdr_load(stbi *s, int *x, int *y, int *comp, int req_comp)
    token = hdr_gettoken(s,buffer);
    if (strncmp(token, "-Y ", 3))  return epf("unsupported data layout", "Unsupported HDR format");
    token += 3;
-   height = strtol(token, &token, 10);
+   height = (int) strtol(token, &token, 10);
    while (*token == ' ') ++token;
    if (strncmp(token, "+X ", 3))  return epf("unsupported data layout", "Unsupported HDR format");
    token += 3;
-   width = strtol(token, NULL, 10);
+   width = (int) strtol(token, NULL, 10);
 
    *x = width;
    *y = height;
@@ -4421,14 +4432,14 @@ static int stbi_hdr_info(stbi *s, int *x, int *y, int *comp)
        return 0;
    }
    token += 3;
-   *y = strtol(token, &token, 10);
+   *y = (int) strtol(token, &token, 10);
    while (*token == ' ') ++token;
    if (strncmp(token, "+X ", 3)) {
        stbi_rewind( s );
        return 0;
    }
    token += 3;
-   *x = strtol(token, NULL, 10);
+   *x = (int) strtol(token, NULL, 10);
    *comp = 3;
    return 1;
 }
@@ -4612,6 +4623,7 @@ int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int *x, int
              various warnings
              fix broken STBI_SIMD path
              fix bug where stbi_load_from_file no longer left file pointer in correct place
+             fix broken non-easy path for 32-bit BMP (possibly never used)
       1.34 (unknown)
              use STBI_NOTUSED in resample_row_generic(), fix one more leak in tga failure case
       1.33 (2011-07-14)
