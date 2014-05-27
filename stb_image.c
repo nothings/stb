@@ -1,4 +1,4 @@
-/* stbi-1.33 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stbi-1.35 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -22,6 +22,7 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.35 (2014-05-27) warnings, bugfixes, etc
       1.34 (unknown   ) warning fix
       1.33 (2011-07-14) minor fixes suggested by Dave Moore
       1.32 (2011-07-13) info support for all filetypes (SpartanJ)
@@ -29,9 +30,6 @@
       1.30 (2011-06-11) added ability to load files via io callbacks (Ben Wenger)
       1.29 (2010-08-16) various warning fixes from Aurelien Pocheville 
       1.28 (2010-08-01) fix bug in GIF palette transparency (SpartanJ)
-      1.27 (2010-08-01) cast-to-stbi__uint8 to fix warnings (Laurent Gomila)
-                        allow trailing 0s at end of image data (Laurent Gomila)
-      1.26 (2010-07-24) fix bug in file buffering for PNG reported by SpartanJ
 
    See end of file for full revision history.
 
@@ -41,23 +39,26 @@
 
  ============================    Contributors    =========================
               
- Image formats                                Optimizations & bugfixes
-    Sean Barrett (jpeg, png, bmp)                Fabian "ryg" Giesen
-    Nicolas Schulz (hdr, psd)                                                 
-    Jonathan Dummer (tga)                     Bug fixes & warning fixes           
-    Jean-Marc Lienher (gif)                      Marc LeBlanc               
-    Tom Seddon (pic)                             Christpher Lloyd           
-    Thatcher Ulrich (psd)                        Dave Moore                 
-                                                 Won Chun                   
-                                                 the Horde3D community      
- Extensions, features                            Janez Zemva                
-    Jetro Lauha (stbi_info)                      Jonathan Blow              
-    James "moose2000" Brown (iPhone PNG)         Laurent Gomila                             
-    Ben "Disch" Wenger (io callbacks)            Aruelien Pocheville
-    Martin "SpartanJ" Golini                     Ryamond Barbiero
-                                                 David Woo
+ Image formats                                Bug fixes & warning fixes
+    Sean Barrett (jpeg, png, bmp)                Marc LeBlanc
+    Nicolas Schulz (hdr, psd)                    Christpher Lloyd
+    Jonathan Dummer (tga)                        Dave Moore
+    Jean-Marc Lienher (gif)                      Won Chun
+    Tom Seddon (pic)                             the Horde3D community
+    Thatcher Ulrich (psd)                        Janez Zemva
+                                                 Jonathan Blow
+                                                 Laurent Gomila
+ Extensions, features                            Aruelien Pocheville
+    Jetro Lauha (stbi_info)                      Ryamond Barbiero
+    James "moose2000" Brown (iPhone PNG)         David Woo
+    Ben "Disch" Wenger (io callbacks)            Roy Eltham
+    Martin "SpartanJ" Golini                     Luke Graham
+                                                 Thomas Ruf
+                                                 John Bartholomew
+ Optimizations & bugfixes                        Ken Hamada
+    Fabian "ryg" Giesen                          Cort Stratton
 
-
+                                 
  If your name should be here but isn't, let Sean know.
 
 */
@@ -187,12 +188,13 @@
 
 #ifndef STBI_NO_STDIO
 
-#if defined(_MSC_VER) && _MSC_VER >= 0x1400
-#define _CRT_SECURE_NO_WARNINGS // suppress bogus warnings about fopen()
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+#define _CRT_SECURE_NO_WARNINGS // suppress warnings about fopen()
+#pragma warning(push)
+#pragma warning(disable:4996)   // suppress even more warnings about fopen()
 #endif
-
 #include <stdio.h>
-#endif
+#endif // STBI_NO_STDIO
 
 #define STBI_VERSION 1
 
@@ -232,7 +234,7 @@ extern stbi_uc *stbi_load_from_file  (FILE *f,                  int *x, int *y, 
 typedef struct
 {
    int      (*read)  (void *user,char *data,int size);   // fill 'data' with 'size' bytes.  return number of bytes actually read 
-   void     (*skip)  (void *user,unsigned n);            // skip the next 'n' bytes
+   void     (*skip)  (void *user,int n);                 // skip the next 'n' bytes, or 'unget' the last -n bytes if negative
    int      (*eof)   (void *user);                       // returns nonzero if we are at end of file/data
 } stbi_io_callbacks;
 
@@ -296,6 +298,7 @@ extern void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert);
 // ZLIB client - used by PNG, available for other purposes
 
 extern char *stbi_zlib_decode_malloc_guesssize(const char *buffer, int len, int initial_size, int *outlen);
+extern char *stbi_zlib_decode_malloc_guesssize_headerflag(const char *buffer, int len, int initial_size, int *outlen, int parse_header);
 extern char *stbi_zlib_decode_malloc(const char *buffer, int len, int *outlen);
 extern int   stbi_zlib_decode_buffer(char *obuffer, int olen, const char *ibuffer, int ilen);
 
@@ -368,11 +371,11 @@ typedef   signed int    stbi__int32;
 // should produce compiler error if size is wrong
 typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 
-#if defined(STBI_NO_STDIO) && !defined(STBI_NO_WRITE)
-#define STBI_NO_WRITE
-#endif
-
+#ifdef _MSC_VER
+#define STBI_NOTUSED(v)  (void)(v)
+#else
 #define STBI_NOTUSED(v)  (void)sizeof(v)
+#endif
 
 #ifdef _MSC_VER
 #define STBI_HAS_LROTL
@@ -436,7 +439,7 @@ static int stdio_read(void *user, char *data, int size)
    return (int) fread(data,1,size,(FILE*) user);
 }
 
-static void stdio_skip(void *user, unsigned n)
+static void stdio_skip(void *user, int n)
 {
    fseek((FILE*) user, n, SEEK_CUR);
 }
@@ -483,8 +486,10 @@ static stbi_uc *stbi_tga_load(stbi *s, int *x, int *y, int *comp, int req_comp);
 static int      stbi_tga_info(stbi *s, int *x, int *y, int *comp);
 static int      stbi_psd_test(stbi *s);
 static stbi_uc *stbi_psd_load(stbi *s, int *x, int *y, int *comp, int req_comp);
+#ifndef STBI_NO_HDR
 static int      stbi_hdr_test(stbi *s);
 static float   *stbi_hdr_load(stbi *s, int *x, int *y, int *comp, int req_comp);
+#endif
 static int      stbi_pic_test(stbi *s);
 static stbi_uc *stbi_pic_load(stbi *s, int *x, int *y, int *comp, int req_comp);
 static int      stbi_gif_test(stbi *s);
@@ -566,9 +571,15 @@ unsigned char *stbi_load(char const *filename, int *x, int *y, int *comp, int re
 
 unsigned char *stbi_load_from_file(FILE *f, int *x, int *y, int *comp, int req_comp)
 {
+   unsigned char *result;
    stbi s;
    start_file(&s,f);
-   return stbi_load_main(&s,x,y,comp,req_comp);
+   result = stbi_load_main(&s,x,y,comp,req_comp);
+   if (result) {
+      // need to 'unget' all the characters in the IO buffer
+      fseek(f, - (int) (s.img_buffer_end - s.img_buffer), SEEK_CUR);
+   }
+   return result;
 }
 #endif //!STBI_NO_STDIO
 
@@ -716,9 +727,11 @@ static void refill_buffer(stbi *s)
 {
    int n = (s->io.read)(s->io_user_data,(char*)s->buffer_start,s->buflen);
    if (n == 0) {
-      // at end of file, treat same as if from memory
+      // at end of file, treat same as if from memory, but need
+      // to handle case where s->img_buffer isn't pointing to safe memory
       s->read_from_callbacks = 0;
-      s->img_buffer = s->img_buffer_end-1;
+      s->img_buffer = s->buffer_start;
+      s->img_buffer_end = s->buffer_start+1;
       *s->img_buffer = 0;
    } else {
       s->img_buffer = s->buffer_start;
@@ -757,7 +770,7 @@ stbi_inline static stbi__uint8 get8u(stbi *s)
 static void skip(stbi *s, int n)
 {
    if (s->io.read) {
-      int blen = s->img_buffer_end - s->img_buffer;
+      int blen = (int) (s->img_buffer_end - s->img_buffer);
       if (blen < n) {
          s->img_buffer = s->img_buffer_end;
          (s->io.skip)(s->io_user_data, n - blen);
@@ -770,7 +783,7 @@ static void skip(stbi *s, int n)
 static int getn(stbi *s, stbi_uc *buffer, int n)
 {
    if (s->io.read) {
-      int blen = s->img_buffer_end - s->img_buffer;
+      int blen = (int) (s->img_buffer_end - s->img_buffer);
       if (blen < n) {
          int res, count;
 
@@ -1879,7 +1892,7 @@ static stbi__uint8 *load_jpeg_image(jpeg *z, int *out_x, int *out_y, int *comp, 
             stbi__uint8 *y = coutput[0];
             if (z->s->img_n == 3) {
                #ifdef STBI_SIMD
-               stbi_YCbCr_installed(out, y, coutput[1], coutput[2], z->s.img_x, n);
+               stbi_YCbCr_installed(out, y, coutput[1], coutput[2], z->s->img_x, n);
                #else
                YCbCr_to_RGB_row(out, y, coutput[1], coutput[2], z->s->img_x, n);
                #endif
@@ -4588,9 +4601,17 @@ int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int *x, int
 
 #endif // STBI_HEADER_FILE_ONLY
 
+#if !defined(STBI_NO_STDIO) && defined(_MSC_VER) && _MSC_VER >= 1400
+#pragma warning(pop)
+#endif
+
+
 /*
    revision history:
       1.35 (2014-05-27)
+             various warnings
+             fix broken STBI_SIMD path
+             fix bug where stbi_load_from_file no longer left file pointer in correct place
       1.34 (unknown)
              use STBI_NOTUSED in resample_row_generic(), fix one more leak in tga failure case
       1.33 (2011-07-14)

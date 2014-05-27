@@ -1,4 +1,4 @@
-/* stbiw-0.92 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stbiw-0.93 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010
                             no warranty implied; use at your own risk
 
@@ -318,7 +318,7 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
       }
 
       if (bestloc) {
-         int d = data+i - bestloc; // distance back
+         int d = (int) (data+i - bestloc); // distance back
          assert(d <= 32767 && best <= 258);
          for (j=0; best > lengthc[j+1]-1; ++j);
          stbi__zlib_huff(j+257);
@@ -503,6 +503,8 @@ int stbi_write_png(char const *filename, int x, int y, int comp, const void *dat
 
 /* Revision history
 
+      0.93 (2014-05-27)
+             warning fixes
       0.92 (2010-08-01)
              casts to unsigned char to fix warnings
       0.91 (2010-07-17)
