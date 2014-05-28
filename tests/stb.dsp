@@ -86,10 +86,6 @@ LINK32=link.exe
 # Name "stb - Win32 Debug"
 # Begin Source File
 
-SOURCE=.\compile_test.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\stb.c
 # End Source File
 # Begin Source File
@@ -99,6 +95,10 @@ SOURCE=..\stb_image.c
 # Begin Source File
 
 SOURCE=..\stb_vorbis.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\test_c_compilation.c
 # End Source File
 # Begin Source File
 
