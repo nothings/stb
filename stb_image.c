@@ -3024,7 +3024,7 @@ static stbi_uc *bmp_load(stbi *s, int *x, int *y, int *comp, int req_comp)
                   mb = 0xffu <<  0;
                   ma = 0xffu << 24;
                   fake_a = 1; // @TODO: check for cases like alpha value is all 0 and switch it to 255
-                  STBI_UNUSED(fake_a);
+                  STBI_NOTUSED(fake_a);
                } else {
                   mr = 31u << 10;
                   mg = 31u <<  5;
@@ -3133,7 +3133,7 @@ static stbi_uc *bmp_load(stbi *s, int *x, int *y, int *comp, int req_comp)
             }
          } else {
             for (i=0; i < (int) s->img_x; ++i) {
-               stbi__uint32 v = (stbi_uint32) (bpp == 16 ? get16le(s) : get32le(s));
+               stbi__uint32 v = (stbi__uint32) (bpp == 16 ? get16le(s) : get32le(s));
                int a;
                out[z++] = (stbi__uint8) shiftsigned(v & mr, rshift, rcount);
                out[z++] = (stbi__uint8) shiftsigned(v & mg, gshift, gcount);
