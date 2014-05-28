@@ -6,10 +6,10 @@ single-file public domain libraries for C/C++
 library    | lastest version | category | description
 --------------------- | ---- | -------- | --------------------------------
 **stb_vorbis.c**      | 1.0  | audio    | decode ogg vorbis files from file/memory to float/16-bit signed output
-**stb_image.c**       | 1.33 | graphics | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**stb_image.c**       | 1.35 | graphics | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **stb_truetype.h**    | 0.8  | graphics | parse, decode, and rasterize characters from truetype fonts
-**stb_image_write.h** | 0.92 | graphics | image writing to disk: PNG, TGA, BMP
-**stb_textedit.h**    | 1.1  | UI       | guts of a text editor for games etc implementing them from scratch
+**stb_image_write.h** | 0.93 | graphics | image writing to disk: PNG, TGA, BMP
+**stb_textedit.h**    | 1.2  | UI       | guts of a text editor for games etc implementing them from scratch
 **stb_dxt.h**         | 1.04 | 3D&nbsp;graphics | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h**      | 0.2  | 3D&nbsp;graphics | revised Perlin noise (3D input, 1D output)
 **stb_c_lexer.h**     | 0.04 | parsing  | simplify writing parsers for C-like languages
