@@ -40,7 +40,7 @@ Yes. I'll put a list here when people remind me what they are.
 
 #### Do you have any advice on how to create my own single-file library?
 
-Yes. https://github.com/nothings/stb/blob/master/stb_howto.txt
+Yes. https://github.com/nothings/stb/blob/master/docs/stb_howto.txt
 
 #### Why public domain?
 
