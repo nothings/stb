@@ -15,6 +15,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "make_readme"=..\tools\make_readme\make_readme.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "stb"=.\stb.dsp - Package Owner=<4>
 
 Package=<5>

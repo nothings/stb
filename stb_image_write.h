@@ -1,4 +1,4 @@
-/* stbiw-0.93 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v0.93 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010
                             no warranty implied; use at your own risk
 

@@ -1,11 +1,8 @@
-/* stb-2.23 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.23 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
    for getting stuff done in C/C++.
-
-   Email bug reports, feature requests, etc. to 'sean' at the same site.
-
 
    Documentation: http://nothings.org/stb/stb_h.html
    Unit tests:    http://nothings.org/stb/stb.c
