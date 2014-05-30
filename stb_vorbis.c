@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder -- public domain -- version 1.0
+// Ogg Vorbis audio decoder - v1.0 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Written by Sean Barrett in 2007, last updated in 2014

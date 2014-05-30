@@ -1,4 +1,4 @@
-// stb_c_lexer.h 0.04 -- public domain Sean Barrett 2013
+// stb_c_lexer.h - v0.04 - public domain Sean Barrett 2013
 // lexer for making little C-like languages with recursive-descent parsers
 //
 // This file provides both the interface and the implementation.
