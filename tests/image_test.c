@@ -1,8 +1,8 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
-#define STBI_HEADER_FILE_ONLY
-#include "stb_image.c"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 
 int main(int argc, char **argv)
