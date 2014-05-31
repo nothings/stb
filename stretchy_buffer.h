@@ -61,7 +61,7 @@
 //         sb_push(TYPE *a, TYPE v)   adds v on the end of the array, a la push_back
 //         sb_add(TYPE *a, int n)     adds n uninitialized elements at end of array & returns pointer to first added
 //         sb_last(TYPE *a)           returns an lvalue of the last item in the array
-//         a[2]                       access the 2nd (counting from 0) element of the array
+//         a[n]                       access the nth (counting from 0) element of the array
 //
 //     #define STRETCHY_BUFFER_NO_SHORT_NAMES to only export
 //     names of the form 'stb_sb_' if you have a name that would
