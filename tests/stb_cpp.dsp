@@ -87,10 +87,6 @@ SOURCE=.\stb_cpp.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\stb_image.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\stb_vorbis.c
 # End Source File
 # Begin Source File
