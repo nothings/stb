@@ -16,12 +16,14 @@
 //        - the length of the "in-use" part of the array
 //        - the current size of the allocated array
 //
-//    I find it to be super-convenient in C, but it lacks many of the
-//    abilities of vector<>: there is no range checking, the object
-//    address isn't stable (see next section for details), the set
-//    of methods available is small (although the file stb.h has
-//    another implementation of stretchy buffers called 'stb_arr'
-//    which provides more methods, e.g. for insertion and deletion).
+//    I find it to be single most useful non-built-in-structure when
+//    programming in C (hash tables a close second), but to be clear
+//    it lacks many of the capabilities of C++ vector<>: there is no
+//    range checking, the object address isn't stable (see next section
+//    for details), the set of methods available is small (although
+//    the file stb.h has another implementation of stretchy buffers
+//    called 'stb_arr' which provides more methods, e.g. for insertion
+//    and deletion).
 //
 // How to use:
 //
@@ -98,6 +100,9 @@
 //    the main trick is in realizing in the first place that it's
 //    possible to do this in a generic, type-safe way in C.
 
+#ifndef STB_STRETCHY_BUFFER_H_INCLUDED
+#define STB_STRETCHY_BUFFER_H_INCLUDED
+
 #ifndef NO_STRETCHY_BUFFER_SHORT_NAMES
 #define sb_free   stb_sb_free
 #define sb_push   stb_sb_push
@@ -137,6 +142,7 @@ static void * stb__sbgrowf(void *arr, int increment, int itemsize)
       #ifdef STRETCHY_BUFFER_OUT_OF_MEMORY
       STRETCHY_BUFFER_OUT_OF_MEMORY ;
       #endif
-      return (void *) 8; // try to force a NULL pointer exception later
+      return (void *) (2*sizeof(int)); // try to force a NULL pointer exception later
    }
 }
+#endif // STB_STRETCHY_BUFFER_H_INCLUDED
