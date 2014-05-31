@@ -1552,7 +1552,12 @@ int main(int argc, char **argv)
    for (n=1; n < 20; ++n)
       malloc(1 << n);
 
-   stb_("Finished stb.c with %d errors.", count);
+   printf("Finished stb.c with %d errors.\n", count);
+
+   #ifdef _MSC_VER
+   if (count)
+      __asm int 3;
+   #endif
 
    return 0;
 }
