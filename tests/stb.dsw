@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "image_test"=.\image_test\image_test.dsp - Package Owner=<4>
+Project: "image_test"=.\image_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -15,7 +15,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "make_readme"=..\tools\make_readme\make_readme.dsp - Package Owner=<4>
+Project: "make_readme"=..\tools\make_readme.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -37,6 +37,9 @@ Package=<4>
 {{{
     Begin Project Dependency
     Project_Dep_Name stb_cpp
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name image_test
     End Project Dependency
 }}}
 
