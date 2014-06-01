@@ -1,7 +1,8 @@
-// stretchy_buffer.h - v0.9 - public domain
+// stretchy_buffer.h - v1.0 - public domain - nothings.org/stb
 // a vector<>-like dynamic array for C
 //
 // version history:
+//      1.0 -  fixed bug in the version I posted prematurely
 //      0.9 -  rewrite to try to avoid strict-aliasing optimization
 //             issues, but won't compile as C++
 //
