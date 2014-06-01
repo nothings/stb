@@ -137,7 +137,7 @@ static void * stb__sbgrowf(void *arr, int increment, int itemsize)
       if (!arr)
          p[1] = 0;
       p[0] = m;
-      return p;
+      return p+2;
    } else {
       #ifdef STRETCHY_BUFFER_OUT_OF_MEMORY
       STRETCHY_BUFFER_OUT_OF_MEMORY ;
