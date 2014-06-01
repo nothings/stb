@@ -1,10 +1,11 @@
-// stretchy_buffer.h - v1.0 - public domain - nothings.org/stb
+// stretchy_buffer.h - v1.01 - public domain - nothings.org/stb
 // a vector<>-like dynamic array for C
 //
 // version history:
-//      1.0 -  fixed bug in the version I posted prematurely
-//      0.9 -  rewrite to try to avoid strict-aliasing optimization
-//             issues, but won't compile as C++
+//      1.01 -  added a "common uses" documentation section
+//      1.0  -  fixed bug in the version I posted prematurely
+//      0.9  -  rewrite to try to avoid strict-aliasing optimization
+//              issues, but won't compile as C++
 //
 // Will probably not work correctly with strict-aliasing optimizations.
 //
@@ -87,6 +88,63 @@
 //     in the face of such compilers, #define STRETCHY_BUFFER_OUT_OF_MEMORY
 //     to a statement such as assert(0) or exit(1) or something
 //     to force a failure when out-of-memory occurs.
+//
+// Common use:
+//
+//    The main application for this is when building a list of
+//    things with an unknown quantity, either due to loading from
+//    a file or through a process which produces an unpredictable
+//    number.
+//
+//    My most common idiom is something like:
+//
+//       SomeStruct *arr = NULL;
+//       while (something)
+//       {
+//          SomeStruct new_one;
+//          new_one.whatever = whatever;
+//          new_one.whatup   = whatup;
+//          new_one.foobar   = barfoo;
+//          sb_push(arr, new_one);
+//       }
+//
+//    and various closely-related factorings of that. For example,
+//    you might have several functions to create/init new SomeStructs,
+//    and if you use the above idiom, you might prefer to make them
+//    return structs rather than take non-const-pointers-to-structs,
+//    so you can do things like:
+//
+//       SomeStruct *arr = NULL;
+//       while (something)
+//       {
+//          if (case_A) {
+//             sb_push(arr, some_func1());
+//          } else if (case_B) {
+//             sb_push(arr, some_func2());
+//          } else {
+//             sb_push(arr, some_func3());
+//          }
+//       }
+//
+//    Note that the above relies on the fact that sb_push doesn't
+//    evaluate its second argument more than once. The macros do
+//    evaluate the *array* argument multiple times, and numeric
+//    arguments may be evaluated multiple times, but you can rely
+//    on the second argument of sb_push being evaluated only once.
+//
+//    Of course, you don't have to store bare objects in the array;
+//    if you need the objects to have stable pointers, store an array
+//    of pointers instead:
+//
+//       SomeStruct **arr = NULL;
+//       while (something)
+//       {
+//          SomeStruct *new_one = malloc(sizeof(*new_one));
+//          new_one->whatever = whatever;
+//          new_one->whatup   = whatup;
+//          new_one->foobar   = barfoo;
+//          sb_push(arr, new_one);
+//       }
 //
 // How it works:
 //
