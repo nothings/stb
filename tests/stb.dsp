@@ -102,6 +102,10 @@ SOURCE=.\test_c_compilation.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\stretchy_buffer_test.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\test_truetype.c
 # End Source File
 # Begin Source File
