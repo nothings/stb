@@ -15,6 +15,7 @@ library    | lastest version | category | description
 **stb_c_lexer.h** | 0.04 | parsing | simplify writing parsers for C-like languages
 **stb_divide.h** | 0.91 | math | more useful 32-bit modulus e.g. "euclidean divide"
 **stb.h** | 2.23 | misc | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**stretchy_buffer.h** | 0.9 | utility | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 
 FAQ
 ---

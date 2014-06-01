@@ -5,6 +5,8 @@
 //      0.9 -  rewrite to try to avoid strict-aliasing optimization
 //             issues, but won't compile as C++
 //
+// Will probably not work correctly with strict-aliasing optimizations.
+//
 // The idea:
 //
 //    This implements an approximation to C++ vector<> for C, in that it

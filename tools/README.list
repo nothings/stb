@@ -8,3 +8,4 @@ stb_perlin.h      | 3D graphics | revised Perlin noise (3D input, 1D output)
 stb_c_lexer.h     | parsing  | simplify writing parsers for C-like languages
 stb_divide.h      | math     | more useful 32-bit modulus e.g. "euclidean divide"
 stb.h             | misc     | helper functions for C, mostly redundant in C++; basically author's personal stuff
+stretchy_buffer.h | utility  | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++

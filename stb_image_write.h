@@ -9,6 +9,8 @@ Before including,
 
 in the file that you want to have the implementation.
 
+Will probably not work correctly with strict-aliasing optimizations.
+
 
 ABOUT:
 
