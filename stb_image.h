@@ -26,7 +26,7 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
-      1.36 (2014-05-30) converted to header file
+      1.36 (2014-06-03) converted to header file, allow reading incorrect iphoned-images without iphone flag
       1.35 (2014-05-27) warnings, bugfixes, TGA optimization, etc
       1.34 (unknown   ) warning fix
       1.33 (2011-07-14) minor fixes suggested by Dave Moore
@@ -2698,7 +2698,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
    stbi_uc palette[1024], pal_img_n=0;
    stbi_uc has_trans=0, tc[3];
    stbi__uint32 ioff=0, idata_limit=0, i, pal_len=0;
-   int first=1,k,interlace=0, iphone=0;
+   int first=1,k,interlace=0, is_iphone=0;
    stbi__context *s = z->s;
 
    z->expanded = NULL;
@@ -2713,7 +2713,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
       stbi__pngchunk c = stbi__get_chunk_header(s);
       switch (c.type) {
          case PNG_TYPE('C','g','B','I'):
-            iphone = stbi__de_iphone_flag;
+            is_iphone = 1;
             stbi__skip(s, c.length);
             break;
          case PNG_TYPE('I','H','D','R'): {
@@ -2800,7 +2800,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
             if (scan != SCAN_load) return 1;
             if (z->idata == NULL) return stbi__err("no IDAT","Corrupt PNG");
-            z->expanded = (stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag((char *) z->idata, ioff, 16384, (int *) &raw_len, !iphone);
+            z->expanded = (stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag((char *) z->idata, ioff, 16384, (int *) &raw_len, !is_iphone);
             if (z->expanded == NULL) return 0; // zlib should set error
             free(z->idata); z->idata = NULL;
             if ((req_comp == s->img_n+1 && req_comp != 3 && !pal_img_n) || has_trans)
@@ -2810,7 +2810,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             if (!stbi__create_png_image(z, z->expanded, raw_len, s->img_out_n, interlace)) return 0;
             if (has_trans)
                if (!stbi__compute_transparency(z, tc, s->img_out_n)) return 0;
-            if (iphone && s->img_out_n > 2)
+            if (is_iphone && stbi__de_iphone_flag && s->img_out_n > 2)
                stbi__de_iphone(z);
             if (pal_img_n) {
                // pal_img_n == 3 or 4
@@ -4250,7 +4250,7 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    *x = width;
    *y = height;
 
-   *comp = 3;
+   if (comp) *comp = 3;
    if (req_comp == 0) req_comp = 3;
 
    // Read data
@@ -4535,6 +4535,9 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      1.36 (2014-06-03)
+             convert to header file single-file library
+             if de-iphone isn't set, load iphone images color-swapped instead of returning NULL
       1.35 (2014-05-27)
              various warnings
              fix broken STBI_SIMD path
