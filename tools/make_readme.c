@@ -15,7 +15,7 @@ int main(int argc, char  **argv)
    for (i=0; i < listlen; ++i) {
       int num,j;
       char **tokens = stb_tokens_stripwhite(list[i], "|", &num);  // stb_tokens -- tokenize string into malloced array of strings
-      FILE *g = fopen(stb_sprintf("../%s", tokens[0]), "rb");     // stb_sprintf -- sprintf to a temporary buffer (not threadsafe)
+      FILE *g = fopen(stb_sprintf("../%s", tokens[0]), "rb");     // stb_sprintf -- sprintf to a static temp buffer (not threadsafe or secure)
       char buffer[256], *s1, *s2;
       fread(buffer, 1, 256, g);
       fclose(g);
