@@ -90,7 +90,43 @@ SOURCE=.\stb.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_c_lexer.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_divide.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_dxt.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_image_write.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_perlin.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_textedit.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_truetype.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_vorbis.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\stretchy_buffer.h
 # End Source File
 # Begin Source File
 
