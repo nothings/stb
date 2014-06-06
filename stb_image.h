@@ -26,17 +26,13 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
-      1.38 (2014-06-06) suppress MSVC run-time warnings
+      1.38 (2014-06-06) suppress MSVC run-time warnings, fix accidental rename of 'skip'
       1.37 (2014-06-04) remove duplicate typedef
       1.36 (2014-06-03) converted to header file, allow reading incorrect iphoned-images without iphone flag
       1.35 (2014-05-27) warnings, bugfixes, TGA optimization, etc
       1.34 (unknown   ) warning fix
       1.33 (2011-07-14) minor fixes suggested by Dave Moore
       1.32 (2011-07-13) info support for all filetypes (SpartanJ)
-      1.31 (2011-06-19) a few more leak fixes, bug in PNG handling (SpartanJ)
-      1.30 (2011-06-11) added ability to load files via io callbacks (Ben Wenger)
-      1.29 (2010-08-16) various warning fixes from Aurelien Pocheville 
-      1.28 (2010-08-01) fix bug in GIF palette transparency (SpartanJ)
 
    See end of file for full revision history.
 
@@ -185,7 +181,7 @@
 // overhead. 
 //
 // The three functions you must define are "read" (reads some bytes of data),
-// "stbi__skip" (skips some bytes of data), "eof" (reports if the stream is at the end).
+// "skip" (skips some bytes of data), "eof" (reports if the stream is at the end).
 
 
 #ifndef STBI_NO_STDIO
@@ -242,7 +238,7 @@ STBIDEF stbi_uc *stbi_load_from_file  (FILE *f,                  int *x, int *y,
 typedef struct
 {
    int      (*read)  (void *user,char *data,int size);   // fill 'data' with 'size' bytes.  return number of bytes actually read 
-   void     (*stbi__skip)  (void *user,int n);                 // stbi__skip the next 'n' bytes, or 'unget' the last -n bytes if negative
+   void     (*skip)  (void *user,int n);                 // skip the next 'n' bytes, or 'unget' the last -n bytes if negative
    int      (*eof)   (void *user);                       // returns nonzero if we are at end of file/data
 } stbi_io_callbacks;
 
@@ -783,7 +779,7 @@ static void stbi__skip(stbi__context *s, int n)
       int blen = (int) (s->img_buffer_end - s->img_buffer);
       if (blen < n) {
          s->img_buffer = s->img_buffer_end;
-         (s->io.stbi__skip)(s->io_user_data, n - blen);
+         (s->io.skip)(s->io_user_data, n - blen);
          return;
       }
    }
@@ -3766,9 +3762,9 @@ static stbi_uc *stbi__pic_load(stbi__context *s,int *px,int *py,int *comp,int re
    if (stbi__at_eof(s))  return stbi__errpuc("bad file","file too short (pic header)");
    if ((1 << 28) / x < y) return stbi__errpuc("too large", "Image too large to stbi__jpeg_huff_decode");
 
-   stbi__get32be(s); //stbi__skip `ratio'
-   stbi__get16be(s); //stbi__skip `fields'
-   stbi__get16be(s); //stbi__skip `pad'
+   stbi__get32be(s); //skip `ratio'
+   stbi__get16be(s); //skip `fields'
+   stbi__get16be(s); //skip `pad'
 
    // intermediate buffer is RGBA
    result = (stbi_uc *) malloc(x*y*4);
@@ -4534,6 +4530,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
    revision history:
       1.38 (2014-06-06)
              suppress MSVC warnings on integer casts truncating values
+             fix accidental rename of 'skip' field of I/O
       1.37 (2014-06-04)
              remove duplicate typedef
       1.36 (2014-06-03)
