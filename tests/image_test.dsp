@@ -92,9 +92,5 @@ SOURCE=..\stb_image.h
 
 SOURCE=..\stb_image_write.h
 # End Source File
-# Begin Source File
-
-SOURCE=..\..\stb_image_write.h
-# End Source File
 # End Target
 # End Project
