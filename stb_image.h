@@ -1,4 +1,4 @@
-/* stb_image - v1.37 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.38 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -26,6 +26,7 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.38 (2014-06-06) suppress MSVC run-time warnings
       1.37 (2014-06-04) remove duplicate typedef
       1.36 (2014-06-03) converted to header file, allow reading incorrect iphoned-images without iphone flag
       1.35 (2014-05-27) warnings, bugfixes, TGA optimization, etc
@@ -4531,6 +4532,8 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      1.38 (2014-06-06)
+             suppress MSVC warnings on integer casts truncating values
       1.37 (2014-06-04)
              remove duplicate typedef
       1.36 (2014-06-03)
