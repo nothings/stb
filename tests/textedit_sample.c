@@ -32,7 +32,7 @@ void layout_func(StbTexteditRow *row, STB_TEXTEDIT_STRING *str, int start_i)
 
 int delete_chars(STB_TEXTEDIT_STRING *str, int pos, int num)
 {
-   memmove(&str->string[pos], &str->string[pos+num], str->stringlen - pos - num);
+   memmove(&str->string[pos], &str->string[pos+num], str->stringlen - (pos+num));
    str->stringlen -= num;
    return 1; // always succeeds
 }
