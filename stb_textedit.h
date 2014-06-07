@@ -959,7 +959,7 @@ retry:
          stb_textedit_clamp(str, state);
          stb_textedit_prep_selection_at_cursor(state);
          stb_textedit_find_charpos(&find, str, state->cursor, state->single_line);
-         state->select_end = find.first_char;
+         state->cursor = state->select_end = find.first_char;
          state->has_preferred_x = 0;
          break;
       }
@@ -969,7 +969,7 @@ retry:
          stb_textedit_clamp(str, state);
          stb_textedit_prep_selection_at_cursor(state);
          stb_textedit_find_charpos(&find, str, state->cursor, state->single_line);
-         state->select_end = find.first_char + find.length;
+         state->cursor = state->select_end = find.first_char + find.length;
          state->has_preferred_x = 0;
          break;
       }
