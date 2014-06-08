@@ -400,8 +400,12 @@ static int stb_text_locate_coord(STB_TEXTEDIT_STRING *str, float x, float y)
       prev_x = r.x0;
       for (i=0; i < r.num_chars; ++i) {
          float w = STB_TEXTEDIT_GETWIDTH(str, k, i);
-         if (x < prev_x+w)
-            return k+i;
+         if (x < prev_x+w) {
+            if (x < prev_x+w/2)
+               return k+i;
+            else
+               return k+i+1;
+         }
          prev_x += w;
       }
       // shouldn't happen, but if it does, fall through to end-of-line case
