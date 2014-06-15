@@ -1,4 +1,4 @@
-// stb_c_lexer.h - v0.04 - public domain Sean Barrett 2013
+// stb_c_lexer.h - v0.05 - public domain Sean Barrett 2013
 // lexer for making little C-like languages with recursive-descent parsers
 //
 // This file provides both the interface and the implementation.
@@ -10,6 +10,8 @@
 // suffixes on integer constants are not handled (you can override this).
 //
 // History:
+//     0.05
+//        refixed get_location because github version had lost the fix
 //     0.04
 //        fix octal parsing bug
 //     0.03
@@ -22,7 +24,6 @@
 // Status:
 //     - haven't tested compiling as C++
 //     - haven't tested the float parsing path
-//     - maybe tested "get_location" function (used for error reporting) in 0.03
 //     - haven't tested the non-default-config paths (e.g. non-stdlib)
 //     - only tested default-config paths by eyeballing output of self-parse
 //
@@ -294,7 +295,7 @@ void stb_c_lexer_get_location(const stb_lexer *lexer, const char *where, stb_lex
    char *p = lexer->input_stream;
    int line_number = 1;
    int char_offset = 0;
-   while (*p) {
+   while (*p && p < where) {
       if (*p == '\n' || *p == '\r') {
          p += (p[0]+p[1] == '\r'+'\n' ? 2 : 1); // skip newline
          line_number += 1;
