@@ -2897,7 +2897,7 @@ static int stbi__png_info(stbi__context *s, int *x, int *y, int *comp)
 }
 
 // Microsoft/Windows BMP image
-static int stbi__bmp_test(stbi__context *s)
+static int stbi__bmp_test_raw(stbi__context *s)
 {
    int r;
    int sz;
@@ -2909,6 +2909,12 @@ static int stbi__bmp_test(stbi__context *s)
    stbi__get32le(s); // discard data offset
    sz = stbi__get32le(s);
    r = (sz == 12 || sz == 40 || sz == 56 || sz == 108);
+   return r;
+}
+
+static int stbi__bmp_test(stbi__context *s)
+{
+   int r = stbi__bmp_test_raw(s);
    stbi__rewind(s);
    return r;
 }
