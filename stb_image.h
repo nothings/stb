@@ -1,4 +1,4 @@
-/* stb_image - v1.38 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.39 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -26,13 +26,13 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.39 (2014-06-15) TGA optimization fix, multiple BMP fixes
       1.38 (2014-06-06) suppress MSVC run-time warnings, fix accidental rename of 'skip'
       1.37 (2014-06-04) remove duplicate typedef
       1.36 (2014-06-03) converted to header file, allow reading incorrect iphoned-images without iphone flag
       1.35 (2014-05-27) warnings, bugfixes, TGA optimization, etc
       1.34 (unknown   ) warning fix
       1.33 (2011-07-14) minor fixes suggested by Dave Moore
-      1.32 (2011-07-13) info support for all filetypes (SpartanJ)
 
    See end of file for full revision history.
 
@@ -63,8 +63,9 @@
     Arseny Kapoulkine                            Blazej Dariusz Roszkowski
                                                  Thibault Reuille
  If your name should be here but                 Paul Du Bois
- isn't let Sean know.                            Guillaume George
-
+ isn't, let Sean know.                           Guillaume George
+                                                 Jerry Jansson
+                                                 Hayaki Saito
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -2908,7 +2909,7 @@ static int stbi__bmp_test_raw(stbi__context *s)
    stbi__get16le(s); // discard reserved
    stbi__get32le(s); // discard data offset
    sz = stbi__get32le(s);
-   r = (sz == 12 || sz == 40 || sz == 56 || sz == 108);
+   r = (sz == 12 || sz == 40 || sz == 56 || sz == 108 || sz == 124);
    return r;
 }
 
@@ -2973,7 +2974,7 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
    stbi__get16le(s); // discard reserved
    offset = stbi__get32le(s);
    hsz = stbi__get32le(s);
-   if (hsz != 12 && hsz != 40 && hsz != 56 && hsz != 108) return stbi__errpuc("unknown BMP", "BMP type not supported: unknown");
+   if (hsz != 12 && hsz != 40 && hsz != 56 && hsz != 108 && hsz != 124) return stbi__errpuc("unknown BMP", "BMP type not supported: unknown");
    if (hsz == 12) {
       s->img_x = stbi__get16le(s);
       s->img_y = stbi__get16le(s);
@@ -3032,7 +3033,7 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
                return stbi__errpuc("bad BMP", "bad BMP");
          }
       } else {
-         assert(hsz == 108);
+         assert(hsz == 108 || hsz == 124);
          mr = stbi__get32le(s);
          mg = stbi__get32le(s);
          mb = stbi__get32le(s);
@@ -3040,6 +3041,12 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
          stbi__get32le(s); // discard color space
          for (i=0; i < 12; ++i)
             stbi__get32le(s); // discard color space parameters
+         if (hsz == 124) {
+            stbi__get32le(s); // discard rendering intent
+            stbi__get32le(s); // discard offset of profile data
+            stbi__get32le(s); // discard size of profile data
+            stbi__get32le(s); // discard reserved
+         }
       }
       if (bpp < 16)
          psize = (offset - 14 - hsz) >> 2;
@@ -4369,7 +4376,7 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
    }
    stbi__skip(s,12);
    hsz = stbi__get32le(s);
-   if (hsz != 12 && hsz != 40 && hsz != 56 && hsz != 108) {
+   if (hsz != 12 && hsz != 40 && hsz != 56 && hsz != 108 && hsz != 124) {
        stbi__rewind( s );
        return 0;
    }
