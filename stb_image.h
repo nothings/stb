@@ -3272,7 +3272,7 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
    *y = tga_height;
    if (comp) *comp = tga_comp;
 
-   tga_data = (unsigned char*)malloc( tga_width * tga_height * req_comp );
+   tga_data = (unsigned char*)malloc( tga_width * tga_height * tga_comp );
    if (!tga_data) return stbi__errpuc("outofmem", "Out of memory");
 
    // skip to the data's starting position (offset usually = 0)
@@ -3365,9 +3365,9 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
       {
          for (j = 0; j*2 < tga_height; ++j)
          {
-            int index1 = j * tga_width * req_comp;
-            int index2 = (tga_height - 1 - j) * tga_width * req_comp;
-            for (i = tga_width * req_comp; i > 0; --i)
+            int index1 = j * tga_width * tga_comp;
+            int index2 = (tga_height - 1 - j) * tga_width * tga_comp;
+            for (i = tga_width * tga_comp; i > 0; --i)
             {
                unsigned char temp = tga_data[index1];
                tga_data[index1] = tga_data[index2];
