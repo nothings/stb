@@ -3275,7 +3275,7 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
    tga_data = (unsigned char*)malloc( tga_width * tga_height * req_comp );
    if (!tga_data) return stbi__errpuc("outofmem", "Out of memory");
 
-   //   stbi__skip to the data's starting position (offset usually = 0)
+   // skip to the data's starting position (offset usually = 0)
    stbi__skip(s, tga_offset );
 
    if ( !tga_indexed && !tga_is_RLE) {
@@ -3288,7 +3288,7 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
       //   do I need to load a palette?
       if ( tga_indexed)
       {
-         //   any data to stbi__skip? (offset usually = 0)
+         //   any data to skip? (offset usually = 0)
          stbi__skip(s, tga_palette_start );
          //   load the palette
          tga_palette = (unsigned char*)malloc( tga_palette_len * tga_palette_bits / 8 );
@@ -3500,7 +3500,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
       // Endloop
 
       // The RLE-compressed data is preceeded by a 2-byte data count for each row in the data,
-      // which we're going to just stbi__skip.
+      // which we're going to just skip.
       stbi__skip(s, h * channelCount * 2 );
 
       // Read the RLE data by channel.
