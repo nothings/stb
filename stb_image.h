@@ -4541,6 +4541,10 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      1.39 (2014-06-15)
+             fix to TGA optimization when req_comp != number of components in TGA;
+             fix to GIF loading because BMP wasn't rewinding (whoops, no GIFs in my test suite)
+             add support for BMP version 5 (more ignored fields)
       1.38 (2014-06-06)
              suppress MSVC warnings on integer casts truncating values
              fix accidental rename of 'skip' field of I/O
