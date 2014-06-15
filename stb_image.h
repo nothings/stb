@@ -2908,7 +2908,7 @@ static int stbi__bmp_test(stbi__context *s)
    stbi__get16le(s); // discard reserved
    stbi__get32le(s); // discard data offset
    sz = stbi__get32le(s);
-   r = (sz == 12 || sz == 40 || sz == 56 || sz == 108);
+   r = (sz == 12 || sz == 40 || sz == 56 || sz == 108 || sz == 124);
    stbi__rewind(s);
    return r;
 }
@@ -2967,7 +2967,7 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
    stbi__get16le(s); // discard reserved
    offset = stbi__get32le(s);
    hsz = stbi__get32le(s);
-   if (hsz != 12 && hsz != 40 && hsz != 56 && hsz != 108) return stbi__errpuc("unknown BMP", "BMP type not supported: unknown");
+   if (hsz != 12 && hsz != 40 && hsz != 56 && hsz != 108 && hsz != 124) return stbi__errpuc("unknown BMP", "BMP type not supported: unknown");
    if (hsz == 12) {
       s->img_x = stbi__get16le(s);
       s->img_y = stbi__get16le(s);
@@ -3026,7 +3026,7 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
                return stbi__errpuc("bad BMP", "bad BMP");
          }
       } else {
-         assert(hsz == 108);
+         assert(hsz == 108 || hsz == 124);
          mr = stbi__get32le(s);
          mg = stbi__get32le(s);
          mb = stbi__get32le(s);
@@ -3034,6 +3034,12 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
          stbi__get32le(s); // discard color space
          for (i=0; i < 12; ++i)
             stbi__get32le(s); // discard color space parameters
+         if (hsz == 124) {
+            stbi__get32le(s); // discard rendering intent
+            stbi__get32le(s); // discard offset of profile data
+            stbi__get32le(s); // discard size of profile data
+            stbi__get32le(s); // discard reserved
+         }
       }
       if (bpp < 16)
          psize = (offset - 14 - hsz) >> 2;
@@ -4363,7 +4369,7 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
    }
    stbi__skip(s,12);
    hsz = stbi__get32le(s);
-   if (hsz != 12 && hsz != 40 && hsz != 56 && hsz != 108) {
+   if (hsz != 12 && hsz != 40 && hsz != 56 && hsz != 108 && hsz != 124) {
        stbi__rewind( s );
        return 0;
    }
