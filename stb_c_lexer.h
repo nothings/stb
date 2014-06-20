@@ -1,4 +1,4 @@
-// stb_c_lexer.h - v0.05 - public domain Sean Barrett 2013
+// stb_c_lexer.h - v0.06 - public domain Sean Barrett 2013
 // lexer for making little C-like languages with recursive-descent parsers
 //
 // This file provides both the interface and the implementation.
@@ -10,16 +10,13 @@
 // suffixes on integer constants are not handled (you can override this).
 //
 // History:
-//     0.05
-//        refixed get_location because github version had lost the fix
-//     0.04
-//        fix octal parsing bug
-//     0.03
-//        added STB_C_LEX_DISCARD_PREPROCESSOR option
-//        refactor API to simplify (only one struct instead of two)
-//        change literal enum names to have 'lit' at the end
-//     0.02
-//        first public release
+//     0.06 fix missing next character after ending quote mark (Andreas Fredriksson)
+//     0.05 refixed get_location because github version had lost the fix
+//     0.04 fix octal parsing bug
+//     0.03 added STB_C_LEX_DISCARD_PREPROCESSOR option
+//          refactor API to simplify (only one struct instead of two)
+//          change literal enum names to have 'lit' at the end
+//     0.02 first public release
 //
 // Status:
 //     - haven't tested compiling as C++
@@ -159,7 +156,7 @@ extern void stb_c_lexer_get_location(const stb_lexer *lexer, const char *where, 
 #ifdef STB_C_LEXER_IMPLEMENTATION
 
    #if defined(Y) || defined(N)
-   #error "Can only use stb_c_lex in contexts where the preprocessor symbols 'Y' and 'N' are not defined"
+   #error "Can only use stb_c_lexer in contexts where the preprocessor symbols 'Y' and 'N' are not defined"
    #endif
 
 
@@ -441,7 +438,7 @@ static int stb__clex_parse_string(stb_lexer *lexer, char *p, int type)
    *out = 0;
    lexer->string = lexer->string_storage;
    lexer->string_len = out - lexer->string_storage;
-   return stb__clex_token(lexer, type, start, p+1);
+   return stb__clex_token(lexer, type, start, p);
 }
 
 int stb_c_lexer_get_token(stb_lexer *lexer)
@@ -781,9 +778,14 @@ multiline comments */
 /*/ comment /*/
 /**/ extern /**/
 
+void dummy(void)
+{
+   printf("test",1); // https://github.com/nothings/stb/issues/13
+}
+
 int main(int argc, char **argv)
 {
-   FILE *f = fopen("stb_c_lexer.h", "rb");
+   FILE *f = fopen("stb_c_lexer.h","rb");
    char *text = (char *) malloc(1 << 20);
    int len = f ? fread(text, 1, 1<<20, f) : -1;
    stb_lexer lex;
