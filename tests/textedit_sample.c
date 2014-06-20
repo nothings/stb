@@ -48,7 +48,8 @@ int insert_chars(STB_TEXTEDIT_STRING *str, int pos, STB_TEXTEDIT_CHARTYPE *newte
 
 // define all the #defines needed 
 
-#define KEYDOWN_BIT     0x80000000
+#define KEYDOWN_BIT                    0x80000000
+
 #define STB_TEXTEDIT_STRINGLEN(tc)     ((tc)->stringlen)
 #define STB_TEXTEDIT_LAYOUTROW         layout_func
 #define STB_TEXTEDIT_GETWIDTH(tc,n,i)  (1) // quick hack for monospaced

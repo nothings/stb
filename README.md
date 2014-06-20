@@ -10,7 +10,7 @@ library    | lastest version | category | description
 **stb_truetype.h** | 0.8 | graphics | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | 0.94 | graphics | image writing to disk: PNG, TGA, BMP
 **stretchy_buffer.h** | 1.01 | utility | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
-**stb_textedit.h** | 1.2 | UI | guts of a text editor for games etc implementing them from scratch
+**stb_textedit.h** | 1.3 | UI | guts of a text editor for games etc implementing them from scratch
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h** | 0.2 | 3D&nbsp;graphics | revised Perlin noise (3D input, 1D output)
 **stb_c_lexer.h** | 0.04 | parsing | simplify writing parsers for C-like languages
