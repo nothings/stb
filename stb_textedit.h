@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.2  - public domain - Sean Barrett
+// stb_textedit.h - v1.3  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -30,6 +30,7 @@
 //
 // VERSION HISTORY
 //
+//   1.3  (2013-06-19) fix mouse clicking to round to nearest char boundary
 //   1.2  (2013-05-27) fix some RAD types that had crept into the new code
 //   1.1  (2013-12-15) move-by-word (requires STB_TEXTEDIT_IS_SPACE )
 //   1.0  (2012-07-26) improve documentation, initial public release
@@ -40,6 +41,7 @@
 // ADDITIONAL CONTRIBUTORS
 //
 //   Ulf Winklemann: move-by-word in 1.1
+//   Scott Graham: mouse selectiom bugfix in 1.3
 //
 // USAGE
 //
@@ -105,8 +107,8 @@
 //    STB_TEXTEDIT_STRINGLEN(obj)       the length of the string (ideally O(1))
 //    STB_TEXTEDIT_LAYOUTROW(&r,obj,n)  returns the results of laying out a line of characters
 //                                        starting from character #n (see discussion below)
-//    STB_TEXTEDIT_GETWIDTH(obj,n,i)    returns the pixel delta from the xpos of the i-1'th
-//                                        character to the i'th char for a line of characters
+//    STB_TEXTEDIT_GETWIDTH(obj,n,i)    returns the pixel delta from the xpos of the i'th character
+//                                        to the xpos of the i+1'th char for a line of characters
 //                                        starting at character #n (i.e. accounts for kerning
 //                                        with previous char)
 //    STB_TEXTEDIT_KEYTOTEXT(k)         maps a keyboard input to an insertable character
@@ -400,8 +402,12 @@ static int stb_text_locate_coord(STB_TEXTEDIT_STRING *str, float x, float y)
       prev_x = r.x0;
       for (i=0; i < r.num_chars; ++i) {
          float w = STB_TEXTEDIT_GETWIDTH(str, k, i);
-         if (x < prev_x+w)
-            return k+i;
+         if (x < prev_x+w) {
+            if (x < prev_x+w/2)
+               return k+i;
+            else
+               return k+i+1;
+         }
          prev_x += w;
       }
       // shouldn't happen, but if it does, fall through to end-of-line case
