@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.0 - public domain
+// Ogg Vorbis audio decoder - v1.01 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Written by Sean Barrett in 2007, last updated in 2014
@@ -20,7 +20,7 @@
 //       files to around 6 hours (Ogg supports 64-bit)
 //
 // Bugfix/warning contributors:
-//    Terje Mathisen     Niklas Frykholm
+//    Terje Mathisen     Niklas Frykholm     Andy Hill
 //    Casey Muratori     John Bolton
 //    Laurent Gomila     Marc LeBlanc
 //    Bernhard Wodo      Evan Balster
@@ -30,6 +30,7 @@
 // list them all because I was lax about updating for a long time, sorry.)
 //
 // Partial history:
+//    1.01    - 2014/06/18 - fix stb_vorbis_get_samples_float (interleaved was correct)
 //    1.0     - 2014/05/26 - fix memory leaks; fix warnings; fix bugs in >2-channel;
 //                           (API change) report sample rate for decode-full-file funcs
 //    0.99996 -            - bracket #include <malloc.h> for macintosh compilation
@@ -5368,8 +5369,10 @@ int stb_vorbis_get_samples_float_interleaved(stb_vorbis *f, int channels, float 
       }
       n += k;
       f->channel_buffer_start += k;
-      if (n == len) break;
-      if (!stb_vorbis_get_frame_float(f, NULL, &outputs)) break;
+      if (n == len)
+         break;
+      if (!stb_vorbis_get_frame_float(f, NULL, &outputs))
+         break;
    }
    return n;
 }
@@ -5386,20 +5389,23 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
       if (n+k >= num_samples) k = num_samples - n;
       if (k) {
          for (i=0; i < z; ++i)
-            memcpy(buffer[i]+n, f->channel_buffers+f->channel_buffer_start, sizeof(float)*k);
+            memcpy(buffer[i]+n, f->channel_buffers[i]+f->channel_buffer_start, sizeof(float)*k);
          for (   ; i < channels; ++i)
             memset(buffer[i]+n, 0, sizeof(float) * k);
       }
       n += k;
       f->channel_buffer_start += k;
-      if (n == num_samples) break;
-      if (!stb_vorbis_get_frame_float(f, NULL, &outputs)) break;
+      if (n == num_samples)
+         break;
+      if (!stb_vorbis_get_frame_float(f, NULL, &outputs))
+         break;
    }
    return n;
 }
 #endif // STB_VORBIS_NO_PULLDATA_API
 
 /* Version history
+    1.01    - 2014/06/18 - fix stb_vorbis_get_samples_float
     1.0     - 2014/05/26 - fix memory leaks; fix warnings; fix bugs in multichannel
                            (API change) report sample rate for decode-full-file funcs
     0.99996 - bracket #include <malloc.h> for macintosh compilation by Laurent Gomila
