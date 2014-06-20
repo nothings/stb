@@ -3,6 +3,18 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
+Project: "c_lexer_test"=.\c_lexer_test\c_lexer_test.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "image_test"=.\image_test.dsp - Package Owner=<4>
 
 Package=<5>
@@ -43,6 +55,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name stretch_test
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name c_lexer_test
     End Project Dependency
 }}}
 
