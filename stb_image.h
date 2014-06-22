@@ -1,4 +1,4 @@
-/* stb_image - v1.39 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.40 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -26,6 +26,7 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.40 (2014-06-22) gcc warning
       1.39 (2014-06-15) TGA optimization fix, multiple BMP fixes
       1.38 (2014-06-06) suppress MSVC run-time warnings, fix accidental rename of 'skip'
       1.37 (2014-06-04) remove duplicate typedef
@@ -66,6 +67,7 @@
  isn't, let Sean know.                           Guillaume George
                                                  Jerry Jansson
                                                  Hayaki Saito
+                                                 Johan Duparc
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -4542,6 +4544,8 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      1.40 (2014-06-22)
+             fix gcc struct-initialization warning
       1.39 (2014-06-15)
              fix to TGA optimization when req_comp != number of components in TGA;
              fix to GIF loading because BMP wasn't rewinding (whoops, no GIFs in my test suite)

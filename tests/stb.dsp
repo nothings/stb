@@ -106,6 +106,10 @@ SOURCE=..\stb_dxt.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_image.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_image_write.h
 # End Source File
 # Begin Source File
