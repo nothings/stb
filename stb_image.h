@@ -1,4 +1,4 @@
-/* stb_image - v1.40 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.41 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -21,11 +21,12 @@
       HDR (radiance rgbE format)
       PIC (Softimage PIC)
 
-      - stbi__jpeg_huff_decode from memory or through FILE (define STBI_NO_STDIO to remove code)
-      - stbi__jpeg_huff_decode from arbitrary I/O callbacks
+      - decode from memory or through FILE (define STBI_NO_STDIO to remove code)
+      - decode from arbitrary I/O callbacks
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.41 (2014-06-25) fix search&replace that messed up comments/error messages
       1.40 (2014-06-22) gcc warning
       1.39 (2014-06-15) TGA optimization fix, multiple BMP fixes
       1.38 (2014-06-06) suppress MSVC run-time warnings, fix accidental rename of 'skip'
@@ -426,7 +427,7 @@ typedef struct
 
 static void stbi__refill_buffer(stbi__context *s);
 
-// initialize a memory-stbi__jpeg_huff_decode context
+// initialize a memory-decode context
 static void stbi__start_mem(stbi__context *s, stbi_uc const *buffer, int len)
 {
    s->io.read = NULL;
@@ -1083,7 +1084,7 @@ static void stbi__grow_buffer_unsafe(stbi__jpeg *j)
 // (1 << n) - 1
 static stbi__uint32 stbi__bmask[17]={0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535};
 
-// stbi__jpeg_huff_decode a jpeg huffman value from the bitstream
+// decode a jpeg huffman value from the bitstream
 stbi_inline static int stbi__jpeg_huff_decode(stbi__jpeg *j, stbi__huffman *h)
 {
    unsigned int temp;
@@ -1177,7 +1178,7 @@ static stbi_uc stbi__jpeg_dezigzag[64+15] =
    63, 63, 63, 63, 63, 63, 63
 };
 
-// stbi__jpeg_huff_decode one 64-entry block--
+// decode one 64-entry block--
 static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman *hdc, stbi__huffman *hac, int b)
 {
    int diff,dc,k;
@@ -1192,7 +1193,7 @@ static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman 
    j->img_comp[b].dc_pred = dc;
    data[0] = (short) dc;
 
-   // stbi__jpeg_huff_decode AC components, see JPEG spec
+   // decode AC components, see JPEG spec
    k = 1;
    do {
       int r,s;
@@ -1205,7 +1206,7 @@ static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman 
          k += 16;
       } else {
          k += r;
-         // stbi__jpeg_huff_decode into unzigzag'd location
+         // decode into unzigzag'd location
          data[stbi__jpeg_dezigzag[k++]] = (short) stbi__extend_receive(j,s);
       }
    } while (k < 64);
@@ -1571,7 +1572,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
 
    if (scan != SCAN_load) return 1;
 
-   if ((1 << 30) / s->img_x / s->img_n < s->img_y) return stbi__err("too large", "Image too large to stbi__jpeg_huff_decode");
+   if ((1 << 30) / s->img_x / s->img_n < s->img_y) return stbi__err("too large", "Image too large to decode");
 
    for (i=0; i < s->img_n; ++i) {
       if (z->img_comp[i].h > h_max) h_max = z->img_comp[i].h;
@@ -1590,7 +1591,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
       // number of effective pixels (stbi__err.g. for non-interleaved MCU)
       z->img_comp[i].x = (s->img_x * z->img_comp[i].h + h_max-1) / h_max;
       z->img_comp[i].y = (s->img_y * z->img_comp[i].v + v_max-1) / v_max;
-      // to simplify generation, we'll allocate enough memory to stbi__jpeg_huff_decode
+      // to simplify generation, we'll allocate enough memory to decode
       // the bogus oversized data from using interleaved MCUs and their
       // big blocks (stbi__err.g. a 16x16 iMCU on an image of width 33); we won't
       // discard the extra data until colorspace conversion
@@ -1963,7 +1964,7 @@ static int stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp)
    return stbi__jpeg_info_raw(&j, x, y, comp);
 }
 
-// public domain zlib stbi__jpeg_huff_decode    v0.2  Sean Barrett 2006-11-18
+// public domain zlib decode    v0.2  Sean Barrett 2006-11-18
 //    simple implementation
 //      - all input must be provided in an upfront buffer
 //      - all output is written to a single output buffer (can malloc/realloc)
@@ -2728,7 +2729,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             if (!s->img_x || !s->img_y) return stbi__err("0-pixel image","Corrupt PNG");
             if (!pal_img_n) {
                s->img_n = (color & 2 ? 3 : 1) + (color & 4 ? 1 : 0);
-               if ((1 << 30) / s->img_x / s->img_n < s->img_y) return stbi__err("too large", "Image too large to stbi__jpeg_huff_decode");
+               if ((1 << 30) / s->img_x / s->img_n < s->img_y) return stbi__err("too large", "Image too large to decode");
                if (scan == SCAN_header) return 1;
             } else {
                // if paletted, then pal_n is our final components, and
@@ -3054,7 +3055,7 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
          psize = (offset - 14 - hsz) >> 2;
    }
    s->img_n = ma ? 4 : 3;
-   if (req_comp && req_comp >= 3) // we can directly stbi__jpeg_huff_decode 3 or 4
+   if (req_comp && req_comp >= 3) // we can directly decode 3 or 4
       target = req_comp;
    else
       target = s->img_n; // if they want monochrome, we'll post-convert
@@ -3775,7 +3776,7 @@ static stbi_uc *stbi__pic_load(stbi__context *s,int *px,int *py,int *comp,int re
    x = stbi__get16be(s);
    y = stbi__get16be(s);
    if (stbi__at_eof(s))  return stbi__errpuc("bad file","file too short (pic header)");
-   if ((1 << 28) / x < y) return stbi__errpuc("too large", "Image too large to stbi__jpeg_huff_decode");
+   if ((1 << 28) / x < y) return stbi__errpuc("too large", "Image too large to decode");
 
    stbi__get32be(s); //skip `ratio'
    stbi__get16be(s); //skip `fields'
@@ -3902,7 +3903,7 @@ static void stbi__out_gif_code(stbi__gif *g, stbi__uint16 code)
 {
    stbi_uc *p, *c;
 
-   // recurse to stbi__jpeg_huff_decode the prefixes, since the linked-list is backwards,
+   // recurse to decode the prefixes, since the linked-list is backwards,
    // and working backwards through an interleaved image would be nasty
    if (g->codes[code].prefix >= 0)
       stbi__out_gif_code(g, g->codes[code].prefix);
@@ -4544,6 +4545,8 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      1.41 (2014-06-25)
+             fix search&replace from 1.36 that messed up comments/error messages
       1.40 (2014-06-22)
              fix gcc struct-initialization warning
       1.39 (2014-06-15)
