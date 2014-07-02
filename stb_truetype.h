@@ -881,6 +881,9 @@ int stbtt_InitFont(stbtt_fontinfo *info, const unsigned char *data2, int fontsta
                   break;
             }
             break;
+        case STBTT_PLATFORM_ID_UNICODE:
+            info->index_map = cmap + ttULONG(data+encoding_record+4);
+            break;
       }
    }
    if (info->index_map == 0)
