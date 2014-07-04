@@ -232,7 +232,7 @@ typedef struct
 STBHW_EXTERN void stbhw_get_template_size(stbhw_config *c, int *w, int *h);
 
 // generates a template image, assuming data is 3*w*h bytes long, RGB format
-STBHW_EXTERN void stbhw_make_template(stbhw_config *c, unsigned char *data, int w, int h);
+STBHW_EXTERN int stbhw_make_template(stbhw_config *c, unsigned char *data, int w, int h, int stride_in_bytes);
 
 #endif//INCLUDE_STB_HWANG_H
 
@@ -340,7 +340,9 @@ static signed char h_color[STB_HBWANG_MAX_Y+5][STB_HBWANG_MAX_X+6];
 static char *stbhw_error;
 STBHW_EXTERN char *stbhw_get_last_error(void)
 {
-   return stbhw_error;
+   char *temp = stbhw_error;
+   stbhw_error = 0;
+   return temp;
 }
 
 
@@ -470,7 +472,7 @@ STBHW_EXTERN void stbhw_get_template_size(stbhw_config *c, int *w, int *h)
    stbhw__get_template_info(c, w, h, NULL, NULL);
 }
 
-static int stbhw__process_image(stbhw__process *p)
+static int stbhw__process_template(stbhw__process *p)
 {
    int i,j,k,q, ypos;
    int size_x, size_y;
@@ -896,6 +898,8 @@ STBHW_EXTERN int stbhw_build_tileset_from_image(stbhw_tileset *ts, unsigned char
       return 0;
    if (c.short_side_len == 0)
       return 0;
+   if (c.num_color[0] > 32 || c.num_color[1] > 32 || c.num_color[2] > 32 || c.num_color[3] > 32)
+      return 0;
 
    stbhw__get_template_info(&c, NULL, NULL, &h_count, &v_count);
 
@@ -920,7 +924,7 @@ STBHW_EXTERN int stbhw_build_tileset_from_image(stbhw_tileset *ts, unsigned char
    p.h = h;
 
    // load all the tiles out of the image
-   return stbhw__process_image(&p);
+   return stbhw__process_template(&p);
 }
 
 STBHW_EXTERN void stbhw_free_tileset(stbhw_tileset *ts)
@@ -1158,126 +1162,49 @@ static void stbhw__corner_process_v_rect(stbhw__process *p, int xpos, int ypos,
 
 #endif // STB_HBWANG_IMPLEMENTATION
 
-#ifndef INCLUDE_STB_IMAGE_WRITE_H
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-#endif
-
-int corner_color_count[4] = { 2,2,2,2 };
-
-// whether each color for each type of corner should get the corner template
-int corner_type_color_template[4][4] =
+// generates a template image, assuming data is 3*w*h bytes long, RGB format
+STBHW_EXTERN int stbhw_make_template(stbhw_config *c, unsigned char *data, int w, int h, int stride_in_bytes)
 {
-   { 0,0,0,0 },
-   { 0,0,0,0 },
-   { 0,0,0,0 },
-   { 0,0,0,0 },
-};
-
-// number of duplicates with the exact same edge colors
-int num_variants_x = 1;
-int num_variants_y = 1;
-
-// total number of items in complete set:
-//
-// horizontal items:
-//   ec[1] * ec[2] * ec[3] * ec[0] * ec[1] * ec[2] * num_variants_x * num_variants_y
-//
-// vertical items:
-//   ec[0] * ce[1] * ce[3] * ce[0] * ec[2] * ec[3] * num_variants_x * num_variants_y
-
-// number of tiles along the short side
-int short_side = 9;
-
-int my_main(int argc, char **argv)
-{
-   stbhw_config c;
    stbhw__process p;
    int i;
 
-   if (argc != 2) {
-      fprintf(stderr, "Usage: gentemplate {filename}\n"); 
-      return 1;
+   p.data = data;
+   p.w = w;
+   p.h = h;
+   p.stride = stride_in_bytes;
+   p.ts = 0;
+   p.c = c;
+
+   if (c->is_corner) {
+      p.process_h_rect = stbhw__corner_process_h_rect;
+      p.process_v_rect = stbhw__corner_process_v_rect;
+   } else {
+      p.process_h_rect = stbhw__edge_process_h_rect;
+      p.process_v_rect = stbhw__edge_process_v_rect;
    }
-   p.data = NULL;
-   p.h = p.w = p.stride = 0;
-   p.process_h_rect = stbhw__corner_process_h_rect;
-   p.process_v_rect = stbhw__corner_process_v_rect;
-   //p.ts = 0;
-   p.c = & c;
 
-   c.is_corner = 1;
-   c.short_side_len = short_side;
-   c.num_vary_x = num_variants_x;
-   c.num_vary_y = num_variants_y;
-   memcpy(c.num_color, corner_color_count, sizeof(corner_color_count));
+   if (!stbhw__process_template(&p))
+      return 0;
 
-   stbhw__process_image(&p);
-
-   // write out binary information in first line of image
-   for (i=0; i < 4; ++i)
-      p.data[p.w*3-1-i] = c.num_color[i];
-   p.data[p.w*3-1-i] = num_variants_x;
-   p.data[p.w*3-2-i] = num_variants_y;
-   p.data[p.w*3-3-i] = short_side;
-   p.data[p.w*3-4-i] = 0xc0;
+   if (c->is_corner) {
+      // write out binary information in first line of image
+      for (i=0; i < 4; ++i)
+         data[w*3-1-i] = c->num_color[i];
+      data[w*3-1-i] = c->num_vary_x;
+      data[w*3-2-i] = c->num_vary_y;
+      data[w*3-3-i] = c->short_side_len;
+      data[w*3-4-i] = 0xc0;
+   } else {
+      for (i=0; i < 6; ++i)
+         data[w*3-1-i] = c->num_color[i];
+      data[w*3-1-i] = c->num_vary_x;
+      data[w*3-2-i] = c->num_vary_y;
+      data[w*3-3-i] = c->short_side_len;
+   }
 
    // make it more obvious it encodes actual data
    for (i=0; i < 9; ++i)
       p.data[p.w*3 - 1 - i] ^= i*55;
 
-   stbi_write_png(argv[1], p.w, p.h, 3, p.data, p.w*3);
-   return 0;
+   return 1;
 }
-
-
-/*
-// number of colors for each edge based on above diagram:
-int edge_colors[6] = { 1,1,1,1,1,1, };
-
-// number of duplicates with the exact same edge colors
-int num_variants_x = 4;
-int num_variants_y = 4;
-
-// total number of items in complete set:
-//
-// horizontal items:
-//   ec[0] * ec[1] * ec[2] * ec[3] * ec[4] * ec[2] * num_variants_x * num_variants_y
-//
-// vertical items:
-//   ec[0] * ce[1] * ce[5] * ce[3] * ec[4] * ec[5] * num_variants_x * num_variants_y
-
-// number of tiles along the short side
-int short_side = 12;
-
-int main(int argc, char **argv)
-{
-   int w,h,i;
-   unsigned char *data;
-
-   if (argc != 2) {
-      fprintf(stderr, "Usage: gentemplate {filename}\n"); 
-      return 1;
-   }
-
-   memcpy(ec, edge_colors, sizeof(edge_colors));
-   num_vx = num_variants_x;
-   num_vy = num_variants_y;
-
-   data = process_image(NULL, &w, &h, short_side);
-
-   // write out binary information in first line of image
-   for (i=0; i < 6; ++i)
-      data[w*3-1-i] = ec[i];
-   data[w*3-1-i] = num_variants_x;
-   data[w*3-2-i] = num_variants_y;
-   data[w*3-3-i] = short_side;
-
-   // make it more obvious it encodes actual data
-   for (i=0; i < 9; ++i)
-      data[w*3 - 1 - i] ^= i*55;
-
-   stbi_write_png(argv[1], w, h, 3, data, w*3);
-   return 0;
-}
-*/
