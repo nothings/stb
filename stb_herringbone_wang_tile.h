@@ -1,5 +1,5 @@
-/* stbhw-v0.5 - public domain - http://nothings.org/stb/stb_herringbone_wang_tile.h
-   Herringbone Wang Tile Generator - Sean Barrett 2014
+/* stbhw - v0.5 -  http://nothings.org/stb/stb_herringbone_wang_tile.h
+   Herringbone Wang Tile Generator - Sean Barrett 2014 - public domain
 
  This file is in the public domain. In case that declaration is ineffective,
  you are also granted a license to use and modify it without restriction.
@@ -173,7 +173,7 @@ STBHW_EXTERN void stbhw_free_tileset(stbhw_tileset *ts);
 // generate a map that is w * h pixels (3-bytes each)
 // returns non-zero on success, 0 on error
 // not thread-safe (uses a global data structure to avoid memory management)
-// weighting can be NULL, or it 
+// weighting should be NULL, as non-NULL weighting is currently untested
 STBHW_EXTERN int stbhw_generate_image(stbhw_tileset *ts, int **weighting,
                      unsigned char *pixels, int stride_in_bytes, int w, int h);
 
