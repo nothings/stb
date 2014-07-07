@@ -1,4 +1,4 @@
-/* stbhw - v0.5 -  http://nothings.org/stb/stb_herringbone_wang_tile.h
+/* stbhw - v0.5 -  http://nothings.org/gamedev/herringbone
    Herringbone Wang Tile Generator - Sean Barrett 2014 - public domain
 
  This file is in the public domain. In case that declaration is ineffective,
