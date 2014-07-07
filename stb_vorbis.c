@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.01 - public domain
+// Ogg Vorbis audio decoder - v1.02 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Written by Sean Barrett in 2007, last updated in 2014
@@ -21,7 +21,7 @@
 //
 // Bugfix/warning contributors:
 //    Terje Mathisen     Niklas Frykholm     Andy Hill
-//    Casey Muratori     John Bolton
+//    Casey Muratori     John Bolton         Gargaj
 //    Laurent Gomila     Marc LeBlanc
 //    Bernhard Wodo      Evan Balster
 //    Tom Beaumont       Ingo Leitgeb
@@ -30,6 +30,7 @@
 // list them all because I was lax about updating for a long time, sorry.)
 //
 // Partial history:
+//    1.02    - 2014/07/07 - declare qsort comparison as explicitly _cdecl
 //    1.01    - 2014/06/18 - fix stb_vorbis_get_samples_float (interleaved was correct)
 //    1.0     - 2014/05/26 - fix memory leaks; fix warnings; fix bugs in >2-channel;
 //                           (API change) report sample rate for decode-full-file funcs

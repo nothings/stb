@@ -1,4 +1,4 @@
-// stb_truetype.h - v0.8 - public domain
+// stb_truetype.h - v0.8b - public domain
 // authored from 2009-2013 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -31,9 +31,11 @@
 //       David Given
 //       Ivan-Assen Ivanov
 //       Anthony Pesch
+//       Johan Duparc
 //
 // VERSION HISTORY
 //
+//   0.8b (2014-07-07) fix a warning
 //   0.8  (2014-05-25) fix a few more warnings
 //   0.7  (2013-09-25) bugfix: subpixel glyph bug fixed in 0.5 had come back
 //   0.6c (2012-07-24) improve documentation
