@@ -18,26 +18,26 @@ int main(int argc, char **argv)
       fprintf(stderr, "Usage: herringbone_map {inputfile} {output-width} {output-height} {outputfile}\n");
       return 1;
    } else {
-	   char *filename = argv[1];
+      char *filename = argv[1];
       int out_w = atoi(argv[2]);
-	   int out_h = atoi(argv[3]);
+      int out_h = atoi(argv[3]);
       char *outfile = argv[4];
 
-	   unsigned char *pixels, *out_pixels;
-	   stbhw_tileset ts;
-	   int w,h;
+      unsigned char *pixels, *out_pixels;
+      stbhw_tileset ts;
+      int w,h;
 
-	   pixels = stbi_load(filename, &w, &h, 0, 3);
+      pixels = stbi_load(filename, &w, &h, 0, 3);
       if (pixels == 0) {
          fprintf(stderr, "Could open input file '%s'\n", filename);
       }
 
-	   if (!stbhw_build_tileset_from_image(&ts, pixels, w*3, w, h)) {
-		   fprintf(stderr, "Error: %s\n", stbhw_get_last_error());
-		   return 1;
-	   }
+      if (!stbhw_build_tileset_from_image(&ts, pixels, w*3, w, h)) {
+         fprintf(stderr, "Error: %s\n", stbhw_get_last_error());
+         return 1;
+      }
 
-	   free(pixels);
+      free(pixels);
 
       #ifdef DEBUG_OUTPUT
       {
@@ -66,17 +66,17 @@ int main(int argc, char **argv)
       }
       #endif
 
-	   out_pixels = malloc(out_w * out_h * 3);
+      out_pixels = malloc(out_w * out_h * 3);
 
-	   if (!stbhw_generate_image(&ts, NULL, out_pixels, out_w*3, out_w, out_h)) {
-		   fprintf(stderr, "Error: %s\n", stbhw_get_last_error());
-		   return 1;
-	   }
+      if (!stbhw_generate_image(&ts, NULL, out_pixels, out_w*3, out_w, out_h)) {
+         fprintf(stderr, "Error: %s\n", stbhw_get_last_error());
+         return 1;
+      }
 
-	   stbi_write_png(argv[4], out_w, out_h, 3, out_pixels, out_w*3);
-	   free(out_pixels);
+      stbi_write_png(argv[4], out_w, out_h, 3, out_pixels, out_w*3);
+      free(out_pixels);
 
-	   stbhw_free_tileset(&ts);
-	   return 0;
+      stbhw_free_tileset(&ts);
+      return 0;
    }
 }
