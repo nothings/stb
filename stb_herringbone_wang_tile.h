@@ -1,4 +1,4 @@
-/* stbhw-v0.01 - public domain - http://nothings.org/stb/stb_herringbone_wang_tile.h
+/* stbhw-v0.5 - public domain - http://nothings.org/stb/stb_herringbone_wang_tile.h
    Herringbone Wang Tile Generator - Sean Barrett 2014
 
  This file is in the public domain. In case that declaration is ineffective,
@@ -442,11 +442,10 @@ static void stbhw__get_template_info(stbhw_config *c, int *w, int *h, int *h_cou
       size_x = horz_x > vert_x ? horz_x : vert_x;
       size_y = 2 + horz_y + 2 + vert_y;
    } else {
-      // @TODO: non-corner-tile
       int horz_w = c->num_color[0] * c->num_color[1] * c->num_color[2] * c->num_vary_x;
       int horz_h = c->num_color[3] * c->num_color[4] * c->num_color[2] * c->num_vary_y;
 
-      int vert_w = c->num_color[0] * c->num_color[5] * c->num_color[2] * c->num_vary_y;
+      int vert_w = c->num_color[0] * c->num_color[5] * c->num_color[1] * c->num_vary_y;
       int vert_h = c->num_color[3] * c->num_color[4] * c->num_color[5] * c->num_vary_x;
 
       int horz_x = horz_w * (2*c->short_side_len + 3);
@@ -484,6 +483,9 @@ static int stbhw__process_template(stbhw__process *p)
       stbhw_error = "image too small for configuration";
       return 0;
    }
+
+   for (j=0; j < p->h; ++j)
+      memset(p->data + j*p->stride, 255, 3*p->w);
 
    if (c->is_corner) {
       ypos = 2;
@@ -922,6 +924,7 @@ STBHW_EXTERN int stbhw_build_tileset_from_image(stbhw_tileset *ts, unsigned char
    p.process_v_rect = stbhw__parse_v_rect;
    p.w = w;
    p.h = h;
+   p.c = &c;
 
    // load all the tiles out of the image
    return stbhw__process_template(&p);
@@ -1160,8 +1163,6 @@ static void stbhw__corner_process_v_rect(stbhw__process *p, int xpos, int ypos,
    stbhw__set_pixel(p->data, p->stride, xpos+len+1, ypos+2*len+1, stbhw__corner_colors[3][f]);
 }
 
-#endif // STB_HBWANG_IMPLEMENTATION
-
 // generates a template image, assuming data is 3*w*h bytes long, RGB format
 STBHW_EXTERN int stbhw_make_template(stbhw_config *c, unsigned char *data, int w, int h, int stride_in_bytes)
 {
@@ -1208,3 +1209,4 @@ STBHW_EXTERN int stbhw_make_template(stbhw_config *c, unsigned char *data, int w
 
    return 1;
 }
+#endif // STB_HBWANG_IMPLEMENTATION

@@ -27,6 +27,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "herringbone_map"=.\herringbone_map.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "image_test"=.\image_test.dsp - Package Owner=<4>
 
 Package=<5>
