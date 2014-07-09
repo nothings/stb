@@ -553,6 +553,7 @@ static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp);
 
 static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
+   s->img_n = 0;
    if (stbi__jpeg_test(s)) return stbi__jpeg_load(s,x,y,comp,req_comp);
    if (stbi__png_test(s))  return stbi__png_load(s,x,y,comp,req_comp);
    if (stbi__bmp_test(s))  return stbi__bmp_load(s,x,y,comp,req_comp);
@@ -1807,8 +1808,9 @@ static void stbi__cleanup_jpeg(stbi__jpeg *j)
 {
    int i;
    for (i=0; i < j->s->img_n; ++i) {
-      if (j->img_comp[i].data) {
+      if (j->img_comp[i].raw_data) {
          free(j->img_comp[i].raw_data);
+         j->img_comp[i].raw_data = NULL;
          j->img_comp[i].data = NULL;
       }
       if (j->img_comp[i].linebuf) {
