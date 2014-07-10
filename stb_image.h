@@ -189,12 +189,6 @@
 
 
 #ifndef STBI_NO_STDIO
-
-#if defined(_MSC_VER) && _MSC_VER >= 1400
-#define _CRT_SECURE_NO_WARNINGS // suppress warnings about fopen()
-#pragma warning(push)
-#pragma warning(disable:4996)   // suppress even more warnings about fopen()
-#endif
 #include <stdio.h>
 #endif // STBI_NO_STDIO
 
@@ -553,7 +547,6 @@ static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp);
 
 static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
-   s->img_n = 0;
    if (stbi__jpeg_test(s)) return stbi__jpeg_load(s,x,y,comp,req_comp);
    if (stbi__png_test(s))  return stbi__png_load(s,x,y,comp,req_comp);
    if (stbi__bmp_test(s))  return stbi__bmp_load(s,x,y,comp,req_comp);
@@ -575,9 +568,23 @@ static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp
 }
 
 #ifndef STBI_NO_STDIO
+
+FILE *stbi__fopen(char const *filename, char const *mode)
+{
+   FILE *f;
+#if _MSC_VER >= 1400
+   if (0 != fopen_s(&f, filename, "rb"))
+      f=0;
+#else
+   f = fopen(filename, "rb");
+#endif
+   return f;
+}
+
+
 STBIDEF unsigned char *stbi_load(char const *filename, int *x, int *y, int *comp, int req_comp)
 {
-   FILE *f = fopen(filename, "rb");
+   FILE *f = stbi__fopen(filename, "rb");
    unsigned char *result;
    if (!f) return stbi__errpuc("can't fopen", "Unable to open file");
    result = stbi_load_from_file(f,x,y,comp,req_comp);
@@ -645,8 +652,8 @@ float *stbi_loadf_from_callbacks(stbi_io_callbacks const *clbk, void *user, int 
 #ifndef STBI_NO_STDIO
 float *stbi_loadf(char const *filename, int *x, int *y, int *comp, int req_comp)
 {
-   FILE *f = fopen(filename, "rb");
    float *result;
+   FILE *f = stbi__fopen(filename, "rb");
    if (!f) return stbi__errpf("can't fopen", "Unable to open file");
    result = stbi_loadf_from_file(f,x,y,comp,req_comp);
    fclose(f);
@@ -683,7 +690,7 @@ int stbi_is_hdr_from_memory(stbi_uc const *buffer, int len)
 #ifndef STBI_NO_STDIO
 STBIDEF int      stbi_is_hdr          (char const *filename)
 {
-   FILE *f = fopen(filename, "rb");
+   FILE *f = stbi__fopen(filename, "rb");
    int result=0;
    if (f) {
       result = stbi_is_hdr_from_file(f);
@@ -1624,6 +1631,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
 static int decode_jpeg_header(stbi__jpeg *z, int scan)
 {
    int m;
+   z->s->img_n = 0;
    z->marker = STBI__MARKER_none; // initialize cached marker to empty
    m = stbi__get_marker(z);
    if (!stbi__SOI(m)) return stbi__err("no stbi__SOI","Corrupt JPEG");
@@ -1835,7 +1843,6 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
    int n, decode_n;
    // validate req_comp
    if (req_comp < 0 || req_comp > 4) return stbi__errpuc("bad req_comp", "Internal error");
-   z->s->img_n = 0;
 
    // load a jpeg image from whichever source
    if (!decode_jpeg_image(z)) { stbi__cleanup_jpeg(z); return NULL; }
@@ -4504,7 +4511,7 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 #ifndef STBI_NO_STDIO
 STBIDEF int stbi_info(char const *filename, int *x, int *y, int *comp)
 {
-    FILE *f = fopen(filename, "rb");
+    FILE *f = stbi__fopen(filename, "rb");
     int result;
     if (!f) return stbi__err("can't fopen", "Unable to open file");
     result = stbi_info_from_file(f, x, y, comp);
