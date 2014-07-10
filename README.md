@@ -12,6 +12,7 @@ library    | lastest version | category | description
 **stretchy_buffer.h** | 1.01 | utility | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **stb_textedit.h** | 1.3 | UI | guts of a text editor for games etc implementing them from scratch
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | Fabian "ryg" Giesen's real-time DXT compressor
+**stb_herringbone_wang_tile.h** | 0.5 | games | herringbone Wang tile map generator
 **stb_perlin.h** | 0.2 | 3D&nbsp;graphics | revised Perlin noise (3D input, 1D output)
 **stb_c_lexer.h** | 0.06 | parsing | simplify writing parsers for C-like languages
 **stb_divide.h** | 0.91 | math | more useful 32-bit modulus e.g. "euclidean divide"
