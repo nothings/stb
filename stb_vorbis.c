@@ -30,7 +30,7 @@
 // list them all because I was lax about updating for a long time, sorry.)
 //
 // Partial history:
-//    1.02    - 2014/07/07 - declare qsort comparison as explicitly _cdecl
+//    1.02    - 2014/07/09 - declare qsort comparison as explicitly _cdecl
 //    1.01    - 2014/06/18 - fix stb_vorbis_get_samples_float (interleaved was correct)
 //    1.0     - 2014/05/26 - fix memory leaks; fix warnings; fix bugs in >2-channel;
 //                           (API change) report sample rate for decode-full-file funcs
@@ -1085,11 +1085,13 @@ static void compute_accelerated_huffman(Codebook *c)
    }
 }
 
-static int
-#ifdef _MSC_VER // might also be needed on non-msvc Windows builds, so should be #ifdef WINDOWS?
-__cdecl
+#ifdef _MSC_VER
+#define STBV_CDECL __cdecl
+#else
+#define STBV_CDECL
 #endif
-uint32_compare(const void *p, const void *q)
+
+static int STBV_CDECL uint32_compare(const void *p, const void *q)
 {
    uint32 x = * (uint32 *) p;
    uint32 y = * (uint32 *) q;
@@ -1245,7 +1247,7 @@ typedef struct
    uint16 x,y;
 } Point;
 
-int __cdecl point_compare(const void *p, const void *q)
+static int STBV_CDECL point_compare(const void *p, const void *q)
 {
    Point *a = (Point *) p;
    Point *b = (Point *) q;
