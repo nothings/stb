@@ -1085,7 +1085,11 @@ static void compute_accelerated_huffman(Codebook *c)
    }
 }
 
-static int __cdecl uint32_compare(const void *p, const void *q)
+static int
+#ifdef _MSC_VER // might also be needed on non-msvc Windows builds, so should be #ifdef WINDOWS?
+__cdecl
+#endif
+uint32_compare(const void *p, const void *q)
 {
    uint32 x = * (uint32 *) p;
    uint32 y = * (uint32 *) q;
