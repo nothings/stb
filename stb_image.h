@@ -1631,7 +1631,6 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
 static int decode_jpeg_header(stbi__jpeg *z, int scan)
 {
    int m;
-   z->s->img_n = 0;
    z->marker = STBI__MARKER_none; // initialize cached marker to empty
    m = stbi__get_marker(z);
    if (!stbi__SOI(m)) return stbi__err("no stbi__SOI","Corrupt JPEG");
@@ -1841,6 +1840,8 @@ typedef struct
 static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp, int req_comp)
 {
    int n, decode_n;
+   z->s->img_n = 0; // make stbi__cleanup_jpeg safe
+
    // validate req_comp
    if (req_comp < 0 || req_comp > 4) return stbi__errpuc("bad req_comp", "Internal error");
 
