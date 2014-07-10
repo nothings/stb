@@ -354,7 +354,7 @@ STBIDEF void stbi_install_YCbCr_to_RGB(stbi_YCbCr_to_RGB_run func);
 #include <stdio.h>
 #endif
 #include <stdlib.h>
-#include <memory.h>
+#include <string.h>
 #include <assert.h>
 #include <stdarg.h>
 #include <stddef.h> // ptrdiff_t on osx
@@ -4119,7 +4119,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
          }
 
          case 0x3B: // gif stream termination code
-            return (stbi_uc *) 1;
+            return (stbi_uc *) s; // using '1' causes warning on some compilers
 
          default:
             return stbi__errpuc("unknown code", "Corrupt GIF");
@@ -4134,7 +4134,7 @@ static stbi_uc *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int 
    memset(&g, 0, sizeof(g));
 
    u = stbi__gif_load_next(s, &g, comp, req_comp);
-   if (u == (void *) 1) u = 0;  // end of animated gif marker
+   if (u == (stbi_uc *) s) u = 0;  // end of animated gif marker
    if (u) {
       *x = g.w;
       *y = g.h;
