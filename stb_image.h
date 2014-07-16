@@ -1,4 +1,4 @@
-/* stb_image - v1.42 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.43 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -28,6 +28,7 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.43 (2014-07-15) fix MSVC-only bug in 1.42
       1.42 (2014-07-09) no _CRT_SECURE_NO_WARNINGS; error-path fixes; STBI_ASSERT
       1.41 (2014-06-25) fix search&replace that messed up comments/error messages
       1.40 (2014-06-22) gcc warning
@@ -4552,13 +4553,10 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 #endif // STB_IMAGE_IMPLEMENTATION
 
-#if !defined(STBI_NO_STDIO) && defined(_MSC_VER) && _MSC_VER >= 1400
-#pragma warning(pop)
-#endif
-
-
 /*
    revision history:
+      1.43 (2014-07-15)
+             fix MSVC-only compiler problem in code changed in 1.42
       1.42 (2014-07-09)
              don't define _CRT_SECURE_NO_WARNINGS (affects user code)
              fixes to stbi__cleanup_jpeg path
