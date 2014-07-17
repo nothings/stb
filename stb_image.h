@@ -577,7 +577,7 @@ static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp
 FILE *stbi__fopen(char const *filename, char const *mode)
 {
    FILE *f;
-#if _MSC_VER >= 1400
+#if defined(_MSC_VER) && _MSC_VER >= 1400
    if (0 != fopen_s(&f, filename, "rb"))
       f=0;
 #else
