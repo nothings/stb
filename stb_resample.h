@@ -18,13 +18,11 @@ Initial implementation by Jorge L Rodriguez
 #define STBR_INCLUDE_STB_RESAMPLE_H
 
 // Basic usage:
-//    unsigned char *data = stbr_resize(input_data, input_w, input_h, input_components, STBR_FILTER_NEAREST, output_data, output_w, output_h);
+//    result = stbr_resize(input_data, input_w, input_h, input_components, STBR_FILTER_NEAREST, output_data, output_w, output_h);
 //
 //    input_data is your supplied texels.
 //    output_data will be the resized texels. It should be of size output_w * output_h * input_components.
-//    Returned data == output_data, for convenience, or 0 in case of an error.
-//    
-//
+//    Returned result is 1 for success or 0 in case of an error.
 
 typedef enum
 {
@@ -49,7 +47,7 @@ extern "C" {
 	// PRIMARY API - resize an image
 	//
 
-	STBRDEF stbr_uc* stbr_resize(const stbr_uc* input_data, int input_w, int input_h, int input_components, stbr_filter filter, stbr_uc* output_data, int output_w, int output_h);
+	STBRDEF int stbr_resize(const stbr_uc* input_data, int input_w, int input_h, int input_components, stbr_filter filter, stbr_uc* output_data, int output_w, int output_h);
 
 
 #ifdef __cplusplus
@@ -156,7 +154,7 @@ static void stbr__filter_nearest_n(const stbr_uc* input_data, stbr_uc* output_da
 
 typedef void (stbr__filter_fn)(const stbr_uc* input_data, stbr_uc* output_data, size_t input_texel_index, size_t output_texel_index, size_t n);
 
-STBRDEF stbr_uc* stbr_resize(const stbr_uc* input_data, int input_w, int input_h, int input_components, stbr_filter filter, stbr_uc* output_data, int output_w, int output_h)
+STBRDEF int stbr_resize(const stbr_uc* input_data, int input_w, int input_h, int input_components, stbr_filter filter, stbr_uc* output_data, int output_w, int output_h)
 {
 	int x, y;
 	int width_stride_input = input_components * input_w;
@@ -203,7 +201,7 @@ STBRDEF stbr_uc* stbr_resize(const stbr_uc* input_data, int input_w, int input_h
 	STBR_ASSERT(memcmp(overwrite_contents_pre, &output_data[output_w * output_h * input_components], OVERWRITE_ARRAY_SIZE) == 0);
 #endif
 
-	return output_data;
+	return 1;
 }
 
 
