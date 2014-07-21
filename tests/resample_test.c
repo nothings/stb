@@ -39,7 +39,7 @@ int main(int argc, char** argv)
 
 	output_data = malloc(out_w * out_h * n);
 
-	stbr_resize(input_data, w, h, n, STBR_FILTER_NEAREST, output_data, out_w, out_h);
+	stbr_resize(input_data, w, h, n, output_data, out_w, out_h, STBR_FILTER_NEAREST, STBR_EDGE_CLAMP);
 
 	stbi_write_png("output.png", out_w, out_h, n, output_data, out_w * n);
 
