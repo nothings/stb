@@ -41,7 +41,7 @@ int main(int argc, char** argv)
 	output_data = malloc(out_stride * out_h);
 
 	// Cut out the outside 64 pixels all around to test the stride.
-	stbr_resize(input_data + w*64*n + 64*n, w - 128, h - 128, n, w*n, output_data, out_w, out_h, out_stride, STBR_FILTER_NEAREST, STBR_EDGE_CLAMP);
+	stbr_resize(input_data + w*64*n + 64*n, w - 128, h - 128, n, w*n, output_data, out_w, out_h, out_stride, STBR_FILTER_NEAREST, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
 
 	stbi_write_png("output.png", out_w, out_h, n, output_data, out_stride);
 
