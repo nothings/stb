@@ -60,3 +60,69 @@ horizontal axis.
 
 
 
+Function prototypes:
+
+the highest-level one could be:
+
+   stb_resample_8bit(uint8_t       *dest, int dest_width, int dest_height,
+                     uint8_t const *src , int  src_width, int  src_height,
+                     int channels,
+                     stbr_filter filter);
+
+the lowest-level one could be:
+
+   stb_resample_arbitrary(void       *dest, stbr_type dest_type, int dest_width, int dest_height, int dest_stride_in_bytes,
+                          void const *src , stbr_type  src_type, int  src_width, int  src_height, int src_stride_in_bytes,
+                          int channels,
+                          int nonpremul_alpha_channel_index,
+                          stbr_wrapmode wrap,                     // clamp, wrap, mirror
+                          stbr_filter filter,
+                          float s0, float t0, float s1, float t1, // range of source to use, 0..1 in GPU texture-coordinate style
+                          void  *tempmem, size_t tempmem_size_in_bytes);
+
+And there would be a bunch of convenience functions at in-between levels.
+
+
+Some notes:
+
+   Intermediate-level functions should be provided for each source type & same dest type
+   so that the code is typesafe; only when people fall back to stb_resample_arbitrary should
+   they be at risk for type unsafety. (One way to deal with the explosion of functions of
+   every possible type would be to define one function for each input type, and accept three
+   separate output pointers, one for each type, only one of which can be non-NULL.)
+
+   nonpremul_alpha_channel_index:
+       if this is negative, no channels are processed specially
+       if this is non-negative, then it's the index of the alpha channel,
+           and the image should be treated as non-premultiplied alpha that
+           needs to be resampled accounting for this (weight the sampling
+           by the alpha channel, i.e. premultiply, filter, unpremultiply).
+           this mechanism only allows one alpha channel and ALL channels 
+           are scaled by it; an alternative would be to find some way to
+           pass in which channels serve as alpha channels for which other
+           channels, but eh.
+
+   s0,t0,s1,t1:
+       this allows fine subpixel-positioning and subpixel-resizing in an explicit way without
+           things having to be exact pixel multiples. it allows people to pseudo-stream
+           images by computing "tiles" of images a bit at a time without forcing those
+           tiles to quantize their source data.
+
+   tempmem, tempmem_size
+       all functions will needed tempmem, but they can allocate a fixed tempmem buffer
+           on the stack. providing an API that allows overriding the amount of tempmem
+           available allows people to process arbitrarily large images. the return
+           value for the function could be 0 on success or non-0 being the size of
+           tempmem needed.
+   
+
+
+
+Reference:
+
+Cubic sampling function for seperable cubic:
+   f(x) = (a+2)*x^3 - (a+3)*x^2 + 1       for 0 <= x <= 1
+   f(x) = a*x^3 - 5*a*x^2 + 8*a*x - 4*a   for 1 < x <= 2
+   f(x) = 0                               otherwise
+   "a" is configurable, try -1/2 (from http://pixinsight.com/forum/index.php?topic=556.0 )
+
