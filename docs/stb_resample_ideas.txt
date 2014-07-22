@@ -71,8 +71,8 @@ the highest-level one could be:
 
 the lowest-level one could be:
 
-   stb_resample_arbitrary(void       *dest, stbr_type dest_type, int dest_width, int dest_height, int dest_stride_in_bytes,
-                          void const *src , stbr_type  src_type, int  src_width, int  src_height, int src_stride_in_bytes,
+   stb_resample_arbitrary(void       *dst, stbr_type dst_type, int dst_width, int dst_height, int dst_stride_in_bytes,
+                          void const *src, stbr_type src_type, int src_width, int src_height, int src_stride_in_bytes,
                           int channels,
                           int nonpremul_alpha_channel_index,
                           stbr_wrapmode wrap,                     // clamp, wrap, mirror
@@ -80,16 +80,10 @@ the lowest-level one could be:
                           float s0, float t0, float s1, float t1, // range of source to use, 0..1 in GPU texture-coordinate style
                           void  *tempmem, size_t tempmem_size_in_bytes);
 
-And there would be a bunch of convenience functions at in-between levels.
+And there would be a bunch of convenience functions in-between those two levels.
 
 
 Some notes:
-
-   Intermediate-level functions should be provided for each source type & same dest type
-   so that the code is typesafe; only when people fall back to stb_resample_arbitrary should
-   they be at risk for type unsafety. (One way to deal with the explosion of functions of
-   every possible type would be to define one function for each input type, and accept three
-   separate output pointers, one for each type, only one of which can be non-NULL.)
 
    nonpremul_alpha_channel_index:
        if this is negative, no channels are processed specially
@@ -108,13 +102,36 @@ Some notes:
            images by computing "tiles" of images a bit at a time without forcing those
            tiles to quantize their source data.
 
-   tempmem, tempmem_size
+   tempmem, tempmem_size:
        all functions will needed tempmem, but they can allocate a fixed tempmem buffer
            on the stack. providing an API that allows overriding the amount of tempmem
            available allows people to process arbitrarily large images. the return
            value for the function could be 0 on success or non-0 being the size of
            tempmem needed.
    
+   src_stride, dest_stride:
+       the stride variables are signed to allow you to describe both traditional
+           top-to-bottom images (pass in a pointer to the top-left pixel and
+           a positive stride) and bottom-to-top images (pass in a pointer to
+           the bottom-left pixel and a negative stride)
+
+   ordering of src & dest:
+       put these in whatever order you like, i just chose one arbitrarily
+
+   width & height
+       these are ints not unsigned ints or size_ts because i personally forbid
+           unsigned variables for almost everything to avoid signed/unsigned comparison
+           issues, but this is a matter of personal taste and you can do differently
+
+   Intermediate-level functions should be provided for each source type & same dest type
+   so that the code is typesafe; only when people fall back to stb_resample_arbitrary should
+   they be at risk for type unsafety. (One way to deal avoid an explosion of functions of
+   every possible *combination* of types in a type-safe way would be to define one function
+   for each input type, and accept three separate output pointers, one for each type, only
+   one of which can be non-NULL. 9 functions isn't that bad, but if you want to have three
+   or four intermediate-level functions with fewer parameters, 9*4 gets silly. Could also
+   use the same trick for stb_resample_arbitrary, replacing it with three typesafe functions.)
+
 
 
 
