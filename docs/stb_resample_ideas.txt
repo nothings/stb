@@ -8,7 +8,7 @@ library back to C:
 
 2.
 
-@VinoBS Another option is to just port @richgel999's C++ library to C/stb: https://code.google.com/p/imageresampler/source/browse/#svn%2FtrunkConsider three cases just to suggest the spectrum
+Consider three cases just to suggest the spectrum
 of possiblities:
 
 a) linear upsample: each output pixel is a weighted sum
@@ -75,8 +75,24 @@ optimal is to do whichever axis is smaller first, but I don't
 think we have to care about doing that right.)
 
 
-Now, you probably want to avoid memory allocations (since you're passing
-in the target buffer already), so instead of using a scanline-width
+Now, you can either:
+
+    1. malloc the temp memory
+    2. alloca it
+    3. allocate a fixed amount on the stack
+    4. let the user pass it in
+
+I forbid #2 in stb libraries for portability.
+
+If you're not allocating the output image, but rather requiring
+the user to pass it in, it's probably worth trying to avoid #1
+because people always want to use stb libs without any memory
+allocations for various reason. (Note that most stb libs go
+crazy with memory allocations--you shouldn't use stb_image
+in a console game--but I've tried to avoid it more in newer
+libs.)
+
+The way #3 would work is instead of using a scanline-width
 temp buffer, use some fixed-width temp buffer that's W pixels,
 and scale the image in vertical stripes that are that wide.
 Suppose you make the temp buffers 256 wide; then an upsample
@@ -85,6 +101,9 @@ strips), but a downsample by 8 computes ~32-pixel-width
 strips (from a 256-pixel width strip). Note this limits
 the max down/upsampling to be ballpark 256x along the
 horizontal axis.
+
+In the following, I do #3 and allow #4 for cases where #3 is
+too small, but it's not the only possibility:
 
 
 
@@ -101,17 +120,23 @@ the lowest-level one could be:
 
    stb_resample_arbitrary(void       *dst, stbr_type dst_type, int dst_width, int dst_height, int dst_stride_in_bytes,
                           void const *src, stbr_type src_type, int src_width, int src_height, int src_stride_in_bytes,
+                          float s0, float t0, float s1, float t1, // range of source to use, 0..1 in GPU texture-coordinate style
                           int channels,
                           int nonpremul_alpha_channel_index,
                           stbr_wrapmode wrap,                     // clamp, wrap, mirror
                           stbr_filter filter,
-                          float s0, float t0, float s1, float t1, // range of source to use, 0..1 in GPU texture-coordinate style
                           void  *tempmem, size_t tempmem_size_in_bytes);
 
 And there would be a bunch of convenience functions in-between those two levels.
 
 
 Some notes:
+
+   s0,t0,s1,t1:
+       this allows fine subpixel-positioning and subpixel-resizing in an explicit way without
+           things having to be exact pixel multiples. it allows people to pseudo-stream
+           images by computing "tiles" of images a bit at a time without forcing those
+           tiles to quantize their source data.
 
    nonpremul_alpha_channel_index:
        if this is negative, no channels are processed specially
@@ -123,12 +148,6 @@ Some notes:
            are scaled by it; an alternative would be to find some way to
            pass in which channels serve as alpha channels for which other
            channels, but eh.
-
-   s0,t0,s1,t1:
-       this allows fine subpixel-positioning and subpixel-resizing in an explicit way without
-           things having to be exact pixel multiples. it allows people to pseudo-stream
-           images by computing "tiles" of images a bit at a time without forcing those
-           tiles to quantize their source data.
 
    tempmem, tempmem_size:
        all functions will needed tempmem, but they can allocate a fixed tempmem buffer
