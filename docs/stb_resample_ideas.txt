@@ -57,7 +57,25 @@ need four scanline buffers, and in general the number of
 buffers will be limited by the max filter width, which is
 presumably hardcoded.
 
-You want to avoid memory allocations (since you're passing
+It turns out to be slightly different for two reasons:
+
+   1. when using an arbitrary filter and downsampling,
+      you actually need N output buffers and 1 input buffer
+      (vs 1 output buffer and N input buffers upsampling)
+
+   2. this approach will be very inefficient as written.
+      you want to use separable filters and actually do
+      seperable computation: first decode an input scanline
+      into a 'decode' buffer, then horizontally resample it
+      into the "input" buffer (kind of a misnomer, but
+      they're the inputs to the vertical resampler)
+
+(The above approach isn't optimal for non-uniform resampling;
+optimal is to do whichever axis is smaller first, but I don't
+think we have to care about doing that right.)
+
+
+Now, you probably want to avoid memory allocations (since you're passing
 in the target buffer already), so instead of using a scanline-width
 temp buffer, use some fixed-width temp buffer that's W pixels,
 and scale the image in vertical stripes that are that wide.
