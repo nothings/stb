@@ -8,7 +8,7 @@ library back to C:
 
 2.
 
-Consider three cases just to suggest the spectrum
+@VinoBS Another option is to just port @richgel999's C++ library to C/stb: https://code.google.com/p/imageresampler/source/browse/#svn%2FtrunkConsider three cases just to suggest the spectrum
 of possiblities:
 
 a) linear upsample: each output pixel is a weighted sum
