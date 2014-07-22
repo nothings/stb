@@ -930,7 +930,7 @@ static void crc32_init(void)
    uint32 s;
    for(i=0; i < 256; i++) {
       for (s=i<<24, j=0; j < 8; ++j)
-         s = (s << 1) ^ (s >= (1<<31) ? CRC32_POLY : 0);
+         s = (s << 1) ^ (s >= (1U<<31) ? CRC32_POLY : 0);
       crc_table[i] = s;
    }
 }
@@ -964,15 +964,15 @@ static int ilog(int32 n)
    static signed char log2_4[16] = { 0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4 };
 
    // 2 compares if n < 16, 3 compares otherwise (4 if signed or n > 1<<29)
-   if (n < (1U << 14))
-        if (n < (1U <<  4))        return     0 + log2_4[n      ];
-        else if (n < (1U <<  9))      return  5 + log2_4[n >>  5];
+   if (n < (1 << 14))
+        if (n < (1 <<  4))        return     0 + log2_4[n      ];
+        else if (n < (1 <<  9))      return  5 + log2_4[n >>  5];
              else                     return 10 + log2_4[n >> 10];
-   else if (n < (1U << 24))
-             if (n < (1U << 19))      return 15 + log2_4[n >> 15];
+   else if (n < (1 << 24))
+             if (n < (1 << 19))      return 15 + log2_4[n >> 15];
              else                     return 20 + log2_4[n >> 20];
-        else if (n < (1U << 29))      return 25 + log2_4[n >> 25];
-             else if (n < (1U << 31)) return 30 + log2_4[n >> 30];
+        else if (n < (1 << 29))      return 25 + log2_4[n >> 25];
+             else if (n < (1 << 31)) return 30 + log2_4[n >> 30];
                   else                return 0; // signed n returns 0
 }
 
@@ -1396,7 +1396,7 @@ static int start_page_no_capturepattern(vorb *f)
       return error(f, VORBIS_unexpected_eof);
    // assume we _don't_ know any the sample position of any segments
    f->end_seg_with_known_loc = -2;
-   if (loc0 != ~0 || loc1 != ~0) {
+   if (loc0 != ~0U || loc1 != ~0U) {
       int i;
       // determine which packet is the last one that will complete
       for (i=f->segment_count-1; i >= 0; --i)
@@ -1548,14 +1548,6 @@ static uint32 get_bits(vorb *f, int n)
    return z;
 }
 
-static int32 get_bits_signed(vorb *f, int n)
-{
-   uint32 z = get_bits(f, n);
-   if (z & (1 << (n-1)))
-      z += ~((1 << n) - 1);
-   return (int32) z;
-}
-
 // @OPTIMIZE: primary accumulator for huffman
 // expand the buffer to as many bits as possible without reading off end of packet
 // it might be nice to allow f->valid_bits and f->acc to be stored in registers,
@@ -1639,23 +1631,6 @@ static int codebook_decode_scalar_raw(vorb *f, Codebook *c)
    return -1;
 }
 
-static int codebook_decode_scalar(vorb *f, Codebook *c)
-{
-   int i;
-   if (f->valid_bits < STB_VORBIS_FAST_HUFFMAN_LENGTH)
-      prep_huffman(f);
-   // fast huffman table lookup
-   i = f->acc & FAST_HUFFMAN_TABLE_MASK;
-   i = c->fast_huffman[i];
-   if (i >= 0) {
-      f->acc >>= c->codeword_lengths[i];
-      f->valid_bits -= c->codeword_lengths[i];
-      if (f->valid_bits < 0) { f->valid_bits = 0; return -1; }
-      return i;
-   }
-   return codebook_decode_scalar_raw(f,c);
-}
-
 #ifndef STB_VORBIS_NO_INLINE_DECODE
 
 #define DECODE_RAW(var, f,c)                                  \
@@ -1673,6 +1648,23 @@ static int codebook_decode_scalar(vorb *f, Codebook *c)
    }
 
 #else
+
+static int codebook_decode_scalar(vorb *f, Codebook *c)
+{
+   int i;
+   if (f->valid_bits < STB_VORBIS_FAST_HUFFMAN_LENGTH)
+      prep_huffman(f);
+   // fast huffman table lookup
+   i = f->acc & FAST_HUFFMAN_TABLE_MASK;
+   i = c->fast_huffman[i];
+   if (i >= 0) {
+      f->acc >>= c->codeword_lengths[i];
+      f->valid_bits -= c->codeword_lengths[i];
+      if (f->valid_bits < 0) { f->valid_bits = 0; return -1; }
+      return i;
+   }
+   return codebook_decode_scalar_raw(f,c);
+}
 
 #define DECODE_RAW(var,f,c)    var = codebook_decode_scalar(f,c);
 
@@ -1705,7 +1697,7 @@ static int codebook_decode_scalar(vorb *f, Codebook *c)
    #define CODEBOOK_ELEMENT_BASE(c)         (0)
 #endif
 
-static int codebook_decode_start(vorb *f, Codebook *c, int len)
+static int codebook_decode_start(vorb *f, Codebook *c)
 {
    int z = -1;
 
@@ -1727,7 +1719,7 @@ static int codebook_decode_start(vorb *f, Codebook *c, int len)
 
 static int codebook_decode(vorb *f, Codebook *c, float *output, int len)
 {
-   int i,z = codebook_decode_start(f,c,len);
+   int i,z = codebook_decode_start(f,c);
    if (z < 0) return FALSE;
    if (len > c->dimensions) len = c->dimensions;
 
@@ -1766,7 +1758,7 @@ static int codebook_decode(vorb *f, Codebook *c, float *output, int len)
 
 static int codebook_decode_step(vorb *f, Codebook *c, float *output, int len, int step)
 {
-   int i,z = codebook_decode_start(f,c,len);
+   int i,z = codebook_decode_start(f,c);
    float last = CODEBOOK_ELEMENT_BASE(c);
    if (z < 0) return FALSE;
    if (len > c->dimensions) len = c->dimensions;
@@ -2132,7 +2124,6 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
          memset(residue_buffers[i], 0, sizeof(float) * n);
 
    if (rtype == 2 && ch != 1) {
-      int len = ch * n;
       for (j=0; j < ch; ++j)
          if (!do_not_decode[j])
             break;
@@ -2636,7 +2627,6 @@ static __forceinline void iter_54(float *z)
 
 static void imdct_step3_inner_s_loop_ld654(int n, float *e, int i_off, float *A, int base_n)
 {
-   int k_off = -8;
    int a_off = base_n >> 3;
    float A2 = A[0+a_off];
    float *z = e + i_off;
@@ -2682,7 +2672,7 @@ static void imdct_step3_inner_s_loop_ld654(int n, float *e, int i_off, float *A,
 static void inverse_mdct(float *buffer, int n, vorb *f, int blocktype)
 {
    int n2 = n >> 1, n4 = n >> 2, n8 = n >> 3, l;
-   int n3_4 = n - n4, ld;
+   int ld;
    // @OPTIMIZE: reduce register pressure by using fewer variables?
    int save_point = temp_alloc_save(f);
    float *buf2 = (float *) temp_alloc(f, n2 * sizeof(*buf2));
@@ -3216,12 +3206,10 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
    int i,j,k,n,n2;
    int zero_channel[256];
    int really_zero_channel[256];
-   int window_center;
 
 // WINDOWING
 
    n = f->blocksize[m->blockflag];
-   window_center = n >> 1;
 
    map = &f->mapping[m->mapping];
 
@@ -3336,7 +3324,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
 // RESIDUE DECODE
    for (i=0; i < map->submaps; ++i) {
       float *residue_buffers[STB_VORBIS_MAX_CHANNELS];
-      int r,t;
+      int r;
       uint8 do_not_decode[256];
       int ch = 0;
       for (j=0; j < f->channels; ++j) {
@@ -3352,7 +3340,6 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
          }
       }
       r = map->submap_residue[i];
-      t = f->residue_types[r];
       decode_residue(f, residue_buffers, ch, n2, r, do_not_decode);
    }
 
@@ -4328,7 +4315,7 @@ static int vorbis_search_for_page_pushdata(vorb *f, uint8 *data, int data_len)
             f->next_seg = -1;       // start a new page
             f->current_loc = f->scan[i].sample_loc; // set the current sample location
                                     // to the amount we'd have decoded had we decoded this page
-            f->current_loc_valid = f->current_loc != ~0;
+            f->current_loc_valid = f->current_loc != ~0U;
             return data_len;
          }
          // delete entry
@@ -4549,7 +4536,7 @@ static int vorbis_analyze_page(stb_vorbis *f, ProbedPage *z)
 {
    uint8 header[27], lacing[255];
    uint8 packet_type[255];
-   int num_packet, packet_start, previous =0;
+   int num_packet, packet_start;
    int i,len;
    uint32 samples;
 
@@ -4590,18 +4577,15 @@ static int vorbis_analyze_page(stb_vorbis *f, ProbedPage *z)
 
    for (i=0; i < header[26]; ++i) {
       if (packet_start) {
-         uint8 n,b,m;
+         uint8 n,b;
          if (lacing[i] == 0) goto bail; // trying to read from zero-length packet
          n = get8(f);
          // if bottom bit is non-zero, we've got corruption
          if (n & 1) goto bail;
          n >>= 1;
          b = ilog(f->mode_count-1);
-         m = n >> b;
          n &= (1 << b)-1;
          if (n >= f->mode_count) goto bail;
-         if (num_packet == 0 && f->mode_config[n].blockflag)
-            previous = (m & 1);
          packet_type[num_packet++] = f->mode_config[n].blockflag;
          skip(f, lacing[i]-1);
       } else
