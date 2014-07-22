@@ -18,10 +18,11 @@ Initial implementation by Jorge L Rodriguez
 #define STBR_INCLUDE_STB_RESAMPLE_H
 
 // Basic usage:
-//    result = stbr_resize(input_data, input_w, input_h, input_components, output_data, output_w, output_h, STBR_FILTER_NEAREST, STBR_EDGE_CLAMP);
+//    result = stbr_resize(input_data, input_w, input_h, input_components, 0, output_data, output_w, output_h, 0, STBR_FILTER_NEAREST, STBR_EDGE_CLAMP);
 //
 //    input_data is your supplied texels.
-//    output_data will be the resized texels. It should be of size output_w * output_h * input_components.
+//    output_data will be the resized texels. It should be of size output_w * output_h * input_components (or output_h * output_stride if you provided a stride.)
+//    If input_stride or output_stride is 0 (as in this example) the stride will be automatically calculated as width*components.
 //    Returned result is 1 for success or 0 in case of an error.
 
 typedef enum
@@ -52,7 +53,7 @@ extern "C" {
 	// PRIMARY API - resize an image
 	//
 
-	STBRDEF int stbr_resize(const stbr_uc* input_data, int input_w, int input_h, int input_components, stbr_uc* output_data, int output_w, int output_h, stbr_filter filter, stbr_edge edge);
+	STBRDEF int stbr_resize(const stbr_uc* input_data, int input_w, int input_h, int input_components, int input_stride, stbr_uc* output_data, int output_w, int output_h, int output_stride, stbr_filter filter, stbr_edge edge);
 
 
 #ifdef __cplusplus
@@ -159,17 +160,18 @@ static void stbr__filter_nearest_n(const stbr_uc* input_data, stbr_uc* output_da
 
 typedef void (stbr__filter_fn)(const stbr_uc* input_data, stbr_uc* output_data, size_t input_texel_index, size_t output_texel_index, size_t n);
 
-STBRDEF int stbr_resize(const stbr_uc* input_data, int input_w, int input_h, int input_components, stbr_uc* output_data, int output_w, int output_h, stbr_filter filter, stbr_edge edge)
+STBRDEF int stbr_resize(const stbr_uc* input_data, int input_w, int input_h, int input_components, int input_stride, stbr_uc* output_data, int output_w, int output_h, int output_stride, stbr_filter filter, stbr_edge edge)
 {
 	int x, y;
-	int width_stride_input = input_components * input_w;
-	int width_stride_output = input_components * output_w;
+	int width_stride_input = input_stride ? input_stride : input_components * input_w;
+	int width_stride_output = output_stride ? output_stride : input_components * output_w;
 
 #ifdef STBR_DEBUG_OVERWRITE_TEST
 #define OVERWRITE_ARRAY_SIZE 64
 	unsigned char overwrite_contents_pre[OVERWRITE_ARRAY_SIZE];
 
-	memcpy(overwrite_contents_pre, &output_data[output_w * output_h * input_components], OVERWRITE_ARRAY_SIZE);
+	size_t begin_forbidden = width_stride_output * (output_h - 1) + output_w * input_components;
+	memcpy(overwrite_contents_pre, &output_data[begin_forbidden], OVERWRITE_ARRAY_SIZE);
 #endif
 
 	if (filter == STBR_FILTER_NEAREST)
@@ -203,7 +205,7 @@ STBRDEF int stbr_resize(const stbr_uc* input_data, int input_w, int input_h, int
 		return 0;
 
 #ifdef STBR_DEBUG_OVERWRITE_TEST
-	STBR_ASSERT(memcmp(overwrite_contents_pre, &output_data[output_w * output_h * input_components], OVERWRITE_ARRAY_SIZE) == 0);
+	STBR_ASSERT(memcmp(overwrite_contents_pre, &output_data[begin_forbidden], OVERWRITE_ARRAY_SIZE) == 0);
 #endif
 
 	return 1;

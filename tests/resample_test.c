@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 	unsigned char* output_data;
 	int w, h;
 	int n;
-	int out_w, out_h;
+	int out_w, out_h, out_stride;
 
 	if (argc <= 1)
 	{
@@ -36,12 +36,14 @@ int main(int argc, char** argv)
 
 	out_w = 512;
 	out_h = 512;
+	out_stride = (out_w + 10) * n;
 
-	output_data = malloc(out_w * out_h * n);
+	output_data = malloc(out_stride * out_h);
 
-	stbr_resize(input_data, w, h, n, output_data, out_w, out_h, STBR_FILTER_NEAREST, STBR_EDGE_CLAMP);
+	// Cut out the outside 64 pixels all around to test the stride.
+	stbr_resize(input_data + w*64*n + 64*n, w - 128, h - 128, n, w*n, output_data, out_w, out_h, out_stride, STBR_FILTER_NEAREST, STBR_EDGE_CLAMP);
 
-	stbi_write_png("output.png", out_w, out_h, n, output_data, out_w * n);
+	stbi_write_png("output.png", out_w, out_h, n, output_data, out_stride);
 
 	free(output_data);
 
