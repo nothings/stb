@@ -160,12 +160,13 @@ typedef struct
 
 typedef struct
 {
-	int total_contributors;
+	int total_coefficients;
 	int kernel_texel_width;
 
-	float* decode_buffer;
 	stbr__contributors* horizontal_contributors;
 	float* horizontal_coefficients;
+
+	float* decode_buffer;
 } stbr__info;
 
 
@@ -194,7 +195,7 @@ int stbr__get_filter_texel_width(stbr_filter filter, int upsample)
 	return (int)ceil(stbr__filter_info_table[filter].support * 2);
 }
 
-int stbr__get_total_contributors(stbr_filter filter, int input_w, int output_w)
+int stbr__get_total_coefficients(stbr_filter filter, int input_w, int output_w)
 {
 	return output_w * stbr__get_filter_texel_width(filter, output_w > input_w ? 1 : 0);
 }
@@ -218,6 +219,7 @@ stbr_inline static stbr_size_t stbr__texel_index(int x, int y, int c, int width_
 
 stbr_inline static stbr__contributors* stbr__get_contributor(stbr__info* stbr_info, int n)
 {
+	STBR_DEBUG_ASSERT(n >= 0 /*&& n < output_w*/);
 	return &stbr_info->horizontal_contributors[n];
 }
 
@@ -305,18 +307,18 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 	if (tempmem_size_in_bytes < stbr_calculate_memory(input_w, input_h, input_stride_in_bytes, output_w, output_h, output_stride_in_bytes, channels, STBR_FILTER_NEAREST))
 		return 0;
 
-#define STBR__NEXT_MEMPTR(current, old, newtype) (newtype*)(((unsigned char*)current) + old)
-
 	memset(tempmem, 0, tempmem_size_in_bytes);
 
 	stbr__info* stbr_info = (stbr__info*)tempmem;
 
-	stbr_info->total_contributors = stbr__get_total_contributors(filter, input_w, output_w);
+	stbr_info->total_coefficients = stbr__get_total_coefficients(filter, input_w, output_w);
 	stbr_info->kernel_texel_width = stbr__get_filter_texel_width(filter, output_w > input_w ? 1 : 0);
 
-	stbr_info->decode_buffer = STBR__NEXT_MEMPTR(stbr_info, sizeof(stbr__info), float);
-	stbr_info->horizontal_contributors = STBR__NEXT_MEMPTR(stbr_info->decode_buffer, input_w * channels * sizeof(float), stbr__contributors);
-	stbr_info->horizontal_coefficients = STBR__NEXT_MEMPTR(stbr_info->horizontal_contributors, stbr_info->total_contributors * sizeof(stbr__contributors), float);
+#define STBR__NEXT_MEMPTR(current, old, newtype) (newtype*)(((unsigned char*)current) + old)
+
+	stbr_info->horizontal_contributors = STBR__NEXT_MEMPTR(stbr_info, sizeof(stbr__info), stbr__contributors);
+	stbr_info->horizontal_coefficients = STBR__NEXT_MEMPTR(stbr_info->horizontal_contributors, output_w * sizeof(stbr__contributors), float);
+	stbr_info->decode_buffer = STBR__NEXT_MEMPTR(stbr_info->horizontal_coefficients, stbr_info->total_coefficients * sizeof(stbr__contributors), float);
 
 #undef STBR__NEXT_MEMPTR
 
@@ -339,8 +341,8 @@ STBRDEF stbr_size_t stbr_calculate_memory(int input_w, int input_h, int input_st
 
 	int info_size = sizeof(stbr__info);
 	int decode_buffer_size = input_w * channels * sizeof(float);
-	int contributors_size = stbr__get_total_contributors(filter, input_w, output_w) * sizeof(stbr__contributors);
-	int coefficients_size = stbr__get_total_contributors(filter, input_w, output_w) * sizeof(float);
+	int contributors_size = output_w * sizeof(stbr__contributors);
+	int coefficients_size = stbr__get_total_coefficients(filter, input_w, output_w) * sizeof(float);
 
 	return info_size + decode_buffer_size + contributors_size + coefficients_size;
 }
