@@ -197,7 +197,7 @@ typedef struct
 
 float stbr__filter_nearest(float x)
 {
-	if (fabs(x) < 0.5)
+	if (fabs(x) <= 0.5)
 		return 1;
 	else
 		return 0;
