@@ -5,6 +5,7 @@
 #endif
 
 #define STB_RESAMPLE_IMPLEMENTATION
+#define STB_RESAMPLE_STATIC
 #include "stb_resample.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -12,6 +13,10 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
+#ifdef _WIN32
+#include <sys/timeb.h>
+#endif
 
 int main(int argc, char** argv)
 {
@@ -34,14 +39,26 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	out_w = 512;
-	out_h = 512;
+	out_w = 1024;
+	out_h = 1024;
 	out_stride = (out_w + 10) * n;
 
-	output_data = malloc(out_stride * out_h);
+	output_data = (unsigned char*)malloc(out_stride * out_h);
+
+	int in_w = 512;
+	int in_h = 512;
+
+	size_t memory_required = stbr_calculate_memory(in_w, in_h, w*n, out_w, out_h, out_stride, n, STBR_FILTER_NEAREST);
+	void* extra_memory = malloc(memory_required);
 
 	// Cut out the outside 64 pixels all around to test the stride.
-	stbr_resize(input_data + w*64*n + 64*n, w - 128, h - 128, n, w*n, output_data, out_w, out_h, out_stride, STBR_FILTER_NEAREST, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+	int border = 64;
+	STBR_ASSERT(in_w + border <= w);
+	STBR_ASSERT(in_h + border <= h);
+
+	stbr_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, n, STBR_TYPE_UINT8, STBR_FILTER_NEAREST, extra_memory, memory_required);
+
+	free(extra_memory);
 
 	stbi_write_png("output.png", out_w, out_h, n, output_data, out_stride);
 
