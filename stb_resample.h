@@ -180,12 +180,18 @@ typedef struct
 	stbr__contributors* horizontal_contributors;
 	float* horizontal_coefficients;
 
+	stbr__contributors vertical_contributors;
+	float* vertical_coefficients;
+
 	float* decode_buffer;
 
+	int ring_buffer_length; // The length of an individual entry in the ring buffer. The total number of ring buffers is kernel_texel_width
 	int ring_buffer_first_scanline;
 	int ring_buffer_last_scanline;
 	int ring_buffer_begin_index;
 	float* ring_buffer;
+
+	float* encode_buffer; // A temporary buffer to store floats so we don't lose precision while we do multiply-adds.
 } stbr__info;
 
 
@@ -263,11 +269,40 @@ static void stbr__calculate_sample_range(int n, float out_filter_radius, float s
 	*in_last_texel = (int)(floor(in_texel_influence_upperbound - 0.5));
 }
 
+static void stbr__calculate_coefficients(stbr__info* stbr_info, int in_first_texel, int in_last_texel, float in_center_of_out, int n, stbr__contributors* contributor, float* coefficient_group)
+{
+	int i;
+	float total_filter = 0;
+	float filter_scale;
+
+	STBR_DEBUG_ASSERT(in_last_texel - in_first_texel <= stbr_info->kernel_texel_width);
+	STBR_DEBUG_ASSERT(in_first_texel >= 0);
+	STBR_DEBUG_ASSERT(in_last_texel < stbr_info->input_w);
+
+	contributor->n0 = in_first_texel;
+	contributor->n1 = in_last_texel;
+
+	for (i = 0; i <= in_last_texel - in_first_texel; i++)
+	{
+		float in_texel_center = (float)(i + in_first_texel) + 0.5f;
+		total_filter += coefficient_group[i] = stbr__filter_info_table[stbr_info->filter].kernel(in_center_of_out - in_texel_center);
+	}
+
+	STBR_DEBUG_ASSERT(total_filter > 0);
+	STBR_DEBUG_ASSERT(fabs(1 - total_filter) < 0.1f); // Make sure it's not way off.
+
+	// Make sure the sum of all coefficients is 1.
+	filter_scale = 1 / total_filter;
+
+	for (i = 0; i <= in_last_texel - in_first_texel; i++)
+		coefficient_group[i] *= filter_scale;
+}
+
 // Each scan line uses the same kernel values so we should calculate the kernel
 // values once and then we can use them for every scan line.
 static void stbr__calculate_horizontal_filters(stbr__info* stbr_info)
 {
-	int n, i;
+	int n;
 	float scale_ratio = (float)stbr_info->output_w / stbr_info->input_w;
 
 	float out_pixels_radius = stbr__filter_info_table[stbr_info->filter].support * scale_ratio;
@@ -281,30 +316,7 @@ static void stbr__calculate_horizontal_filters(stbr__info* stbr_info)
 
 		stbr__calculate_sample_range(n, out_pixels_radius, scale_ratio, &in_first_texel, &in_last_texel, &in_center_of_out);
 
-		float total_filter = 0;
-		float filter_scale;
-
-		STBR_DEBUG_ASSERT(in_last_texel - in_first_texel <= stbr_info->kernel_texel_width);
-		STBR_DEBUG_ASSERT(in_first_texel >= 0);
-		STBR_DEBUG_ASSERT(in_last_texel < stbr_info->input_w);
-
-		stbr__get_contributor(stbr_info, n)->n0 = in_first_texel;
-		stbr__get_contributor(stbr_info, n)->n1 = in_last_texel;
-
-		for (i = 0; i <= in_last_texel - in_first_texel; i++)
-		{
-			float in_texel_center = (float)(i + in_first_texel) + 0.5f;
-			total_filter += *stbr__get_coefficient(stbr_info, n, i) = stbr__filter_info_table[stbr_info->filter].kernel(in_center_of_out - in_texel_center);
-		}
-
-		STBR_DEBUG_ASSERT(total_filter > 0);
-		STBR_DEBUG_ASSERT(fabs(1-total_filter) < 0.1f); // Make sure it's not way off.
-
-		// Make sure the sum of all coefficients is 1.
-		filter_scale = 1 / total_filter;
-
-		for (i = 0; i <= in_last_texel - in_first_texel; i++)
-			*stbr__get_coefficient(stbr_info, n, i) *= filter_scale;
+		stbr__calculate_coefficients(stbr_info, in_first_texel, in_last_texel, in_center_of_out, n, stbr__get_contributor(stbr_info, n), stbr__get_coefficient(stbr_info, n, 0));
 	}
 }
 
@@ -321,19 +333,29 @@ static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 	int x, c;
 	int channels = stbr_info->channels;
 	int input_w = stbr_info->input_w;
+	int input_stride_bytes = stbr_info->input_stride_bytes;
 	const void* input_data = stbr_info->input_data;
 	float* decode_buffer = stbr_info->decode_buffer;
+	int in_buffer_row_index = n * input_stride_bytes;
 
 	STBR_UNIMPLEMENTED(stbr_info->type != STBR_TYPE_UINT8);
 
 	for (x = 0; x < input_w; x++)
 	{
+		int texel_index = x * channels;
+
 		for (c = 0; c < channels; c++)
 		{
-			int buffer_index = x * channels + c;
-			decode_buffer[buffer_index] = ((float)((const unsigned char*)input_data)[buffer_index]) / 255;
+			int channel_index = x * channels + c;
+			int in_buffer_index = in_buffer_row_index + channel_index;
+			decode_buffer[channel_index] = ((float)((const unsigned char*)input_data)[in_buffer_index]) / 255;
 		}
 	}
+}
+
+static float* stbr__get_ring_buffer_index(float* ring_buffer, int index, int ring_buffer_length)
+{
+	return &ring_buffer[index * ring_buffer_length];
 }
 
 static void stbr__resample_horizontal(stbr__info* stbr_info, int n)
@@ -357,7 +379,9 @@ static void stbr__resample_horizontal(stbr__info* stbr_info, int n)
 		STBR_DEBUG_ASSERT(ring_buffer_index != stbr_info->ring_buffer_begin_index);
 	}
 
-	ring_buffer = &stbr_info->ring_buffer[ring_buffer_index];
+	ring_buffer = stbr__get_ring_buffer_index(stbr_info->ring_buffer, ring_buffer_index, stbr_info->ring_buffer_length);
+
+	memset(ring_buffer, 0, stbr_info->ring_buffer_length);
 
 	for (x = 0; x < output_w; x++)
 	{
@@ -374,12 +398,13 @@ static void stbr__resample_horizontal(stbr__info* stbr_info, int n)
 		{
 			int coefficient_index = coefficient_group_index + (coefficient_counter++);
 			int in_texel_index = k * channels;
+			float coefficient = horizontal_coefficients[coefficient_index];
 
-			if (!horizontal_coefficients[coefficient_index])
+			if (!coefficient)
 				continue;
 
 			for (c = 0; c < channels; c++)
-				ring_buffer[out_texel_index + c] += decode_buffer[in_texel_index + c] * horizontal_coefficients[coefficient_index];
+				ring_buffer[out_texel_index + c] += decode_buffer[in_texel_index + c] * coefficient;
 		}
 	}
 
@@ -388,6 +413,12 @@ static void stbr__resample_horizontal(stbr__info* stbr_info, int n)
 
 static void stbr__decode_and_resample(stbr__info* stbr_info, int n)
 {
+	if (n >= stbr_info->input_h)
+	{
+		STBR_UNIMPLEMENTED("ring buffer overran source height");
+		return;
+	}
+
 	// Decode the nth scanline from the source image into the decode buffer.
 	stbr__decode_scanline(stbr_info, n);
 
@@ -395,6 +426,70 @@ static void stbr__decode_and_resample(stbr__info* stbr_info, int n)
 	stbr__resample_horizontal(stbr_info, n);
 
 	// Now it's sitting in the ring buffer ready to be used as source for the vertical sampling.
+}
+
+// Get the specified scan line from the ring buffer.
+static float* stbr__get_ring_buffer_scanline(int get_scanline, float* ring_buffer, int begin_index, int first_scanline, int ring_buffer_size, int ring_buffer_length)
+{
+	int ring_buffer_index = (begin_index + (get_scanline - first_scanline)) % ring_buffer_size;
+	return stbr__get_ring_buffer_index(ring_buffer, ring_buffer_index, ring_buffer_length);
+}
+
+static void stbr__resample_vertical(stbr__info* stbr_info, int n, int in_first_scanline, int in_last_scanline, float in_center_of_out)
+{
+	int x, k, c;
+	int output_w = stbr_info->output_w;
+	stbr__contributors* vertical_contributors = &stbr_info->vertical_contributors;
+	float* vertical_coefficients = stbr_info->vertical_coefficients;
+	int channels = stbr_info->channels;
+	int kernel_texel_width = stbr_info->kernel_texel_width;
+	void* output_data = stbr_info->output_data;
+	float* encode_buffer = stbr_info->encode_buffer;
+
+	float* ring_buffer = stbr_info->ring_buffer;
+	int ring_buffer_begin_index = stbr_info->ring_buffer_begin_index;
+	int ring_buffer_first_scanline = stbr_info->ring_buffer_first_scanline;
+	int ring_buffer_last_scanline = stbr_info->ring_buffer_last_scanline;
+	int ring_buffer_length = stbr_info->ring_buffer_length;
+
+	STBR_UNIMPLEMENTED(stbr_info->type != STBR_TYPE_UINT8);
+
+	stbr__calculate_coefficients(stbr_info, in_first_scanline, in_last_scanline, in_center_of_out, n, vertical_contributors, vertical_coefficients);
+
+	int n0 = vertical_contributors->n0;
+	int n1 = vertical_contributors->n1;
+
+	int output_row_index = n * stbr_info->output_stride_bytes;
+
+	STBR_DEBUG_ASSERT(n0 >= in_first_scanline);
+	STBR_DEBUG_ASSERT(n1 <= in_last_scanline);
+
+	for (x = 0; x < output_w; x++)
+	{
+		int in_texel_index = x * channels;
+		int out_texel_index = output_row_index + x * channels;
+		int coefficient_counter = 0;
+
+		STBR_DEBUG_ASSERT(n1 >= n0);
+
+		memset(encode_buffer, 0, sizeof(float) * channels);
+
+		for (k = n0; k <= n1; k++)
+		{
+			int coefficient_index = coefficient_counter++;
+			float* ring_buffer_entry = stbr__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_texel_width, ring_buffer_length);
+			float coefficient = vertical_coefficients[coefficient_index];
+
+			if (!coefficient)
+				continue;
+
+			for (c = 0; c < channels; c++)
+				encode_buffer[c] += ring_buffer_entry[in_texel_index + c] * coefficient;
+		}
+
+		for (c = 0; c < channels; c++)
+			((unsigned char*)output_data)[out_texel_index + c] = (unsigned char)(encode_buffer[c] * 255);
+	}
 }
 
 STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
@@ -447,13 +542,16 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 
 	stbr_info->total_coefficients = stbr__get_total_coefficients(filter, input_w, output_w);
 	stbr_info->kernel_texel_width = stbr__get_filter_texel_width(filter, output_w > input_w ? 1 : 0);
+	stbr_info->ring_buffer_length = output_w * channels * sizeof(float);
 
 #define STBR__NEXT_MEMPTR(current, old, newtype) (newtype*)(((unsigned char*)current) + old)
 
 	stbr_info->horizontal_contributors = STBR__NEXT_MEMPTR(stbr_info, sizeof(stbr__info), stbr__contributors);
 	stbr_info->horizontal_coefficients = STBR__NEXT_MEMPTR(stbr_info->horizontal_contributors, output_w * sizeof(stbr__contributors), float);
-	stbr_info->decode_buffer = STBR__NEXT_MEMPTR(stbr_info->horizontal_coefficients, stbr_info->total_coefficients * sizeof(stbr__contributors), float);
+	stbr_info->vertical_coefficients = STBR__NEXT_MEMPTR(stbr_info->horizontal_coefficients, stbr_info->total_coefficients * sizeof(float), float);
+	stbr_info->decode_buffer = STBR__NEXT_MEMPTR(stbr_info->vertical_coefficients, stbr_info->kernel_texel_width * sizeof(float), float);
 	stbr_info->ring_buffer = STBR__NEXT_MEMPTR(stbr_info->decode_buffer, input_w * channels * sizeof(float), float);
+	stbr_info->encode_buffer = STBR__NEXT_MEMPTR(stbr_info->ring_buffer, output_w * channels * sizeof(float) * stbr_info->kernel_texel_width, float);
 
 #undef STBR__NEXT_MEMPTR
 
@@ -497,13 +595,13 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 
 		// Load in new ones.
 		if (stbr_info->ring_buffer_begin_index < 0)
-			stbr__decode_and_resample(stbr_info, 0);
+			stbr__decode_and_resample(stbr_info, in_first_scanline);
 
 		while (in_last_scanline < stbr_info->ring_buffer_last_scanline)
 			stbr__decode_and_resample(stbr_info, stbr_info->ring_buffer_last_scanline + 1);
 
 		// Now all buffers should be ready to do a row a vertical sampling.
-		//stbr__resample_vertical();
+		stbr__resample_vertical(stbr_info, y, in_first_scanline, in_last_scanline, in_center_of_out);
 	}
 
 #ifdef STBR_DEBUG_OVERWRITE_TEST
@@ -525,10 +623,12 @@ STBRDEF stbr_size_t stbr_calculate_memory(int input_w, int input_h, int input_st
 	int info_size = sizeof(stbr__info);
 	int decode_buffer_size = input_w * channels * sizeof(float);
 	int contributors_size = output_w * sizeof(stbr__contributors);
-	int coefficients_size = stbr__get_total_coefficients(filter, input_w, output_w) * sizeof(float);
+	int horizontal_coefficients_size = stbr__get_total_coefficients(filter, input_w, output_w) * sizeof(float);
+	int vertical_coefficients_size = stbr__get_filter_texel_width(filter, output_w > input_w ? 1 : 0) * sizeof(float);
 	int ring_buffer_size = output_w * channels * sizeof(float) * stbr__get_filter_texel_width(filter, output_w > input_w ? 1 : 0);
+	int encode_buffer_size = channels * sizeof(float);
 
-	return info_size + decode_buffer_size + contributors_size + coefficients_size + ring_buffer_size;
+	return info_size + decode_buffer_size + contributors_size + horizontal_coefficients_size + vertical_coefficients_size + ring_buffer_size + encode_buffer_size;
 }
 
 #endif // STB_RESAMPLE_IMPLEMENTATION
