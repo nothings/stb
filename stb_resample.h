@@ -225,23 +225,6 @@ int stbr__get_total_coefficients(stbr_filter filter, int input_w, int output_w)
 	return output_w * stbr__get_filter_texel_width(filter, output_w > input_w ? 1 : 0);
 }
 
-// i0 is a texel in [0, n0-1]
-// What's the nearest texel center to i0's center in [0, n1-1] ?
-// Remapping [0, n0-1] to [0, n1-1] gives (i0 + 0.5)*n1/n0 but we want to avoid
-// floating point math so we rearrange it as (n1*i0 + n1/2)/n0
-stbr_inline static int stbr__nearest_texel(int i0, int n0, int n1)
-{
-	return (n1*i0 + n1/2) / n0;
-}
-
-stbr_inline static stbr_size_t stbr__texel_index(int x, int y, int c, int width_stride, int num_c, int w, int h)
-{
-	STBR_DEBUG_ASSERT(x >= 0 && x < w);
-	STBR_DEBUG_ASSERT(y >= 0 && y < h);
-
-	return y*width_stride + x*num_c + c;
-}
-
 stbr_inline static stbr__contributors* stbr__get_contributor(stbr__info* stbr_info, int n)
 {
 	STBR_DEBUG_ASSERT(n >= 0 && n < stbr_info->output_w);
