@@ -1,0 +1,192 @@
+1.
+
+Consider just porting this C++ public domain
+library back to C:
+    https://code.google.com/p/imageresampler/source/browse/#svn%2Ftrunk
+(recommended by @castano)
+
+
+2.
+
+Consider three cases just to suggest the spectrum
+of possiblities:
+
+a) linear upsample: each output pixel is a weighted sum
+of 4 input pixels
+
+b) cubic upsample: each output pixel is a weighted sum
+of 16 input pixels
+
+c) downsample by N with box filter: each output pixel
+is a weighted sum of NxN input pixels, N can be very large
+
+Now, suppose you want to handle 8-bit input, 16-bit
+input, and float input, and you want to do sRGB correction
+or not.
+
+Suppose you create a temporary buffer of float pixels, say
+one scanline tall. Actually two temp buffers, one for the
+input and one for the output. You decode a scanline of the
+input into the temp buffer which is always linear floats. This
+isolates the handling of 8/16/float and sRGB to one place
+(and still allows you to make optimized 8-bit-sRGB-to-float
+lookup tables). This also allows you to put wrap logic here,
+explicitly wrapping, reflecting, or replicating-from-edge
+pixels that would come from off-edge.
+
+You then do whatever the appropriate weighted sums are
+into the output buffer, and you move on to the next
+scanline of the input.
+
+The algorithm just described works directly for case (c).
+Suppose you're downsampling by 2.5; then output scanline 0
+sums from input scanlines 0, 1, and 2; output scanline 1
+sums from 2,3,4; output 2 from 5,6,7; output 3 from 7,8,9.
+Note how 2 & 7 get reused, but we don't have to recompute
+them because we can do things in a single linear pass
+through the input and output at the same time.
+
+Now, consider case (a). When upsampling, the same two input
+scanlines will get sampled-from for multiple output scanlines.
+So, to avoid recomputing the input scanlines, we need either
+multiple input or multiple output temp buffer lines. Since
+the number of output lines a given pair of input scanlines
+might touch scales with the upsample amount, it makes more
+sense to use two input scanline buffers. For cubic, you'll
+need four scanline buffers, and in general the number of
+buffers will be limited by the max filter width, which is
+presumably hardcoded.
+
+It turns out to be slightly different for two reasons:
+
+   1. when using an arbitrary filter and downsampling,
+      you actually need N output buffers and 1 input buffer
+      (vs 1 output buffer and N input buffers upsampling)
+
+   2. this approach will be very inefficient as written.
+      you want to use separable filters and actually do
+      seperable computation: first decode an input scanline
+      into a 'decode' buffer, then horizontally resample it
+      into the "input" buffer (kind of a misnomer, but
+      they're the inputs to the vertical resampler)
+
+(The above approach isn't optimal for non-uniform resampling;
+optimal is to do whichever axis is smaller first, but I don't
+think we have to care about doing that right.)
+
+
+Now, you can either:
+
+    1. malloc the temp memory
+    2. alloca it
+    3. allocate a fixed amount on the stack
+    4. let the user pass it in
+
+I forbid #2 in stb libraries for portability.
+
+If you're not allocating the output image, but rather requiring
+the user to pass it in, it's probably worth trying to avoid #1
+because people always want to use stb libs without any memory
+allocations for various reason. (Note that most stb libs go
+crazy with memory allocations--you shouldn't use stb_image
+in a console game--but I've tried to avoid it more in newer
+libs.)
+
+The way #3 would work is instead of using a scanline-width
+temp buffer, use some fixed-width temp buffer that's W pixels,
+and scale the image in vertical stripes that are that wide.
+Suppose you make the temp buffers 256 wide; then an upsample
+by 8 computes 256-pixel-width strips (from ~32-pixel-wide input
+strips), but a downsample by 8 computes ~32-pixel-width
+strips (from a 256-pixel width strip). Note this limits
+the max down/upsampling to be ballpark 256x along the
+horizontal axis.
+
+In the following, I do #3 and allow #4 for cases where #3 is
+too small, but it's not the only possibility:
+
+
+
+Function prototypes:
+
+the highest-level one could be:
+
+   stb_resample_8bit(uint8_t       *dest, int dest_width, int dest_height,
+                     uint8_t const *src , int  src_width, int  src_height,
+                     int channels,
+                     stbr_filter filter);
+
+the lowest-level one could be:
+
+   stb_resample_arbitrary(void       *dst, stbr_type dst_type, int dst_width, int dst_height, int dst_stride_in_bytes,
+                          void const *src, stbr_type src_type, int src_width, int src_height, int src_stride_in_bytes,
+                          float s0, float t0, float s1, float t1, // range of source to use, 0..1 in GPU texture-coordinate style
+                          int channels,
+                          int nonpremul_alpha_channel_index,
+                          stbr_wrapmode wrap,                     // clamp, wrap, mirror
+                          stbr_filter filter,
+                          void  *tempmem, size_t tempmem_size_in_bytes);
+
+And there would be a bunch of convenience functions in-between those two levels.
+
+
+Some notes:
+
+   s0,t0,s1,t1:
+       this allows fine subpixel-positioning and subpixel-resizing in an explicit way without
+           things having to be exact pixel multiples. it allows people to pseudo-stream
+           images by computing "tiles" of images a bit at a time without forcing those
+           tiles to quantize their source data.
+
+   nonpremul_alpha_channel_index:
+       if this is negative, no channels are processed specially
+       if this is non-negative, then it's the index of the alpha channel,
+           and the image should be treated as non-premultiplied alpha that
+           needs to be resampled accounting for this (weight the sampling
+           by the alpha channel, i.e. premultiply, filter, unpremultiply).
+           this mechanism only allows one alpha channel and ALL channels 
+           are scaled by it; an alternative would be to find some way to
+           pass in which channels serve as alpha channels for which other
+           channels, but eh.
+
+   tempmem, tempmem_size:
+       all functions will needed tempmem, but they can allocate a fixed tempmem buffer
+           on the stack. providing an API that allows overriding the amount of tempmem
+           available allows people to process arbitrarily large images. the return
+           value for the function could be 0 on success or non-0 being the size of
+           tempmem needed.
+   
+   src_stride, dest_stride:
+       the stride variables are signed to allow you to describe both traditional
+           top-to-bottom images (pass in a pointer to the top-left pixel and
+           a positive stride) and bottom-to-top images (pass in a pointer to
+           the bottom-left pixel and a negative stride)
+
+   ordering of src & dest:
+       put these in whatever order you like, i just chose one arbitrarily
+
+   width & height
+       these are ints not unsigned ints or size_ts because i personally forbid
+           unsigned variables for almost everything to avoid signed/unsigned comparison
+           issues, but this is a matter of personal taste and you can do differently
+
+   Intermediate-level functions should be provided for each source type & same dest type
+   so that the code is typesafe; only when people fall back to stb_resample_arbitrary should
+   they be at risk for type unsafety. (One way to deal avoid an explosion of functions of
+   every possible *combination* of types in a type-safe way would be to define one function
+   for each input type, and accept three separate output pointers, one for each type, only
+   one of which can be non-NULL. 9 functions isn't that bad, but if you want to have three
+   or four intermediate-level functions with fewer parameters, 9*4 gets silly. Could also
+   use the same trick for stb_resample_arbitrary, replacing it with three typesafe functions.)
+
+
+
+
+Reference:
+
+Cubic sampling function for seperable cubic:
+   f(x) = (a+2)*x^3 - (a+3)*x^2 + 1       for 0 <= x <= 1
+   f(x) = a*x^3 - 5*a*x^2 + 8*a*x - 4*a   for 1 < x <= 2
+   f(x) = 0                               otherwise
+   "a" is configurable, try -1/2 (from http://pixinsight.com/forum/index.php?topic=556.0 )
+
