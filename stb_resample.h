@@ -309,11 +309,9 @@ static void stbr__calculate_coefficients_upsample(stbr__info* stbr_info, int in_
 		coefficient_group[i] *= filter_scale;
 }
 
-static void stbr__calculate_coefficients_downsample(stbr__info* stbr_info, int out_first_texel, int out_last_texel, float out_center_of_in, int n, stbr__contributors* contributor, float* coefficient_group)
+static void stbr__calculate_coefficients_downsample(stbr__info* stbr_info, float scale_ratio, int out_first_texel, int out_last_texel, float out_center_of_in, int n, stbr__contributors* contributor, float* coefficient_group)
 {
 	int i;
-
-	float scale_ratio = (float)stbr_info->output_w / stbr_info->input_w;
 
 	STBR_DEBUG_ASSERT(out_last_texel - out_first_texel <= stbr_info->kernel_texel_width);
 	STBR_DEBUG_ASSERT(out_first_texel >= 0);
@@ -365,7 +363,7 @@ static void stbr__calculate_horizontal_filters(stbr__info* stbr_info)
 
 			stbr__calculate_sample_range_downsample(n, in_pixels_radius, scale_ratio, &out_first_texel, &out_last_texel, &out_center_of_in);
 
-			stbr__calculate_coefficients_downsample(stbr_info, out_first_texel, out_last_texel, out_center_of_in, n, stbr__get_contributor(stbr_info, n), stbr__get_coefficient(stbr_info, n, 0));
+			stbr__calculate_coefficients_downsample(stbr_info, scale_ratio, out_first_texel, out_last_texel, out_center_of_in, n, stbr__get_contributor(stbr_info, n), stbr__get_coefficient(stbr_info, n, 0));
 		}
 	}
 }
@@ -633,7 +631,7 @@ static void stbr__resample_vertical_downsample(stbr__info* stbr_info, int n, int
 	int ring_buffer_last_scanline = stbr_info->ring_buffer_last_scanline;
 	int ring_buffer_length = stbr_info->ring_buffer_length;
 
-	stbr__calculate_coefficients_downsample(stbr_info, in_first_scanline, in_last_scanline, in_center_of_out, n, vertical_contributors, vertical_coefficients);
+	stbr__calculate_coefficients_downsample(stbr_info, (float)stbr_info->output_h / stbr_info->input_h, in_first_scanline, in_last_scanline, in_center_of_out, n, vertical_contributors, vertical_coefficients);
 
 	int n0 = vertical_contributors->n0;
 	int n1 = vertical_contributors->n1;
