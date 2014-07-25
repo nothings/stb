@@ -473,7 +473,7 @@ static void stbr__resample_horizontal_upsample(stbr__info* stbr_info, int n, flo
 	}
 }
 
-static void stbr__resample_horizontal_downsample(stbr__info* stbr_info, int n)
+static void stbr__resample_horizontal_downsample(stbr__info* stbr_info, int n, float* output_buffer)
 {
 	int x, k, c;
 	int input_w = stbr_info->input_w;
@@ -482,8 +482,6 @@ static void stbr__resample_horizontal_downsample(stbr__info* stbr_info, int n)
 	float* decode_buffer = stbr_info->decode_buffer;
 	stbr__contributors* horizontal_contributors = stbr_info->horizontal_contributors;
 	float* horizontal_coefficients = stbr_info->horizontal_coefficients;
-
-	float* horizontal_buffer = stbr_info->horizontal_buffer;
 
 	STBR_DEBUG_ASSERT(stbr_info->output_w < stbr_info->input_w);
 
@@ -509,9 +507,9 @@ static void stbr__resample_horizontal_downsample(stbr__info* stbr_info, int n)
 
 			for (c = 0; c < channels; c++)
 			{
-				horizontal_buffer[out_texel_index + c] += decode_buffer[in_texel_index + c] * coefficient;
+				output_buffer[out_texel_index + c] += decode_buffer[in_texel_index + c] * coefficient;
 
-				STBR_DEBUG_ASSERT(horizontal_buffer[out_texel_index + c] <= 1.0); // This would indicate that the sum of kernels for this texel doesn't add to 1.
+				STBR_DEBUG_ASSERT(output_buffer[out_texel_index + c] <= 1.0); // This would indicate that the sum of kernels for this texel doesn't add to 1.
 			}
 		}
 	}
@@ -529,7 +527,10 @@ static void stbr__decode_and_resample_upsample(stbr__info* stbr_info, int n)
 	stbr__decode_scanline(stbr_info, n);
 
 	// Now resample it into the ring buffer.
-	stbr__resample_horizontal_upsample(stbr_info, n, stbr__add_empty_ring_buffer_entry(stbr_info, n));
+	if (stbr_info->output_w > stbr_info->input_w)
+		stbr__resample_horizontal_upsample(stbr_info, n, stbr__add_empty_ring_buffer_entry(stbr_info, n));
+	else
+		stbr__resample_horizontal_downsample(stbr_info, n, stbr__add_empty_ring_buffer_entry(stbr_info, n));
 
 	// Now it's sitting in the ring buffer ready to be used as source for the vertical sampling.
 }
@@ -551,7 +552,7 @@ static void stbr__decode_and_resample_downsample(stbr__info* stbr_info, int n)
 	if (stbr_info->output_w > stbr_info->input_w)
 		stbr__resample_horizontal_upsample(stbr_info, n, stbr_info->horizontal_buffer);
 	else
-		stbr__resample_horizontal_downsample(stbr_info, n);
+		stbr__resample_horizontal_downsample(stbr_info, n, stbr_info->horizontal_buffer);
 
 	// Now it's sitting in the horizontal buffer ready to be distributed into the ring buffers.
 }
@@ -589,7 +590,7 @@ static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int i
 
 	int output_row_index = n * stbr_info->output_stride_bytes;
 
-	STBR_DEBUG_ASSERT(stbr_info->output_w > stbr_info->input_w);
+	STBR_DEBUG_ASSERT(stbr_info->output_h > stbr_info->input_h);
 	STBR_DEBUG_ASSERT(n0 >= in_first_scanline);
 	STBR_DEBUG_ASSERT(n1 <= in_last_scanline);
 
