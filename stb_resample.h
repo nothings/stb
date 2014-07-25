@@ -285,6 +285,7 @@ static void stbr__calculate_coefficients_upsample(stbr__info* stbr_info, int in_
 	int i;
 	float total_filter = 0;
 	float filter_scale;
+	stbr_filter filter = stbr_info->filter;
 
 	STBR_DEBUG_ASSERT(in_last_texel - in_first_texel <= stbr_info->kernel_texel_width);
 	STBR_DEBUG_ASSERT(in_first_texel >= 0);
@@ -296,7 +297,7 @@ static void stbr__calculate_coefficients_upsample(stbr__info* stbr_info, int in_
 	for (i = 0; i <= in_last_texel - in_first_texel; i++)
 	{
 		float in_texel_center = (float)(i + in_first_texel) + 0.5f;
-		total_filter += coefficient_group[i] = stbr__filter_info_table[stbr_info->filter].kernel(in_center_of_out - in_texel_center);
+		total_filter += coefficient_group[i] = stbr__filter_info_table[filter].kernel(in_center_of_out - in_texel_center);
 	}
 
 	STBR_DEBUG_ASSERT(total_filter > 0);
@@ -312,6 +313,7 @@ static void stbr__calculate_coefficients_upsample(stbr__info* stbr_info, int in_
 static void stbr__calculate_coefficients_downsample(stbr__info* stbr_info, float scale_ratio, int out_first_texel, int out_last_texel, float out_center_of_in, int n, stbr__contributors* contributor, float* coefficient_group)
 {
 	int i;
+	stbr_filter filter = stbr_info->filter;
 
 	STBR_DEBUG_ASSERT(out_last_texel - out_first_texel <= stbr_info->kernel_texel_width);
 	STBR_DEBUG_ASSERT(out_first_texel >= 0);
@@ -323,7 +325,7 @@ static void stbr__calculate_coefficients_downsample(stbr__info* stbr_info, float
 	for (i = 0; i <= out_last_texel - out_first_texel; i++)
 	{
 		float in_texel_center = (float)(i + out_first_texel) + 0.5f;
-		coefficient_group[i] = stbr__filter_info_table[stbr_info->filter].kernel(out_center_of_in - in_texel_center) * scale_ratio;
+		coefficient_group[i] = stbr__filter_info_table[filter].kernel(out_center_of_in - in_texel_center) * scale_ratio;
 	}
 }
 
@@ -575,7 +577,7 @@ static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int i
 
 	STBR_UNIMPLEMENTED(stbr_info->type != STBR_TYPE_UINT8);
 
-	STBR_UNIMPLEMENTED("stbr__calculate_coefficients(stbr_info, in_first_scanline, in_last_scanline, in_center_of_out, n, vertical_contributors, vertical_coefficients)");
+	stbr__calculate_coefficients_upsample(stbr_info, in_first_scanline, in_last_scanline, in_center_of_out, n, vertical_contributors, vertical_coefficients);
 
 	int n0 = vertical_contributors->n0;
 	int n1 = vertical_contributors->n1;
@@ -680,7 +682,7 @@ static void stbr__buffer_loop_upsample(stbr__info* stbr_info)
 		float in_center_of_out = 0; // Center of the current out scanline in the in scanline space
 		int in_first_scanline = 0, in_last_scanline = 0;
 
-		STBR_UNIMPLEMENTED("stbr__calculate_sample_range(y, out_scanlines_radius, scale_ratio, &in_first_scanline, &in_last_scanline, &in_center_of_out)");
+		stbr__calculate_sample_range_upsample(y, out_scanlines_radius, scale_ratio, &in_first_scanline, &in_last_scanline, &in_center_of_out);
 
 		STBR_DEBUG_ASSERT(in_last_scanline - in_first_scanline <= stbr_info->kernel_texel_width);
 		STBR_DEBUG_ASSERT(in_first_scanline >= 0);
