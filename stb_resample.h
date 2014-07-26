@@ -30,6 +30,7 @@ typedef enum
 	STBR_FILTER_NEAREST     = 1,
 	STBR_FILTER_BILINEAR    = 2,
 	STBR_FILTER_BICUBIC     = 3,  // A cubic b spline
+	STBR_FILTER_CATMULLROM  = 4,
 } stbr_filter;
 
 typedef enum
@@ -245,11 +246,26 @@ static float stbr__filter_bicubic(float x)
 	return (0.0f);
 }
 
+static float stbr__filter_catmullrom(float x)
+{
+	x = (float)fabs(x);
+
+	float xx = x*x;
+
+	if (x < 1.0f)
+		return 1.5f * (x * xx) - 2.5f * xx + 1;
+	else if (x < 2.0f)
+		return -0.5f * (x * xx) + 2.5f * xx - 4 * x + 2;
+
+	return (0.0f);
+}
+
 static stbr__filter_info stbr__filter_info_table[] = {
-		{ NULL,                  0.0f },
-		{ stbr__filter_nearest,  0.5f },
-		{ stbr__filter_bilinear, 1.0f },
-		{ stbr__filter_bicubic,  2.0f },
+		{ NULL,                    0.0f },
+		{ stbr__filter_nearest,    0.5f },
+		{ stbr__filter_bilinear,   1.0f },
+		{ stbr__filter_bicubic,    2.0f },
+		{ stbr__filter_catmullrom, 2.0f },
 };
 
 stbr_inline static int stbr__use_width_upsampling_noinfo(int output_w, int input_w)
@@ -515,8 +531,6 @@ static void stbr__output_decode_coefficients_1(float* output_buffer, int out_tex
 	STBR_DEBUG_ASSERT(channels == 1);
 
 	output_buffer[out_texel_index] += input_buffer[input_texel_index] * coefficient;
-
-	STBR_DEBUG_ASSERT(output_buffer[out_texel_index] <= 1.001f);
 }
 
 static void stbr__output_decode_coefficients_2(float* output_buffer, int out_texel_index, float* input_buffer, int input_texel_index, int channels, float coefficient)
@@ -525,9 +539,6 @@ static void stbr__output_decode_coefficients_2(float* output_buffer, int out_tex
 
 	output_buffer[out_texel_index    ] += input_buffer[input_texel_index    ] * coefficient;
 	output_buffer[out_texel_index + 1] += input_buffer[input_texel_index + 1] * coefficient;
-
-	STBR_DEBUG_ASSERT(output_buffer[out_texel_index    ] <= 1.001f);
-	STBR_DEBUG_ASSERT(output_buffer[out_texel_index + 1] <= 1.001f);
 }
 
 static void stbr__output_decode_coefficients_3(float* output_buffer, int out_texel_index, float* input_buffer, int input_texel_index, int channels, float coefficient)
@@ -537,10 +548,6 @@ static void stbr__output_decode_coefficients_3(float* output_buffer, int out_tex
 	output_buffer[out_texel_index    ] += input_buffer[input_texel_index    ] * coefficient;
 	output_buffer[out_texel_index + 1] += input_buffer[input_texel_index + 1] * coefficient;
 	output_buffer[out_texel_index + 2] += input_buffer[input_texel_index + 2] * coefficient;
-
-	STBR_DEBUG_ASSERT(output_buffer[out_texel_index    ] <= 1.001f);
-	STBR_DEBUG_ASSERT(output_buffer[out_texel_index + 1] <= 1.001f);
-	STBR_DEBUG_ASSERT(output_buffer[out_texel_index + 2] <= 1.001f);
 }
 
 static void stbr__output_decode_coefficients_4(float* output_buffer, int out_texel_index, float* input_buffer, int input_texel_index, int channels, float coefficient)
@@ -551,22 +558,13 @@ static void stbr__output_decode_coefficients_4(float* output_buffer, int out_tex
 	output_buffer[out_texel_index + 1] += input_buffer[input_texel_index + 1] * coefficient;
 	output_buffer[out_texel_index + 2] += input_buffer[input_texel_index + 2] * coefficient;
 	output_buffer[out_texel_index + 3] += input_buffer[input_texel_index + 3] * coefficient;
-
-	STBR_DEBUG_ASSERT(output_buffer[out_texel_index    ] <= 1.001f);
-	STBR_DEBUG_ASSERT(output_buffer[out_texel_index + 1] <= 1.001f);
-	STBR_DEBUG_ASSERT(output_buffer[out_texel_index + 2] <= 1.001f);
-	STBR_DEBUG_ASSERT(output_buffer[out_texel_index + 3] <= 1.001f);
 }
 
 static void stbr__output_decode_coefficients_n(float* output_buffer, int out_texel_index, float* input_buffer, int input_texel_index, int channels, float coefficient)
 {
 	int c;
 	for (c = 0; c < channels; c++)
-	{
 		output_buffer[out_texel_index + c] += input_buffer[input_texel_index + c] * coefficient;
-
-		STBR_DEBUG_ASSERT(output_buffer[out_texel_index + c] <= 1.001f);
-	}
 }
 
 static stbr__output_decode_coefficients stbr__get_output_decode_coefficients_function(int channels)
@@ -751,7 +749,11 @@ static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int i
 		}
 
 		for (c = 0; c < channels; c++)
+		{
+			STBR_DEBUG_ASSERT(encode_buffer[c] < 1.0f + 1.0f/255);
+
 			((unsigned char*)output_data)[out_texel_index + c] = (unsigned char)(encode_buffer[c] * 255);
+		}
 	}
 }
 
@@ -885,7 +887,11 @@ static void stbr__empty_ring_buffer(stbr__info* stbr_info, int first_necessary_s
 					int ring_texel_index = texel_index;
 					int output_texel_index = output_row + texel_index;
 					for (c = 0; c < channels; c++)
+					{
+						STBR_DEBUG_ASSERT(ring_buffer_entry[ring_texel_index + c] < 1.0f + 1.0f / 255);
+
 						((unsigned char*)output_data)[output_texel_index + c] = (unsigned char)(ring_buffer_entry[ring_texel_index + c] * 255);
+					}
 				}
 			}
 
