@@ -27,8 +27,9 @@ Initial implementation by Jorge L Rodriguez
 
 typedef enum
 {
-	STBR_FILTER_NEAREST = 1,
-	STBR_FILTER_LINEAR = 2,
+	STBR_FILTER_NEAREST     = 1,
+	STBR_FILTER_BILINEAR    = 2,
+	STBR_FILTER_BICUBIC     = 3,  // A cubic b spline
 } stbr_filter;
 
 typedef enum
@@ -212,13 +213,15 @@ static stbr_inline int stbr__max(int a, int b)
 
 static float stbr__filter_nearest(float x)
 {
-	if (fabs(x) <= 0.5)
+	x = (float)fabs(x);
+
+	if (x <= 0.5)
 		return 1;
 	else
 		return 0;
 }
 
-static float stbr__filter_linear(float x)
+static float stbr__filter_bilinear(float x)
 {
 	x = (float)fabs(x);
 
@@ -228,10 +231,25 @@ static float stbr__filter_linear(float x)
 		return 0;
 }
 
+static float stbr__filter_bicubic(float x)
+{
+	x = (float)fabs(x);
+
+	float xx = x*x;
+
+	if (x < 1.0f)
+		return 0.5f * (x * xx) - xx + 0.66666666666f;
+	else if (x < 2.0f)
+		return -0.16666666f * (x * xx) + xx - 2 * x + 1.3333333333f;
+
+	return (0.0f);
+}
+
 static stbr__filter_info stbr__filter_info_table[] = {
-		{ NULL,                 0.0f },
-		{ stbr__filter_nearest, 0.5f },
-		{ stbr__filter_linear,  1.0f },
+		{ NULL,                  0.0f },
+		{ stbr__filter_nearest,  0.5f },
+		{ stbr__filter_bilinear, 1.0f },
+		{ stbr__filter_bicubic,  2.0f },
 };
 
 stbr_inline static int stbr__use_width_upsampling_noinfo(int output_w, int input_w)
