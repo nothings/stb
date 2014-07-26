@@ -777,26 +777,26 @@ static void stbr__resample_vertical_downsample(stbr__info* stbr_info, int n, int
 
 	int n0 = vertical_contributors->n0;
 	int n1 = vertical_contributors->n1;
+	int max_n = stbr__min(n1, output_h - 1);
 
 	stbr__output_decode_coefficients output_decode_coefficients_fn = stbr__get_output_decode_coefficients_function(channels);
 
 	STBR_DEBUG_ASSERT(!stbr__use_height_upsampling(stbr_info));
 	STBR_DEBUG_ASSERT(n0 >= in_first_scanline);
 	STBR_DEBUG_ASSERT(n1 <= in_last_scanline);
+	STBR_DEBUG_ASSERT(n1 >= n0);
 
-	for (x = 0; x < output_w; x++)
+	// Using min and max to avoid writing into ring buffers that will be thrown out.
+	for (k = stbr__max(n0, 0); k <= max_n; k++)
 	{
-		int in_texel_index = x * channels;
-		int max_n = stbr__min(n1, output_h-1);
+		int coefficient_index = k - n0;
 
-		STBR_DEBUG_ASSERT(n1 >= n0);
+		float* ring_buffer_entry = stbr__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_texel_width, ring_buffer_length);
+		float coefficient = vertical_coefficients[coefficient_index];
 
-		// Using min and max to avoid writing into ring buffers that will be thrown out.
-		for (k = stbr__max(n0, 0); k <= max_n; k++)
+		for (x = 0; x < output_w; x++)
 		{
-			int coefficient_index = k - n0;
-			float* ring_buffer_entry = stbr__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_texel_width, ring_buffer_length);
-			float coefficient = vertical_coefficients[coefficient_index];
+			int in_texel_index = x * channels;
 
 			output_decode_coefficients_fn(ring_buffer_entry, in_texel_index, horizontal_buffer, in_texel_index, channels, coefficient);
 		}
