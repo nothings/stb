@@ -31,6 +31,7 @@ typedef enum
 	STBR_FILTER_BILINEAR    = 2,
 	STBR_FILTER_BICUBIC     = 3,  // A cubic b spline
 	STBR_FILTER_CATMULLROM  = 4,
+	STBR_FILTER_MITCHELL    = 5,
 } stbr_filter;
 
 typedef enum
@@ -260,12 +261,27 @@ static float stbr__filter_catmullrom(float x)
 	return (0.0f);
 }
 
+static float stbr__filter_mitchell(float x)
+{
+	x = (float)fabs(x);
+
+	float xx = x*x;
+
+	if (x < 1.0f)
+		return 1.1666666666666f * (x * xx) - 2 * xx + 0.8888888888f;
+	else if (x < 2.0f)
+		return -0.3888888888f * (x * xx) + 2 * xx - 3.333333333f * x + 1.777777777777f;
+
+	return (0.0f);
+}
+
 static stbr__filter_info stbr__filter_info_table[] = {
 		{ NULL,                    0.0f },
 		{ stbr__filter_nearest,    0.5f },
 		{ stbr__filter_bilinear,   1.0f },
 		{ stbr__filter_bicubic,    2.0f },
 		{ stbr__filter_catmullrom, 2.0f },
+		{ stbr__filter_mitchell,   2.0f },
 };
 
 stbr_inline static int stbr__use_width_upsampling_noinfo(int output_w, int input_w)
