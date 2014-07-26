@@ -196,5 +196,6 @@ Wish list:
    s0, t0, s1, t1 vs scale_x, scale_y, offset_x, offset_y - What's the best interface?
    Separate wrap modes and filter modes per axis
    Alpha test coverage respecting resize (FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage: https://code.google.com/p/nvidia-texture-tools/source/browse/trunk/src/nvimage/FloatImage.cpp)
+   Edge: Clamp, ignore, wrap, reflect
 
 
