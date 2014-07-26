@@ -254,9 +254,9 @@ static float stbr__filter_catmullrom(float x)
 	float xx = x*x;
 
 	if (x < 1.0f)
-		return 1.5f * (x * xx) - 2.5f * xx + 1;
+		return 1.5f * xx * (x - 1.66666666f) + 1;
 	else if (x < 2.0f)
-		return -0.5f * (x * xx) + 2.5f * xx - 4 * x + 2;
+		return -0.5f * x * ((xx - 5 * x) + 8) + 2;
 
 	return (0.0f);
 }
@@ -268,9 +268,9 @@ static float stbr__filter_mitchell(float x)
 	float xx = x*x;
 
 	if (x < 1.0f)
-		return 1.1666666666666f * (x * xx) - 2 * xx + 0.8888888888f;
+		return 1.1666666666666f * xx * (x - 1.714285715f) + 0.8888888888f;
 	else if (x < 2.0f)
-		return -0.3888888888f * (x * xx) + 2 * xx - 3.333333333f * x + 1.777777777777f;
+		return -0.3888888888f * x * ((xx - 5.14285714f * x) + 8.571428571f) + 1.777777777777f;
 
 	return (0.0f);
 }
