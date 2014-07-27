@@ -279,12 +279,10 @@ static float stbr__filter_bicubic(float x)
 {
 	x = (float)fabs(x);
 
-	float xx = x*x;
-
 	if (x < 1.0f)
-		return 0.5f * (x * xx) - xx + 0.66666666666f;
+		return 0.66666666666f + x*x*(0.5f*x  - 1);
 	else if (x < 2.0f)
-		return -0.16666666f * (x * xx) + xx - 2 * x + 1.3333333333f;
+		return 1.3333333333f + x*(-2 + x*(1 - 0.16666666f * x));
 
 	return (0.0f);
 }
@@ -293,12 +291,10 @@ static float stbr__filter_catmullrom(float x)
 {
 	x = (float)fabs(x);
 
-	float xx = x*x;
-
 	if (x < 1.0f)
-		return 1.5f * xx * (x - 1.66666666f) + 1;
+		return 1 - x*x*(1.5f - 2.5f*x);
 	else if (x < 2.0f)
-		return -0.5f * x * ((xx - 5 * x) + 8) + 2;
+		return 2 - x*(4 + x*(0.5f*x - 2.5f));
 
 	return (0.0f);
 }
@@ -307,12 +303,10 @@ static float stbr__filter_mitchell(float x)
 {
 	x = (float)fabs(x);
 
-	float xx = x*x;
-
 	if (x < 1.0f)
-		return 1.1666666666666f * xx * (x - 1.714285715f) + 0.8888888888f;
+		return 0.8888888888f + x*x*(1.1666666666666f * x - 2.0f);
 	else if (x < 2.0f)
-		return -0.3888888888f * x * ((xx - 5.14285714f * x) + 8.571428571f) + 1.777777777777f;
+		return 1.777777777777f + x*(-3.3333333333f + x*(2 - 0.3888888888888f*x));
 
 	return (0.0f);
 }
