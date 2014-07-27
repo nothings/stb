@@ -37,6 +37,7 @@ typedef enum
 typedef enum
 {
 	STBR_EDGE_CLAMP = 1,
+	STBR_EDGE_REFLECT = 2,
 } stbr_edge;
 
 typedef enum
@@ -347,17 +348,38 @@ stbr_inline static float* stbr__get_coefficient(stbr__info* stbr_info, int n, in
 
 stbr_inline static int stbr__edge_wrap(stbr_edge edge, int n, int max)
 {
-	STBR_UNIMPLEMENTED(edge != STBR_EDGE_CLAMP);
-
 	switch (edge)
 	{
-	default:
 	case STBR_EDGE_CLAMP:
 		if (n < 0)
 			return 0;
 		if (n >= max)
 			return max - 1;
 		return n;
+	case STBR_EDGE_REFLECT:
+	{
+		if (n < 0)
+		{
+			if (n < max)
+				return -n;
+			else
+				return max - 1;
+		}
+
+		if (n >= max)
+		{
+			int max2 = max * 2;
+			if (n < max2)
+				return 0;
+			else
+				return max2 - n - 1;
+		}
+
+		return n;
+	}
+	default:
+		STBR_UNIMPLEMENTED("Unimplemented edge type");
+		return 0;
 	}
 }
 
