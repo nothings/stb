@@ -77,7 +77,7 @@ extern "C" {
 	STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
 		void* output_data, int output_w, int output_h, int output_stride_in_bytes,
 		//int channels, int alpha_channel, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
-		int channels, stbr_type type, stbr_filter filter, stbr_edge edge,
+		int channels, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
 		void* tempmem, stbr_size_t tempmem_size_in_bytes);
 
 
@@ -182,6 +182,7 @@ typedef struct
 	stbr_type type;
 	stbr_filter filter;
 	stbr_edge edge;
+	stbr_colorspace colorspace;
 
 	stbr__contributors* horizontal_contributors;
 	float* horizontal_coefficients;
@@ -224,6 +225,14 @@ static stbr_inline float stbr__saturate(float x)
 
 	return x;
 }
+
+static float stbr__srgb_uchar_to_linear_float[256] = {
+	0.000000f, 0.000304f, 0.000607f, 0.000911f, 0.001214f, 0.001518f, 0.001821f, 0.002125f, 0.002428f, 0.002732f, 0.003035f, 0.003347f, 0.003677f, 0.004025f, 0.004391f, 0.004777f, 0.005182f, 0.005605f, 0.006049f, 0.006512f, 0.006995f, 0.007499f, 0.008023f, 0.008568f, 0.009134f, 0.009721f, 0.010330f, 0.010960f, 0.011612f, 0.012286f, 0.012983f, 0.013702f, 0.014444f, 0.015209f, 0.015996f, 0.016807f, 0.017642f, 0.018500f, 0.019382f, 0.020289f, 0.021219f, 0.022174f, 0.023153f, 0.024158f, 0.025187f, 0.026241f, 0.027321f, 0.028426f, 0.029557f, 0.030713f, 0.031896f, 0.033105f, 0.034340f, 0.035601f, 0.036889f, 0.038204f, 0.039546f, 0.040915f, 0.042311f, 0.043735f, 0.045186f, 0.046665f, 0.048172f, 0.049707f, 0.051269f, 0.052861f, 0.054480f, 0.056128f, 0.057805f, 0.059511f, 0.061246f, 0.063010f, 0.064803f, 0.066626f, 0.068478f, 0.070360f, 0.072272f, 0.074214f, 0.076185f, 0.078187f, 0.080220f, 0.082283f, 0.084376f, 0.086500f, 0.088656f, 0.090842f, 0.093059f, 0.095307f, 0.097587f, 0.099899f, 0.102242f, 0.104616f, 0.107023f, 0.109462f, 0.111932f, 0.114435f, 0.116971f, 0.119538f, 0.122139f, 0.124772f, 0.127438f, 0.130136f, 0.132868f, 0.135633f, 0.138432f, 0.141263f, 0.144128f, 0.147027f, 0.149960f, 0.152926f, 0.155926f, 0.158961f, 0.162029f, 0.165132f, 0.168269f, 0.171441f, 0.174647f, 0.177888f, 0.181164f, 0.184475f, 0.187821f, 0.191202f, 0.194618f, 0.198069f, 0.201556f, 0.205079f, 0.208637f, 0.212231f, 0.215861f, 0.219526f, 0.223228f, 0.226966f, 0.230740f, 0.234551f, 0.238398f, 0.242281f, 0.246201f, 0.250158f, 0.254152f, 0.258183f, 0.262251f, 0.266356f, 0.270498f, 0.274677f, 0.278894f, 0.283149f, 0.287441f, 0.291771f, 0.296138f, 0.300544f, 0.304987f, 0.309469f, 0.313989f, 0.318547f, 0.323143f, 0.327778f, 0.332452f, 0.337164f, 0.341914f, 0.346704f, 0.351533f, 0.356400f, 0.361307f, 0.366253f, 0.371238f, 0.376262f, 0.381326f, 0.386430f, 0.391573f, 0.396755f, 0.401978f, 0.407240f, 0.412543f, 0.417885f, 0.423268f, 0.428691f, 0.434154f, 0.439657f, 0.445201f, 0.450786f, 0.456411f, 0.462077f, 0.467784f, 0.473532f, 0.479320f, 0.485150f, 0.491021f, 0.496933f, 0.502887f, 0.508881f, 0.514918f, 0.520996f, 0.527115f, 0.533276f, 0.539480f, 0.545725f, 0.552011f, 0.558340f, 0.564712f, 0.571125f, 0.577581f, 0.584078f, 0.590619f, 0.597202f, 0.603827f, 0.610496f, 0.617207f, 0.623960f, 0.630757f, 0.637597f, 0.644480f, 0.651406f, 0.658375f, 0.665387f, 0.672443f, 0.679543f, 0.686685f, 0.693872f, 0.701102f, 0.708376f, 0.715694f, 0.723055f, 0.730461f, 0.737911f, 0.745404f, 0.752942f, 0.760525f, 0.768151f, 0.775822f, 0.783538f, 0.791298f, 0.799103f, 0.806952f, 0.814847f, 0.822786f, 0.830770f, 0.838799f, 0.846873f, 0.854993f, 0.863157f, 0.871367f, 0.879622f, 0.887923f, 0.896269f, 0.904661f, 0.913099f, 0.921582f, 0.930111f, 0.938686f, 0.947307f, 0.955974f, 0.964686f, 0.973445f, 0.982251f, 0.991102f, 1.0f
+};
+
+static unsigned char stbr__linear_uchar_to_srgb_uchar[256] = {
+	0, 12, 21, 28, 33, 38, 42, 46, 49, 52, 55, 58, 61, 63, 66, 68, 70, 73, 75, 77, 79, 81, 82, 84, 86, 88, 89, 91, 93, 94, 96, 97, 99, 100, 102, 103, 104, 106, 107, 109, 110, 111, 112, 114, 115, 116, 117, 118, 120, 121, 122, 123, 124, 125, 126, 127, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 151, 152, 153, 154, 155, 156, 157, 157, 158, 159, 160, 161, 161, 162, 163, 164, 165, 165, 166, 167, 168, 168, 169, 170, 171, 171, 172, 173, 174, 174, 175, 176, 176, 177, 178, 179, 179, 180, 181, 181, 182, 183, 183, 184, 185, 185, 186, 187, 187, 188, 189, 189, 190, 191, 191, 192, 193, 193, 194, 194, 195, 196, 196, 197, 197, 198, 199, 199, 200, 201, 201, 202, 202, 203, 204, 204, 205, 205, 206, 206, 207, 208, 208, 209, 209, 210, 210, 211, 212, 212, 213, 213, 214, 214, 215, 215, 216, 217, 217, 218, 218, 219, 219, 220, 220, 221, 221, 222, 222, 223, 223, 224, 224, 225, 226, 226, 227, 227, 228, 228, 229, 229, 230, 230, 231, 231, 232, 232, 233, 233, 234, 234, 235, 235, 236, 236, 237, 237, 237, 238, 238, 239, 239, 240, 240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 245, 246, 246, 247, 247, 248, 248, 249, 249, 250, 250, 251, 251, 251, 252, 252, 253, 253, 254, 254, 255
+};
 
 
 static float stbr__filter_nearest(float x)
@@ -566,9 +575,92 @@ static float* stbr__get_decode_buffer(stbr__info* stbr_info)
 	return &stbr_info->decode_buffer[stbr__get_filter_texel_margin(stbr_info->filter) * stbr_info->channels];
 }
 
+typedef float(*stbr__decode_scanline_type_colorspace)(const void* buffer, int offset, int channel);
+
+static float stbr__decode_scanline_uchar_sRGB(const void* buffer, int offset, int channel)
+{
+	return stbr__srgb_uchar_to_linear_float[((const unsigned char*)buffer)[offset+channel]];
+}
+
+static float stbr__decode_scanline_uchar_linear(const void* buffer, int offset, int channel)
+{
+	return ((float)((const unsigned char*)buffer)[offset + channel]) / 255;
+}
+
+typedef void(*stbr__decode_scanline_channels)(float* decode_buffer, int out_texel_index, const void* input_buffer, int input_texel_index, int channels, stbr__decode_scanline_type_colorspace decode_type_colorspace);
+
+static void stbr__decode_scanline_1(float* decode_buffer, int out_texel_index, const void* input_buffer, int input_texel_index, int channels, stbr__decode_scanline_type_colorspace decode_type_colorspace)
+{
+	STBR_DEBUG_ASSERT(channels == 1);
+
+	decode_buffer[out_texel_index] = decode_type_colorspace(input_buffer, input_texel_index, 0);
+}
+
+static void stbr__decode_scanline_2(float* decode_buffer, int out_texel_index, const void* input_buffer, int input_texel_index, int channels, stbr__decode_scanline_type_colorspace decode_type_colorspace)
+{
+	STBR_DEBUG_ASSERT(channels == 2);
+
+	decode_buffer[out_texel_index]     = decode_type_colorspace(input_buffer, input_texel_index, 0);
+	decode_buffer[out_texel_index + 1] = decode_type_colorspace(input_buffer, input_texel_index, 1);
+}
+
+static void stbr__decode_scanline_3(float* decode_buffer, int out_texel_index, const void* input_buffer, int input_texel_index, int channels, stbr__decode_scanline_type_colorspace decode_type_colorspace)
+{
+	STBR_DEBUG_ASSERT(channels == 3);
+
+	decode_buffer[out_texel_index]     = decode_type_colorspace(input_buffer, input_texel_index, 0);
+	decode_buffer[out_texel_index + 1] = decode_type_colorspace(input_buffer, input_texel_index, 1);
+	decode_buffer[out_texel_index + 2] = decode_type_colorspace(input_buffer, input_texel_index, 2);
+}
+
+static void stbr__decode_scanline_4(float* decode_buffer, int out_texel_index, const void* input_buffer, int input_texel_index, int channels, stbr__decode_scanline_type_colorspace decode_type_colorspace)
+{
+	STBR_DEBUG_ASSERT(channels == 4);
+
+	decode_buffer[out_texel_index]     = decode_type_colorspace(input_buffer, input_texel_index, 0);
+	decode_buffer[out_texel_index + 1] = decode_type_colorspace(input_buffer, input_texel_index, 1);
+	decode_buffer[out_texel_index + 2] = decode_type_colorspace(input_buffer, input_texel_index, 2);
+	decode_buffer[out_texel_index + 3] = decode_type_colorspace(input_buffer, input_texel_index, 3);
+}
+
+static void stbr__decode_scanline_n(float* decode_buffer, int out_texel_index, const void* input_buffer, int input_texel_index, int channels, stbr__decode_scanline_type_colorspace decode_type_colorspace)
+{
+	int c;
+	for (c = 0; c < channels; c++)
+		decode_buffer[out_texel_index + c] = decode_type_colorspace(input_buffer, input_texel_index, c);
+}
+
+static stbr__decode_scanline_type_colorspace stbr__get_decode_type_colorspace_function(stbr_type type, stbr_colorspace colorspace)
+{
+	STBR_UNIMPLEMENTED(type != STBR_TYPE_UINT8);
+
+	if (colorspace == STBR_COLORSPACE_LINEAR)
+		return stbr__decode_scanline_uchar_linear;
+	else if (colorspace == STBR_COLORSPACE_SRGB)
+		return stbr__decode_scanline_uchar_sRGB;
+
+	STBR_UNIMPLEMENTED("Unknown color space.");
+
+	return NULL;
+}
+
+static stbr__decode_scanline_channels stbr__get_decode_channels_function(int channels)
+{
+	if (channels == 1)
+		return &stbr__decode_scanline_1;
+	else if (channels == 2)
+		return &stbr__decode_scanline_2;
+	else if (channels == 3)
+		return &stbr__decode_scanline_3;
+	else if (channels == 4)
+		return &stbr__decode_scanline_4;
+
+	return &stbr__decode_scanline_n;
+}
+
 static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 {
-	int x, c;
+	int x;
 	int channels = stbr_info->channels;
 	int input_w = stbr_info->input_w;
 	int input_stride_bytes = stbr_info->input_stride_bytes;
@@ -578,15 +670,15 @@ static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 	int in_buffer_row_index = stbr__edge_wrap(edge, n, stbr_info->input_h) * input_stride_bytes;
 	int max_x = input_w + stbr__get_filter_texel_margin(stbr_info->filter);
 
-	STBR_UNIMPLEMENTED(stbr_info->type != STBR_TYPE_UINT8);
+	stbr__decode_scanline_channels decode_channels_fn = stbr__get_decode_channels_function(channels);
+	stbr__decode_scanline_type_colorspace decode_type_colorspace_fn = stbr__get_decode_type_colorspace_function(stbr_info->type, stbr_info->colorspace);
 
 	for (x = -stbr__get_filter_texel_margin(stbr_info->filter); x < max_x; x++)
 	{
 		int decode_texel_index = x * channels;
 		int input_texel_index = in_buffer_row_index + stbr__edge_wrap(edge, x, input_w) * channels;
 
-		for (c = 0; c < channels; c++)
-			decode_buffer[decode_texel_index + c] = ((float)((const unsigned char*)input_data)[input_texel_index + c]) / 255;
+		decode_channels_fn(decode_buffer, decode_texel_index, input_data, input_texel_index, channels, decode_type_colorspace_fn);
 	}
 }
 
@@ -792,9 +884,93 @@ static float* stbr__get_ring_buffer_scanline(int get_scanline, float* ring_buffe
 	return stbr__get_ring_buffer_entry(ring_buffer, ring_buffer_index, ring_buffer_length);
 }
 
+
+typedef void(*stbr__encode_scanline_type_colorspace)(const void* buffer, int offset, int channel, float value);
+
+static void stbr__encode_scanline_uchar_sRGB(const void* buffer, int offset, int channel, float value)
+{
+	((unsigned char*)buffer)[offset + channel] = stbr__linear_uchar_to_srgb_uchar[(unsigned char)(stbr__saturate(value)*255)];
+}
+
+static void stbr__encode_scanline_uchar_linear(const void* buffer, int offset, int channel, float value)
+{
+	((unsigned char*)buffer)[offset + channel] = (unsigned char)(stbr__saturate(value) * 255);
+}
+
+typedef void(*stbr__encode_scanline_channels)(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, stbr__encode_scanline_type_colorspace encode_type_colorspace);
+
+static void stbr__encode_scanline_1(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, stbr__encode_scanline_type_colorspace encode_type_colorspace)
+{
+	STBR_DEBUG_ASSERT(channels == 1);
+
+	encode_type_colorspace(output_buffer, output_texel_index, 0, encode_buffer[encode_texel_index]);
+}
+
+static void stbr__encode_scanline_2(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, stbr__encode_scanline_type_colorspace encode_type_colorspace)
+{
+	STBR_DEBUG_ASSERT(channels == 2);
+
+	encode_type_colorspace(output_buffer, output_texel_index, 0, encode_buffer[encode_texel_index]);
+	encode_type_colorspace(output_buffer, output_texel_index, 1, encode_buffer[encode_texel_index + 1]);
+}
+
+static void stbr__encode_scanline_3(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, stbr__encode_scanline_type_colorspace encode_type_colorspace)
+{
+	STBR_DEBUG_ASSERT(channels == 3);
+
+	encode_type_colorspace(output_buffer, output_texel_index, 0, encode_buffer[encode_texel_index]);
+	encode_type_colorspace(output_buffer, output_texel_index, 1, encode_buffer[encode_texel_index + 1]);
+	encode_type_colorspace(output_buffer, output_texel_index, 2, encode_buffer[encode_texel_index + 2]);
+}
+
+static void stbr__encode_scanline_4(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, stbr__encode_scanline_type_colorspace encode_type_colorspace)
+{
+	STBR_DEBUG_ASSERT(channels == 4);
+
+	encode_type_colorspace(output_buffer, output_texel_index, 0, encode_buffer[encode_texel_index]);
+	encode_type_colorspace(output_buffer, output_texel_index, 1, encode_buffer[encode_texel_index + 1]);
+	encode_type_colorspace(output_buffer, output_texel_index, 2, encode_buffer[encode_texel_index + 2]);
+	encode_type_colorspace(output_buffer, output_texel_index, 3, encode_buffer[encode_texel_index + 3]);
+}
+
+static void stbr__encode_scanline_n(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, stbr__encode_scanline_type_colorspace encode_type_colorspace)
+{
+	int c;
+	for (c = 0; c < channels; c++)
+		encode_type_colorspace(output_buffer, output_texel_index, c, encode_buffer[encode_texel_index + c]);
+}
+
+static stbr__encode_scanline_type_colorspace stbr__get_encode_type_colorspace_function(stbr_type type, stbr_colorspace colorspace)
+{
+	STBR_UNIMPLEMENTED(type != STBR_TYPE_UINT8);
+
+	if (colorspace == STBR_COLORSPACE_LINEAR)
+		return stbr__encode_scanline_uchar_linear;
+	else if (colorspace == STBR_COLORSPACE_SRGB)
+		return stbr__encode_scanline_uchar_sRGB;
+
+	STBR_UNIMPLEMENTED("Unknown color space.");
+
+	return NULL;
+}
+
+static stbr__encode_scanline_channels stbr__get_encode_channels_function(int channels)
+{
+	if (channels == 1)
+		return &stbr__encode_scanline_1;
+	else if (channels == 2)
+		return &stbr__encode_scanline_2;
+	else if (channels == 3)
+		return &stbr__encode_scanline_3;
+	else if (channels == 4)
+		return &stbr__encode_scanline_4;
+
+	return &stbr__encode_scanline_n;
+}
+
 static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int in_first_scanline, int in_last_scanline, float in_center_of_out)
 {
-	int x, k, c;
+	int x, k;
 	int output_w = stbr_info->output_w;
 	stbr__contributors* vertical_contributors = &stbr_info->vertical_contributors;
 	float* vertical_coefficients = stbr_info->vertical_coefficients;
@@ -819,6 +995,8 @@ static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int i
 	int output_row_index = n * stbr_info->output_stride_bytes;
 
 	stbr__output_decode_coefficients output_decode_coefficients_fn = stbr__get_output_decode_coefficients_function(channels);
+	stbr__encode_scanline_channels encode_channels_fn = stbr__get_encode_channels_function(channels);
+	stbr__encode_scanline_type_colorspace encode_type_colorspace_fn = stbr__get_encode_type_colorspace_function(stbr_info->type, stbr_info->colorspace);
 
 	STBR_DEBUG_ASSERT(stbr__use_height_upsampling(stbr_info));
 	STBR_DEBUG_ASSERT(n0 >= in_first_scanline);
@@ -843,8 +1021,7 @@ static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int i
 			output_decode_coefficients_fn(encode_buffer, 0, ring_buffer_entry, in_texel_index, channels, coefficient);
 		}
 
-		for (c = 0; c < channels; c++)
-			((unsigned char*)output_data)[out_texel_index + c] = (unsigned char)(stbr__saturate(encode_buffer[c]) * 255);
+		encode_channels_fn(output_data, out_texel_index, encode_buffer, 0, channels, encode_type_colorspace_fn);
 	}
 }
 
@@ -959,6 +1136,9 @@ static void stbr__empty_ring_buffer(stbr__info* stbr_info, int first_necessary_s
 	float* ring_buffer = stbr_info->ring_buffer;
 	int ring_buffer_length = stbr_info->ring_buffer_length_bytes/sizeof(float);
 
+	stbr__encode_scanline_channels encode_channels_fn = stbr__get_encode_channels_function(channels);
+	stbr__encode_scanline_type_colorspace encode_type_colorspace_fn = stbr__get_encode_type_colorspace_function(stbr_info->type, stbr_info->colorspace);
+
 	if (stbr_info->ring_buffer_begin_index >= 0)
 	{
 		// Get rid of whatever we don't need anymore.
@@ -968,7 +1148,7 @@ static void stbr__empty_ring_buffer(stbr__info* stbr_info, int first_necessary_s
 
 			if (stbr_info->ring_buffer_first_scanline >= 0 && stbr_info->ring_buffer_first_scanline < stbr_info->output_h)
 			{
-				int x, c;
+				int x;
 				int output_row = stbr_info->ring_buffer_first_scanline * output_stride_bytes;
 				float* ring_buffer_entry = stbr__get_ring_buffer_entry(ring_buffer, stbr_info->ring_buffer_begin_index, ring_buffer_length);
 
@@ -977,8 +1157,8 @@ static void stbr__empty_ring_buffer(stbr__info* stbr_info, int first_necessary_s
 					int texel_index = x * channels;
 					int ring_texel_index = texel_index;
 					int output_texel_index = output_row + texel_index;
-					for (c = 0; c < channels; c++)
-						((unsigned char*)output_data)[output_texel_index + c] = (unsigned char)(stbr__saturate(ring_buffer_entry[ring_texel_index + c]) * 255);
+
+					encode_channels_fn(output_data, output_texel_index, ring_buffer_entry, ring_texel_index, channels, encode_type_colorspace_fn);
 				}
 			}
 
@@ -1040,7 +1220,7 @@ static void stbr__buffer_loop_downsample(stbr__info* stbr_info)
 
 STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
 	void* output_data, int output_w, int output_h, int output_stride_in_bytes,
-	int channels, stbr_type type, stbr_filter filter, stbr_edge edge,
+	int channels, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
 	void* tempmem, stbr_size_t tempmem_size_in_bytes)
 {
 	int width_stride_input = input_stride_in_bytes ? input_stride_in_bytes : channels * input_w;
@@ -1085,6 +1265,7 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 	stbr_info->type = type;
 	stbr_info->filter = filter;
 	stbr_info->edge = edge;
+	stbr_info->colorspace = colorspace;
 
 	stbr_info->ring_buffer_length_bytes = output_w * channels * sizeof(float);
 	stbr_info->decode_buffer_texels = input_w + stbr__get_filter_texel_margin(filter) * 2;

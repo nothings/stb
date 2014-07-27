@@ -48,7 +48,7 @@ int main(int argc, char** argv)
 	int in_w = 512;
 	int in_h = 512;
 
-	size_t memory_required = stbr_calculate_memory(in_w, in_h, w*n, out_w, out_h, out_stride, n, STBR_FILTER_BICUBIC);
+	size_t memory_required = stbr_calculate_memory(in_w, in_h, w*n, out_w, out_h, out_stride, n, STBR_FILTER_CATMULLROM);
 	void* extra_memory = malloc(memory_required);
 
 	// Cut out the outside 64 pixels all around to test the stride.
@@ -56,7 +56,7 @@ int main(int argc, char** argv)
 	STBR_ASSERT(in_w + border <= w);
 	STBR_ASSERT(in_h + border <= h);
 
-	stbr_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, n, STBR_TYPE_UINT8, STBR_FILTER_BICUBIC, STBR_EDGE_CLAMP, extra_memory, memory_required);
+	stbr_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, n, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
 
 	free(extra_memory);
 
