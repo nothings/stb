@@ -36,8 +36,9 @@ typedef enum
 
 typedef enum
 {
-	STBR_EDGE_CLAMP = 1,
+	STBR_EDGE_CLAMP   = 1,
 	STBR_EDGE_REFLECT = 2,
+	STBR_EDGE_WRAP    = 3,
 } stbr_edge;
 
 typedef enum
@@ -353,9 +354,12 @@ stbr_inline static int stbr__edge_wrap(stbr_edge edge, int n, int max)
 	case STBR_EDGE_CLAMP:
 		if (n < 0)
 			return 0;
+
 		if (n >= max)
 			return max - 1;
+
 		return n;
+
 	case STBR_EDGE_REFLECT:
 	{
 		if (n < 0)
@@ -369,7 +373,7 @@ stbr_inline static int stbr__edge_wrap(stbr_edge edge, int n, int max)
 		if (n >= max)
 		{
 			int max2 = max * 2;
-			if (n < max2)
+			if (n >= max2)
 				return 0;
 			else
 				return max2 - n - 1;
@@ -377,6 +381,20 @@ stbr_inline static int stbr__edge_wrap(stbr_edge edge, int n, int max)
 
 		return n;
 	}
+
+	case STBR_EDGE_WRAP:
+		if (n >= 0)
+			return (n % max);
+		else
+		{
+			int m = (-n) % max;
+
+			if (m != 0)
+				m = max - m;
+
+			return (m);
+		}
+
 	default:
 		STBR_UNIMPLEMENTED("Unimplemented edge type");
 		return 0;
@@ -926,7 +944,7 @@ static void stbr__empty_ring_buffer(stbr__info* stbr_info, int first_necessary_s
 					int output_texel_index = output_row + texel_index;
 					for (c = 0; c < channels; c++)
 					{
-						STBR_DEBUG_ASSERT(ring_buffer_entry[ring_texel_index + c] < 1.0f + 1.0f / 255);
+						//STBR_DEBUG_ASSERT(ring_buffer_entry[ring_texel_index + c] < 1.0f + 1.0f / 255);
 
 						((unsigned char*)output_data)[output_texel_index + c] = (unsigned char)(ring_buffer_entry[ring_texel_index + c] * 255);
 					}
