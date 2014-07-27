@@ -49,7 +49,10 @@ typedef enum
 
 typedef enum
 {
-	STBR_TYPE_UINT8 = 1,
+	STBR_TYPE_UINT8  = 1,
+	STBR_TYPE_UINT16 = 2,
+	STBR_TYPE_UINT32 = 3,
+	STBR_TYPE_FLOAT  = 4,
 } stbr_type;
 
 typedef unsigned char stbr_uc;
@@ -233,6 +236,23 @@ static float stbr__srgb_uchar_to_linear_float[256] = {
 static unsigned char stbr__linear_uchar_to_srgb_uchar[256] = {
 	0, 12, 21, 28, 33, 38, 42, 46, 49, 52, 55, 58, 61, 63, 66, 68, 70, 73, 75, 77, 79, 81, 82, 84, 86, 88, 89, 91, 93, 94, 96, 97, 99, 100, 102, 103, 104, 106, 107, 109, 110, 111, 112, 114, 115, 116, 117, 118, 120, 121, 122, 123, 124, 125, 126, 127, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 151, 152, 153, 154, 155, 156, 157, 157, 158, 159, 160, 161, 161, 162, 163, 164, 165, 165, 166, 167, 168, 168, 169, 170, 171, 171, 172, 173, 174, 174, 175, 176, 176, 177, 178, 179, 179, 180, 181, 181, 182, 183, 183, 184, 185, 185, 186, 187, 187, 188, 189, 189, 190, 191, 191, 192, 193, 193, 194, 194, 195, 196, 196, 197, 197, 198, 199, 199, 200, 201, 201, 202, 202, 203, 204, 204, 205, 205, 206, 206, 207, 208, 208, 209, 209, 210, 210, 211, 212, 212, 213, 213, 214, 214, 215, 215, 216, 217, 217, 218, 218, 219, 219, 220, 220, 221, 221, 222, 222, 223, 223, 224, 224, 225, 226, 226, 227, 227, 228, 228, 229, 229, 230, 230, 231, 231, 232, 232, 233, 233, 234, 234, 235, 235, 236, 236, 237, 237, 237, 238, 238, 239, 239, 240, 240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 245, 246, 246, 247, 247, 248, 248, 249, 249, 250, 250, 251, 251, 251, 252, 252, 253, 253, 254, 254, 255
 };
+
+float stbr__srgb_to_linear(float f)
+{
+	if (f <= 0.04045f)
+		return f / 12.92f;
+	else
+		return (float)pow((f + 0.055f) / 1.055f, 2.4f);
+}
+
+float stbr__linear_to_srgb(float f)
+{
+	if (f <= 0.0031308f)
+		return f * 12.92f;
+	else
+		return 1.055f * (float)pow(f, 1 / 2.4f) - 0.055f;
+}
+
 
 
 static float stbr__filter_nearest(float x)
@@ -579,12 +599,42 @@ typedef float(*stbr__decode_scanline_type_colorspace)(const void* buffer, int of
 
 static float stbr__decode_scanline_uchar_sRGB(const void* buffer, int offset, int channel)
 {
-	return stbr__srgb_uchar_to_linear_float[((const unsigned char*)buffer)[offset+channel]];
+	return stbr__srgb_uchar_to_linear_float[((const unsigned char*)buffer)[offset + channel]];
 }
 
 static float stbr__decode_scanline_uchar_linear(const void* buffer, int offset, int channel)
 {
 	return ((float)((const unsigned char*)buffer)[offset + channel]) / 255;
+}
+
+static float stbr__decode_scanline_ushort_sRGB(const void* buffer, int offset, int channel)
+{
+	return stbr__srgb_to_linear((float)(((const unsigned short*)buffer)[offset + channel])/65535);
+}
+
+static float stbr__decode_scanline_ushort_linear(const void* buffer, int offset, int channel)
+{
+	return ((float)((const unsigned short*)buffer)[offset + channel]) / 65535;
+}
+
+static float stbr__decode_scanline_uint_sRGB(const void* buffer, int offset, int channel)
+{
+	return stbr__srgb_to_linear((float)(((const unsigned int*)buffer)[offset + channel]) / 4294967295);
+}
+
+static float stbr__decode_scanline_uint_linear(const void* buffer, int offset, int channel)
+{
+	return ((float)((const unsigned int*)buffer)[offset + channel]) / 4294967295;
+}
+
+static float stbr__decode_scanline_float_sRGB(const void* buffer, int offset, int channel)
+{
+	return stbr__srgb_to_linear(((const float*)buffer)[offset + channel]);
+}
+
+static float stbr__decode_scanline_float_linear(const void* buffer, int offset, int channel)
+{
+	return ((const float*)buffer)[offset + channel];
 }
 
 typedef void(*stbr__decode_scanline_channels)(float* decode_buffer, int out_texel_index, const void* input_buffer, int input_texel_index, int channels, stbr__decode_scanline_type_colorspace decode_type_colorspace);
@@ -632,15 +682,42 @@ static void stbr__decode_scanline_n(float* decode_buffer, int out_texel_index, c
 
 static stbr__decode_scanline_type_colorspace stbr__get_decode_type_colorspace_function(stbr_type type, stbr_colorspace colorspace)
 {
-	STBR_UNIMPLEMENTED(type != STBR_TYPE_UINT8);
+	switch (type)
+	{
+	case STBR_TYPE_UINT8:
+		if (colorspace == STBR_COLORSPACE_LINEAR)
+			return stbr__decode_scanline_uchar_linear;
+		else if (colorspace == STBR_COLORSPACE_SRGB)
+			return stbr__decode_scanline_uchar_sRGB;
+		break;
 
-	if (colorspace == STBR_COLORSPACE_LINEAR)
-		return stbr__decode_scanline_uchar_linear;
-	else if (colorspace == STBR_COLORSPACE_SRGB)
-		return stbr__decode_scanline_uchar_sRGB;
+	case STBR_TYPE_UINT16:
+		if (colorspace == STBR_COLORSPACE_LINEAR)
+			return stbr__decode_scanline_ushort_linear;
+		else if (colorspace == STBR_COLORSPACE_SRGB)
+			return stbr__decode_scanline_ushort_sRGB;
+		break;
+
+	case STBR_TYPE_UINT32:
+		if (colorspace == STBR_COLORSPACE_LINEAR)
+			return stbr__decode_scanline_uint_linear;
+		else if (colorspace == STBR_COLORSPACE_SRGB)
+			return stbr__decode_scanline_uint_sRGB;
+		break;
+
+	case STBR_TYPE_FLOAT:
+		if (colorspace == STBR_COLORSPACE_LINEAR)
+			return stbr__decode_scanline_float_linear;
+		else if (colorspace == STBR_COLORSPACE_SRGB)
+			return stbr__decode_scanline_float_sRGB;
+		break;
+
+	default:
+		STBR_UNIMPLEMENTED("Unknown type.");
+		return NULL;
+	}
 
 	STBR_UNIMPLEMENTED("Unknown color space.");
-
 	return NULL;
 }
 
@@ -897,6 +974,36 @@ static void stbr__encode_scanline_uchar_linear(const void* buffer, int offset, i
 	((unsigned char*)buffer)[offset + channel] = (unsigned char)(stbr__saturate(value) * 255);
 }
 
+static void stbr__encode_scanline_ushort_sRGB(const void* buffer, int offset, int channel, float value)
+{
+	((unsigned short*)buffer)[offset + channel] = (unsigned short)stbr__linear_to_srgb((stbr__saturate(value) * 65535));
+}
+
+static void stbr__encode_scanline_ushort_linear(const void* buffer, int offset, int channel, float value)
+{
+	((unsigned short*)buffer)[offset + channel] = (unsigned short)(stbr__saturate(value) * 65535);
+}
+
+static void stbr__encode_scanline_uint_sRGB(const void* buffer, int offset, int channel, float value)
+{
+	((unsigned int*)buffer)[offset + channel] = (unsigned int)stbr__linear_to_srgb((stbr__saturate(value) * 4294967295));
+}
+
+static void stbr__encode_scanline_uint_linear(const void* buffer, int offset, int channel, float value)
+{
+	((unsigned int*)buffer)[offset + channel] = (unsigned int)(stbr__saturate(value) * 4294967295);
+}
+
+static void stbr__encode_scanline_float_sRGB(const void* buffer, int offset, int channel, float value)
+{
+	((float*)buffer)[offset + channel] = stbr__linear_to_srgb(stbr__saturate(value));
+}
+
+static void stbr__encode_scanline_float_linear(const void* buffer, int offset, int channel, float value)
+{
+	((float*)buffer)[offset + channel] = stbr__saturate(value);
+}
+
 typedef void(*stbr__encode_scanline_channels)(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, stbr__encode_scanline_type_colorspace encode_type_colorspace);
 
 static void stbr__encode_scanline_1(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, stbr__encode_scanline_type_colorspace encode_type_colorspace)
@@ -942,15 +1049,42 @@ static void stbr__encode_scanline_n(void* output_buffer, int output_texel_index,
 
 static stbr__encode_scanline_type_colorspace stbr__get_encode_type_colorspace_function(stbr_type type, stbr_colorspace colorspace)
 {
-	STBR_UNIMPLEMENTED(type != STBR_TYPE_UINT8);
+	switch (type)
+	{
+	case STBR_TYPE_UINT8:
+		if (colorspace == STBR_COLORSPACE_LINEAR)
+			return stbr__encode_scanline_uchar_linear;
+		else if (colorspace == STBR_COLORSPACE_SRGB)
+			return stbr__encode_scanline_uchar_sRGB;
+		break;
 
-	if (colorspace == STBR_COLORSPACE_LINEAR)
-		return stbr__encode_scanline_uchar_linear;
-	else if (colorspace == STBR_COLORSPACE_SRGB)
-		return stbr__encode_scanline_uchar_sRGB;
+	case STBR_TYPE_UINT16:
+		if (colorspace == STBR_COLORSPACE_LINEAR)
+			return stbr__encode_scanline_ushort_linear;
+		else if (colorspace == STBR_COLORSPACE_SRGB)
+			return stbr__encode_scanline_ushort_sRGB;
+		break;
+
+	case STBR_TYPE_UINT32:
+		if (colorspace == STBR_COLORSPACE_LINEAR)
+			return stbr__encode_scanline_uint_linear;
+		else if (colorspace == STBR_COLORSPACE_SRGB)
+			return stbr__encode_scanline_uint_sRGB;
+		break;
+
+	case STBR_TYPE_FLOAT:
+		if (colorspace == STBR_COLORSPACE_LINEAR)
+			return stbr__encode_scanline_float_linear;
+		else if (colorspace == STBR_COLORSPACE_SRGB)
+			return stbr__encode_scanline_float_sRGB;
+		break;
+
+	default:
+		STBR_UNIMPLEMENTED("Unknown type.");
+		return NULL;
+	}
 
 	STBR_UNIMPLEMENTED("Unknown color space.");
-
 	return NULL;
 }
 
