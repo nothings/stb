@@ -196,6 +196,8 @@
 
 #define STBI_VERSION 1
 
+#define STBI_UNUSED(var) 
+
 enum
 {
    STBI_default = 0, // only used for req_comp
@@ -574,7 +576,7 @@ static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp
 
 #ifndef STBI_NO_STDIO
 
-FILE *stbi__fopen(char const *filename, char const *mode)
+FILE *stbi__fopen(char const *filename, char const* STBI_UNUSED(mode))
 {
    FILE *f;
 #if _MSC_VER >= 1400
