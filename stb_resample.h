@@ -599,96 +599,6 @@ static float* stbr__get_decode_buffer(stbr__info* stbr_info)
 
 #define DECODE(type, colorspace) ((type) * (STBR_MAX_COLORSPACES) + (colorspace))
 
-#define DECODE_UINT8_SRGB(n) \
-	decode_buffer[decode_texel_index + n] = stbr__srgb_uchar_to_linear_float[((const unsigned char*)input_data)[input_texel_index + n]];
-
-#define DECODE_UINT8_LINEAR(n) \
-	decode_buffer[decode_texel_index + n] = ((float)((const unsigned char*)input_data)[input_texel_index + n]) / 255;
-
-#define DECODE_UINT16_SRGB(n) \
-	decode_buffer[decode_texel_index + n] = stbr__srgb_to_linear(((float)((const unsigned short*)input_data)[input_texel_index + n])/65535);
-
-#define DECODE_UINT16_LINEAR(n) \
-	decode_buffer[decode_texel_index + n] = ((float)((const unsigned short*)input_data)[input_texel_index + n]) / 65535;
-
-#define DECODE_UINT32_SRGB(n) \
-	decode_buffer[decode_texel_index + n] = stbr__srgb_to_linear(((float)((const unsigned int*)input_data)[input_texel_index + n])/4294967295);
-
-#define DECODE_UINT32_LINEAR(n) \
-	decode_buffer[decode_texel_index + n] = ((float)((const unsigned int*)input_data)[input_texel_index + n]) / 4294967295;
-
-#define DECODE_FLOAT_SRGB(n) \
-	decode_buffer[decode_texel_index + n] = stbr__srgb_to_linear(((const float*)input_data)[input_texel_index + n]);
-
-#define DECODE_FLOAT_LINEAR(n) \
-	decode_buffer[decode_texel_index + n] = ((const float*)input_data)[input_texel_index + n];
-
-static void stbr__decode_scanline_range(stbr__info* stbr_info, int start, int max, int in_buffer_row_index)
-{
-	int x;
-	int channels = stbr_info->channels;
-	stbr_edge edge = stbr_info->edge;
-	int colorspace = stbr_info->colorspace;
-	int type = stbr_info->type;
-	int decode = DECODE(type, colorspace);
-	int input_w = stbr_info->input_w;
-	float* decode_buffer = stbr__get_decode_buffer(stbr_info);
-	const void* input_data = stbr_info->input_data;
-
-	for (x = start; x < max; x++)
-	{
-		int decode_texel_index = x * channels;
-		int input_texel_index = in_buffer_row_index + stbr__edge_wrap(edge, x, input_w) * channels;
-
-		switch (decode)
-		{
-		case DECODE(STBR_TYPE_UINT8, STBR_COLORSPACE_LINEAR):
-			for (int n = 0; n < channels; n++)
-				DECODE_UINT8_LINEAR(n);
-			break;
-
-		case DECODE(STBR_TYPE_UINT8, STBR_COLORSPACE_SRGB):
-			for (int n = 0; n < channels; n++)
-				DECODE_UINT8_SRGB(n);
-			break;
-
-		case DECODE(STBR_TYPE_UINT16, STBR_COLORSPACE_LINEAR):
-			for (int n = 0; n < channels; n++)
-				DECODE_UINT16_LINEAR(n);
-			break;
-
-		case DECODE(STBR_TYPE_UINT16, STBR_COLORSPACE_SRGB):
-			for (int n = 0; n < channels; n++)
-				DECODE_UINT16_SRGB(n);
-			break;
-
-		case DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_LINEAR):
-			for (int n = 0; n < channels; n++)
-				DECODE_UINT32_LINEAR(n);
-			break;
-
-		case DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_SRGB):
-			for (int n = 0; n < channels; n++)
-				DECODE_UINT32_SRGB(n);
-			break;
-
-		case DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR):
-			for (int n = 0; n < channels; n++)
-				DECODE_FLOAT_LINEAR(n);
-			break;
-
-		case DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB):
-			for (int n = 0; n < channels; n++)
-				DECODE_FLOAT_SRGB(n);
-			break;
-
-		default:
-			STBR_UNIMPLEMENTED("Unknown type/colorspace/channels combination.");
-			break;
-		}
-	}
-}
-
 static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 {
 	int x;
@@ -704,74 +614,51 @@ static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 	int max_x = input_w + stbr__get_filter_texel_margin(stbr_info->filter);
 	int decode = DECODE(type, colorspace);
 
-#if 1
-	// Do the first and last first because they're more complicated due to edge behavior
-	stbr__decode_scanline_range(stbr_info, -stbr__get_filter_texel_margin(stbr_info->filter), 0, in_buffer_row_index);
-	stbr__decode_scanline_range(stbr_info, input_w, max_x, in_buffer_row_index);
-
-	const int group_size = 4;
-	// Now do the center ones since we can do them in big batches. 4 seems to be the magic number here, after some testing.
-	for (x = 0; x < input_w * channels - group_size; x += group_size)
+	for (x = -stbr__get_filter_texel_margin(stbr_info->filter); x < max_x; x++)
 	{
-		int decode_texel_index = x;
-		int input_texel_index = in_buffer_row_index + x;
+		int decode_texel_index = x * channels;
+		int input_texel_index = in_buffer_row_index + stbr__edge_wrap(edge, x, input_w) * channels;
 
 		switch (decode)
 		{
 		case DECODE(STBR_TYPE_UINT8, STBR_COLORSPACE_LINEAR):
-			DECODE_UINT8_LINEAR(0);
-			DECODE_UINT8_LINEAR(1);
-			DECODE_UINT8_LINEAR(2);
-			DECODE_UINT8_LINEAR(3);
+			for (int n = 0; n < channels; n++)
+				decode_buffer[decode_texel_index + n] = ((float)((const unsigned char*)input_data)[input_texel_index + n]) / 255;
 			break;
 
 		case DECODE(STBR_TYPE_UINT8, STBR_COLORSPACE_SRGB):
-			DECODE_UINT8_SRGB(0);
-			DECODE_UINT8_SRGB(1);
-			DECODE_UINT8_SRGB(2);
-			DECODE_UINT8_SRGB(3);
+			for (int n = 0; n < channels; n++)
+				decode_buffer[decode_texel_index + n] = stbr__srgb_uchar_to_linear_float[((const unsigned char*)input_data)[input_texel_index + n]];
 			break;
 
 		case DECODE(STBR_TYPE_UINT16, STBR_COLORSPACE_LINEAR):
-			DECODE_UINT16_LINEAR(0);
-			DECODE_UINT16_LINEAR(1);
-			DECODE_UINT16_LINEAR(2);
-			DECODE_UINT16_LINEAR(3);
+			for (int n = 0; n < channels; n++)
+				decode_buffer[decode_texel_index + n] = ((float)((const unsigned short*)input_data)[input_texel_index + n]) / 65535;
 			break;
 
 		case DECODE(STBR_TYPE_UINT16, STBR_COLORSPACE_SRGB):
-			DECODE_UINT16_SRGB(0);
-			DECODE_UINT16_SRGB(1);
-			DECODE_UINT16_SRGB(2);
-			DECODE_UINT16_SRGB(3);
+			for (int n = 0; n < channels; n++)
+				decode_buffer[decode_texel_index + n] = stbr__srgb_to_linear(((float)((const unsigned short*)input_data)[input_texel_index + n]) / 65535);
 			break;
 
 		case DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_LINEAR):
-			DECODE_UINT32_LINEAR(0);
-			DECODE_UINT32_LINEAR(1);
-			DECODE_UINT32_LINEAR(2);
-			DECODE_UINT32_LINEAR(3);
+			for (int n = 0; n < channels; n++)
+				decode_buffer[decode_texel_index + n] = ((float)((const unsigned int*)input_data)[input_texel_index + n]) / 4294967295;
 			break;
 
 		case DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_SRGB):
-			DECODE_UINT32_SRGB(0);
-			DECODE_UINT32_SRGB(1);
-			DECODE_UINT32_SRGB(2);
-			DECODE_UINT32_SRGB(3);
+			for (int n = 0; n < channels; n++)
+				decode_buffer[decode_texel_index + n] = stbr__srgb_to_linear(((float)((const unsigned int*)input_data)[input_texel_index + n]) / 4294967295);
 			break;
 
 		case DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR):
-			DECODE_FLOAT_LINEAR(0);
-			DECODE_FLOAT_LINEAR(1);
-			DECODE_FLOAT_LINEAR(2);
-			DECODE_FLOAT_LINEAR(3);
+			for (int n = 0; n < channels; n++)
+				decode_buffer[decode_texel_index + n] = ((const float*)input_data)[input_texel_index + n];
 			break;
 
 		case DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB):
-			DECODE_FLOAT_SRGB(0);
-			DECODE_FLOAT_SRGB(1);
-			DECODE_FLOAT_SRGB(2);
-			DECODE_FLOAT_SRGB(3);
+			for (int n = 0; n < channels; n++)
+				decode_buffer[decode_texel_index + n] = stbr__srgb_to_linear(((const float*)input_data)[input_texel_index + n]);
 			break;
 
 		default:
@@ -779,32 +666,6 @@ static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 			break;
 		}
 	}
-
-	// Do the remainder one at a time.
-	for (; x < input_w * channels; x++)
-	{
-		int decode_texel_index = x;
-		int input_texel_index = in_buffer_row_index + x;
-
-		switch (decode)
-		{
-		case DECODE(STBR_TYPE_UINT8, STBR_COLORSPACE_LINEAR):  DECODE_UINT8_LINEAR(0);  break;
-		case DECODE(STBR_TYPE_UINT8, STBR_COLORSPACE_SRGB):    DECODE_UINT8_SRGB(0);    break;
-		case DECODE(STBR_TYPE_UINT16, STBR_COLORSPACE_LINEAR): DECODE_UINT16_LINEAR(0); break;
-		case DECODE(STBR_TYPE_UINT16, STBR_COLORSPACE_SRGB):   DECODE_UINT16_SRGB(0);   break;
-		case DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_LINEAR): DECODE_UINT32_LINEAR(0); break;
-		case DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_SRGB):   DECODE_UINT32_SRGB(0);   break;
-		case DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR):  DECODE_FLOAT_LINEAR(0);  break;
-		case DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB):    DECODE_FLOAT_SRGB(0);    break;
-
-		default:
-			STBR_UNIMPLEMENTED("Unknown type/colorspace/channels combination.");
-			break;
-		}
-	}
-#else
-	stbr__decode_scanline_range(stbr_info, -stbr__get_filter_texel_margin(stbr_info->filter), max_x, in_buffer_row_index);
-#endif
 }
 
 #undef DECODE
