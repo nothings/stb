@@ -292,7 +292,7 @@ static float stbr__filter_catmullrom(float x)
 	x = (float)fabs(x);
 
 	if (x < 1.0f)
-		return 1 - x*x*(1.5f - 2.5f*x);
+		return 1 - x*x*(2.5f - 1.5f*x);
 	else if (x < 2.0f)
 		return 2 - x*(4 + x*(0.5f*x - 2.5f));
 
