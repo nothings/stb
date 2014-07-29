@@ -699,62 +699,6 @@ static float* stbr__add_empty_ring_buffer_entry(stbr__info* stbr_info, int n)
 	return ring_buffer;
 }
 
-typedef void(*stbr__output_decode_coefficients)(float* output_buffer, int out_texel_index, float* decode_buffer, int decode_texel_index, int channels, float coefficient);
-
-static void stbr__output_decode_coefficients_1(float* output_buffer, int out_texel_index, float* input_buffer, int input_texel_index, int channels, float coefficient)
-{
-	STBR_DEBUG_ASSERT(channels == 1);
-
-	output_buffer[out_texel_index] += input_buffer[input_texel_index] * coefficient;
-}
-
-static void stbr__output_decode_coefficients_2(float* output_buffer, int out_texel_index, float* input_buffer, int input_texel_index, int channels, float coefficient)
-{
-	STBR_DEBUG_ASSERT(channels == 2);
-
-	output_buffer[out_texel_index    ] += input_buffer[input_texel_index    ] * coefficient;
-	output_buffer[out_texel_index + 1] += input_buffer[input_texel_index + 1] * coefficient;
-}
-
-static void stbr__output_decode_coefficients_3(float* output_buffer, int out_texel_index, float* input_buffer, int input_texel_index, int channels, float coefficient)
-{
-	STBR_DEBUG_ASSERT(channels == 3);
-
-	output_buffer[out_texel_index    ] += input_buffer[input_texel_index    ] * coefficient;
-	output_buffer[out_texel_index + 1] += input_buffer[input_texel_index + 1] * coefficient;
-	output_buffer[out_texel_index + 2] += input_buffer[input_texel_index + 2] * coefficient;
-}
-
-static void stbr__output_decode_coefficients_4(float* output_buffer, int out_texel_index, float* input_buffer, int input_texel_index, int channels, float coefficient)
-{
-	STBR_DEBUG_ASSERT(channels == 4);
-
-	output_buffer[out_texel_index    ] += input_buffer[input_texel_index    ] * coefficient;
-	output_buffer[out_texel_index + 1] += input_buffer[input_texel_index + 1] * coefficient;
-	output_buffer[out_texel_index + 2] += input_buffer[input_texel_index + 2] * coefficient;
-	output_buffer[out_texel_index + 3] += input_buffer[input_texel_index + 3] * coefficient;
-}
-
-static void stbr__output_decode_coefficients_n(float* output_buffer, int out_texel_index, float* input_buffer, int input_texel_index, int channels, float coefficient)
-{
-	int c;
-	for (c = 0; c < channels; c++)
-		output_buffer[out_texel_index + c] += input_buffer[input_texel_index + c] * coefficient;
-}
-
-static stbr__output_decode_coefficients stbr__get_output_decode_coefficients_function(int channels)
-{
-	if (channels == 1)
-		return &stbr__output_decode_coefficients_1;
-	else if (channels == 2)
-		return &stbr__output_decode_coefficients_2;
-	else if (channels == 3)
-		return &stbr__output_decode_coefficients_3;
-	else if (channels == 4)
-		return &stbr__output_decode_coefficients_4;
-
-	return &stbr__output_decode_coefficients_n;
-}
 
 static void stbr__resample_horizontal_upsample(stbr__info* stbr_info, int n, float* output_buffer)
 {
@@ -765,8 +709,6 @@ static void stbr__resample_horizontal_upsample(stbr__info* stbr_info, int n, flo
 	float* decode_buffer = stbr__get_decode_buffer(stbr_info);
 	stbr__contributors* horizontal_contributors = stbr_info->horizontal_contributors;
 	float* horizontal_coefficients = stbr_info->horizontal_coefficients;
-
-	stbr__output_decode_coefficients output_decode_coefficients_fn = stbr__get_output_decode_coefficients_function(channels);
 
 	for (x = 0; x < output_w; x++)
 	{
@@ -789,7 +731,9 @@ static void stbr__resample_horizontal_upsample(stbr__info* stbr_info, int n, flo
 			int in_texel_index = k * channels;
 			float coefficient = horizontal_coefficients[coefficient_index];
 
-			output_decode_coefficients_fn(output_buffer, out_texel_index, decode_buffer, in_texel_index, channels, coefficient);
+			int c;
+			for (c = 0; c < channels; c++)
+				output_buffer[out_texel_index + c] += decode_buffer[in_texel_index + c] * coefficient;
 		}
 	}
 }
@@ -806,8 +750,6 @@ static void stbr__resample_horizontal_downsample(stbr__info* stbr_info, int n, f
 	float* horizontal_coefficients = stbr_info->horizontal_coefficients;
 	int filter_texel_margin = stbr__get_filter_texel_margin(stbr_info->filter);
 	int max_x = input_w + filter_texel_margin * 2;
-
-	stbr__output_decode_coefficients output_decode_coefficients_fn = stbr__get_output_decode_coefficients_function(channels);
 
 	STBR_DEBUG_ASSERT(!stbr__use_width_upsampling(stbr_info));
 
@@ -830,7 +772,9 @@ static void stbr__resample_horizontal_downsample(stbr__info* stbr_info, int n, f
 			int out_texel_index = k * channels;
 			float coefficient = horizontal_coefficients[coefficient_index];
 
-			output_decode_coefficients_fn(output_buffer, out_texel_index, decode_buffer, in_texel_index, channels, coefficient);
+			int c;
+			for (c = 0; c < channels; c++)
+				output_buffer[out_texel_index + c] += decode_buffer[in_texel_index + c] * coefficient;
 		}
 	}
 }
@@ -1039,7 +983,6 @@ static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int i
 
 	int output_row_index = n * stbr_info->output_stride_bytes;
 
-	stbr__output_decode_coefficients output_decode_coefficients_fn = stbr__get_output_decode_coefficients_function(channels);
 	stbr__encode_scanline_channels encode_channels_fn = stbr__get_encode_channels_function(channels);
 	stbr__encode_scanline_type_colorspace encode_type_colorspace_fn = stbr__get_encode_type_colorspace_function(stbr_info->type, stbr_info->colorspace);
 
@@ -1063,7 +1006,9 @@ static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int i
 			float* ring_buffer_entry = stbr__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_texel_width, ring_buffer_length);
 			float coefficient = vertical_coefficients[coefficient_index];
 
-			output_decode_coefficients_fn(encode_buffer, 0, ring_buffer_entry, in_texel_index, channels, coefficient);
+			int c;
+			for (c = 0; c < channels; c++)
+				encode_buffer[c] += ring_buffer_entry[in_texel_index + c] * coefficient;
 		}
 
 		encode_channels_fn(output_data, out_texel_index, encode_buffer, 0, channels, encode_type_colorspace_fn);
@@ -1094,8 +1039,6 @@ static void stbr__resample_vertical_downsample(stbr__info* stbr_info, int n, int
 	int n1 = vertical_contributors->n1;
 	int max_n = stbr__min(n1, output_h - 1);
 
-	stbr__output_decode_coefficients output_decode_coefficients_fn = stbr__get_output_decode_coefficients_function(channels);
-
 	STBR_DEBUG_ASSERT(!stbr__use_height_upsampling(stbr_info));
 	STBR_DEBUG_ASSERT(n0 >= in_first_scanline);
 	STBR_DEBUG_ASSERT(n1 <= in_last_scanline);
@@ -1113,7 +1056,9 @@ static void stbr__resample_vertical_downsample(stbr__info* stbr_info, int n, int
 		{
 			int in_texel_index = x * channels;
 
-			output_decode_coefficients_fn(ring_buffer_entry, in_texel_index, horizontal_buffer, in_texel_index, channels, coefficient);
+			int c;
+			for (c = 0; c < channels; c++)
+				ring_buffer_entry[in_texel_index + c] += horizontal_buffer[in_texel_index + c] * coefficient;
 		}
 	}
 }
