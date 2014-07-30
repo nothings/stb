@@ -1147,7 +1147,7 @@ static void stbr__buffer_loop_downsample(stbr__info* stbr_info)
 {
 	int y;
 	float scale_ratio = (float)stbr_info->output_h / stbr_info->input_h;
-	float in_pixels_radius = stbr__filter_info_table[stbr_info->filter].support;
+	float in_pixels_radius = stbr__filter_info_table[stbr_info->filter].support / scale_ratio;
 	int max_y = stbr_info->input_h + stbr__get_filter_texel_margin(stbr_info->filter, stbr_info->input_h, stbr_info->output_h);
 
 	STBR_DEBUG_ASSERT(!stbr__use_height_upsampling(stbr_info));

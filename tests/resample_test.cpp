@@ -137,11 +137,25 @@ void test_suite()
 		resize_image("barbara.png", (float)i / 100, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
 	}
 
-	for (int i = 110; i < 1000; i += 10)
+	for (int i = 110; i < 500; i += 10)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
 		resize_image("barbara.png", (float)i / 100, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+	}
+
+	for (int i = 10; i < 100; i++)
+	{
+		char outname[200];
+		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
+		resize_image("barbara.png", 1, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+	}
+
+	for (int i = 110; i < 500; i += 10)
+	{
+		char outname[200];
+		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
+		resize_image("barbara.png", 1, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
 	}
 }
 
