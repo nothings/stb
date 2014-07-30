@@ -715,12 +715,12 @@ static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 
 		case STBR__DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_LINEAR):
 			for (int n = 0; n < channels; n++)
-				decode_buffer[decode_texel_index + n] = ((float)((const unsigned int*)input_data)[input_texel_index + n]) / 4294967295;
+				decode_buffer[decode_texel_index + n] = (float)(((double)((const unsigned int*)input_data)[input_texel_index + n]) / 4294967295);
 			break;
 
 		case STBR__DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_SRGB):
 			for (int n = 0; n < channels; n++)
-				decode_buffer[decode_texel_index + n] = stbr__srgb_to_linear(((float)((const unsigned int*)input_data)[input_texel_index + n]) / 4294967295);
+				decode_buffer[decode_texel_index + n] = stbr__srgb_to_linear((float)(((double)((const unsigned int*)input_data)[input_texel_index + n]) / 4294967295));
 			break;
 
 		case STBR__DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR):
@@ -913,12 +913,12 @@ static stbr_inline void stbr__encode_scanline(void* output_buffer, int output_te
 
 	case STBR__DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_LINEAR):
 		for (int n = 0; n < channels; n++)
-			((unsigned int*)output_buffer)[output_texel_index + n] = (unsigned int)(stbr__saturate(encode_buffer[encode_texel_index + n]) * 4294967295);
+			((unsigned int*)output_buffer)[output_texel_index + n] = (unsigned int)(((double)stbr__saturate(encode_buffer[encode_texel_index + n])) * 4294967295);
 		break;
 
 	case STBR__DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_SRGB):
 		for (int n = 0; n < channels; n++)
-			((unsigned int*)output_buffer)[output_texel_index + n] = (unsigned int)(stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_texel_index + n])) * 4294967295);
+			((unsigned int*)output_buffer)[output_texel_index + n] = (unsigned int)(((double)stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_texel_index + n]))) * 4294967295);
 		break;
 
 	case STBR__DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR):

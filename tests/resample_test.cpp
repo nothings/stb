@@ -128,9 +128,9 @@ void resize_image(const char* filename, float width_percent, float height_percen
 template <typename F, typename T>
 void convert_image(const F* input, T* output, int length)
 {
-	float f = (pow(2.0f, 8.0f * sizeof(T)) - 1) / (pow(2.0f, 8.0f * sizeof(F)) - 1);
+	double f = (pow(2.0, 8.0 * sizeof(T)) - 1) / (pow(2.0, 8.0 * sizeof(F)) - 1);
 	for (int i = 0; i < length; i++)
-		output[i] = (T)(((float)input[i]) * f);
+		output[i] = (T)(((double)input[i]) * f);
 }
 
 template <typename T>
@@ -155,8 +155,8 @@ void test_format(const char* file, float width_percent, float height_percent, st
 	free(T_data);
 	stbi_image_free(input_data);
 
-	char* char_data = (char*)malloc(new_w * new_h * n * sizeof(char));
-	convert_image<T, char>(output_data, char_data, new_w * new_h * n);
+	unsigned char* char_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(char));
+	convert_image<T, unsigned char>(output_data, char_data, new_w * new_h * n);
 
 	char output[200];
 	sprintf(output, "test-output/type-%d-%d-%d-%d-%s", type, colorspace, new_w, new_h, file);
