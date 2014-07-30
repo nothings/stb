@@ -56,7 +56,28 @@ int main(int argc, char** argv)
 	STBR_ASSERT(in_w + border <= w);
 	STBR_ASSERT(in_h + border <= h);
 
+#ifdef PERF_TEST
+	struct timeb initial_time_millis, final_time_millis;
+
+	long average = 0;
+	for (int j = 0; j < 10; j++)
+	{
+		ftime(&initial_time_millis);
+		for (int i = 0; i < 100; i++)
+			stbr_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, n, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+		ftime(&final_time_millis);
+		long lapsed_ms = (long)(final_time_millis.time - initial_time_millis.time) * 1000 + (final_time_millis.millitm - initial_time_millis.millitm);
+		printf("Resample: %dms\n", lapsed_ms);
+
+		average += lapsed_ms;
+	}
+
+	average /= 10;
+
+	printf("Average: %dms\n", average);
+#else
 	stbr_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, n, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+#endif
 
 	free(extra_memory);
 
