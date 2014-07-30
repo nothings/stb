@@ -157,6 +157,13 @@ void test_suite()
 		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
 		resize_image("barbara.png", 1, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
 	}
+
+	for (int i = 50; i < 200; i += 10)
+	{
+		char outname[200];
+		sprintf(outname, "test-output/barbara-width-height-%d.jpg", i);
+		resize_image("barbara.png", 100 / (float)i, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+	}
 }
 
 

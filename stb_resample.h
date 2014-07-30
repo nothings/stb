@@ -1248,7 +1248,7 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 	{
 		stbr_info->horizontal_buffer = NULL;
 		stbr_info->ring_buffer = STBR__NEXT_MEMPTR(stbr_info->decode_buffer, stbr_info->decode_buffer_texels * channels * sizeof(float), float);
-		stbr_info->encode_buffer = STBR__NEXT_MEMPTR(stbr_info->ring_buffer, stbr_info->ring_buffer_length_bytes * stbr__get_filter_texel_width(filter, input_w, output_w), float);
+		stbr_info->encode_buffer = STBR__NEXT_MEMPTR(stbr_info->ring_buffer, stbr_info->ring_buffer_length_bytes * stbr__get_filter_texel_width(filter, input_h, output_h), float);
 
 		STBR_DEBUG_ASSERT((size_t)STBR__NEXT_MEMPTR(stbr_info->encode_buffer, stbr_info->channels * sizeof(float), unsigned char) == (size_t)tempmem + tempmem_size_in_bytes);
 	}
