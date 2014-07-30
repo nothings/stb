@@ -331,12 +331,12 @@ float stbr__linear_to_srgb(float f)
 
 static float stbr__filter_nearest(float x)
 {
-	x = (float)fabs(x);
-
-	if (x <= 0.5)
-		return 1;
-	else
+	if (x <= -0.5f)
 		return 0;
+	else if (x > 0.5f)
+		return 0;
+	else
+		return 1;
 }
 
 static float stbr__filter_bilinear(float x)

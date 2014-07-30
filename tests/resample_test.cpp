@@ -227,6 +227,19 @@ void test_suite()
 	resize_image("gamma_2.2.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, STBR_COLORSPACE_SRGB, "test-output/gamma_2.2.jpg");
 	resize_image("gamma_dalai_lama_gray.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, STBR_COLORSPACE_SRGB, "test-output/gamma_dalai_lama_gray.jpg");
 
+	// filter tests
+	resize_image("barbara.png", 2, 2, STBR_FILTER_NEAREST, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-upsample-nearest.png");
+	resize_image("barbara.png", 2, 2, STBR_FILTER_BILINEAR, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-upsample-bilinear.png");
+	resize_image("barbara.png", 2, 2, STBR_FILTER_BICUBIC, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-upsample-bicubic.png");
+	resize_image("barbara.png", 2, 2, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-upsample-catmullrom.png");
+	resize_image("barbara.png", 2, 2, STBR_FILTER_MITCHELL, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-upsample-mitchell.png");
+
+	resize_image("barbara.png", 0.5f, 0.5f, STBR_FILTER_NEAREST, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-downsample-nearest.png");
+	resize_image("barbara.png", 0.5f, 0.5f, STBR_FILTER_BILINEAR, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-downsample-bilinear.png");
+	resize_image("barbara.png", 0.5f, 0.5f, STBR_FILTER_BICUBIC, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-downsample-bicubic.png");
+	resize_image("barbara.png", 0.5f, 0.5f, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-downsample-catmullrom.png");
+	resize_image("barbara.png", 0.5f, 0.5f, STBR_FILTER_MITCHELL, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-downsample-mitchell.png");
+
 	for (int i = 10; i < 100; i++)
 	{
 		char outname[200];
