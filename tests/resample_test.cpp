@@ -18,6 +18,8 @@
 #include <sys/timeb.h>
 #endif
 
+void test_suite();
+
 int main(int argc, char** argv)
 {
 	unsigned char* input_data;
@@ -25,6 +27,11 @@ int main(int argc, char** argv)
 	int w, h;
 	int n;
 	int out_w, out_h, out_stride;
+
+#if 1
+	test_suite();
+	return 0;
+#endif
 
 	if (argc <= 1)
 	{
@@ -87,3 +94,55 @@ int main(int argc, char** argv)
 
 	return 0;
 }
+
+void resize_image(const char* filename, float width_percent, float height_percent, stbr_filter filter, stbr_edge edge, const char* output_filename)
+{
+	int w, h, n;
+
+	unsigned char* input_data = stbi_load(filename, &w, &h, &n, 0);
+	if (!input_data)
+	{
+		printf("Input image could not be loaded");
+		return;
+	}
+
+	int out_w = (int)(w * width_percent);
+	int out_h = (int)(h * height_percent);
+
+	unsigned char* output_data = (unsigned char*)malloc(out_w * out_h * n);
+
+	size_t memory_required = stbr_calculate_memory(w, h, out_w, out_h, n, filter);
+	void* extra_memory = malloc(memory_required);
+
+	stbr_resize_arbitrary(input_data, w, h, 0, output_data, out_w, out_h, 0, n, STBR_TYPE_UINT8, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+
+	free(extra_memory);
+
+	stbi_write_png(output_filename, out_w, out_h, n, output_data, 0);
+
+	free(output_data);
+}
+
+void test_suite()
+{
+	// sRGB tests
+	resize_image("gamma_colors.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, "test-output/gamma_colors.jpg");
+	resize_image("gamma_2.2.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, "test-output/gamma_2.2.jpg");
+	resize_image("gamma_dalai_lama_gray.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, "test-output/gamma_dalai_lama_gray.jpg");
+
+	for (int i = 10; i < 100; i++)
+	{
+		char outname[200];
+		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
+		resize_image("barbara.png", (float)i / 100, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+	}
+
+	for (int i = 110; i < 1000; i += 10)
+	{
+		char outname[200];
+		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
+		resize_image("barbara.png", (float)i / 100, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+	}
+}
+
+
