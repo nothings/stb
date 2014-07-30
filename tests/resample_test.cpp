@@ -166,6 +166,50 @@ void test_format(const char* file, float width_percent, float height_percent, st
 	free(output_data);
 }
 
+void convert_image_float(const unsigned char* input, float* output, int length)
+{
+	for (int i = 0; i < length; i++)
+		output[i] = ((float)input[i])/255;
+}
+
+void convert_image_float(const float* input, unsigned char* output, int length)
+{
+	for (int i = 0; i < length; i++)
+		output[i] = (unsigned char)(input[i] * 255);
+}
+
+void test_float(const char* file, float width_percent, float height_percent, stbr_type type, stbr_colorspace colorspace)
+{
+	int w, h, n;
+	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
+
+	int new_w = (int)(w * width_percent);
+	int new_h = (int)(h * height_percent);
+
+	float* T_data = (float*)malloc(w * h * n * sizeof(float));
+	convert_image_float(input_data, T_data, w * h * n);
+
+	float* output_data = (float*)malloc(new_w * new_h * n * sizeof(float));
+
+	size_t required = stbr_calculate_memory(w, h, new_w, new_h, n, STBR_FILTER_CATMULLROM);
+	void* extra_memory = malloc(required);
+	stbr_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, n, type, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, colorspace, extra_memory, required);
+	free(extra_memory);
+
+	free(T_data);
+	stbi_image_free(input_data);
+
+	unsigned char* char_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(char));
+	convert_image_float(output_data, char_data, new_w * new_h * n);
+
+	char output[200];
+	sprintf(output, "test-output/type-%d-%d-%d-%d-%s", type, colorspace, new_w, new_h, file);
+	stbi_write_png(output, new_w, new_h, n, char_data, 0);
+
+	free(char_data);
+	free(output_data);
+}
+
 void test_suite()
 {
 	// sRGB tests
@@ -218,10 +262,10 @@ void test_suite()
 	test_format<unsigned int>("barbara.png", 2.0, 0.5, STBR_TYPE_UINT32, STBR_COLORSPACE_SRGB);
 	test_format<unsigned int>("barbara.png", 2.0, 0.5, STBR_TYPE_UINT32, STBR_COLORSPACE_LINEAR);
 
-	test_format<float>("barbara.png", 0.5, 2.0, STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB);
-	test_format<float>("barbara.png", 0.5, 2.0, STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR);
-	test_format<float>("barbara.png", 2.0, 0.5, STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB);
-	test_format<float>("barbara.png", 2.0, 0.5, STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR);
+	test_float("barbara.png", 0.5, 2.0, STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB);
+	test_float("barbara.png", 0.5, 2.0, STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR);
+	test_float("barbara.png", 2.0, 0.5, STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB);
+	test_float("barbara.png", 2.0, 0.5, STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR);
 }
 
 
