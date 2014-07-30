@@ -210,8 +210,52 @@ void test_float(const char* file, float width_percent, float height_percent, stb
 	free(output_data);
 }
 
+void test_channels(char* file, float width_percent, float height_percent, int channels)
+{
+	int w, h, n;
+	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
+
+	int new_w = (int)(w * width_percent);
+	int new_h = (int)(h * height_percent);
+
+	unsigned char* channels_data = (unsigned char*)malloc(w * h * channels * sizeof(unsigned char));
+
+	for (int i = 0; i < w * h; i++)
+	{
+		int input_position = i * n;
+		int output_position = i * channels;
+
+		for (int c = 0; c < channels; c++)
+			channels_data[output_position + c] = input_data[input_position + stbr__min(c, n)];
+	}
+
+	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * channels * sizeof(unsigned char));
+
+	stbr_resize_srgb_uint8(channels_data, w, h, output_data, new_w, new_h, channels, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP);
+
+	free(channels_data);
+	stbi_image_free(input_data);
+
+	char output[200];
+	sprintf(output, "test-output/channels-%d-%d-%d-%s", channels, new_w, new_h, file);
+	stbi_write_png(output, new_w, new_h, channels, output_data, 0);
+
+	free(output_data);
+}
+
 void test_suite()
 {
+	// Channels test
+	test_channels("barbara.png", 0.5f, 0.5f, 1);
+	test_channels("barbara.png", 0.5f, 0.5f, 2);
+	test_channels("barbara.png", 0.5f, 0.5f, 3);
+	test_channels("barbara.png", 0.5f, 0.5f, 4);
+
+	test_channels("barbara.png", 2, 2, 1);
+	test_channels("barbara.png", 2, 2, 2);
+	test_channels("barbara.png", 2, 2, 3);
+	test_channels("barbara.png", 2, 2, 4);
+
 	// Edge behavior tests
 	resize_image("hgradient.png", 2, 2, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_LINEAR, "test-output/hgradient-clamp.png");
 	resize_image("hgradient.png", 2, 2, STBR_FILTER_CATMULLROM, STBR_EDGE_WRAP, STBR_COLORSPACE_LINEAR, "test-output/hgradient-wrap.png");
