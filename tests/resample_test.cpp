@@ -96,7 +96,7 @@ int main(int argc, char** argv)
 	return 0;
 }
 
-void resize_image(const char* filename, float width_percent, float height_percent, stbr_filter filter, stbr_edge edge, const char* output_filename)
+void resize_image(const char* filename, float width_percent, float height_percent, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace, const char* output_filename)
 {
 	int w, h, n;
 
@@ -115,7 +115,7 @@ void resize_image(const char* filename, float width_percent, float height_percen
 	size_t memory_required = stbr_calculate_memory(w, h, out_w, out_h, n, filter);
 	void* extra_memory = malloc(memory_required);
 
-	stbr_resize_arbitrary(input_data, w, h, 0, output_data, out_w, out_h, 0, n, STBR_TYPE_UINT8, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+	stbr_resize_arbitrary(input_data, w, h, 0, output_data, out_w, out_h, 0, n, STBR_TYPE_UINT8, filter, edge, colorspace, extra_memory, memory_required);
 
 	free(extra_memory);
 	stbi_image_free(input_data);
@@ -212,44 +212,54 @@ void test_float(const char* file, float width_percent, float height_percent, stb
 
 void test_suite()
 {
+	// Edge behavior tests
+	resize_image("hgradient.png", 2, 2, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_LINEAR, "test-output/hgradient-clamp.png");
+	resize_image("hgradient.png", 2, 2, STBR_FILTER_CATMULLROM, STBR_EDGE_WRAP, STBR_COLORSPACE_LINEAR, "test-output/hgradient-wrap.png");
+
+	resize_image("vgradient.png", 2, 2, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_LINEAR, "test-output/vgradient-clamp.png");
+	resize_image("vgradient.png", 2, 2, STBR_FILTER_CATMULLROM, STBR_EDGE_WRAP, STBR_COLORSPACE_LINEAR, "test-output/vgradient-wrap.png");
+
+	resize_image("1px-border.png", 2, 2, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, STBR_COLORSPACE_LINEAR, "test-output/1px-border-reflect.png");
+	resize_image("1px-border.png", 2, 2, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_LINEAR, "test-output/1px-border-clamp.png");
+
 	// sRGB tests
-	resize_image("gamma_colors.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, "test-output/gamma_colors.jpg");
-	resize_image("gamma_2.2.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, "test-output/gamma_2.2.jpg");
-	resize_image("gamma_dalai_lama_gray.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, "test-output/gamma_dalai_lama_gray.jpg");
+	resize_image("gamma_colors.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, STBR_COLORSPACE_SRGB, "test-output/gamma_colors.jpg");
+	resize_image("gamma_2.2.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, STBR_COLORSPACE_SRGB, "test-output/gamma_2.2.jpg");
+	resize_image("gamma_dalai_lama_gray.jpg", .5f, .5f, STBR_FILTER_CATMULLROM, STBR_EDGE_REFLECT, STBR_COLORSPACE_SRGB, "test-output/gamma_dalai_lama_gray.jpg");
 
 	for (int i = 10; i < 100; i++)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
-		resize_image("barbara.png", (float)i / 100, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+		resize_image("barbara.png", (float)i / 100, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, outname);
 	}
 
 	for (int i = 110; i < 500; i += 10)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
-		resize_image("barbara.png", (float)i / 100, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+		resize_image("barbara.png", (float)i / 100, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, outname);
 	}
 
 	for (int i = 10; i < 100; i++)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
-		resize_image("barbara.png", 1, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+		resize_image("barbara.png", 1, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, outname);
 	}
 
 	for (int i = 110; i < 500; i += 10)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
-		resize_image("barbara.png", 1, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+		resize_image("barbara.png", 1, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, outname);
 	}
 
 	for (int i = 50; i < 200; i += 10)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-height-%d.jpg", i);
-		resize_image("barbara.png", 100 / (float)i, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+		resize_image("barbara.png", 100 / (float)i, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, outname);
 	}
 
 	test_format<unsigned short>("barbara.png", 0.5, 2.0, STBR_TYPE_UINT16, STBR_COLORSPACE_SRGB);
