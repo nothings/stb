@@ -133,6 +133,39 @@ void convert_image(const F* input, T* output, int length)
 		output[i] = (T)(((float)input[i]) * f);
 }
 
+template <typename T>
+void test_format(const char* file, float width_percent, float height_percent, stbr_type type, stbr_colorspace colorspace)
+{
+	int w, h, n;
+	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
+
+	int new_w = (int)(w * width_percent);
+	int new_h = (int)(h * height_percent);
+
+	T* T_data = (T*)malloc(w * h * n * sizeof(T));
+	convert_image<unsigned char, T>(input_data, T_data, w * h * n);
+
+	T* output_data = (T*)malloc(new_w * new_h * n * sizeof(T));
+
+	size_t required = stbr_calculate_memory(w, h, new_w, new_h, n, STBR_FILTER_CATMULLROM);
+	void* extra_memory = malloc(required);
+	stbr_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, n, type, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, colorspace, extra_memory, required);
+	free(extra_memory);
+
+	free(T_data);
+	stbi_image_free(input_data);
+
+	char* char_data = (char*)malloc(new_w * new_h * n * sizeof(char));
+	convert_image<T, char>(output_data, char_data, new_w * new_h * n);
+
+	char output[200];
+	sprintf(output, "test-output/type-%d-%d-%d-%d-%s", type, colorspace, new_w, new_h, file);
+	stbi_write_png(output, new_w, new_h, n, char_data, 0);
+
+	free(char_data);
+	free(output_data);
+}
+
 void test_suite()
 {
 	// sRGB tests
@@ -175,28 +208,20 @@ void test_suite()
 		resize_image("barbara.png", 100 / (float)i, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
 	}
 
-	{
-		int w, h, n;
-		unsigned char* input_data = stbi_load("barbara.png", &w, &h, &n, 0);
+	test_format<unsigned short>("barbara.png", 0.5, 2.0, STBR_TYPE_UINT16, STBR_COLORSPACE_SRGB);
+	test_format<unsigned short>("barbara.png", 0.5, 2.0, STBR_TYPE_UINT16, STBR_COLORSPACE_LINEAR);
+	test_format<unsigned short>("barbara.png", 2.0, 0.5, STBR_TYPE_UINT16, STBR_COLORSPACE_SRGB);
+	test_format<unsigned short>("barbara.png", 2.0, 0.5, STBR_TYPE_UINT16, STBR_COLORSPACE_LINEAR);
 
-		unsigned short* short_data = (unsigned short*)malloc(w * h * n * sizeof(unsigned short));
-		convert_image<unsigned char, unsigned short>(input_data, short_data, w * h * n);
+	test_format<unsigned int>("barbara.png", 0.5, 2.0, STBR_TYPE_UINT32, STBR_COLORSPACE_SRGB);
+	test_format<unsigned int>("barbara.png", 0.5, 2.0, STBR_TYPE_UINT32, STBR_COLORSPACE_LINEAR);
+	test_format<unsigned int>("barbara.png", 2.0, 0.5, STBR_TYPE_UINT32, STBR_COLORSPACE_SRGB);
+	test_format<unsigned int>("barbara.png", 2.0, 0.5, STBR_TYPE_UINT32, STBR_COLORSPACE_LINEAR);
 
-		unsigned short* output_data = (unsigned short*)malloc(w * h * n * sizeof(unsigned short));
-
-		stbr_resize_srgb_uint16(short_data, w, h, output_data, w * 2, h / 2, n, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP);
-
-		free(short_data);
-		stbi_image_free(input_data);
-
-		char* char_data = (char*)malloc(w * h * n * sizeof(char));
-		convert_image<unsigned short, char>(output_data, char_data, w * h * n);
-
-		stbi_write_png("test-output/barbara-short.png", w * 2, h / 2, n, char_data, 0);
-
-		free(char_data);
-		free(output_data);
-	}
+	test_format<float>("barbara.png", 0.5, 2.0, STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB);
+	test_format<float>("barbara.png", 0.5, 2.0, STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR);
+	test_format<float>("barbara.png", 2.0, 0.5, STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB);
+	test_format<float>("barbara.png", 2.0, 0.5, STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR);
 }
 
 

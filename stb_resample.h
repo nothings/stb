@@ -610,9 +610,8 @@ static void stbr__check_downsample_coefficients(stbr__info* stbr_info)
 				break;
 		}
 
-		STBR_DEBUG_ASSERT(stbr_info->type == STBR_TYPE_UINT8); // Assert below should be 1 + 1/(2^n-1) where n is bits per int.
 		STBR_DEBUG_ASSERT(total > 0.9f);
-		STBR_DEBUG_ASSERT(total <= 1.0f + 1.0f / 255);
+		STBR_DEBUG_ASSERT(total <= 1.0f + 1.0f / (pow(2.0f, 8.0f * stbr__type_size[stbr_info->type]) - 1));
 	}
 }
 #endif
@@ -958,14 +957,12 @@ static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int i
 	int ring_buffer_last_scanline = stbr_info->ring_buffer_last_scanline;
 	int ring_buffer_length = stbr_info->ring_buffer_length_bytes/sizeof(float);
 
-	STBR_UNIMPLEMENTED(stbr_info->type != STBR_TYPE_UINT8);
-
 	stbr__calculate_coefficients_upsample(stbr_info, in_first_scanline, in_last_scanline, in_center_of_out, vertical_contributors, vertical_coefficients);
 
 	int n0 = vertical_contributors->n0;
 	int n1 = vertical_contributors->n1;
 
-	int output_row_index = n * stbr_info->output_stride_bytes;
+	int output_row_index = n * stbr_info->output_stride_bytes / stbr__type_size[type];
 
 	STBR_DEBUG_ASSERT(stbr__use_height_upsampling(stbr_info));
 	STBR_DEBUG_ASSERT(n0 >= in_first_scanline);
