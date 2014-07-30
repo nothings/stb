@@ -92,7 +92,7 @@ typedef enum
 	STBR_TYPE_UINT16 = 2,
 	STBR_TYPE_UINT32 = 3,
 	STBR_TYPE_FLOAT  = 4,
-	// If you add here, update STBR_MAX_TYPES
+	// If you add here, update STBR_MAX_TYPES and stbr__type_size
 } stbr_type;
 
 #define STBR_MAX_TYPES 4
@@ -301,6 +301,14 @@ static float stbr__srgb_uchar_to_linear_float[256] = {
 
 static unsigned char stbr__linear_uchar_to_srgb_uchar[256] = {
 	0, 12, 21, 28, 33, 38, 42, 46, 49, 52, 55, 58, 61, 63, 66, 68, 70, 73, 75, 77, 79, 81, 82, 84, 86, 88, 89, 91, 93, 94, 96, 97, 99, 100, 102, 103, 104, 106, 107, 109, 110, 111, 112, 114, 115, 116, 117, 118, 120, 121, 122, 123, 124, 125, 126, 127, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 151, 152, 153, 154, 155, 156, 157, 157, 158, 159, 160, 161, 161, 162, 163, 164, 165, 165, 166, 167, 168, 168, 169, 170, 171, 171, 172, 173, 174, 174, 175, 176, 176, 177, 178, 179, 179, 180, 181, 181, 182, 183, 183, 184, 185, 185, 186, 187, 187, 188, 189, 189, 190, 191, 191, 192, 193, 193, 194, 194, 195, 196, 196, 197, 197, 198, 199, 199, 200, 201, 201, 202, 202, 203, 204, 204, 205, 205, 206, 206, 207, 208, 208, 209, 209, 210, 210, 211, 212, 212, 213, 213, 214, 214, 215, 215, 216, 217, 217, 218, 218, 219, 219, 220, 220, 221, 221, 222, 222, 223, 223, 224, 224, 225, 226, 226, 227, 227, 228, 228, 229, 229, 230, 230, 231, 231, 232, 232, 233, 233, 234, 234, 235, 235, 236, 236, 237, 237, 237, 238, 238, 239, 239, 240, 240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 245, 246, 246, 247, 247, 248, 248, 249, 249, 250, 250, 251, 251, 251, 252, 252, 253, 253, 254, 254, 255
+};
+
+static unsigned char stbr__type_size[] = {
+	0,
+	1, // STBR_TYPE_UINT8
+	2, // STBR_TYPE_UINT16
+	4, // STBR_TYPE_UINT32
+	4, // STBR_TYPE_FLOAT
 };
 
 float stbr__srgb_to_linear(float f)
@@ -671,11 +679,11 @@ static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 	int type = stbr_info->type;
 	int colorspace = stbr_info->colorspace;
 	int input_w = stbr_info->input_w;
-	int input_stride_bytes = stbr_info->input_stride_bytes;
+	int input_stride = stbr_info->input_stride_bytes / stbr__type_size[stbr_info->type];
 	const void* input_data = stbr_info->input_data;
 	float* decode_buffer = stbr__get_decode_buffer(stbr_info);
 	stbr_edge edge = stbr_info->edge;
-	int in_buffer_row_index = stbr__edge_wrap(edge, n, stbr_info->input_h) * input_stride_bytes;
+	int in_buffer_row_index = stbr__edge_wrap(edge, n, stbr_info->input_h) * input_stride;
 	int max_x = input_w + stbr__get_filter_texel_margin(stbr_info->filter, stbr_info->input_w, stbr_info->output_w);
 	int decode = STBR__DECODE(type, colorspace);
 
@@ -901,7 +909,7 @@ static stbr_inline void stbr__encode_scanline(void* output_buffer, int output_te
 
 	case STBR__DECODE(STBR_TYPE_UINT16, STBR_COLORSPACE_SRGB):
 		for (int n = 0; n < channels; n++)
-			((unsigned short*)output_buffer)[output_texel_index + n] = (unsigned short)stbr__linear_to_srgb((stbr__saturate(encode_buffer[encode_texel_index + n]) * 65535));
+			((unsigned short*)output_buffer)[output_texel_index + n] = (unsigned short)(stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_texel_index + n])) * 65535);
 		break;
 
 	case STBR__DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_LINEAR):
@@ -911,7 +919,7 @@ static stbr_inline void stbr__encode_scanline(void* output_buffer, int output_te
 
 	case STBR__DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_SRGB):
 		for (int n = 0; n < channels; n++)
-			((unsigned int*)output_buffer)[output_texel_index + n] = (unsigned int)stbr__linear_to_srgb((stbr__saturate(encode_buffer[encode_texel_index + n]) * 4294967295));
+			((unsigned int*)output_buffer)[output_texel_index + n] = (unsigned int)(stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_texel_index + n])) * 4294967295);
 		break;
 
 	case STBR__DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR):
@@ -1091,7 +1099,7 @@ static void stbr__buffer_loop_upsample(stbr__info* stbr_info)
 
 static void stbr__empty_ring_buffer(stbr__info* stbr_info, int first_necessary_scanline)
 {
-	int output_stride_bytes = stbr_info->output_stride_bytes;
+	int output_stride = stbr_info->output_stride_bytes / stbr__type_size[stbr_info->type];
 	int channels = stbr_info->channels;
 	int type = stbr_info->type;
 	int colorspace = stbr_info->colorspace;
@@ -1107,12 +1115,10 @@ static void stbr__empty_ring_buffer(stbr__info* stbr_info, int first_necessary_s
 		// Get rid of whatever we don't need anymore.
 		while (first_necessary_scanline > stbr_info->ring_buffer_first_scanline)
 		{
-			STBR_UNIMPLEMENTED(stbr_info->type != STBR_TYPE_UINT8);
-
 			if (stbr_info->ring_buffer_first_scanline >= 0 && stbr_info->ring_buffer_first_scanline < stbr_info->output_h)
 			{
 				int x;
-				int output_row = stbr_info->ring_buffer_first_scanline * output_stride_bytes;
+				int output_row = stbr_info->ring_buffer_first_scanline * output_stride;
 				float* ring_buffer_entry = stbr__get_ring_buffer_entry(ring_buffer, stbr_info->ring_buffer_begin_index, ring_buffer_length);
 
 				for (x = 0; x < output_w; x++)
@@ -1186,8 +1192,8 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 	int channels, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
 	void* tempmem, stbr_size_t tempmem_size_in_bytes)
 {
-	int width_stride_input = input_stride_in_bytes ? input_stride_in_bytes : channels * input_w;
-	int width_stride_output = output_stride_in_bytes ? output_stride_in_bytes : channels * output_w;
+	int width_stride_input = input_stride_in_bytes ? input_stride_in_bytes : channels * input_w * stbr__type_size[type];
+	int width_stride_output = output_stride_in_bytes ? output_stride_in_bytes : channels * output_w * stbr__type_size[type];
 
 #ifdef STBR_DEBUG_OVERWRITE_TEST
 #define OVERWRITE_ARRAY_SIZE 8
@@ -1196,14 +1202,12 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 	unsigned char overwrite_output_after_pre[OVERWRITE_ARRAY_SIZE];
 	unsigned char overwrite_tempmem_after_pre[OVERWRITE_ARRAY_SIZE];
 
-	stbr_size_t begin_forbidden = width_stride_output * (output_h - 1) + output_w * channels;
+	stbr_size_t begin_forbidden = width_stride_output * (output_h - 1) + output_w * channels * stbr__type_size[type];
 	memcpy(overwrite_output_before_pre, &((unsigned char*)output_data)[-OVERWRITE_ARRAY_SIZE], OVERWRITE_ARRAY_SIZE);
 	memcpy(overwrite_output_after_pre, &((unsigned char*)output_data)[begin_forbidden], OVERWRITE_ARRAY_SIZE);
 	memcpy(overwrite_tempmem_before_pre, &((unsigned char*)tempmem)[-OVERWRITE_ARRAY_SIZE], OVERWRITE_ARRAY_SIZE);
 	memcpy(overwrite_tempmem_after_pre, &((unsigned char*)tempmem)[tempmem_size_in_bytes], OVERWRITE_ARRAY_SIZE);
 #endif
-
-	STBR_UNIMPLEMENTED(type != STBR_TYPE_UINT8);
 
 	STBR_ASSERT(filter != 0);
 	STBR_ASSERT(filter < STBR_ARRAY_SIZE(stbr__filter_info_table));

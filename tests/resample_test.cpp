@@ -87,6 +87,7 @@ int main(int argc, char** argv)
 #endif
 
 	free(extra_memory);
+	stbi_image_free(input_data);
 
 	stbi_write_png("output.png", out_w, out_h, n, output_data, out_stride);
 
@@ -117,10 +118,19 @@ void resize_image(const char* filename, float width_percent, float height_percen
 	stbr_resize_arbitrary(input_data, w, h, 0, output_data, out_w, out_h, 0, n, STBR_TYPE_UINT8, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
 
 	free(extra_memory);
+	stbi_image_free(input_data);
 
 	stbi_write_png(output_filename, out_w, out_h, n, output_data, 0);
 
 	free(output_data);
+}
+
+template <typename F, typename T>
+void convert_image(const F* input, T* output, int length)
+{
+	float f = (pow(2.0f, 8.0f * sizeof(T)) - 1) / (pow(2.0f, 8.0f * sizeof(F)) - 1);
+	for (int i = 0; i < length; i++)
+		output[i] = (T)(((float)input[i]) * f);
 }
 
 void test_suite()
@@ -163,6 +173,29 @@ void test_suite()
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-height-%d.jpg", i);
 		resize_image("barbara.png", 100 / (float)i, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, outname);
+	}
+
+	{
+		int w, h, n;
+		unsigned char* input_data = stbi_load("barbara.png", &w, &h, &n, 0);
+
+		unsigned short* short_data = (unsigned short*)malloc(w * h * n * sizeof(unsigned short));
+		convert_image<unsigned char, unsigned short>(input_data, short_data, w * h * n);
+
+		unsigned short* output_data = (unsigned short*)malloc(w * h * n * sizeof(unsigned short));
+
+		stbr_resize_srgb_uint16(short_data, w, h, output_data, w * 2, h / 2, n, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP);
+
+		free(short_data);
+		stbi_image_free(input_data);
+
+		char* char_data = (char*)malloc(w * h * n * sizeof(char));
+		convert_image<unsigned short, char>(output_data, char_data, w * h * n);
+
+		stbi_write_png("test-output/barbara-short.png", w * 2, h / 2, n, char_data, 0);
+
+		free(char_data);
+		free(output_data);
 	}
 }
 
