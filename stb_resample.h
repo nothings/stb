@@ -1,29 +1,65 @@
-/* stb_resample - v0.1 - public domain image resampling
-no warranty implied; use at your own risk
+/* stb_resample - v0.50 - public domain image resampling
+   no warranty implied; use at your own risk
 
-Do this:
-#define STB_RESAMPLE_IMPLEMENTATION
-before you include this file in *one* C or C++ file to create the implementation.
+   Do this:
+      #define STB_RESAMPLE_IMPLEMENTATION
+   before you include this file in *one* C or C++ file to create the implementation.
 
-#define STBR_ASSERT(x) to avoid using assert.h.
+   #define STBR_ASSERT(x) to avoid using assert.h.
 
-Latest revisions:
+   #define STBR_NO_MALLOC to avoid using stdlib.h and malloc. This will remove
+      all resize functions except stbr_resize_arbitrary() from the API.
 
-See end of file for full revision history.
+   QUICK NOTES:
+      Written with emphasis on usage and speed. Only the resize operation is
+          currently supported, no rotations or translations.
 
-Initial implementation by Jorge L Rodriguez
+      Supports arbitrary resize for separable filters. For a list of
+          supported filters see the stbr_filter enum. To add a new filter,
+          write a filter function and add it to stbr__filter_info_table.
+
+   Latest revisions:
+      0.50 (2014-07-29) first released version
+
+   See end of file for full revision history.
+
+   TODO:
+      Installable filters
+      Specify with (s0, t0) X (s1, t1) what area of the source image to use,
+         at sub-pixel level
+      Specify wrap and filter modes independently for each axis
+      Resize that respects alpha test coverage
+         (Reference code: FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage:
+         https://code.google.com/p/nvidia-texture-tools/source/browse/trunk/src/nvimage/FloatImage.cpp )
+
+   Initial implementation by Jorge L Rodriguez, @VinoBS
 */
 
 #ifndef STBR_INCLUDE_STB_RESAMPLE_H
 #define STBR_INCLUDE_STB_RESAMPLE_H
 
 // Basic usage:
-//    result = stbr_resize(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, channels, alpha_channel, STBR_TYPE_UINT8, STBR_FILTER_BILINEAR, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+//    result = stbr_resize_srgb_uint8(input_data, input_w, input_h, output_data, output_w, output_h, channels, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP);
 //
 //    input_data is your supplied texels.
-//    output_data will be the resized texels. It should be of size output_w * output_h * input_components (or output_h * output_stride if you provided a stride.)
-//    If input_stride or output_stride is 0 (as in this example) the stride will be automatically calculated as width*components.
-//    Returned result is 1 for success or 0 in case of an error.
+//    output_data will be the resized texels. It should be of size output_w * output_h * channels
+//    Returned result is 1 for success or 0 in case of an error. Currently the only error is failure to allocate memory.
+//    If you're unsure of which filter to use, Catmull-Rom is a good upsampling filter and Mitchell is a good downsampling filter.
+
+
+// Advanced usage:
+//    size_t memory_required = stbr_calculate_memory(input_w, input_h, output_w, output_h, channels, STBR_FILTER_CATMULLROM);
+//    void* extra_memory = malloc(memory_required); // Any memory allocation method of your choosing
+//    result = stbr_resize_arbitrary(input_data, input_w, input_h, input_stride_in_bytes,
+//            output_data, output_w, output_h, output_stride_in_bytes,
+//            channels, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB,
+//            extra_memory, memory_required);
+//    free(extra_memory);
+//
+//    input_stride_in_bytes and output_stride_in_bytes can be 0. If so they will be automatically calculated as width * channels.
+//    Returned result is 1 for success or 0 in case of an error. Currently the only error is that the memory passed in is insufficient.
+//    stbr_resize_arbitrary() will not allocate any memory, it will use the memory you pass in to do its work.
+
 
 typedef enum
 {
@@ -61,7 +97,17 @@ typedef enum
 
 #define STBR_MAX_TYPES 4
 
-typedef unsigned char stbr_uc;
+typedef unsigned char stbr_uint8;
+
+#ifdef _MSC_VER
+typedef unsigned short stbr_uint16;
+typedef unsigned int   stbr_uint32;
+#else
+#include <stdint.h>
+typedef uint16_t stbr_uint16;
+typedef uint32_t stbr_uint32;
+#endif
+
 typedef unsigned int stbr_size_t; // to avoid including a header for size_t
 
 #ifdef __cplusplus
@@ -74,18 +120,40 @@ extern "C" {
 #define STBRDEF extern
 #endif
 
+#ifndef STBR_NO_MALLOC
+
 	//////////////////////////////////////////////////////////////////////////////
 	//
-	// PRIMARY API - resize an image
+	// PRIMARY API - sRGB type-safe image resizing.
 	//
 
-	STBRDEF stbr_size_t stbr_calculate_memory(int input_w, int input_h, int input_stride_in_bytes,
-		int output_w, int output_h, int output_stride_in_bytes,
-		int channels, stbr_filter filter);
+	STBRDEF int stbr_resize_srgb_uint8(const stbr_uint8* input_data, int input_w, int input_h,
+		stbr_uint8* output_data, int output_w, int output_h,
+		int channels, stbr_filter filter, stbr_edge edge);
+
+	STBRDEF int stbr_resize_srgb_uint16(const stbr_uint16* input_data, int input_w, int input_h,
+		stbr_uint16* output_data, int output_w, int output_h,
+		int channels, stbr_filter filter, stbr_edge edge);
+
+	STBRDEF int stbr_resize_srgb_uint32(const stbr_uint32* input_data, int input_w, int input_h,
+		stbr_uint32* output_data, int output_w, int output_h,
+		int channels, stbr_filter filter, stbr_edge edge);
+
+	STBRDEF int stbr_resize_srgb_float(const float* input_data, int input_w, int input_h,
+		float* output_data, int output_w, int output_h,
+		int channels, stbr_filter filter, stbr_edge edge);
+
+#endif // STBR_NO_MALLOC
+
+	//////////////////////////////////////////////////////////////////////////////
+	//
+	// ADVANCED API
+	//
+
+	STBRDEF stbr_size_t stbr_calculate_memory(int input_w, int input_h, int output_w, int output_h, int channels, stbr_filter filter);
 
 	STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
 		void* output_data, int output_w, int output_h, int output_stride_in_bytes,
-		//int channels, int alpha_channel, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
 		int channels, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
 		void* tempmem, stbr_size_t tempmem_size_in_bytes);
 
@@ -119,8 +187,11 @@ extern "C" {
 // For memset
 #include <string.h>
 
-
 #include <math.h>
+
+#ifndef STBR_NO_MALLOC
+#include <stdlib.h>
+#endif
 
 
 #ifndef _MSC_VER
@@ -134,21 +205,8 @@ extern "C" {
 #endif
 
 
-#ifdef _MSC_VER
-typedef unsigned short stbr__uint16;
-typedef   signed short stbr__int16;
-typedef unsigned int   stbr__uint32;
-typedef   signed int   stbr__int32;
-#else
-#include <stdint.h>
-typedef uint16_t stbr__uint16;
-typedef int16_t  stbr__int16;
-typedef uint32_t stbr__uint32;
-typedef int32_t  stbr__int32;
-#endif
-
 // should produce compiler error if size is wrong
-typedef unsigned char stbr__validate_uint32[sizeof(stbr__uint32) == 4 ? 1 : -1];
+typedef unsigned char stbr__validate_uint32[sizeof(stbr_uint32) == 4 ? 1 : -1];
 
 #ifdef _MSC_VER
 #define STBR_NOTUSED(v)  (void)(v)
@@ -1142,7 +1200,7 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 	if (!tempmem)
 		return 0;
 
-	if (tempmem_size_in_bytes < stbr_calculate_memory(input_w, input_h, input_stride_in_bytes, output_w, output_h, output_stride_in_bytes, channels, STBR_FILTER_NEAREST))
+	if (tempmem_size_in_bytes < stbr_calculate_memory(input_w, input_h, output_w, output_h, channels, filter))
 		return 0;
 
 	memset(tempmem, 0, tempmem_size_in_bytes);
@@ -1213,9 +1271,7 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 }
 
 
-STBRDEF stbr_size_t stbr_calculate_memory(int input_w, int input_h, int input_stride_in_bytes,
-	int output_w, int output_h, int output_stride_in_bytes,
-	int channels, stbr_filter filter)
+STBRDEF stbr_size_t stbr_calculate_memory(int input_w, int input_h, int output_w, int output_h, int channels, stbr_filter filter)
 {
 	STBR_ASSERT(filter != 0);
 	STBR_ASSERT(filter < STBR_ARRAY_SIZE(stbr__filter_info_table));
@@ -1244,8 +1300,83 @@ STBRDEF stbr_size_t stbr_calculate_memory(int input_w, int input_h, int input_st
 	return info_size + contributors_size + horizontal_coefficients_size + vertical_coefficients_size + decode_buffer_size + horizontal_buffer_size + ring_buffer_size + encode_buffer_size;
 }
 
+#ifndef STBR_NO_MALLOC
+
+STBRDEF int stbr_resize_srgb_uint8(const stbr_uint8* input_data, int input_w, int input_h,
+	stbr_uint8* output_data, int output_w, int output_h,
+	int channels, stbr_filter filter, stbr_edge edge)
+{
+	size_t memory_required = stbr_calculate_memory(input_w, input_h, output_w, output_h, channels, filter);
+	void* extra_memory = malloc(memory_required);
+
+	if (!extra_memory)
+		return 0;
+
+	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, channels, STBR_TYPE_UINT8, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+
+	free(extra_memory);
+
+	return result;
+}
+
+STBRDEF int stbr_resize_srgb_uint16(const stbr_uint16* input_data, int input_w, int input_h,
+	stbr_uint16* output_data, int output_w, int output_h,
+	int channels, stbr_filter filter, stbr_edge edge)
+{
+	size_t memory_required = stbr_calculate_memory(input_w, input_h, output_w, output_h, channels, filter);
+	void* extra_memory = malloc(memory_required);
+
+	if (!extra_memory)
+		return 0;
+
+	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, channels, STBR_TYPE_UINT16, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+
+	free(extra_memory);
+
+	return result;
+}
+
+STBRDEF int stbr_resize_srgb_uint32(const stbr_uint32* input_data, int input_w, int input_h,
+	stbr_uint32* output_data, int output_w, int output_h,
+	int channels, stbr_filter filter, stbr_edge edge)
+{
+	size_t memory_required = stbr_calculate_memory(input_w, input_h, output_w, output_h, channels, filter);
+	void* extra_memory = malloc(memory_required);
+
+	if (!extra_memory)
+		return 0;
+
+	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, channels, STBR_TYPE_UINT32, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+
+	free(extra_memory);
+
+	return result;
+}
+
+STBRDEF int stbr_resize_srgb_float(const float* input_data, int input_w, int input_h,
+	float* output_data, int output_w, int output_h,
+	int channels, stbr_filter filter, stbr_edge edge)
+{
+	size_t memory_required = stbr_calculate_memory(input_w, input_h, output_w, output_h, channels, filter);
+	void* extra_memory = malloc(memory_required);
+
+	if (!extra_memory)
+		return 0;
+
+	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, channels, STBR_TYPE_FLOAT, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+
+	free(extra_memory);
+
+	return result;
+}
+
+#endif // STBR_NO_MALLOC
+
+
 #endif // STB_RESAMPLE_IMPLEMENTATION
 
 /*
 revision history:
+      0.50 (2014-07-29)
+             first released version
 */
