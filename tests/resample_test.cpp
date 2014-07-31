@@ -49,8 +49,8 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	out_w = 128;
-	out_h = 128;
+	out_w = 512;
+	out_h = 512;
 	out_stride = (out_w + 10) * n;
 
 	output_data = (unsigned char*)malloc(out_stride * out_h);
