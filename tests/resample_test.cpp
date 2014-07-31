@@ -49,8 +49,8 @@ int main(int argc, char** argv)
 		return 1;
 	}
 
-	out_w = 256;
-	out_h = 256;
+	out_w = 128;
+	out_h = 128;
 	out_stride = (out_w + 10) * n;
 
 	output_data = (unsigned char*)malloc(out_stride * out_h);
@@ -58,7 +58,12 @@ int main(int argc, char** argv)
 	int in_w = 512;
 	int in_h = 512;
 
-	size_t memory_required = stbr_calculate_memory(in_w, in_h, out_w, out_h, n, STBR_FILTER_CATMULLROM);
+	float s0 = 0.25f;
+	float t0 = 0.25f;
+	float s1 = 0.75f;
+	float t1 = 0.75f;
+
+	size_t memory_required = stbr_calculate_memory(in_w, in_h, out_w, out_h, s0, t0, s1, t1, n, STBR_FILTER_CATMULLROM);
 	void* extra_memory = malloc(memory_required);
 
 	// Cut out the outside 64 pixels all around to test the stride.
@@ -86,7 +91,7 @@ int main(int argc, char** argv)
 
 	printf("Average: %dms\n", average);
 #else
-	stbr_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, n, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+	stbr_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, s0, t0, s1, t1, n, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
 #endif
 
 	free(extra_memory);
@@ -115,10 +120,10 @@ void resize_image(const char* filename, float width_percent, float height_percen
 
 	unsigned char* output_data = (unsigned char*)malloc(out_w * out_h * n);
 
-	size_t memory_required = stbr_calculate_memory(w, h, out_w, out_h, n, filter);
+	size_t memory_required = stbr_calculate_memory(w, h, out_w, out_h, 0, 0, 1, 1, n, filter);
 	void* extra_memory = malloc(memory_required);
 
-	stbr_resize_arbitrary(input_data, w, h, 0, output_data, out_w, out_h, 0, n, STBR_TYPE_UINT8, filter, edge, colorspace, extra_memory, memory_required);
+	stbr_resize_arbitrary(input_data, w, h, 0, output_data, out_w, out_h, 0, 0, 0, 1, 1, n, STBR_TYPE_UINT8, filter, edge, colorspace, extra_memory, memory_required);
 
 	free(extra_memory);
 	stbi_image_free(input_data);
@@ -150,9 +155,9 @@ void test_format(const char* file, float width_percent, float height_percent, st
 
 	T* output_data = (T*)malloc(new_w * new_h * n * sizeof(T));
 
-	size_t required = stbr_calculate_memory(w, h, new_w, new_h, n, STBR_FILTER_CATMULLROM);
+	size_t required = stbr_calculate_memory(w, h, new_w, new_h, 0, 0, 1, 1, n, STBR_FILTER_CATMULLROM);
 	void* extra_memory = malloc(required);
-	stbr_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, n, type, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, colorspace, extra_memory, required);
+	stbr_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, type, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, colorspace, extra_memory, required);
 	free(extra_memory);
 
 	free(T_data);
@@ -194,9 +199,9 @@ void test_float(const char* file, float width_percent, float height_percent, stb
 
 	float* output_data = (float*)malloc(new_w * new_h * n * sizeof(float));
 
-	size_t required = stbr_calculate_memory(w, h, new_w, new_h, n, STBR_FILTER_CATMULLROM);
+	size_t required = stbr_calculate_memory(w, h, new_w, new_h, 0, 0, 1, 1, n, STBR_FILTER_CATMULLROM);
 	void* extra_memory = malloc(required);
-	stbr_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, n, type, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, colorspace, extra_memory, required);
+	stbr_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, type, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, colorspace, extra_memory, required);
 	free(extra_memory);
 
 	free(T_data);
