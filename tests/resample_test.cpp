@@ -31,7 +31,7 @@ int main(int argc, char** argv)
 	int n;
 	int out_w, out_h, out_stride;
 
-#if 0
+#if 1
 	test_suite();
 	return 0;
 #endif
@@ -251,8 +251,49 @@ void test_channels(const char* file, float width_percent, float height_percent, 
 	free(output_data);
 }
 
+void test_subpixel(const char* file, float width_percent, float height_percent, float s1, float t1)
+{
+	int w, h, n;
+	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
+
+	s1 = ((float)w - 1 + s1)/w;
+	t1 = ((float)h - 1 + t1)/h;
+
+	int new_w = (int)(w * width_percent);
+	int new_h = (int)(h * height_percent);
+
+	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
+
+	size_t tempmem_size = stbr_calculate_memory(w, h, new_w, new_h, 0, 0, s1, t1, n, STBR_FILTER_CATMULLROM);
+	void* tempmem = malloc(tempmem_size);
+
+	stbr_resize_arbitrary(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, s1, t1, n, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, tempmem, tempmem_size);
+
+	free(tempmem);
+
+	stbi_image_free(input_data);
+
+	char output[200];
+	sprintf(output, "test-output/subpixel-%d-%d-%f-%f-%s", new_w, new_h, s1, t1, file);
+	stbi_write_png(output, new_w, new_h, n, output_data, 0);
+
+	free(output_data);
+}
+
 void test_suite()
 {
+	for (int i = 0; i < 10; i++)
+		test_subpixel("barbara.png", 0.5f, 0.5f, (float)i / 10, 1);
+
+	for (int i = 0; i < 10; i++)
+		test_subpixel("barbara.png", 0.5f, 0.5f, 1, (float)i / 10);
+
+	for (int i = 0; i < 10; i++)
+		test_subpixel("barbara.png", 2, 2, (float)i / 10, 1);
+
+	for (int i = 0; i < 10; i++)
+		test_subpixel("barbara.png", 2, 2, 1, (float)i / 10);
+
 	// Channels test
 	test_channels("barbara.png", 0.5f, 0.5f, 1);
 	test_channels("barbara.png", 0.5f, 0.5f, 2);
