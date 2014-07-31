@@ -2,6 +2,9 @@
 #define STBR_ASSERT(x) \
 	if (!(x)) \
 		__debugbreak();
+#else
+#include <assert.h>
+#define STBR_ASSERT(x) assert(x)
 #endif
 
 #define STB_RESAMPLE_IMPLEMENTATION
@@ -28,7 +31,7 @@ int main(int argc, char** argv)
 	int n;
 	int out_w, out_h, out_stride;
 
-#if 1
+#if 0
 	test_suite();
 	return 0;
 #endif
@@ -210,7 +213,7 @@ void test_float(const char* file, float width_percent, float height_percent, stb
 	free(output_data);
 }
 
-void test_channels(char* file, float width_percent, float height_percent, int channels)
+void test_channels(const char* file, float width_percent, float height_percent, int channels)
 {
 	int w, h, n;
 	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
