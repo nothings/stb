@@ -43,7 +43,7 @@
 //
 //    input_data is your supplied texels.
 //    output_data will be the resized texels. It should be of size output_w * output_h * channels
-//    Returned result is 1 for success or 0 in case of an error. Currently the only error is failure to allocate memory.
+//    Returned result is 1 for success or 0 in case of an error. In the case of an error an assert with be triggered, #define STBR_ASSERT() to see it.
 //    If you're unsure of which filter to use, Catmull-Rom is a good upsampling filter and Mitchell is a good downsampling filter.
 
 
@@ -59,7 +59,7 @@
 //
 //    input_stride_in_bytes and output_stride_in_bytes can be 0. If so they will be automatically calculated as width * channels.
 //    s0, t0, s1, t1 are the top-left and bottom right corner (uv addressing style: [0, 1]x[0, 1]) of a region of the input image to use.
-//    Returned result is 1 for success or 0 in case of an error. Currently the only error is that the memory passed in is insufficient.
+//    Returned result is 1 for success or 0 in case of an error. In the case of an error an assert with be triggered, #define STBR_ASSERT() to see it.
 //    stbr_resize_arbitrary() will not allocate any memory, it will use the memory you pass in to do its work.
 
 
@@ -1230,6 +1230,8 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 	int channels, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
 	void* tempmem, stbr_size_t tempmem_size_in_bytes)
 {
+	stbr_size_t memory_required = stbr_calculate_memory(input_w, input_h, output_w, output_h, s0, t0, s1, t1, channels, filter);
+
 	int width_stride_input = input_stride_in_bytes ? input_stride_in_bytes : channels * input_w * stbr__type_size[type];
 	int width_stride_output = output_stride_in_bytes ? output_stride_in_bytes : channels * output_w * stbr__type_size[type];
 
@@ -1250,13 +1252,28 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 	STBR_ASSERT(filter != 0);
 	STBR_ASSERT(filter < STBR_ARRAY_SIZE(stbr__filter_info_table));
 
+	if (!filter || filter >= STBR_ARRAY_SIZE(stbr__filter_info_table))
+		return 0;
+
 	STBR_ASSERT(s1 > s0);
 	STBR_ASSERT(t1 > t0);
+
+	if (s1 <= s0 || t1 <= t0)
+		return 0;
+
+	STBR_ASSERT(s1 <= 1 && s0 >= 0 && t1 <= 1 && t0 >= 0);
+
+	if (s1 > 1 || s0 < 0 || t1 > 1 || t0 < 0)
+		return 0;
+
+	STBR_ASSERT(tempmem);
 
 	if (!tempmem)
 		return 0;
 
-	if (tempmem_size_in_bytes < stbr_calculate_memory(input_w, input_h, output_w, output_h, s0, t0, s1, t1, channels, filter))
+	STBR_ASSERT(tempmem_size_in_bytes >= memory_required);
+
+	if (tempmem_size_in_bytes < memory_required)
 		return 0;
 
 	memset(tempmem, 0, tempmem_size_in_bytes);
