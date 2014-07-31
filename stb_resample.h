@@ -25,8 +25,6 @@
 
    TODO:
       Installable filters
-      Specify with (s0, t0) X (s1, t1) what area of the source image to use,
-         at sub-pixel level
       Specify wrap and filter modes independently for each axis
       Resize that respects alpha test coverage
          (Reference code: FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage:
