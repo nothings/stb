@@ -51,12 +51,13 @@
 //    result = stbr_resize_arbitrary(input_data, input_w, input_h, input_stride_in_bytes,
 //            output_data, output_w, output_h, output_stride_in_bytes,
 //            s0, t0, s1, t1,
-//            channels, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB,
+//            channels, premultiplied_alpha_channel, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB,
 //            extra_memory, memory_required);
 //    free(extra_memory);
 //
 //    input_stride_in_bytes and output_stride_in_bytes can be 0. If so they will be automatically calculated as width * channels.
 //    s0, t0, s1, t1 are the top-left and bottom right corner (uv addressing style: [0, 1]x[0, 1]) of a region of the input image to use.
+//    premultiplied_alpha_channel is 0 if there are no premultiplied alpha channels. If nonzero, the specified channel will be divided from all other channels before resampling, then multiplied back in after.
 //    Returned result is 1 for success or 0 in case of an error. In the case of an error an assert with be triggered, #define STBR_ASSERT() to see it.
 //    stbr_resize_arbitrary() will not allocate any memory, it will use the memory you pass in to do its work.
 
@@ -155,7 +156,7 @@ extern "C" {
 	STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
 		void* output_data, int output_w, int output_h, int output_stride_in_bytes,
 		float s0, float t0, float s1, float t1,
-		int channels, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
+		int channels, int premultiplied_alpha_channel, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
 		void* tempmem, stbr_size_t tempmem_size_in_bytes);
 
 
@@ -256,6 +257,7 @@ typedef struct
 	float vertical_scale;
 
 	int channels;
+	int premul_alpha_channel;
 	stbr_type type;
 	stbr_filter filter;
 	stbr_edge edge;
@@ -708,6 +710,7 @@ static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 {
 	int x, c;
 	int channels = stbr_info->channels;
+	int premul_alpha_channel = stbr_info->premul_alpha_channel;
 	int type = stbr_info->type;
 	int colorspace = stbr_info->colorspace;
 	int input_w = stbr_info->input_w;
@@ -769,6 +772,17 @@ static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 		default:
 			STBR_UNIMPLEMENTED("Unknown type/colorspace/channels combination.");
 			break;
+		}
+
+		if (premul_alpha_channel)
+		{
+			for (c = 0; c < channels; c++)
+			{
+				if (c == premul_alpha_channel)
+					continue;
+
+				decode_buffer[decode_texel_index + c] /= decode_buffer[decode_texel_index + premul_alpha_channel];
+			}
 		}
 	}
 }
@@ -920,9 +934,21 @@ static float* stbr__get_ring_buffer_scanline(int get_scanline, float* ring_buffe
 }
 
 
-static stbr_inline void stbr__encode_scanline(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, int decode)
+static stbr_inline void stbr__encode_scanline(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, int premul_alpha_channel, int decode)
 {
 	int n;
+
+	if (premul_alpha_channel)
+	{
+		for (n = 0; n < channels; n++)
+		{
+			if (n == premul_alpha_channel)
+				continue;
+
+			encode_buffer[encode_texel_index + n] *= encode_buffer[encode_texel_index + premul_alpha_channel];
+		}
+	}
+
 	switch (decode)
 	{
 	case STBR__DECODE(STBR_TYPE_UINT8, STBR_COLORSPACE_LINEAR):
@@ -969,6 +995,18 @@ static stbr_inline void stbr__encode_scanline(void* output_buffer, int output_te
 		STBR_UNIMPLEMENTED("Unknown type/colorspace/channels combination.");
 		break;
 	}
+
+	// Put it back the way it was in case this is a ring buffer.
+	if (premul_alpha_channel)
+	{
+		for (n = 0; n < channels; n++)
+		{
+			if (n == premul_alpha_channel)
+				continue;
+
+			encode_buffer[encode_texel_index + n] /= encode_buffer[encode_texel_index + premul_alpha_channel];
+		}
+	}
 }
 
 static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int in_first_scanline, int in_last_scanline, float in_center_of_out)
@@ -978,6 +1016,7 @@ static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int i
 	stbr__contributors* vertical_contributors = &stbr_info->vertical_contributors;
 	float* vertical_coefficients = stbr_info->vertical_coefficients;
 	int channels = stbr_info->channels;
+	int premul_alpha_channel = stbr_info->premul_alpha_channel;
 	int type = stbr_info->type;
 	int colorspace = stbr_info->colorspace;
 	int kernel_texel_width = stbr__get_filter_texel_width_vertical(stbr_info);
@@ -1023,7 +1062,7 @@ static void stbr__resample_vertical_upsample(stbr__info* stbr_info, int n, int i
 				encode_buffer[c] += ring_buffer_entry[in_texel_index + c] * coefficient;
 		}
 
-		stbr__encode_scanline(output_data, out_texel_index, encode_buffer, 0, channels, decode);
+		stbr__encode_scanline(output_data, out_texel_index, encode_buffer, 0, channels, premul_alpha_channel, decode);
 	}
 }
 
@@ -1130,6 +1169,7 @@ static void stbr__empty_ring_buffer(stbr__info* stbr_info, int first_necessary_s
 {
 	int output_stride = stbr_info->output_stride_bytes / stbr__type_size[stbr_info->type];
 	int channels = stbr_info->channels;
+	int premul_alpha_channel = stbr_info->premul_alpha_channel;
 	int type = stbr_info->type;
 	int colorspace = stbr_info->colorspace;
 	int output_w = stbr_info->output_w;
@@ -1156,7 +1196,7 @@ static void stbr__empty_ring_buffer(stbr__info* stbr_info, int first_necessary_s
 					int ring_texel_index = texel_index;
 					int output_texel_index = output_row + texel_index;
 
-					stbr__encode_scanline(output_data, output_texel_index, ring_buffer_entry, ring_texel_index, channels, decode);
+					stbr__encode_scanline(output_data, output_texel_index, ring_buffer_entry, ring_texel_index, channels, premul_alpha_channel, decode);
 				}
 			}
 
@@ -1221,7 +1261,7 @@ static void stbr__buffer_loop_downsample(stbr__info* stbr_info)
 STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
 	void* output_data, int output_w, int output_h, int output_stride_in_bytes,
 	float s0, float t0, float s1, float t1,
-	int channels, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
+	int channels, int premul_alpha_channel, stbr_type type, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace,
 	void* tempmem, stbr_size_t tempmem_size_in_bytes)
 {
 	stbr_size_t memory_required = stbr_calculate_memory(input_w, input_h, output_w, output_h, s0, t0, s1, t1, channels, filter);
@@ -1260,6 +1300,11 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 	if (s1 > 1 || s0 < 0 || t1 > 1 || t0 < 0)
 		return 0;
 
+	STBR_ASSERT(premul_alpha_channel >= 0 && premul_alpha_channel < channels);
+
+	if (premul_alpha_channel < 0 || premul_alpha_channel >= channels)
+		return 0;
+
 	STBR_ASSERT(tempmem);
 
 	if (!tempmem)
@@ -1296,6 +1341,7 @@ STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input
 	stbr_info->vertical_shift = t0 * input_h / (t1 - t0);
 
 	stbr_info->channels = channels;
+	stbr_info->premul_alpha_channel = premul_alpha_channel;
 	stbr_info->type = type;
 	stbr_info->filter = filter;
 	stbr_info->edge = edge;
@@ -1396,7 +1442,7 @@ STBRDEF int stbr_resize_srgb_uint8(const stbr_uint8* input_data, int input_w, in
 	if (!extra_memory)
 		return 0;
 
-	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, STBR_TYPE_UINT8, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, 0, STBR_TYPE_UINT8, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
 
 	free(extra_memory);
 
@@ -1413,7 +1459,7 @@ STBRDEF int stbr_resize_srgb_uint16(const stbr_uint16* input_data, int input_w, 
 	if (!extra_memory)
 		return 0;
 
-	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, STBR_TYPE_UINT16, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, 0, STBR_TYPE_UINT16, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
 
 	free(extra_memory);
 
@@ -1430,7 +1476,7 @@ STBRDEF int stbr_resize_srgb_uint32(const stbr_uint32* input_data, int input_w, 
 	if (!extra_memory)
 		return 0;
 
-	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, STBR_TYPE_UINT32, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, 0, STBR_TYPE_UINT32, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
 
 	free(extra_memory);
 
@@ -1447,7 +1493,7 @@ STBRDEF int stbr_resize_srgb_float(const float* input_data, int input_w, int inp
 	if (!extra_memory)
 		return 0;
 
-	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, STBR_TYPE_FLOAT, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
+	int result = stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, 0, STBR_TYPE_FLOAT, filter, edge, STBR_COLORSPACE_SRGB, extra_memory, memory_required);
 
 	free(extra_memory);
 
