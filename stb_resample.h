@@ -1003,75 +1003,80 @@ static float* stbr__get_ring_buffer_scanline(int get_scanline, float* ring_buffe
 static stbr_inline void stbr__encode_scanline(void* output_buffer, int output_texel_index, float* encode_buffer, int encode_texel_index, int channels, int premul_alpha_channel, int decode)
 {
 	int n;
+	float divide_alpha = 1;
 
 	if (premul_alpha_channel)
-	{
-		for (n = 0; n < channels; n++)
-		{
-			if (n == premul_alpha_channel)
-				continue;
-
-			encode_buffer[encode_texel_index + n] /= encode_buffer[encode_texel_index + premul_alpha_channel];
-		}
-	}
+		divide_alpha = encode_buffer[encode_texel_index + premul_alpha_channel];
 
 	switch (decode)
 	{
 	case STBR__DECODE(STBR_TYPE_UINT8, STBR_COLORSPACE_LINEAR):
 		for (n = 0; n < channels; n++)
-			((unsigned char*)output_buffer)[output_texel_index + n] = (unsigned char)(stbr__saturate(encode_buffer[encode_texel_index + n]) * 255);
+		{
+			float divide_alpha_channel = (n == premul_alpha_channel) ? 1 : divide_alpha;
+			((unsigned char*)output_buffer)[output_texel_index + n] = (unsigned char)(stbr__saturate(encode_buffer[encode_texel_index + n] / divide_alpha_channel) * 255);
+		}
 		break;
 
 	case STBR__DECODE(STBR_TYPE_UINT8, STBR_COLORSPACE_SRGB):
 		for (n = 0; n < channels; n++)
-			((unsigned char*)output_buffer)[output_texel_index + n] = stbr__linear_uchar_to_srgb_uchar[(unsigned char)(stbr__saturate(encode_buffer[encode_texel_index + n]) * 255)];
+		{
+			float divide_alpha_channel = (n == premul_alpha_channel) ? 1 : divide_alpha;
+			((unsigned char*)output_buffer)[output_texel_index + n] = stbr__linear_uchar_to_srgb_uchar[(unsigned char)(stbr__saturate(encode_buffer[encode_texel_index + n] / divide_alpha_channel) * 255)];
+		}
 		break;
 
 	case STBR__DECODE(STBR_TYPE_UINT16, STBR_COLORSPACE_LINEAR):
 		for (n = 0; n < channels; n++)
-			((unsigned short*)output_buffer)[output_texel_index + n] = (unsigned short)(stbr__saturate(encode_buffer[encode_texel_index + n]) * 65535);
+		{
+			float divide_alpha_channel = (n == premul_alpha_channel) ? 1 : divide_alpha;
+			((unsigned short*)output_buffer)[output_texel_index + n] = (unsigned short)(stbr__saturate(encode_buffer[encode_texel_index + n] / divide_alpha_channel) * 65535);
+		}
 		break;
 
 	case STBR__DECODE(STBR_TYPE_UINT16, STBR_COLORSPACE_SRGB):
 		for (n = 0; n < channels; n++)
-			((unsigned short*)output_buffer)[output_texel_index + n] = (unsigned short)(stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_texel_index + n])) * 65535);
+		{
+			float divide_alpha_channel = (n == premul_alpha_channel) ? 1 : divide_alpha;
+			((unsigned short*)output_buffer)[output_texel_index + n] = (unsigned short)(stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_texel_index + n] / divide_alpha_channel)) * 65535);
+		}
 		break;
 
 	case STBR__DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_LINEAR):
 		for (n = 0; n < channels; n++)
-			((unsigned int*)output_buffer)[output_texel_index + n] = (unsigned int)(((double)stbr__saturate(encode_buffer[encode_texel_index + n])) * 4294967295);
+		{
+			float divide_alpha_channel = (n == premul_alpha_channel) ? 1 : divide_alpha;
+			((unsigned int*)output_buffer)[output_texel_index + n] = (unsigned int)(((double)stbr__saturate(encode_buffer[encode_texel_index + n] / divide_alpha_channel)) * 4294967295);
+		}
 		break;
 
 	case STBR__DECODE(STBR_TYPE_UINT32, STBR_COLORSPACE_SRGB):
 		for (n = 0; n < channels; n++)
-			((unsigned int*)output_buffer)[output_texel_index + n] = (unsigned int)(((double)stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_texel_index + n]))) * 4294967295);
+		{
+			float divide_alpha_channel = (n == premul_alpha_channel) ? 1 : divide_alpha;
+			((unsigned int*)output_buffer)[output_texel_index + n] = (unsigned int)(((double)stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_texel_index + n] / divide_alpha_channel))) * 4294967295);
+		}
 		break;
 
 	case STBR__DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR):
 		for (n = 0; n < channels; n++)
-			((float*)output_buffer)[output_texel_index + n] = stbr__saturate(encode_buffer[encode_texel_index + n]);
+		{
+			float divide_alpha_channel = (n == premul_alpha_channel) ? 1 : divide_alpha;
+			((float*)output_buffer)[output_texel_index + n] = stbr__saturate(encode_buffer[encode_texel_index + n] / divide_alpha_channel);
+		}
 		break;
 
 	case STBR__DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB):
 		for (n = 0; n < channels; n++)
-			((float*)output_buffer)[output_texel_index + n] = stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_texel_index + n]));
+		{
+			float divide_alpha_channel = (n == premul_alpha_channel) ? 1 : divide_alpha;
+			((float*)output_buffer)[output_texel_index + n] = stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_texel_index + n] / divide_alpha_channel));
+		}
 		break;
 
 	default:
 		STBR_UNIMPLEMENTED("Unknown type/colorspace/channels combination.");
 		break;
-	}
-
-	// Put it back the way it was in case this is a ring buffer.
-	if (premul_alpha_channel)
-	{
-		for (n = 0; n < channels; n++)
-		{
-			if (n == premul_alpha_channel)
-				continue;
-
-			encode_buffer[encode_texel_index + n] *= encode_buffer[encode_texel_index + premul_alpha_channel];
-		}
 	}
 }
 

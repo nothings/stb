@@ -295,8 +295,8 @@ void test_premul(const char* file)
 
 	stbi_write_png("test-output/premul-original.png", w, h, n, input_data, 0);
 
-	int new_w = (int)(w * .5);
-	int new_h = (int)(h * .5);
+	int new_w = (int)(w * .1);
+	int new_h = (int)(h * .1);
 
 	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
 
