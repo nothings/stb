@@ -286,11 +286,14 @@ void test_premul(const char* file)
 	unsigned char* input_data = stbi_load(file, &w, &h, &n, 4);
 	n = 4;
 
-	// Premultiply the first texel.
-	input_data[0] /= 2;
-	input_data[1] /= 2;
-	input_data[2] /= 2;
-	input_data[3] = 255 / 2;
+	// Set alpha for the top half.
+	for (int x = 0; x < w; x++)
+	{
+		for (int y = 0; y < h / 2; y++)
+			input_data[(y*w + x)*n + 3] = input_data[(y*w + x)*n + 0];
+	}
+
+	stbi_write_png("test-output/premul-original.png", w, h, n, input_data, 0);
 
 	int new_w = (int)(w * .5);
 	int new_h = (int)(h * .5);
@@ -302,13 +305,18 @@ void test_premul(const char* file)
 
 	stbr_resize_advanced(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, 3, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, tempmem, tempmem_size);
 
-	free(tempmem);
-
-	stbi_image_free(input_data);
-
 	char output[200];
 	sprintf(output, "test-output/premul-%s", file);
 	stbi_write_png(output, new_w, new_h, n, output_data, 0);
+
+	stbr_resize_advanced(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, 0, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, tempmem, tempmem_size);
+
+	sprintf(output, "test-output/nopremul-%s", file);
+	stbi_write_png(output, new_w, new_h, n, output_data, 0);
+
+	free(tempmem);
+
+	stbi_image_free(input_data);
 
 	free(output_data);
 }
