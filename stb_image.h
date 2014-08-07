@@ -1,4 +1,4 @@
-/* stb_image - v1.43 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.44 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -28,11 +28,12 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.44 (2014-08-07) warnings
       1.43 (2014-07-15) fix MSVC-only bug in 1.42
       1.42 (2014-07-09) no _CRT_SECURE_NO_WARNINGS; error-path fixes; STBI_ASSERT
       1.41 (2014-06-25) fix search&replace that messed up comments/error messages
       1.40 (2014-06-22) gcc warning
-      1.39 (2014-06-15) TGA optimization fix, multiple BMP fixes
+      1.39 (2014-06-15) TGA optimization bugfix, multiple BMP fixes
       1.38 (2014-06-06) suppress MSVC run-time warnings, fix accidental rename of 'skip'
       1.37 (2014-06-04) remove duplicate typedef
       1.36 (2014-06-03) converted to header file, allow reading incorrect iphoned-images without iphone flag
@@ -66,11 +67,12 @@
     Fabian "ryg" Giesen                          Cort Stratton
     Arseny Kapoulkine                            Blazej Dariusz Roszkowski
                                                  Thibault Reuille
- If your name should be here but                 Paul Du Bois
- isn't, let Sean know.                           Guillaume George
+                                                 Paul Du Bois
+                                                 Guillaume George
                                                  Jerry Jansson
-                                                 Hayaki Saito
-                                                 Johan Duparc
+  If your name should be here but                Hayaki Saito
+  isn't, let Sean know.                          Johan Duparc
+                                                 Ronny Chevalier
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
