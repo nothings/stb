@@ -1,4 +1,4 @@
-// stb_truetype.h - v0.8b - public domain
+// stb_truetype.h - v0.9 - public domain
 // authored from 2009-2013 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -32,9 +32,11 @@
 //       Ivan-Assen Ivanov
 //       Anthony Pesch
 //       Johan Duparc
+//       Hou Qiming
 //
 // VERSION HISTORY
 //
+//   0.9  (2014-08-07) support certain mac/iOS fonts without an MS platformID
 //   0.8b (2014-07-07) fix a warning
 //   0.8  (2014-05-25) fix a few more warnings
 //   0.7  (2013-09-25) bugfix: subpixel glyph bug fixed in 0.5 had come back
@@ -884,6 +886,8 @@ int stbtt_InitFont(stbtt_fontinfo *info, const unsigned char *data2, int fontsta
             }
             break;
         case STBTT_PLATFORM_ID_UNICODE:
+            // Mac/iOS has these
+            // all the encodingIDs are unicode, so we don't bother to check it
             info->index_map = cmap + ttULONG(data+encoding_record+4);
             break;
       }
