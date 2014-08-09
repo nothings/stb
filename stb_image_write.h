@@ -128,8 +128,9 @@ static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp,
          if (write_alpha < 0)
             fwrite(&d[comp-1], 1, 1, f);
          switch (comp) {
-            case 1:
-            case 2: write3(f, d[0],d[0],d[0]);
+            case 1: fwrite(d, 1, 1, f);
+                    break;
+            case 2: fwrite(d, 2, 1, f);
                     break;
             case 4:
                if (!write_alpha) {
@@ -179,8 +180,11 @@ int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *dat
 int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
 {
    int has_alpha = !(comp & 1);
+   int colorbytes = comp - has_alpha;
+   int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 3, 1 color channel (Y/YA) = 2
+   if (format == 2) colorbytes = 3;     // is 2 color channels (RG/RGA) even possible? write as RGB/RGBA
    return outfile(filename, -1,-1, x, y, comp, (void *) data, has_alpha, 0,
-                  "111 221 2222 11", 0,0,2, 0,0,0, 0,0,x,y, 24+8*has_alpha, 8*has_alpha);
+                  "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, (colorbytes+has_alpha)*8, has_alpha*8);
 }
 
 // stretchy buffer; stbiw__sbpush() == vector<>::push_back() -- stbiw__sbcount() == vector<>::size()
