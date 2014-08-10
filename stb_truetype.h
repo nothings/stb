@@ -215,7 +215,7 @@ GLstbtt_uint ftex;
 void my_stbtt_initfont(void)
 {
    fread(ttf_buffer, 1, 1<<20, fopen("c:/windows/fonts/times.ttf", "rb"));
-   stbtt_BakeFontBitmap(data,0, 32.0, temp_bitmap,512,512, 32,96, cdata); // no guarantee this fits!
+   stbtt_BakeFontBitmap(data,0, 32.0, temp_bitmap,512,512, 32,96, cdata, NULL); // no guarantee this fits!
    // can free ttf_buffer at this point
    glGenTextures(1, &ftex);
    glBindTexture(GL_TEXTURE_2D, ftex);
@@ -433,11 +433,11 @@ extern int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // font 
                                 float pixel_height,                     // height of font in pixels
                                 unsigned char *pixels, int pw, int ph,  // bitmap to be filled in
                                 int first_char, int num_chars,          // characters to bake
-                                stbtt_bakedchar *chardata);             // you allocate this, it's num_chars long
+                                stbtt_bakedchar *chardata,              // you allocate this, it's num_chars long
+                                void *userdata);                        // used when we call STBTT_malloc
 // if return is positive, the first unused row of the bitmap
 // if return is negative, returns the negative of the number of characters that fit
 // if return is 0, no characters fit and no rows were used
-// This uses a very crappy packing.
 
 typedef struct
 {
@@ -1860,35 +1860,189 @@ void stbtt_MakeCodepointBitmap(const stbtt_fontinfo *info, unsigned char *output
 //
 // bitmap baking
 //
-// This is SUPER-CRAPPY packing to keep source code small
+// This is SUPER-AWESOME packing to keep your textures small
+
+typedef struct stbtt_skylinenode
+{
+   stbtt_uint32 x;
+   stbtt_uint32 y;
+   stbtt_uint32 w;
+   struct stbtt_skylinenode *next;
+} stbtt_skylinenode;
+
+static int stbtt_SkylineRectangleFits(stbtt_skylinenode *node, const stbtt_uint32 maxw, const stbtt_uint32 maxh, const stbtt_uint32 w, const stbtt_uint32 h, stbtt_uint32 *_y)
+{
+   const stbtt_uint32 x = node->x;
+   if ((x + w) > maxw)
+      return 0;
+
+   stbtt_uint32 y = 0;
+   stbtt_uint32 remaining = w;
+   do {
+      const stbtt_uint32 nodeY = node->y;
+      if (nodeY > y)
+         y = nodeY;
+      if ((y + h) > maxh)
+         return 0;
+      remaining = node->w < remaining ? (remaining - node->w) : 0;
+      node = node->next;
+   } while (remaining && node);
+
+   *_y = y;
+   return (remaining == 0);
+}
+
+static int stbtt_PackSkylineRectangle(stbtt_skylinenode **skyline, const stbtt_uint32 maxw, const stbtt_uint32 maxh, const stbtt_uint32 w, const stbtt_uint32 h, stbtt_uint32 *_x, stbtt_uint32 *_y, void *userdata)
+{
+   stbtt_uint32 besth = 0xFFFFFFFF;
+   stbtt_uint32 bestw = 0xFFFFFFFF;
+   stbtt_skylinenode *node;
+   stbtt_skylinenode *insert = NULL;
+   stbtt_skylinenode *prev = NULL;
+   int found = 0;
+
+   STBTT_assert(*skyline);
+
+   *_x = *_y = 0;
+
+   // see if we have room somewhere...
+   for (stbtt_skylinenode *node = *skyline; node; node = node->next) {
+      stbtt_uint32 y;
+      if (stbtt_SkylineRectangleFits(node, maxw, maxh, w, h, &y)) {
+         const stbtt_uint32 maxy = y + h;
+         const stbtt_uint32 nodew = node->w;
+         if ((maxy < besth) || ((maxy == besth) && (nodew < bestw))) {
+            besth = maxy;
+            bestw = nodew;
+            insert = prev;
+            found = 1;
+            *_x = node->x;
+            *_y = y;
+         }
+      }
+
+      // @TODO: You _could_ swap w and h, and see if the rotated rectangle fits better, but you'd need to adjust the baking and report this to the caller.
+
+      prev = node;
+   }
+
+   if (!found)
+      return 0;  // no space in the bin that can fit this rectangle
+
+   // Add this rectangle to the bin.
+   node = (stbtt_skylinenode *) STBTT_malloc(sizeof (stbtt_skylinenode), userdata);
+   if (!node)
+      return 0;  // better luck next time?
+
+   node->x = *_x;
+   node->y = *_y + h;
+   node->w = w;
+
+   if (!insert) {
+      node->next = *skyline;
+      *skyline = node;
+   } else {
+      node->next = insert->next;
+      insert->next = node;
+   }
+
+   // now trim down the skyline so no widths overlap with what we added...
+   prev = node;
+   for (node = node->next; node; node = node->next) {
+      const stbtt_uint32 prevMaxX = prev->x + prev->w;
+      const stbtt_uint32 nodeX = node->x;
+
+      STBTT_assert(prev->x <= nodeX);
+      if (prevMaxX < nodeX)
+         break;
+
+      const stbtt_uint32 shrink = prevMaxX - nodeX;
+      if (node->w > shrink) {
+         node->x += shrink;
+         node->w -= shrink;
+         break;
+      }
+
+      STBTT_assert(prev != NULL);  // we should always be working with index >= 1.
+      prev->next = node->next;
+      STBTT_free(node, userdata);
+      node = prev;
+   }
+
+   // now consolidate skyline neighbors that have the same height...
+   node = *skyline;
+   STBTT_assert(node);  // should be at least one at this point...
+   while (1) {
+      stbtt_skylinenode *next = node->next;
+      if (!next) {
+         break;
+      } else if (node->y != next->y) {  // not same height, skip ahead.
+         node = next;
+      } else {  // same height
+         node->w += next->w;
+         node->next = next->next;
+         STBTT_free(next, userdata);
+      }
+   }
+
+   return 1;
+}
+
+static void stbtt_FreeSkyline(stbtt_skylinenode *node, void *userdata)
+{
+   while (node) {
+      stbtt_skylinenode *next = node->next;
+      STBTT_free(node, userdata);
+      node = next;
+   }
+}
 
 extern int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // font location (use offset=0 for plain .ttf)
                                 float pixel_height,                     // height of font in pixels
                                 unsigned char *pixels, int pw, int ph,  // bitmap to be filled in
                                 int first_char, int num_chars,          // characters to bake
-                                stbtt_bakedchar *chardata)
+                                stbtt_bakedchar *chardata,              // you allocate this, it's num_chars long
+                                void *userdata)                         // used when we call STBTT_malloc
 {
+   stbtt_skylinenode *skyline;
    float scale;
-   int x,y,bottom_y, i;
+   int bottom_y, i;
    stbtt_fontinfo f;
+
+   skyline = (stbtt_skylinenode *) STBTT_malloc(sizeof (stbtt_skylinenode), userdata);
+   if (!skyline)
+      return 0;  // better luck next time?
+
+   skyline->x = skyline->y = 0;
+   skyline->w = pw;
+   skyline->next = NULL;
+
    stbtt_InitFont(&f, data, offset);
    STBTT_memset(pixels, 0, pw*ph); // background of 0 around pixels
-   x=y=1;
    bottom_y = 1;
 
    scale = stbtt_ScaleForPixelHeight(&f, pixel_height);
 
    for (i=0; i < num_chars; ++i) {
+      stbtt_uint32 x, y;
       int advance, lsb, x0,y0,x1,y1,gw,gh;
       int g = stbtt_FindGlyphIndex(&f, first_char + i);
       stbtt_GetGlyphHMetrics(&f, g, &advance, &lsb);
       stbtt_GetGlyphBitmapBox(&f, g, scale,scale, &x0,&y0,&x1,&y1);
+
       gw = x1-x0;
       gh = y1-y0;
-      if (x + gw + 1 >= pw)
-         y = bottom_y, x = 1; // advance to next row
-      if (y + gh + 1 >= ph) // check if it fits vertically AFTER potentially moving to next row
-         return -i;
+
+      // +2 to make sure there's a pixel of empty space around each glyph
+      if (!stbtt_PackSkylineRectangle(&skyline, pw, ph, gw+2, gh+2, &x, &y, userdata)) {
+         stbtt_FreeSkyline(skyline, userdata);
+         return -i;  // @TODO: technically, this _might_ fit more, but we give up here.
+      }
+
+      // give yourself that one-pixel offset for empty space.
+      x++;
+      y++;
+
       STBTT_assert(x+gw < pw);
       STBTT_assert(y+gh < ph);
       stbtt_MakeGlyphBitmap(&f, pixels+x+y*pw, gw,gh,pw, scale,scale, g);
@@ -1900,9 +2054,11 @@ extern int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // font 
       chardata[i].xoff     = (float) x0;
       chardata[i].yoff     = (float) y0;
       x = x + gw + 2;
-      if (y+gh+2 > bottom_y)
-         bottom_y = y+gh+2;
+      if (y+gh+1 > bottom_y)
+         bottom_y = y+gh+1;
    }
+
+   stbtt_FreeSkyline(skyline, userdata);
    return bottom_y;
 }
 
