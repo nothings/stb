@@ -89,23 +89,21 @@ typedef enum
 
 typedef enum
 {
-	STBR_COLORSPACE_LINEAR = 1,
-	STBR_COLORSPACE_SRGB = 2,
-	// If you add here, update STBR_MAX_COLORSPACES
-} stbr_colorspace;
+	STBR_COLORSPACE_LINEAR,
+	STBR_COLORSPACE_SRGB,
 
-#define STBR_MAX_COLORSPACES 2
+	STBR_MAX_COLORSPACES,
+} stbr_colorspace;
 
 typedef enum
 {
-	STBR_TYPE_UINT8  = 1,
-	STBR_TYPE_UINT16 = 2,
-	STBR_TYPE_UINT32 = 3,
-	STBR_TYPE_FLOAT  = 4,
-	// If you add here, update STBR_MAX_TYPES and stbr__type_size
-} stbr_type;
+	STBR_TYPE_UINT8 ,
+	STBR_TYPE_UINT16,
+	STBR_TYPE_UINT32,
+	STBR_TYPE_FLOAT ,
 
-#define STBR_MAX_TYPES 4
+	STBR_MAX_TYPES
+} stbr_type;
 
 typedef unsigned char stbr_uint8;
 
