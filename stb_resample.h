@@ -842,14 +842,15 @@ static void stbr__decode_scanline(stbr__info* stbr_info, int n)
 			break;
 		}
 
-		if (alpha_channel)
+		if (alpha_channel >= 0)
 		{
+			float alpha = decode_buffer[decode_pixel_index + alpha_channel];
 			for (c = 0; c < channels; c++)
 			{
 				if (c == alpha_channel)
 					continue;
 
-				decode_buffer[decode_pixel_index + c] *= decode_buffer[decode_pixel_index + alpha_channel];
+				decode_buffer[decode_pixel_index + c] *= alpha;
 			}
 		}
 	}
@@ -1007,7 +1008,7 @@ static stbr_inline void stbr__encode_pixel(void* output_buffer, int output_pixel
 	int n;
 	float divide_alpha = 1;
 
-	if (alpha_channel) {
+	if (alpha_channel >= 0) {
 		float alpha = encode_buffer[encode_pixel_index + alpha_channel];
 		float reciprocal_alpha = alpha ? 1.0f / alpha : 0;
 		for (n = 0; n < channels; n++)
@@ -1377,9 +1378,9 @@ static int stbr__resize_advanced(const void* input_data, int input_w, int input_
 	if (s1 > 1 || s0 < 0 || t1 > 1 || t0 < 0)
 		return 0;
 
-	STBR_ASSERT(alpha_channel >= 0 && alpha_channel < channels);
+	STBR_ASSERT(alpha_channel < channels);
 
-	if (alpha_channel < 0 || alpha_channel >= channels)
+	if (alpha_channel >= channels)
 		return 0;
 
 	STBR_ASSERT(tempmem);
