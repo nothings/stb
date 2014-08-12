@@ -21,6 +21,58 @@
 #include <sys/timeb.h>
 #endif
 
+#define MT_SIZE 624
+static size_t g_aiMT[MT_SIZE];
+static size_t g_iMTI = 0;
+
+// Mersenne Twister implementation from Wikipedia.
+// Avoiding use of the system rand() to be sure that our tests generate the same test data on any system.
+void mtsrand(size_t iSeed)
+{
+	g_aiMT[0] = iSeed;
+	for (size_t i = 1; i < MT_SIZE; i++)
+	{
+		size_t inner1 = g_aiMT[i - 1];
+		size_t inner2 = (g_aiMT[i - 1] >> 30);
+		size_t inner = inner1 ^ inner2;
+		g_aiMT[i] = (0x6c078965 * inner) + i;
+	}
+
+	g_iMTI = 0;
+}
+
+size_t mtrand()
+{
+	if (g_iMTI == 0)
+	{
+		for (size_t i = 0; i < MT_SIZE; i++)
+		{
+			size_t y = (0x80000000 & (g_aiMT[i])) + (0x7fffffff & (g_aiMT[(i + 1) % MT_SIZE]));
+			g_aiMT[i] = g_aiMT[(i + 397) % MT_SIZE] ^ (y >> 1);
+			if ((y % 2) == 1)
+				g_aiMT[i] = g_aiMT[i] ^ 0x9908b0df;
+		}
+	}
+
+	size_t y = g_aiMT[g_iMTI];
+	y = y ^ (y >> 11);
+	y = y ^ ((y << 7) & (0x9d2c5680));
+	y = y ^ ((y << 15) & (0xefc60000));
+	y = y ^ (y >> 18);
+
+	g_iMTI = (g_iMTI + 1) % MT_SIZE;
+
+	return y;
+}
+
+
+inline float mtfrand()
+{
+	const int ninenine = 999999;
+	return (float)(mtrand() % ninenine)/ninenine;
+}
+
+
 void test_suite();
 
 int main(int argc, char** argv)
@@ -297,8 +349,115 @@ void test_premul(const char* file)
 	free(output_data);
 }
 
+void test_subpixel_1()
+{
+	unsigned char image[8 * 8];
+
+	mtsrand(0);
+
+	for (int i = 0; i < sizeof(image); i++)
+		image[i] = mtrand() % 255;
+
+	unsigned char output_data[16 * 16];
+
+	stbr_resize_arbitrary(image, 8, 8, 0, output_data, 16, 16, 0, 0, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+
+	unsigned char output_left[8 * 16];
+	unsigned char output_right[8 * 16];
+
+	stbr_resize_arbitrary(image, 8, 8, 0, output_left, 8, 16, 0, 0, 0, 0.5f, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(image, 8, 8, 0, output_right, 8, 16, 0, 0.5f, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+
+	for (int x = 0; x < 8; x++)
+	{
+		for (int y = 0; y < 16; y++)
+		{
+			STBR_ASSERT(output_data[y * 16 + x] == output_left[y * 8 + x]);
+			STBR_ASSERT(output_data[y * 16 + x + 8] == output_right[y * 8 + x]);
+		}
+	}
+}
+
+void test_subpixel_2()
+{
+	unsigned char image[8 * 8];
+
+	mtsrand(0);
+
+	for (int i = 0; i < sizeof(image); i++)
+		image[i] = mtrand() % 255;
+
+	unsigned char large_image[32 * 32];
+
+	for (int x = 0; x < 8; x++)
+	{
+		for (int y = 0; y < 8; y++)
+		{
+			for (int i = 0; i < 4; i++)
+			{
+				for (int j = 0; j < 4; j++)
+					large_image[j*4*8*8 + i*8 + y*4*8 + x] = image[y*8 + x];
+			}
+		}
+	}
+
+	unsigned char output_data_1[16 * 16];
+	unsigned char output_data_2[16 * 16];
+
+	stbr_resize_arbitrary(image, 8, 8, 0, output_data_1, 16, 16, 0, 0, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_WRAP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(large_image, 32, 32, 0, output_data_2, 16, 16, 0, 0.25f, 0.25f, 0.5f, 0.5f, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+
+	for (int x = 0; x < 16; x++)
+	{
+		for (int y = 0; y < 16; y++)
+			STBR_ASSERT(output_data_1[y * 16 + x] == output_data_2[y * 16 + x]);
+	}
+}
+
+void test_subpixel_3()
+{
+	unsigned char image[8 * 8];
+
+	mtsrand(0);
+
+	for (int i = 0; i < sizeof(image); i++)
+		image[i] = mtrand() % 255;
+
+	unsigned char output_data_1[32 * 32];
+	unsigned char output_data_2[32 * 32];
+
+	stbr_resize_uint8_subpixel(image, 8, 8, output_data_1, 32, 32, 0, 0, 1, 1, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP);
+	stbr_resize_uint8_srgb(image, 8, 8, output_data_2, 32, 32, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP);
+
+	for (int x = 0; x < 32; x++)
+	{
+		for (int y = 0; y < 32; y++)
+			STBR_ASSERT(output_data_1[y * 32 + x] == output_data_2[y * 32 + x]);
+	}
+}
+
+void test_subpixel_4()
+{
+	unsigned char image[8 * 8];
+
+	mtsrand(0);
+
+	for (int i = 0; i < sizeof(image); i++)
+		image[i] = mtrand() % 255;
+
+	unsigned char output[8 * 8];
+
+	stbr_resize_arbitrary(image, 8, 8, 0, output, 8, 8, 0, 0, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_BILINEAR, STBR_EDGE_CLAMP, STBR_COLORSPACE_LINEAR);
+	STBR_ASSERT(memcmp(image, output, 8 * 8) == 0);
+}
+
 void test_suite()
 {
+	test_subpixel_1();
+	test_subpixel_2();
+	test_subpixel_3();
+	test_subpixel_4();
+
 	test_premul("barbara.png");
 
 	for (int i = 0; i < 10; i++)
