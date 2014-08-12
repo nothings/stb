@@ -140,7 +140,7 @@ int main(int argc, char** argv)
 
 	printf("Average: %dms\n", average);
 #else
-	stbr_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, s0, t0, s1, t1, n, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, s0, t0, s1, t1, n, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
 #endif
 
 	stbi_image_free(input_data);
@@ -168,7 +168,7 @@ void resize_image(const char* filename, float width_percent, float height_percen
 
 	unsigned char* output_data = (unsigned char*)malloc(out_w * out_h * n);
 
-	stbr_resize_arbitrary(input_data, w, h, 0, output_data, out_w, out_h, 0, 0, 0, 1, 1, n, -1, STBR_TYPE_UINT8, filter, edge, colorspace);
+	stbr_resize_arbitrary(input_data, w, h, 0, output_data, out_w, out_h, 0, 0, 0, 1, 1, n, -1, STBR_TYPE_UINT8, filter, edge, edge, colorspace);
 
 	stbi_image_free(input_data);
 
@@ -199,7 +199,7 @@ void test_format(const char* file, float width_percent, float height_percent, st
 
 	T* output_data = (T*)malloc(new_w * new_h * n * sizeof(T));
 
-	stbr_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, -1, type, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, colorspace);
+	stbr_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, -1, type, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, colorspace);
 
 	free(T_data);
 	stbi_image_free(input_data);
@@ -240,7 +240,7 @@ void test_float(const char* file, float width_percent, float height_percent, stb
 
 	float* output_data = (float*)malloc(new_w * new_h * n * sizeof(float));
 
-	stbr_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, -1, type, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, colorspace);
+	stbr_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, -1, type, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, colorspace);
 
 	free(T_data);
 	stbi_image_free(input_data);
@@ -302,7 +302,7 @@ void test_subpixel(const char* file, float width_percent, float height_percent, 
 
 	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
 
-	stbr_resize_arbitrary(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, s1, t1, n, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, s1, t1, n, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
 
 	stbi_image_free(input_data);
 
@@ -333,13 +333,13 @@ void test_premul(const char* file)
 
 	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
 
-	stbr_resize_arbitrary(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, 3, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, 3, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
 
 	char output[200];
 	sprintf(output, "test-output/premul-%s", file);
 	stbi_write_png(output, new_w, new_h, n, output_data, 0);
 
-	stbr_resize_arbitrary(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
 
 	sprintf(output, "test-output/nopremul-%s", file);
 	stbi_write_png(output, new_w, new_h, n, output_data, 0);
@@ -360,13 +360,13 @@ void test_subpixel_1()
 
 	unsigned char output_data[16 * 16];
 
-	stbr_resize_arbitrary(image, 8, 8, 0, output_data, 16, 16, 0, 0, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(image, 8, 8, 0, output_data, 16, 16, 0, 0, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
 
 	unsigned char output_left[8 * 16];
 	unsigned char output_right[8 * 16];
 
-	stbr_resize_arbitrary(image, 8, 8, 0, output_left, 8, 16, 0, 0, 0, 0.5f, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
-	stbr_resize_arbitrary(image, 8, 8, 0, output_right, 8, 16, 0, 0.5f, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(image, 8, 8, 0, output_left, 8, 16, 0, 0, 0, 0.5f, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(image, 8, 8, 0, output_right, 8, 16, 0, 0.5f, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
 
 	for (int x = 0; x < 8; x++)
 	{
@@ -404,8 +404,8 @@ void test_subpixel_2()
 	unsigned char output_data_1[16 * 16];
 	unsigned char output_data_2[16 * 16];
 
-	stbr_resize_arbitrary(image, 8, 8, 0, output_data_1, 16, 16, 0, 0, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_WRAP, STBR_COLORSPACE_SRGB);
-	stbr_resize_arbitrary(large_image, 32, 32, 0, output_data_2, 16, 16, 0, 0.25f, 0.25f, 0.5f, 0.5f, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(image, 8, 8, 0, output_data_1, 16, 16, 0, 0, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_WRAP, STBR_EDGE_WRAP, STBR_COLORSPACE_SRGB);
+	stbr_resize_arbitrary(large_image, 32, 32, 0, output_data_2, 16, 16, 0, 0.25f, 0.25f, 0.5f, 0.5f, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
 
 	for (int x = 0; x < 16; x++)
 	{
@@ -447,7 +447,7 @@ void test_subpixel_4()
 
 	unsigned char output[8 * 8];
 
-	stbr_resize_arbitrary(image, 8, 8, 0, output, 8, 8, 0, 0, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_BILINEAR, STBR_EDGE_CLAMP, STBR_COLORSPACE_LINEAR);
+	stbr_resize_arbitrary(image, 8, 8, 0, output, 8, 8, 0, 0, 0, 1, 1, 1, -1, STBR_TYPE_UINT8, STBR_FILTER_BILINEAR, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, STBR_COLORSPACE_LINEAR);
 	STBR_ASSERT(memcmp(image, output, 8 * 8) == 0);
 }
 
