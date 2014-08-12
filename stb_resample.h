@@ -1088,15 +1088,15 @@ static stbr_inline void stbr__encode_pixel(stbr__info* stbr_info, void* output_b
 
 	case STBR__DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_LINEAR):
 		for (n = 0; n < channels; n++)
-			((float*)output_buffer)[output_pixel_index + n] = stbr__saturate(encode_buffer[encode_pixel_index + n]);
+			((float*)output_buffer)[output_pixel_index + n] = encode_buffer[encode_pixel_index + n];
 		break;
 
 	case STBR__DECODE(STBR_TYPE_FLOAT, STBR_COLORSPACE_SRGB):
 		for (n = 0; n < channels; n++)
-			((float*)output_buffer)[output_pixel_index + n] = stbr__linear_to_srgb(stbr__saturate(encode_buffer[encode_pixel_index + n]));
+			((float*)output_buffer)[output_pixel_index + n] = stbr__linear_to_srgb(encode_buffer[encode_pixel_index + n]);
 
 		if (stbr_info->flags&STBR_FLAG_FORCE_LINEAR_ALPHA)
-			((float*)output_buffer)[output_pixel_index + alpha_channel] = stbr__saturate(encode_buffer[encode_pixel_index + alpha_channel]);
+			((float*)output_buffer)[output_pixel_index + alpha_channel] = encode_buffer[encode_pixel_index + alpha_channel];
 
 		break;
 
