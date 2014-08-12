@@ -105,6 +105,13 @@ typedef enum
 	STBR_MAX_TYPES
 } stbr_type;
 
+static unsigned char stbr__type_size[] = {
+	1, // STBR_TYPE_UINT8
+	2, // STBR_TYPE_UINT16
+	4, // STBR_TYPE_UINT32
+	4, // STBR_TYPE_FLOAT
+};
+
 typedef unsigned char stbr_uint8;
 
 #ifdef _MSC_VER
@@ -379,14 +386,6 @@ static unsigned char stbr__linear_uchar_to_srgb_uchar[256] = {
 	228, 229, 229, 230, 230, 231, 231, 232, 232, 233, 233, 234, 234, 235, 235, 236, 236, 237, 237, 237, 238, 238, 239, 239,
 	240, 240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 245, 246, 246, 247, 247, 248, 248, 249, 249, 250, 250, 251,
 	251, 251, 252, 252, 253, 253, 254, 254, 255
-};
-
-static unsigned char stbr__type_size[] = {
-	0,
-	1, // STBR_TYPE_UINT8
-	2, // STBR_TYPE_UINT16
-	4, // STBR_TYPE_UINT32
-	4, // STBR_TYPE_FLOAT
 };
 
 float stbr__srgb_to_linear(float f)
