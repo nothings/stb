@@ -1,4 +1,4 @@
-/* stb_image - v1.44 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.45 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -28,6 +28,7 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.45 (2014-08-16) workaround MSVC-ARM internal compiler error by wrapping malloc
       1.44 (2014-08-07) warnings
       1.43 (2014-07-15) fix MSVC-only bug in 1.42
       1.42 (2014-07-09) no _CRT_SECURE_NO_WARNINGS; error-path fixes; STBI_ASSERT
@@ -73,6 +74,7 @@
   If your name should be here but                Hayaki Saito
   isn't, let Sean know.                          Johan Duparc
                                                  Ronny Chevalier
+                                                 Michal Cichon
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -527,6 +529,11 @@ static int stbi__err(const char *str)
    return 0;
 }
 
+static void *stbi__malloc(size_t size)
+{
+    return malloc(size);
+}
+
 // stbi__err - error
 // stbi__errpf - error returning pointer to float
 // stbi__errpuc - error returning pointer to unsigned char
@@ -877,7 +884,7 @@ static unsigned char *stbi__convert_format(unsigned char *data, int img_n, int r
    if (req_comp == img_n) return data;
    STBI_ASSERT(req_comp >= 1 && req_comp <= 4);
 
-   good = (unsigned char *) malloc(req_comp * x * y);
+   good = (unsigned char *) stbi__malloc(req_comp * x * y);
    if (good == NULL) {
       free(data);
       return stbi__errpuc("outofmem", "Out of memory");
@@ -917,7 +924,7 @@ static unsigned char *stbi__convert_format(unsigned char *data, int img_n, int r
 static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp)
 {
    int i,k,n;
-   float *output = (float *) malloc(x * y * comp * sizeof(float));
+   float *output = (float *) stbi__malloc(x * y * comp * sizeof(float));
    if (output == NULL) { free(data); return stbi__errpf("outofmem", "Out of memory"); }
    // compute number of non-alpha components
    if (comp & 1) n = comp; else n = comp-1;
@@ -935,7 +942,7 @@ static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp)
 static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp)
 {
    int i,k,n;
-   stbi_uc *output = (stbi_uc *) malloc(x * y * comp);
+   stbi_uc *output = (stbi_uc *) stbi__malloc(x * y * comp);
    if (output == NULL) { free(data); return stbi__errpuc("outofmem", "Out of memory"); }
    // compute number of non-alpha components
    if (comp & 1) n = comp; else n = comp-1;
@@ -1612,7 +1619,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
       // discard the extra data until colorspace conversion
       z->img_comp[i].w2 = z->img_mcu_x * z->img_comp[i].h * 8;
       z->img_comp[i].h2 = z->img_mcu_y * z->img_comp[i].v * 8;
-      z->img_comp[i].raw_data = malloc(z->img_comp[i].w2 * z->img_comp[i].h2+15);
+      z->img_comp[i].raw_data = stbi__malloc(z->img_comp[i].w2 * z->img_comp[i].h2+15);
       if (z->img_comp[i].raw_data == NULL) {
          for(--i; i >= 0; --i) {
             free(z->img_comp[i].raw_data);
@@ -1877,7 +1884,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
 
          // allocate line buffer big enough for upsampling off the edges
          // with upsample factor of 4
-         z->img_comp[k].linebuf = (stbi_uc *) malloc(z->s->img_x + 3);
+         z->img_comp[k].linebuf = (stbi_uc *) stbi__malloc(z->s->img_x + 3);
          if (!z->img_comp[k].linebuf) { stbi__cleanup_jpeg(z); return stbi__errpuc("outofmem", "Out of memory"); }
 
          r->hs      = z->img_h_max / z->img_comp[k].h;
@@ -1895,7 +1902,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
       }
 
       // can't error after this so, this is safe
-      output = (stbi_uc *) malloc(n * z->s->img_x * z->s->img_y + 1);
+      output = (stbi_uc *) stbi__malloc(n * z->s->img_x * z->s->img_y + 1);
       if (!output) { stbi__cleanup_jpeg(z); return stbi__errpuc("outofmem", "Out of memory"); }
 
       // now go ahead and resample
@@ -2340,7 +2347,7 @@ static int stbi__do_zlib(stbi__zbuf *a, char *obuf, int olen, int exp, int parse
 STBIDEF char *stbi_zlib_decode_malloc_guesssize(const char *buffer, int len, int initial_size, int *outlen)
 {
    stbi__zbuf a;
-   char *p = (char *) malloc(initial_size);
+   char *p = (char *) stbi__malloc(initial_size);
    if (p == NULL) return NULL;
    a.zbuffer = (stbi_uc *) buffer;
    a.zbuffer_end = (stbi_uc *) buffer + len;
@@ -2361,7 +2368,7 @@ STBIDEF char *stbi_zlib_decode_malloc(char const *buffer, int len, int *outlen)
 STBIDEF char *stbi_zlib_decode_malloc_guesssize_headerflag(const char *buffer, int len, int initial_size, int *outlen, int parse_header)
 {
    stbi__zbuf a;
-   char *p = (char *) malloc(initial_size);
+   char *p = (char *) stbi__malloc(initial_size);
    if (p == NULL) return NULL;
    a.zbuffer = (stbi_uc *) buffer;
    a.zbuffer_end = (stbi_uc *) buffer + len;
@@ -2388,7 +2395,7 @@ STBIDEF int stbi_zlib_decode_buffer(char *obuffer, int olen, char const *ibuffer
 STBIDEF char *stbi_zlib_decode_noheader_malloc(char const *buffer, int len, int *outlen)
 {
    stbi__zbuf a;
-   char *p = (char *) malloc(16384);
+   char *p = (char *) stbi__malloc(16384);
    if (p == NULL) return NULL;
    a.zbuffer = (stbi_uc *) buffer;
    a.zbuffer_end = (stbi_uc *) buffer+len;
@@ -2486,7 +2493,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
    int k;
    int img_n = s->img_n; // copy it into a local for later
    STBI_ASSERT(out_n == s->img_n || out_n == s->img_n+1);
-   a->out = (stbi_uc *) malloc(x * y * out_n);
+   a->out = (stbi_uc *) stbi__malloc(x * y * out_n);
    if (!a->out) return stbi__err("outofmem", "Out of memory");
    if (s->img_x == x && s->img_y == y) {
       if (raw_len != (img_n * x + 1) * y) return stbi__err("not enough pixels","Corrupt PNG");
@@ -2561,7 +2568,7 @@ static int stbi__create_png_image(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_l
       return stbi__create_png_image_raw(a, raw, raw_len, out_n, a->s->img_x, a->s->img_y);
 
    // de-interlacing
-   final = (stbi_uc *) malloc(a->s->img_x * a->s->img_y * out_n);
+   final = (stbi_uc *) stbi__malloc(a->s->img_x * a->s->img_y * out_n);
    for (p=0; p < 7; ++p) {
       int xorig[] = { 0,4,0,2,0,1,0 };
       int yorig[] = { 0,0,4,0,2,0,1 };
@@ -2620,7 +2627,7 @@ static int stbi__expand_png_palette(stbi__png *a, stbi_uc *palette, int len, int
    stbi__uint32 i, pixel_count = a->s->img_x * a->s->img_y;
    stbi_uc *p, *temp_out, *orig = a->out;
 
-   p = (stbi_uc *) malloc(pixel_count * pal_img_n);
+   p = (stbi_uc *) stbi__malloc(pixel_count * pal_img_n);
    if (p == NULL) return stbi__err("outofmem", "Out of memory");
 
    // between here and free(out) below, exitting would leak
@@ -3076,7 +3083,7 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
       target = req_comp;
    else
       target = s->img_n; // if they want monochrome, we'll post-convert
-   out = (stbi_uc *) malloc(target * s->img_x * s->img_y);
+   out = (stbi_uc *) stbi__malloc(target * s->img_x * s->img_y);
    if (!out) return stbi__errpuc("outofmem", "Out of memory");
    if (bpp < 16) {
       int z=0;
@@ -3305,7 +3312,7 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
    *y = tga_height;
    if (comp) *comp = tga_comp;
 
-   tga_data = (unsigned char*)malloc( tga_width * tga_height * tga_comp );
+   tga_data = (unsigned char*)stbi__malloc( tga_width * tga_height * tga_comp );
    if (!tga_data) return stbi__errpuc("outofmem", "Out of memory");
 
    // skip to the data's starting position (offset usually = 0)
@@ -3324,7 +3331,7 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
          //   any data to skip? (offset usually = 0)
          stbi__skip(s, tga_palette_start );
          //   load the palette
-         tga_palette = (unsigned char*)malloc( tga_palette_len * tga_palette_bits / 8 );
+         tga_palette = (unsigned char*)stbi__malloc( tga_palette_len * tga_palette_bits / 8 );
          if (!tga_palette) {
             free(tga_data);
             return stbi__errpuc("outofmem", "Out of memory");
@@ -3515,7 +3522,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
       return stbi__errpuc("bad compression", "PSD has an unknown compression format");
 
    // Create the destination image.
-   out = (stbi_uc *) malloc(4 * w*h);
+   out = (stbi_uc *) stbi__malloc(4 * w*h);
    if (!out) return stbi__errpuc("outofmem", "Out of memory");
    pixelCount = w*h;
 
@@ -3800,7 +3807,7 @@ static stbi_uc *stbi__pic_load(stbi__context *s,int *px,int *py,int *comp,int re
    stbi__get16be(s); //skip `pad'
 
    // intermediate buffer is RGBA
-   result = (stbi_uc *) malloc(x*y*4);
+   result = (stbi_uc *) stbi__malloc(x*y*4);
    memset(result, 0xff, x*y*4);
 
    if (!stbi__pic_load_core(s,x,y,comp, result)) {
@@ -4051,14 +4058,14 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
 
    if (g->out == 0) {
       if (!stbi__gif_header(s, g, comp,0))     return 0; // stbi__g_failure_reason set by stbi__gif_header
-      g->out = (stbi_uc *) malloc(4 * g->w * g->h);
+      g->out = (stbi_uc *) stbi__malloc(4 * g->w * g->h);
       if (g->out == 0)                      return stbi__errpuc("outofmem", "Out of memory");
       stbi__fill_gif_background(g);
    } else {
       // animated-gif-only path
       if (((g->eflags & 0x1C) >> 2) == 3) {
          old_out = g->out;
-         g->out = (stbi_uc *) malloc(4 * g->w * g->h);
+         g->out = (stbi_uc *) stbi__malloc(4 * g->w * g->h);
          if (g->out == 0)                   return stbi__errpuc("outofmem", "Out of memory");
          memcpy(g->out, old_out, g->w*g->h*4);
       }
@@ -4281,7 +4288,7 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    if (req_comp == 0) req_comp = 3;
 
    // Read data
-   hdr_data = (float *) malloc(height * width * req_comp * sizeof(float));
+   hdr_data = (float *) stbi__malloc(height * width * req_comp * sizeof(float));
 
    // Load image data
    // image data is stored as some number of sca
@@ -4320,7 +4327,7 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
          len <<= 8;
          len |= stbi__get8(s);
          if (len != width) { free(hdr_data); free(scanline); return stbi__errpf("invalid decoded scanline length", "corrupt HDR"); }
-         if (scanline == NULL) scanline = (stbi_uc *) malloc(width * 4);
+         if (scanline == NULL) scanline = (stbi_uc *) stbi__malloc(width * 4);
             
          for (k = 0; k < 4; ++k) {
             i = 0;
@@ -4557,6 +4564,10 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      1.44 (2014-08-16)
+             fix MSVC-ARM internal compiler error by wrapping malloc
+      1.44 (2014-08-07)
+		       various warning fixes from Ronny Chevalier
       1.43 (2014-07-15)
              fix MSVC-only compiler problem in code changed in 1.42
       1.42 (2014-07-09)
