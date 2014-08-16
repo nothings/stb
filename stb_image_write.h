@@ -42,7 +42,7 @@ USAGE:
    a row of pixels to the first byte of the next row of pixels.
 
    PNG creates output files with the same number of components as the input.
-   The BMP and TGA formats expand Y to RGB in the file format. BMP does not
+   The BMP format expands Y to RGB in the file format and does not
    output alpha.
    
    PNG supports writing rectangles of data even when the bytes storing rows of
@@ -128,8 +128,8 @@ static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp,
          if (write_alpha < 0)
             fwrite(&d[comp-1], 1, 1, f);
          switch (comp) {
-            case 1:
-            case 2: write3(f, d[0],d[0],d[0]);
+            case 1: 
+            case 2: fwrite(d, 1, 1, f);
                     break;
             case 4:
                if (!write_alpha) {
@@ -179,8 +179,10 @@ int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *dat
 int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
 {
    int has_alpha = !(comp & 1);
+   int colorbytes = comp - has_alpha;
+   int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
    return outfile(filename, -1,-1, x, y, comp, (void *) data, has_alpha, 0,
-                  "111 221 2222 11", 0,0,2, 0,0,0, 0,0,x,y, 24+8*has_alpha, 8*has_alpha);
+                  "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, (colorbytes+has_alpha)*8, has_alpha*8);
 }
 
 // stretchy buffer; stbiw__sbpush() == vector<>::push_back() -- stbiw__sbcount() == vector<>::size()
