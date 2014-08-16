@@ -178,8 +178,8 @@ int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *dat
 
 int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
 {
-   int has_alpha = !(comp & 1);
-   int colorbytes = comp - has_alpha;
+   int has_alpha = (comp == 2 || comp == 4);
+   int colorbytes = has_alpha ? comp-1 : comp;
    int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
    return outfile(filename, -1,-1, x, y, comp, (void *) data, has_alpha, 0,
                   "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, (colorbytes+has_alpha)*8, has_alpha*8);
