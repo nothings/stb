@@ -5,7 +5,7 @@
 #define STB_DIVIDE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_HERRINGBONE_WANG_TILE_IMEPLEMENTATIOn
-#define STB_RESAMPLE_IMPLEMENTATION
+#define STB_IMAGE_RESIZE_IMPLEMENTATION
 
 #include "stb_herringbone_wang_tile.h"
 #include "stb_image.h"
@@ -14,4 +14,4 @@
 #include "stb_dxt.h"
 #include "stb_c_lexer.h"
 #include "stb_divide.h"
-#include "stb_resample.h"
+#include "stb_image_resize.h"
