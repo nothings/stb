@@ -16,8 +16,9 @@ libraries.)
 
 Include a "header-file" section with header-file
 guards and declarations for all the functions,
-but don't guard the implementation. That way,
-if client's header file X includes your header file for
+but only guard the implementation with LIBRARYNAME_IMPLEMENTATION,
+not the header-file guard. That way, if client's
+header file X includes your header file for
 declarations, they can still include header file X
 in the source file that creates the implementation;
 if you guard the implementation too, then the first
