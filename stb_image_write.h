@@ -1,4 +1,4 @@
-/* stb_image_write - v0.94 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v0.95 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010
                             no warranty implied; use at your own risk
 
@@ -507,6 +507,8 @@ int stbi_write_png(char const *filename, int x, int y, int comp, const void *dat
 
 /* Revision history
 
+      0.95 (2014-08-17)
+		       add monochrome TGA output
       0.94 (2014-05-31)
              rename private functions to avoid conflicts with stb_image.h
       0.93 (2014-05-27)
