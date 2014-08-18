@@ -350,6 +350,7 @@ void test_premul(const char* file)
 	free(output_data);
 }
 
+// test that splitting a pow-2 image into tiles produces identical results
 void test_subpixel_1()
 {
 	unsigned char image[8 * 8];
@@ -379,6 +380,7 @@ void test_subpixel_1()
 	}
 }
 
+// test that replicating an image and using a subtile of it produces same results as wraparound
 void test_subpixel_2()
 {
 	unsigned char image[8 * 8];
@@ -415,6 +417,7 @@ void test_subpixel_2()
 	}}
 }
 
+// test that 0,0,1,1 subpixel produces same result as no-rect
 void test_subpixel_3()
 {
 	unsigned char image[8 * 8];
@@ -437,6 +440,7 @@ void test_subpixel_3()
 	}
 }
 
+// test that 1:1 resample using s,t=0,0,1,1 with bilinear produces original image
 void test_subpixel_4()
 {
 	unsigned char image[8 * 8];
