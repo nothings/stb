@@ -1,7 +1,8 @@
-#ifdef _WIN32
+#if defined(_WIN32) && _MSC_VER > 1200
 #define STBR_ASSERT(x) \
-	if (!(x)) \
-		__debugbreak();
+	if (!(x)) {         \
+		__debugbreak();  \
+	} else
 #else
 #include <assert.h>
 #define STBR_ASSERT(x) assert(x)
@@ -407,11 +408,11 @@ void test_subpixel_2()
 	stbr_resize_arbitrary(image, 8, 8, 0, output_data_1, 16, 16, 0, 0, 0, 1, 1, 1, -1, 0, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_WRAP, STBR_EDGE_WRAP, STBR_COLORSPACE_SRGB);
 	stbr_resize_arbitrary(large_image, 32, 32, 0, output_data_2, 16, 16, 0, 0.25f, 0.25f, 0.5f, 0.5f, 1, -1, 0, STBR_TYPE_UINT8, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB);
 
-	for (int x = 0; x < 16; x++)
+	{for (int x = 0; x < 16; x++)
 	{
 		for (int y = 0; y < 16; y++)
 			STBR_ASSERT(output_data_1[y * 16 + x] == output_data_2[y * 16 + x]);
-	}
+	}}
 }
 
 void test_subpixel_3()
@@ -453,6 +454,8 @@ void test_subpixel_4()
 
 void test_suite()
 {
+	int i;
+
 	test_subpixel_1();
 	test_subpixel_2();
 	test_subpixel_3();
@@ -460,16 +463,16 @@ void test_suite()
 
 	test_premul("barbara.png");
 
-	for (int i = 0; i < 10; i++)
+	for (i = 0; i < 10; i++)
 		test_subpixel("barbara.png", 0.5f, 0.5f, (float)i / 10, 1);
 
-	for (int i = 0; i < 10; i++)
+	for (i = 0; i < 10; i++)
 		test_subpixel("barbara.png", 0.5f, 0.5f, 1, (float)i / 10);
 
-	for (int i = 0; i < 10; i++)
+	for (i = 0; i < 10; i++)
 		test_subpixel("barbara.png", 2, 2, (float)i / 10, 1);
 
-	for (int i = 0; i < 10; i++)
+	for (i = 0; i < 10; i++)
 		test_subpixel("barbara.png", 2, 2, 1, (float)i / 10);
 
 	// Channels test
@@ -511,35 +514,35 @@ void test_suite()
 	resize_image("barbara.png", 0.5f, 0.5f, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-downsample-catmullrom.png");
 	resize_image("barbara.png", 0.5f, 0.5f, STBR_FILTER_MITCHELL, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, "test-output/barbara-downsample-mitchell.png");
 
-	for (int i = 10; i < 100; i++)
+	for (i = 10; i < 100; i++)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
 		resize_image("barbara.png", (float)i / 100, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, outname);
 	}
 
-	for (int i = 110; i < 500; i += 10)
+	for (i = 110; i < 500; i += 10)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
 		resize_image("barbara.png", (float)i / 100, 1, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, outname);
 	}
 
-	for (int i = 10; i < 100; i++)
+	for (i = 10; i < 100; i++)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
 		resize_image("barbara.png", 1, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, outname);
 	}
 
-	for (int i = 110; i < 500; i += 10)
+	for (i = 110; i < 500; i += 10)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
 		resize_image("barbara.png", 1, (float)i / 100, STBR_FILTER_CATMULLROM, STBR_EDGE_CLAMP, STBR_COLORSPACE_SRGB, outname);
 	}
 
-	for (int i = 50; i < 200; i += 10)
+	for (i = 50; i < 200; i += 10)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-height-%d.jpg", i);

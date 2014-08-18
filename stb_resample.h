@@ -132,84 +132,80 @@ typedef uint32_t stbr_uint32;
 
 typedef unsigned int stbr_size_t; // to avoid including a header for size_t
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #ifdef STB_RESAMPLE_STATIC
 #define STBRDEF static
 #else
+#ifdef __cplusplus
+#define STBRDEF extern "C"
+#else
 #define STBRDEF extern
 #endif
-
-	//////////////////////////////////////////////////////////////////////////////
-	//
-	// PRIMARY API - sRGB type-safe image resizing.
-	//
-
-	STBRDEF int stbr_resize_uint8_srgb(const stbr_uint8* input_data, int input_w, int input_h,
-		stbr_uint8* output_data, int output_w, int output_h,
-		int channels, stbr_filter filter, stbr_edge edge);
-
-	STBRDEF int stbr_resize_uint16_srgb(const stbr_uint16* input_data, int input_w, int input_h,
-		stbr_uint16* output_data, int output_w, int output_h,
-		int channels, stbr_filter filter, stbr_edge edge);
-
-	STBRDEF int stbr_resize_uint32_srgb(const stbr_uint32* input_data, int input_w, int input_h,
-		stbr_uint32* output_data, int output_w, int output_h,
-		int channels, stbr_filter filter, stbr_edge edge);
-
-	STBRDEF int stbr_resize_float_srgb(const float* input_data, int input_w, int input_h,
-		float* output_data, int output_w, int output_h,
-		int channels, stbr_filter filter, stbr_edge edge);
-
-
-	STBRDEF int stbr_resize_uint8_alphaweighted(const stbr_uint8* input_data, int input_w, int input_h,
-		stbr_uint8* output_data, int output_w, int output_h,
-		int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace);
-
-	STBRDEF int stbr_resize_uint16_alphaweighted(const stbr_uint16* input_data, int input_w, int input_h,
-		stbr_uint16* output_data, int output_w, int output_h,
-		int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace);
-
-	STBRDEF int stbr_resize_uint32_alphaweighted(const stbr_uint32* input_data, int input_w, int input_h,
-		stbr_uint32* output_data, int output_w, int output_h,
-		int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace);
-
-	STBRDEF int stbr_resize_float_alphaweighted(const float* input_data, int input_w, int input_h,
-		float* output_data, int output_w, int output_h,
-		int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace);
-
-
-	STBRDEF int stbr_resize_uint8_subpixel(const stbr_uint8* input_data, int input_w, int input_h,
-		stbr_uint8* output_data, int output_w, int output_h,
-		float s0, float t0, float s1, float t1,
-		int channels, stbr_filter filter, stbr_edge edge);
-
-	STBRDEF int stbr_resize_uint16_subpixel(const stbr_uint16* input_data, int input_w, int input_h,
-		stbr_uint16* output_data, int output_w, int output_h,
-		float s0, float t0, float s1, float t1,
-		int channels, stbr_filter filter, stbr_edge edge);
-
-	STBRDEF int stbr_resize_uint32_subpixel(const stbr_uint32* input_data, int input_w, int input_h,
-		stbr_uint32* output_data, int output_w, int output_h,
-		float s0, float t0, float s1, float t1,
-		int channels, stbr_filter filter, stbr_edge edge);
-
-	STBRDEF int stbr_resize_float_subpixel(const float* input_data, int input_w, int input_h,
-		float* output_data, int output_w, int output_h,
-		float s0, float t0, float s1, float t1,
-		int channels, stbr_filter filter, stbr_edge edge);
-
-
-	STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
-		void* output_data, int output_w, int output_h, int output_stride_in_bytes,
-		float s0, float t0, float s1, float t1,
-		int channels, int alpha_channel, stbr_uint32 flags, stbr_type type, stbr_filter filter, stbr_edge edge_horizontal, stbr_edge edge_vertical, stbr_colorspace colorspace);
-
-#ifdef __cplusplus
-}
 #endif
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// PRIMARY API - sRGB type-safe image resizing.
+//
+
+STBRDEF int stbr_resize_uint8_srgb(const stbr_uint8* input_data, int input_w, int input_h,
+	stbr_uint8* output_data, int output_w, int output_h,
+	int channels, stbr_filter filter, stbr_edge edge);
+
+STBRDEF int stbr_resize_uint16_srgb(const stbr_uint16* input_data, int input_w, int input_h,
+	stbr_uint16* output_data, int output_w, int output_h,
+	int channels, stbr_filter filter, stbr_edge edge);
+
+STBRDEF int stbr_resize_uint32_srgb(const stbr_uint32* input_data, int input_w, int input_h,
+	stbr_uint32* output_data, int output_w, int output_h,
+	int channels, stbr_filter filter, stbr_edge edge);
+
+STBRDEF int stbr_resize_float_srgb(const float* input_data, int input_w, int input_h,
+	float* output_data, int output_w, int output_h,
+	int channels, stbr_filter filter, stbr_edge edge);
+
+
+STBRDEF int stbr_resize_uint8_alphaweighted(const stbr_uint8* input_data, int input_w, int input_h,
+	stbr_uint8* output_data, int output_w, int output_h,
+	int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace);
+
+STBRDEF int stbr_resize_uint16_alphaweighted(const stbr_uint16* input_data, int input_w, int input_h,
+	stbr_uint16* output_data, int output_w, int output_h,
+	int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace);
+
+STBRDEF int stbr_resize_uint32_alphaweighted(const stbr_uint32* input_data, int input_w, int input_h,
+	stbr_uint32* output_data, int output_w, int output_h,
+	int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace);
+
+STBRDEF int stbr_resize_float_alphaweighted(const float* input_data, int input_w, int input_h,
+	float* output_data, int output_w, int output_h,
+	int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace);
+
+
+STBRDEF int stbr_resize_uint8_subpixel(const stbr_uint8* input_data, int input_w, int input_h,
+	stbr_uint8* output_data, int output_w, int output_h,
+	float s0, float t0, float s1, float t1,
+	int channels, stbr_filter filter, stbr_edge edge);
+
+STBRDEF int stbr_resize_uint16_subpixel(const stbr_uint16* input_data, int input_w, int input_h,
+	stbr_uint16* output_data, int output_w, int output_h,
+	float s0, float t0, float s1, float t1,
+	int channels, stbr_filter filter, stbr_edge edge);
+
+STBRDEF int stbr_resize_uint32_subpixel(const stbr_uint32* input_data, int input_w, int input_h,
+	stbr_uint32* output_data, int output_w, int output_h,
+	float s0, float t0, float s1, float t1,
+	int channels, stbr_filter filter, stbr_edge edge);
+
+STBRDEF int stbr_resize_float_subpixel(const float* input_data, int input_w, int input_h,
+	float* output_data, int output_w, int output_h,
+	float s0, float t0, float s1, float t1,
+	int channels, stbr_filter filter, stbr_edge edge);
+
+
+STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
+	void* output_data, int output_w, int output_h, int output_stride_in_bytes,
+	float s0, float t0, float s1, float t1,
+	int channels, int alpha_channel, stbr_uint32 flags, stbr_type type, stbr_filter filter, stbr_edge edge_horizontal, stbr_edge edge_vertical, stbr_colorspace colorspace);
 
 //
 //
@@ -248,12 +244,12 @@ extern "C" {
 
 #ifndef _MSC_VER
 #ifdef __cplusplus
-#define stbr_inline inline
+#define stbr__inline inline
 #else
-#define stbr_inline
+#define stbr__inline
 #endif
 #else
-#define stbr_inline __forceinline
+#define stbr__inline __forceinline
 #endif
 
 
@@ -335,17 +331,17 @@ typedef struct
 	float* encode_buffer; // A temporary buffer to store floats so we don't lose precision while we do multiply-adds.
 } stbr__info;
 
-static stbr_inline int stbr__min(int a, int b)
+static stbr__inline int stbr__min(int a, int b)
 {
 	return a < b ? a : b;
 }
 
-static stbr_inline int stbr__max(int a, int b)
+static stbr__inline int stbr__max(int a, int b)
 {
 	return a > b ? a : b;
 }
 
-static stbr_inline float stbr__saturate(float x)
+static stbr__inline float stbr__saturate(float x)
 {
 	if (x < 0)
 		return 0;
@@ -480,24 +476,24 @@ static stbr__filter_info stbr__filter_info_table[] = {
 		{ stbr__filter_mitchell,   2.0f },
 };
 
-stbr_inline static int stbr__use_upsampling(float ratio)
+stbr__inline static int stbr__use_upsampling(float ratio)
 {
 	return ratio > 1;
 }
 
-stbr_inline static int stbr__use_width_upsampling(stbr__info* stbr_info)
+stbr__inline static int stbr__use_width_upsampling(stbr__info* stbr_info)
 {
 	return stbr__use_upsampling(stbr_info->horizontal_scale);
 }
 
-stbr_inline static int stbr__use_height_upsampling(stbr__info* stbr_info)
+stbr__inline static int stbr__use_height_upsampling(stbr__info* stbr_info)
 {
 	return stbr__use_upsampling(stbr_info->vertical_scale);
 }
 
 // This is the maximum number of input samples that can affect an output sample
 // with the given filter
-stbr_inline static int stbr__get_filter_pixel_width(stbr_filter filter, int input_w, int output_w, float scale)
+stbr__inline static int stbr__get_filter_pixel_width(stbr_filter filter, int input_w, int output_w, float scale)
 {
 	STBR_ASSERT(filter != 0);
 	STBR_ASSERT(filter < STBR_ARRAY_SIZE(stbr__filter_info_table));
@@ -508,34 +504,34 @@ stbr_inline static int stbr__get_filter_pixel_width(stbr_filter filter, int inpu
 		return (int)ceil(stbr__filter_info_table[filter].support * 2 / scale);
 }
 
-stbr_inline static int stbr__get_filter_pixel_width_horizontal(stbr__info* stbr_info)
+stbr__inline static int stbr__get_filter_pixel_width_horizontal(stbr__info* stbr_info)
 {
 	return stbr__get_filter_pixel_width(stbr_info->filter, stbr_info->input_w, stbr_info->output_w, stbr_info->horizontal_scale);
 }
 
-stbr_inline static int stbr__get_filter_pixel_width_vertical(stbr__info* stbr_info)
+stbr__inline static int stbr__get_filter_pixel_width_vertical(stbr__info* stbr_info)
 {
 	return stbr__get_filter_pixel_width(stbr_info->filter, stbr_info->input_h, stbr_info->output_h, stbr_info->vertical_scale);
 }
 
 // This is how much to expand buffers to account for filters seeking outside
 // the image boundaries.
-stbr_inline static int stbr__get_filter_pixel_margin(stbr_filter filter, int input_w, int output_w, float scale)
+stbr__inline static int stbr__get_filter_pixel_margin(stbr_filter filter, int input_w, int output_w, float scale)
 {
 	return stbr__get_filter_pixel_width(filter, input_w, output_w, scale) / 2;
 }
 
-stbr_inline static int stbr__get_filter_pixel_margin_horizontal(stbr__info* stbr_info)
+stbr__inline static int stbr__get_filter_pixel_margin_horizontal(stbr__info* stbr_info)
 {
 	return stbr__get_filter_pixel_width(stbr_info->filter, stbr_info->input_w, stbr_info->output_w, stbr_info->horizontal_scale) / 2;
 }
 
-stbr_inline static int stbr__get_filter_pixel_margin_vertical(stbr__info* stbr_info)
+stbr__inline static int stbr__get_filter_pixel_margin_vertical(stbr__info* stbr_info)
 {
 	return stbr__get_filter_pixel_width(stbr_info->filter, stbr_info->input_h, stbr_info->output_h, stbr_info->vertical_scale) / 2;
 }
 
-stbr_inline static int stbr__get_horizontal_contributors_noinfo(stbr_filter filter, int input_w, int output_w, float horizontal_scale)
+stbr__inline static int stbr__get_horizontal_contributors_noinfo(stbr_filter filter, int input_w, int output_w, float horizontal_scale)
 {
 	if (stbr__use_upsampling(horizontal_scale))
 		return output_w;
@@ -543,33 +539,33 @@ stbr_inline static int stbr__get_horizontal_contributors_noinfo(stbr_filter filt
 		return (input_w + stbr__get_filter_pixel_margin(filter, input_w, output_w, horizontal_scale) * 2);
 }
 
-stbr_inline static int stbr__get_horizontal_contributors(stbr__info* stbr_info)
+stbr__inline static int stbr__get_horizontal_contributors(stbr__info* stbr_info)
 {
 	return stbr__get_horizontal_contributors_noinfo(stbr_info->filter, stbr_info->input_w, stbr_info->output_w, stbr_info->horizontal_scale);
 }
 
-stbr_inline static int stbr__get_total_coefficients_noinfo(stbr_filter filter, int input_w, int output_w, float horizontal_scale)
+stbr__inline static int stbr__get_total_coefficients_noinfo(stbr_filter filter, int input_w, int output_w, float horizontal_scale)
 {
 	return stbr__get_horizontal_contributors_noinfo(filter, input_w, output_w, horizontal_scale) * stbr__get_filter_pixel_width(filter, input_w, output_w, horizontal_scale);
 }
 
-stbr_inline static int stbr__get_total_coefficients(stbr__info* stbr_info)
+stbr__inline static int stbr__get_total_coefficients(stbr__info* stbr_info)
 {
 	return stbr__get_total_coefficients_noinfo(stbr_info->filter, stbr_info->input_w, stbr_info->output_w, stbr_info->horizontal_scale);
 }
 
-stbr_inline static stbr__contributors* stbr__get_contributor(stbr__info* stbr_info, int n)
+stbr__inline static stbr__contributors* stbr__get_contributor(stbr__info* stbr_info, int n)
 {
 	STBR_DEBUG_ASSERT(n >= 0 && n < stbr__get_horizontal_contributors(stbr_info));
 	return &stbr_info->horizontal_contributors[n];
 }
 
-stbr_inline static float* stbr__get_coefficient(stbr__info* stbr_info, int n, int c)
+stbr__inline static float* stbr__get_coefficient(stbr__info* stbr_info, int n, int c)
 {
 	return &stbr_info->horizontal_coefficients[stbr__get_filter_pixel_width(stbr_info->filter, stbr_info->input_w, stbr_info->output_w, stbr_info->horizontal_scale)*n + c];
 }
 
-stbr_inline static int stbr__edge_wrap(stbr_edge edge, int n, int max)
+stbr__inline static int stbr__edge_wrap(stbr_edge edge, int n, int max)
 {
 	switch (edge)
 	{
@@ -1029,7 +1025,7 @@ static float* stbr__get_ring_buffer_scanline(int get_scanline, float* ring_buffe
 }
 
 
-static stbr_inline void stbr__encode_pixel(stbr__info* stbr_info, void* output_buffer, int output_pixel_index, float* encode_buffer, int encode_pixel_index, int channels, int alpha_channel, int decode)
+static stbr__inline void stbr__encode_pixel(stbr__info* stbr_info, void* output_buffer, int output_pixel_index, float* encode_buffer, int encode_pixel_index, int channels, int alpha_channel, int decode)
 {
 	int n;
 	float divide_alpha = 1;
@@ -1358,6 +1354,39 @@ static void stbr__buffer_loop_downsample(stbr__info* stbr_info)
 	stbr__empty_ring_buffer(stbr_info, stbr_info->output_h);
 }
 
+static stbr__inline stbr_size_t stbr__calculate_memory(int input_w, int input_h, int output_w, int output_h, float s0, float t0, float s1, float t1, int channels, stbr_filter filter)
+{
+	float horizontal_scale = ((float)output_w / input_w) / (s1 - s0);
+	float vertical_scale = ((float)output_h / input_h) / (t1 - t0);
+
+	int pixel_margin = stbr__get_filter_pixel_margin(filter, input_w, output_w, horizontal_scale);
+	int filter_height = stbr__get_filter_pixel_width(filter, input_h, output_h, vertical_scale);
+
+	int info_size = sizeof(stbr__info);
+	int contributors_size = stbr__get_horizontal_contributors_noinfo(filter, input_w, output_w, horizontal_scale) * sizeof(stbr__contributors);
+	int horizontal_coefficients_size = stbr__get_total_coefficients_noinfo(filter, input_w, output_w, horizontal_scale) * sizeof(float);
+	int vertical_coefficients_size = filter_height * sizeof(float);
+	int decode_buffer_size = (input_w + pixel_margin*2) * channels * sizeof(float);
+	int horizontal_buffer_size = output_w * channels * sizeof(float);
+	int ring_buffer_size = output_w * channels * filter_height * sizeof(float);
+	int encode_buffer_size = channels * sizeof(float);
+
+	STBR_ASSERT(filter != 0);
+	STBR_ASSERT(filter < STBR_ARRAY_SIZE(stbr__filter_info_table)); // this now happens too late
+
+	if (stbr__use_upsampling(horizontal_scale))
+		// The horizontal buffer is for when we're downsampling the height and we
+		// can't output the result of sampling the decode buffer directly into the
+		// ring buffers.
+		horizontal_buffer_size = 0;
+	else
+		// The encode buffer is to retain precision in the height upsampling method
+		// and isn't used when height downsampling.
+		encode_buffer_size = 0;
+
+	return info_size + contributors_size + horizontal_coefficients_size + vertical_coefficients_size + decode_buffer_size + horizontal_buffer_size + ring_buffer_size + encode_buffer_size;
+}
+
 static int stbr__resize_allocated(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
 	void* output_data, int output_w, int output_h, int output_stride_in_bytes,
 	float s0, float t0, float s1, float t1,
@@ -1500,40 +1529,7 @@ static int stbr__resize_allocated(const void* input_data, int input_w, int input
 }
 
 
-static stbr_inline stbr_size_t stbr__calculate_memory(int input_w, int input_h, int output_w, int output_h, float s0, float t0, float s1, float t1, int channels, stbr_filter filter)
-{
-	float horizontal_scale = ((float)output_w / input_w) / (s1 - s0);
-	float vertical_scale = ((float)output_h / input_h) / (t1 - t0);
-
-	int pixel_margin = stbr__get_filter_pixel_margin(filter, input_w, output_w, horizontal_scale);
-	int filter_height = stbr__get_filter_pixel_width(filter, input_h, output_h, vertical_scale);
-
-	int info_size = sizeof(stbr__info);
-	int contributors_size = stbr__get_horizontal_contributors_noinfo(filter, input_w, output_w, horizontal_scale) * sizeof(stbr__contributors);
-	int horizontal_coefficients_size = stbr__get_total_coefficients_noinfo(filter, input_w, output_w, horizontal_scale) * sizeof(float);
-	int vertical_coefficients_size = filter_height * sizeof(float);
-	int decode_buffer_size = (input_w + pixel_margin*2) * channels * sizeof(float);
-	int horizontal_buffer_size = output_w * channels * sizeof(float);
-	int ring_buffer_size = output_w * channels * filter_height * sizeof(float);
-	int encode_buffer_size = channels * sizeof(float);
-
-	STBR_ASSERT(filter != 0);
-	STBR_ASSERT(filter < STBR_ARRAY_SIZE(stbr__filter_info_table)); // this now happens too late
-
-	if (stbr__use_upsampling(horizontal_scale))
-		// The horizontal buffer is for when we're downsampling the height and we
-		// can't output the result of sampling the decode buffer directly into the
-		// ring buffers.
-		horizontal_buffer_size = 0;
-	else
-		// The encode buffer is to retain precision in the height upsampling method
-		// and isn't used when height downsampling.
-		encode_buffer_size = 0;
-
-	return info_size + contributors_size + horizontal_coefficients_size + vertical_coefficients_size + decode_buffer_size + horizontal_buffer_size + ring_buffer_size + encode_buffer_size;
-}
-
-STBRDEF stbr_inline int stbr_resize_arbitrary(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
+STBRDEF int stbr_resize_arbitrary(const void* input_data, int input_w, int input_h, int input_stride_in_bytes,
 	void* output_data, int output_w, int output_h, int output_stride_in_bytes,
 	float s0, float t0, float s1, float t1,
 	int channels, int alpha_channel, stbr_uint32 flags, stbr_type type, stbr_filter filter, stbr_edge edge_horizontal, stbr_edge edge_vertical, stbr_colorspace colorspace)
@@ -1552,63 +1548,63 @@ STBRDEF stbr_inline int stbr_resize_arbitrary(const void* input_data, int input_
 	return result;
 }
 
-STBRDEF stbr_inline int stbr_resize_uint8_srgb(const stbr_uint8* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_uint8_srgb(const stbr_uint8* input_data, int input_w, int input_h,
 	stbr_uint8* output_data, int output_w, int output_h,
 	int channels, stbr_filter filter, stbr_edge edge)
 {
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, 0, 0, STBR_TYPE_UINT8, filter, edge, edge, STBR_COLORSPACE_SRGB);
 }
 
-STBRDEF stbr_inline int stbr_resize_uint16_srgb(const stbr_uint16* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_uint16_srgb(const stbr_uint16* input_data, int input_w, int input_h,
 	stbr_uint16* output_data, int output_w, int output_h,
 	int channels, stbr_filter filter, stbr_edge edge)
 {
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, 0, 0, STBR_TYPE_UINT16, filter, edge, edge, STBR_COLORSPACE_SRGB);
 }
 
-STBRDEF stbr_inline int stbr_resize_uint32_srgb(const stbr_uint32* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_uint32_srgb(const stbr_uint32* input_data, int input_w, int input_h,
 	stbr_uint32* output_data, int output_w, int output_h,
 	int channels, stbr_filter filter, stbr_edge edge)
 {
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, 0, 0, STBR_TYPE_UINT32, filter, edge, edge, STBR_COLORSPACE_SRGB);
 }
 
-STBRDEF stbr_inline int stbr_resize_float_srgb(const float* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_float_srgb(const float* input_data, int input_w, int input_h,
 	float* output_data, int output_w, int output_h,
 	int channels, stbr_filter filter, stbr_edge edge)
 {
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, 0, 0, STBR_TYPE_FLOAT, filter, edge, edge, STBR_COLORSPACE_SRGB);
 }
 
-STBRDEF stbr_inline int stbr_resize_uint8_alphaweighted(const stbr_uint8* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_uint8_alphaweighted(const stbr_uint8* input_data, int input_w, int input_h,
 	stbr_uint8* output_data, int output_w, int output_h,
 	int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace)
 {
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, alpha_channel, STBR_FLAG_NONPREMUL_ALPHA, STBR_TYPE_UINT8, filter, edge, edge, colorspace);
 }
 
-STBRDEF stbr_inline int stbr_resize_uint16_alphaweighted(const stbr_uint16* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_uint16_alphaweighted(const stbr_uint16* input_data, int input_w, int input_h,
 	stbr_uint16* output_data, int output_w, int output_h,
 	int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace)
 {
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, alpha_channel, STBR_FLAG_NONPREMUL_ALPHA, STBR_TYPE_UINT16, filter, edge, edge, colorspace);
 }
 
-STBRDEF stbr_inline int stbr_resize_uint32_alphaweighted(const stbr_uint32* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_uint32_alphaweighted(const stbr_uint32* input_data, int input_w, int input_h,
 	stbr_uint32* output_data, int output_w, int output_h,
 	int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace)
 {
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, alpha_channel, STBR_FLAG_NONPREMUL_ALPHA, STBR_TYPE_UINT32, filter, edge, edge, colorspace);
 }
 
-STBRDEF stbr_inline int stbr_resize_float_alphaweighted(const float* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_float_alphaweighted(const float* input_data, int input_w, int input_h,
 	float* output_data, int output_w, int output_h,
 	int channels, int alpha_channel, stbr_filter filter, stbr_edge edge, stbr_colorspace colorspace)
 {
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, 0, 0, 1, 1, channels, alpha_channel, STBR_FLAG_NONPREMUL_ALPHA, STBR_TYPE_FLOAT, filter, edge, edge, colorspace);
 }
 
-STBRDEF stbr_inline int stbr_resize_uint8_subpixel(const stbr_uint8* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_uint8_subpixel(const stbr_uint8* input_data, int input_w, int input_h,
 	stbr_uint8* output_data, int output_w, int output_h,
 	float s0, float t0, float s1, float t1,
 	int channels, stbr_filter filter, stbr_edge edge)
@@ -1616,7 +1612,7 @@ STBRDEF stbr_inline int stbr_resize_uint8_subpixel(const stbr_uint8* input_data,
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, s0, t0, s1, t1, channels, 0, 0, STBR_TYPE_UINT8, filter, edge, edge, STBR_COLORSPACE_SRGB);
 }
 
-STBRDEF stbr_inline int stbr_resize_uint16_subpixel(const stbr_uint16* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_uint16_subpixel(const stbr_uint16* input_data, int input_w, int input_h,
 	stbr_uint16* output_data, int output_w, int output_h,
 	float s0, float t0, float s1, float t1,
 	int channels, stbr_filter filter, stbr_edge edge)
@@ -1624,7 +1620,7 @@ STBRDEF stbr_inline int stbr_resize_uint16_subpixel(const stbr_uint16* input_dat
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, s0, t0, s1, t1, channels, 0, 0, STBR_TYPE_UINT16, filter, edge, edge, STBR_COLORSPACE_SRGB);
 }
 
-STBRDEF stbr_inline int stbr_resize_uint32_subpixel(const stbr_uint32* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_uint32_subpixel(const stbr_uint32* input_data, int input_w, int input_h,
 	stbr_uint32* output_data, int output_w, int output_h,
 	float s0, float t0, float s1, float t1,
 	int channels, stbr_filter filter, stbr_edge edge)
@@ -1632,7 +1628,7 @@ STBRDEF stbr_inline int stbr_resize_uint32_subpixel(const stbr_uint32* input_dat
 	return stbr_resize_arbitrary(input_data, input_w, input_h, 0, output_data, output_w, output_h, 0, s0, t0, s1, t1, channels, 0, 0, STBR_TYPE_UINT32, filter, edge, edge, STBR_COLORSPACE_SRGB);
 }
 
-STBRDEF stbr_inline int stbr_resize_float_subpixel(const float* input_data, int input_w, int input_h,
+STBRDEF int stbr_resize_float_subpixel(const float* input_data, int input_w, int input_h,
 	float* output_data, int output_w, int output_h,
 	float s0, float t0, float s1, float t1,
 	int channels, stbr_filter filter, stbr_edge edge)
