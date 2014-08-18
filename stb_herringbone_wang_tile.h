@@ -1,4 +1,4 @@
-/* stbhw - v0.5 -  http://nothings.org/gamedev/herringbone
+/* stbhw - v0.6 -  http://nothings.org/gamedev/herringbone
    Herringbone Wang Tile Generator - Sean Barrett 2014 - public domain
 
  This file is in the public domain. In case that declaration is ineffective,
@@ -134,6 +134,11 @@ int main(int argc, char **argv)
 
    return 0;
 }
+
+== VERSION HISTORY ===================
+
+	0.6   2014-08-17   - fix broken map-maker
+	0.5   2014-07-07   - initial release 
 
 */
 
@@ -483,9 +488,6 @@ static int stbhw__process_template(stbhw__process *p)
       stbhw_error = "image too small for configuration";
       return 0;
    }
-
-   for (j=0; j < p->h; ++j)
-      memset(p->data + j*p->stride, 255, 3*p->w);
 
    if (c->is_corner) {
       ypos = 2;
@@ -1183,6 +1185,9 @@ STBHW_EXTERN int stbhw_make_template(stbhw_config *c, unsigned char *data, int w
       p.process_h_rect = stbhw__edge_process_h_rect;
       p.process_v_rect = stbhw__edge_process_v_rect;
    }
+
+   for (i=0; i < p.h; ++i)
+      memset(p.data + i*p.stride, 255, 3*p.w);
 
    if (!stbhw__process_template(&p))
       return 0;
