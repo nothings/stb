@@ -249,15 +249,12 @@ STBRDEF int stbir_resize_arbitrary(const void* input_data, int input_w, int inpu
 typedef unsigned char stbir__validate_uint32[sizeof(stbir_uint32) == 4 ? 1 : -1];
 
 #ifdef _MSC_VER
-#define STBIR_NOTUSED(v)  (void)(v)
+#define STBIR__NOTUSED(v)  (void)(v)
 #else
-#define STBIR_NOTUSED(v)  (void)sizeof(v)
+#define STBIR__NOTUSED(v)  (void)sizeof(v)
 #endif
 
-#define STBIR_ARRAY_SIZE(a) (sizeof((a))/sizeof((a)[0]))
-
-#define STBIR__MAX_UNROLLED_CHANNELS 4
-
+#define STBIR__ARRAY_SIZE(a) (sizeof((a))/sizeof((a)[0]))
 
 // must match stbir_type
 static unsigned char stbir__type_size[] = {
@@ -497,7 +494,7 @@ stbir__inline static int stbir__use_height_upsampling(stbir__info* stbir_info)
 stbir__inline static int stbir__get_filter_pixel_width(stbir_filter filter, int input_w, int output_w, float scale)
 {
 	STBIR_ASSERT(filter != 0);
-	STBIR_ASSERT(filter < STBIR_ARRAY_SIZE(stbir__filter_info_table));
+	STBIR_ASSERT(filter < STBIR__ARRAY_SIZE(stbir__filter_info_table));
 
 	if (stbir__use_upsampling(scale))
 		return (int)ceil(stbir__filter_info_table[filter].support * 2);
@@ -1373,7 +1370,7 @@ static stbir__inline stbir_size_t stbir__calculate_memory(int input_w, int input
 	int encode_buffer_size = channels * sizeof(float);
 
 	STBIR_ASSERT(filter != 0);
-	STBIR_ASSERT(filter < STBIR_ARRAY_SIZE(stbir__filter_info_table)); // this now happens too late
+	STBIR_ASSERT(filter < STBIR__ARRAY_SIZE(stbir__filter_info_table)); // this now happens too late
 
 	if (stbir__use_upsampling(horizontal_scale))
 		// The horizontal buffer is for when we're downsampling the height and we
@@ -1416,9 +1413,9 @@ static int stbir__resize_allocated(const void* input_data, int input_w, int inpu
 #endif
 
 	STBIR_ASSERT(filter != 0);
-	STBIR_ASSERT(filter < STBIR_ARRAY_SIZE(stbir__filter_info_table));
+	STBIR_ASSERT(filter < STBIR__ARRAY_SIZE(stbir__filter_info_table));
 
-	if (!filter || filter >= STBIR_ARRAY_SIZE(stbir__filter_info_table))
+	if (!filter || filter >= STBIR__ARRAY_SIZE(stbir__filter_info_table))
 		return 0;
 
 	STBIR_ASSERT(s1 > s0);
