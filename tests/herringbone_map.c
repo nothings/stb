@@ -29,7 +29,8 @@ int main(int argc, char **argv)
 
       pixels = stbi_load(filename, &w, &h, 0, 3);
       if (pixels == 0) {
-         fprintf(stderr, "Could open input file '%s'\n", filename);
+         fprintf(stderr, "Couldn't open input file '%s'\n", filename);
+			exit(1);
       }
 
       if (!stbhw_build_tileset_from_image(&ts, pixels, w*3, w, h)) {
