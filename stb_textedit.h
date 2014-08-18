@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.3  - public domain - Sean Barrett
+// stb_textedit.h - v1.4  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -30,8 +30,9 @@
 //
 // VERSION HISTORY
 //
-//   1.3  (2013-06-19) fix mouse clicking to round to nearest char boundary
-//   1.2  (2013-05-27) fix some RAD types that had crept into the new code
+//   1.4  (2014-08-17) fix signed/unsigned warnings
+//   1.3  (2014-06-19) fix mouse clicking to round to nearest char boundary
+//   1.2  (2014-05-27) fix some RAD types that had crept into the new code
 //   1.1  (2013-12-15) move-by-word (requires STB_TEXTEDIT_IS_SPACE )
 //   1.0  (2012-07-26) improve documentation, initial public release
 //   0.3  (2012-02-24) bugfixes, single-line mode; insert mode
@@ -41,7 +42,7 @@
 // ADDITIONAL CONTRIBUTORS
 //
 //   Ulf Winklemann: move-by-word in 1.1
-//   Scott Graham: mouse selectiom bugfix in 1.3
+//   Scott Graham: mouse selection bugfix in 1.3
 //
 // USAGE
 //
