@@ -109,7 +109,7 @@ typedef enum
 typedef enum
 {
 	STBIR_FLAG_NONPREMUL_ALPHA    = (1 << 0), // The specified alpha channel will be multiplied into all other channels before resampling, then divided back out after.
-	STBIR_FLAG_FORCE_LINEAR_ALPHA = (1 << 1), // The specified alpha channel should be handled as a linear value even when doing sRGB operations.
+	STBIR_FLAG_GAMMA_CORRECT_ALPHA = (1 << 1), // The specified alpha channel should be handled as a linear value even when doing sRGB operations.
 } stbir_flags;
 
 typedef unsigned char stbir_uint8;
@@ -810,7 +810,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			for (c = 0; c < channels; c++)
 				decode_buffer[decode_pixel_index + c] = stbir__srgb_uchar_to_linear_float[((const unsigned char*)input_data)[input_pixel_index + c]];
 
-			if (stbir_info->flags&STBIR_FLAG_FORCE_LINEAR_ALPHA)
+			if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
 				decode_buffer[decode_pixel_index + alpha_channel] = ((float)((const unsigned char*)input_data)[input_pixel_index + alpha_channel]) / 255;
 
 			break;
@@ -824,7 +824,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			for (c = 0; c < channels; c++)
 				decode_buffer[decode_pixel_index + c] = stbir__srgb_to_linear(((float)((const unsigned short*)input_data)[input_pixel_index + c]) / 65535);
 
-			if (stbir_info->flags&STBIR_FLAG_FORCE_LINEAR_ALPHA)
+			if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
 				decode_buffer[decode_pixel_index + alpha_channel] = ((float)((const unsigned short*)input_data)[input_pixel_index + alpha_channel]) / 65535;
 
 			break;
@@ -838,7 +838,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			for (c = 0; c < channels; c++)
 				decode_buffer[decode_pixel_index + c] = stbir__srgb_to_linear((float)(((double)((const unsigned int*)input_data)[input_pixel_index + c]) / 4294967295));
 
-			if (stbir_info->flags&STBIR_FLAG_FORCE_LINEAR_ALPHA)
+			if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
 				decode_buffer[decode_pixel_index + alpha_channel] = (float)(((double)((const unsigned int*)input_data)[input_pixel_index + alpha_channel]) / 4294967295);
 
 			break;
@@ -852,7 +852,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			for (c = 0; c < channels; c++)
 				decode_buffer[decode_pixel_index + c] = stbir__srgb_to_linear(((const float*)input_data)[input_pixel_index + c]);
 
-			if (stbir_info->flags&STBIR_FLAG_FORCE_LINEAR_ALPHA)
+			if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
 				decode_buffer[decode_pixel_index + alpha_channel] = ((const float*)input_data)[input_pixel_index + alpha_channel];
 
 			break;
@@ -1047,7 +1047,7 @@ static stbir__inline void stbir__encode_pixel(stbir__info* stbir_info, void* out
 		for (n = 0; n < channels; n++)
 			((unsigned char*)output_buffer)[output_pixel_index + n] = stbir__linear_uchar_to_srgb_uchar[(unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + n]) * 255)];
 
-		if (stbir_info->flags&STBIR_FLAG_FORCE_LINEAR_ALPHA)
+		if (!(stbir_info->flags&STBIR_FLAG_FORCE_GAMMA_CORRECT_ALPHA))
 			((unsigned char*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255);
 
 		break;
@@ -1061,7 +1061,7 @@ static stbir__inline void stbir__encode_pixel(stbir__info* stbir_info, void* out
 		for (n = 0; n < channels; n++)
 			((unsigned short*)output_buffer)[output_pixel_index + n] = (unsigned short)(stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n])) * 65535);
 
-		if (stbir_info->flags&STBIR_FLAG_FORCE_LINEAR_ALPHA)
+		if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
 			((unsigned short*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255);
 
 		break;
@@ -1075,7 +1075,7 @@ static stbir__inline void stbir__encode_pixel(stbir__info* stbir_info, void* out
 		for (n = 0; n < channels; n++)
 			((unsigned int*)output_buffer)[output_pixel_index + n] = (unsigned int)(((double)stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n]))) * 4294967295);
 
-		if (stbir_info->flags&STBIR_FLAG_FORCE_LINEAR_ALPHA)
+		if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
 			((unsigned int*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned int)(((double)stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel])) * 4294967295);
 
 		break;
@@ -1089,7 +1089,7 @@ static stbir__inline void stbir__encode_pixel(stbir__info* stbir_info, void* out
 		for (n = 0; n < channels; n++)
 			((float*)output_buffer)[output_pixel_index + n] = stbir__linear_to_srgb(encode_buffer[encode_pixel_index + n]);
 
-		if (stbir_info->flags&STBIR_FLAG_FORCE_LINEAR_ALPHA)
+		if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
 			((float*)output_buffer)[output_pixel_index + alpha_channel] = encode_buffer[encode_pixel_index + alpha_channel];
 
 		break;
@@ -1429,7 +1429,10 @@ static int stbir__resize_allocated(const void* input_data, int input_w, int inpu
 	if (s1 > 1 || s0 < 0 || t1 > 1 || t0 < 0)
 		return 0;
 
-	if (flags&(STBIR_FLAG_FORCE_LINEAR_ALPHA | STBIR_FLAG_NONPREMUL_ALPHA))
+	if (alpha_channel < 0)
+		flags = STBIR_FLAG_GAMMA_CORRECT_ALPHA; // this shouldn't be necessary in the long run, but safety for now
+
+	if (!(flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA) || (flags&STBIR_FLAG_NONPREMUL_ALPHA))
 		STBIR_ASSERT(alpha_channel >= 0 && alpha_channel < channels);
 
 	if (alpha_channel >= channels)
