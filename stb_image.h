@@ -1,4 +1,4 @@
-/* stb_image - v1.45 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.46 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -28,6 +28,7 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.46 (2014-08-26) fix broken tRNS chunk in non-paletted PNG
       1.45 (2014-08-16) workaround MSVC-ARM internal compiler error by wrapping malloc
       1.44 (2014-08-07) warnings
       1.43 (2014-07-15) fix MSVC-only bug in 1.42
@@ -2881,7 +2882,7 @@ static unsigned char *stbi__do_png(stbi__png *p, int *x, int *y, int *n, int req
       }
       *x = p->s->img_x;
       *y = p->s->img_y;
-      if (n) *n = p->s->img_n;
+      if (n) *n = p->s->img_out_n;
    }
    free(p->out);      p->out      = NULL;
    free(p->expanded); p->expanded = NULL;
@@ -4564,7 +4565,9 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
-      1.44 (2014-08-16)
+      1.46 (2014-08-26)
+             fix broken tRNS chunk (colorkey-style transparency) in non-paletted PNG
+      1.45 (2014-08-16)
              fix MSVC-ARM internal compiler error by wrapping malloc
       1.44 (2014-08-07)
 		       various warning fixes from Ronny Chevalier
