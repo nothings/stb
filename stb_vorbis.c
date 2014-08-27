@@ -215,14 +215,14 @@ extern void stb_vorbis_flush_pushdata(stb_vorbis *f);
 extern int stb_vorbis_decode_filename(const char *filename, int *channels, int *sample_rate, short **output);
 #endif
 #if !defined(STB_VORBIS_NO_INTEGER_CONVERSION)
-extern int stb_vorbis_decode_memory(unsigned char *mem, int len, int *channels, int *sample_rate, short **output);
+extern int stb_vorbis_decode_memory(const unsigned char *mem, int len, int *channels, int *sample_rate, short **output);
 #endif
 // decode an entire file and output the data interleaved into a malloc()ed
 // buffer stored in *output. The return value is the number of samples
 // decoded, or -1 if the file could not be opened or was not an ogg vorbis file.
 // When you're done with it, just free() the pointer returned in *output.
 
-extern stb_vorbis * stb_vorbis_open_memory(unsigned char *data, int len,
+extern stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len,
                                   int *error, stb_vorbis_alloc *alloc_buffer);
 // create an ogg vorbis decoder from an ogg vorbis stream in memory (note
 // this must be the entire stream!). on failure, returns NULL and sets *error
@@ -731,9 +731,9 @@ struct stb_vorbis
    int close_on_free;
 #endif
 
-   uint8 *stream;
-   uint8 *stream_start;
-   uint8 *stream_end;
+   const uint8 *stream;
+   const uint8 *stream_start;
+   const uint8 *stream_end;
 
    uint32 stream_len;
 
@@ -5016,7 +5016,7 @@ stb_vorbis * stb_vorbis_open_filename(const char *filename, int *error, stb_vorb
 }
 #endif // STB_VORBIS_NO_STDIO
 
-stb_vorbis * stb_vorbis_open_memory(unsigned char *data, int len, int *error, stb_vorbis_alloc *alloc)
+stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len, int *error, stb_vorbis_alloc *alloc)
 {
    stb_vorbis *f, p;
    if (data == NULL) return NULL;
@@ -5301,7 +5301,7 @@ int stb_vorbis_decode_filename(const char *filename, int *channels, int *sample_
 }
 #endif // NO_STDIO
 
-int stb_vorbis_decode_memory(uint8 *mem, int len, int *channels, int *sample_rate, short **output)
+int stb_vorbis_decode_memory(const uint8 *mem, int len, int *channels, int *sample_rate, short **output)
 {
    int data_len, offset, total, limit, error;
    short *data;
