@@ -30,6 +30,7 @@
 // list them all because I was lax about updating for a long time, sorry.)
 //
 // Partial history:
+//    1.04    - 2014/08/27 - fix missing const-correct case in API
 //    1.03    - 2014/08/07 - warning fixes
 //    1.02    - 2014/07/09 - declare qsort comparison as explicitly _cdecl in Windows
 //    1.01    - 2014/06/18 - fix stb_vorbis_get_samples_float (interleaved was correct)
@@ -731,9 +732,9 @@ struct stb_vorbis
    int close_on_free;
 #endif
 
-   const uint8 *stream;
-   const uint8 *stream_start;
-   const uint8 *stream_end;
+   uint8 *stream;
+   uint8 *stream_start;
+   uint8 *stream_end;
 
    uint32 stream_len;
 
@@ -5021,9 +5022,9 @@ stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len, int *err
    stb_vorbis *f, p;
    if (data == NULL) return NULL;
    vorbis_init(&p, alloc);
-   p.stream = data;
-   p.stream_end = data + len;
-   p.stream_start = p.stream;
+   p.stream = (uint8 *) data;
+   p.stream_end = (uint8 *) data + len;
+   p.stream_start = (uint8 *) p.stream;
    p.stream_len = len;
    p.push_mode = FALSE;
    if (start_decoder(&p)) {
@@ -5396,6 +5397,7 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
 #endif // STB_VORBIS_NO_PULLDATA_API
 
 /* Version history
+    1.04    - 2014/08/27 - fix missing const-correct case in API
     1.03    - 2014/08/07 - Warning fixes
     1.02    - 2014/07/09 - Declare qsort compare function _cdecl on windows
     1.01    - 2014/06/18 - fix stb_vorbis_get_samples_float
