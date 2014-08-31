@@ -595,7 +595,7 @@ static int stbir__edge_wrap_slow(stbir_edge edge, int n, int max)
 	switch (edge)
 	{
 	case STBIR_EDGE_ZERO:
-		return 0;
+		return 0; // we'll decode the wrong pixel here, and then overwrite with 0s later
 
 	case STBIR_EDGE_CLAMP:
 		if (n < 0)
@@ -832,6 +832,16 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 
 	int x = -stbir__get_filter_pixel_margin_horizontal(stbir_info);
 
+	// special handling for STBIR_EDGE_ZERO because it needs to return an item that doesn't appear in the input,
+	// and we want to avoid paying overhead on every pixel if not STBIR_EDGE_ZERO
+	if (edge_vertical == STBIR_EDGE_ZERO && (n < 0 || n >= stbir_info->input_h))
+	{
+		for (; x < max_x; x++)
+			for (c = 0; c < channels; c++)
+				decode_buffer[x*channels + c] = 0;
+		return;
+	}
+
 	switch (decode)
 	{
 	case STBIR__DECODE(STBIR_TYPE_UINT8, STBIR_COLORSPACE_LINEAR):
@@ -945,6 +955,20 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 
 				decode_buffer[decode_pixel_index + c] *= alpha;
 			}
+		}
+	}
+
+	if (edge_horizontal == STBIR_EDGE_ZERO)
+	{
+		for (x = -stbir__get_filter_pixel_margin_horizontal(stbir_info); x < 0; x++)
+		{
+			for (c = 0; c < channels; c++)
+				decode_buffer[x*channels + c] = 0;
+		}
+		for (x = input_w; x < max_x; x++)
+		{
+			for (c = 0; c < channels; c++)
+				decode_buffer[x*channels + c] = 0;
 		}
 	}
 }
