@@ -278,7 +278,7 @@ void test_channels(const char* file, float width_percent, float height_percent, 
 
 	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * channels * sizeof(unsigned char));
 
-	stbir_resize_uint8_srgb(channels_data, w, h, output_data, new_w, new_h, channels, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP);
+	stbir_resize_uint8_srgb(channels_data, w, h, 0, output_data, new_w, new_h, 0, channels);
 
 	free(channels_data);
 	stbi_image_free(input_data);
@@ -431,7 +431,7 @@ void test_subpixel_3()
 	unsigned char output_data_2[32 * 32];
 
 	stbir_resize_uint8_subpixel(image, 8, 8, output_data_1, 32, 32, 0, 0, 1, 1, 1, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP);
-	stbir_resize_uint8_srgb(image, 8, 8, output_data_2, 32, 32, 1, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP);
+	stbir_resize_uint8(image, 8, 8, 0, output_data_2, 32, 32, 0, 1);
 
 	for (int x = 0; x < 32; x++)
 	{
