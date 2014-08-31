@@ -129,7 +129,7 @@ int main(int argc, char** argv)
 	{
 		ftime(&initial_time_millis);
 		for (int i = 0; i < 100; i++)
-			stbir_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, 0, 0, 1, 1, n, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
+			stbir_resize_arbitrary2(NULL, input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, 0, 0, 1, 1, NULL, n, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
 		ftime(&final_time_millis);
 		long lapsed_ms = (long)(final_time_millis.time - initial_time_millis.time) * 1000 + (final_time_millis.millitm - initial_time_millis.millitm);
 		printf("Resample: %dms\n", lapsed_ms);
@@ -141,7 +141,7 @@ int main(int argc, char** argv)
 
 	printf("Average: %dms\n", average);
 #else
-	stbir_resize_arbitrary(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, s0, t0, s1, t1, n, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
+	stbir_resize_arbitrary2(NULL, input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, s0, t0, s1, t1, NULL, n, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
 #endif
 
 	stbi_image_free(input_data);
@@ -160,7 +160,7 @@ void resize_image(const char* filename, float width_percent, float height_percen
 	unsigned char* input_data = stbi_load(filename, &w, &h, &n, 0);
 	if (!input_data)
 	{
-		printf("Input image could not be loaded");
+		printf("Input image could not be loaded\n");
 		return;
 	}
 
@@ -169,7 +169,7 @@ void resize_image(const char* filename, float width_percent, float height_percen
 
 	unsigned char* output_data = (unsigned char*)malloc(out_w * out_h * n);
 
-	stbir_resize_arbitrary(input_data, w, h, 0, output_data, out_w, out_h, 0, 0, 0, 1, 1, n, -1, 0, STBIR_TYPE_UINT8, filter, edge, edge, colorspace);
+	stbir_resize_arbitrary2(NULL, input_data, w, h, 0, output_data, out_w, out_h, 0, 0, 0, 1, 1, NULL, n, -1, 0, STBIR_TYPE_UINT8, filter, filter, edge, edge, colorspace);
 
 	stbi_image_free(input_data);
 
@@ -192,6 +192,10 @@ void test_format(const char* file, float width_percent, float height_percent, st
 	int w, h, n;
 	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
 
+	if (input_data == NULL)
+		return;
+
+
 	int new_w = (int)(w * width_percent);
 	int new_h = (int)(h * height_percent);
 
@@ -200,7 +204,7 @@ void test_format(const char* file, float width_percent, float height_percent, st
 
 	T* output_data = (T*)malloc(new_w * new_h * n * sizeof(T));
 
-	stbir_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, -1, 0, type, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, colorspace);
+	stbir_resize_arbitrary2(NULL, T_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, NULL, n, -1, 0, type, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, colorspace);
 
 	free(T_data);
 	stbi_image_free(input_data);
@@ -233,6 +237,9 @@ void test_float(const char* file, float width_percent, float height_percent, stb
 	int w, h, n;
 	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
 
+	if (input_data == NULL)
+		return;
+
 	int new_w = (int)(w * width_percent);
 	int new_h = (int)(h * height_percent);
 
@@ -241,7 +248,7 @@ void test_float(const char* file, float width_percent, float height_percent, stb
 
 	float* output_data = (float*)malloc(new_w * new_h * n * sizeof(float));
 
-	stbir_resize_arbitrary(T_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, -1, 0, type, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, colorspace);
+	stbir_resize_arbitrary2(NULL, T_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, NULL, n, -1, 0, type, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, colorspace);
 
 	free(T_data);
 	stbi_image_free(input_data);
@@ -261,6 +268,9 @@ void test_channels(const char* file, float width_percent, float height_percent, 
 {
 	int w, h, n;
 	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
+
+	if (input_data == NULL)
+		return;
 
 	int new_w = (int)(w * width_percent);
 	int new_h = (int)(h * height_percent);
@@ -295,6 +305,9 @@ void test_subpixel(const char* file, float width_percent, float height_percent, 
 	int w, h, n;
 	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
 
+	if (input_data == NULL)
+		return;
+
 	s1 = ((float)w - 1 + s1)/w;
 	t1 = ((float)h - 1 + t1)/h;
 
@@ -303,7 +316,7 @@ void test_subpixel(const char* file, float width_percent, float height_percent, 
 
 	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
 
-	stbir_resize_arbitrary(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, s1, t1, n, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
+	stbir_resize_arbitrary2(NULL, input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, s1, t1, NULL, n, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
 
 	stbi_image_free(input_data);
 
@@ -320,6 +333,10 @@ void test_premul(const char* file)
 	unsigned char* input_data = stbi_load(file, &w, &h, &n, 4);
 	n = 4;
 
+	if (input_data == NULL)
+		return;
+
+
 	// Set alpha for the top half.
 	for (int x = 0; x < w; x++)
 	{
@@ -334,13 +351,13 @@ void test_premul(const char* file)
 
 	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
 
-	stbir_resize_arbitrary(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, 3, STBIR_FLAG_NONPREMUL_ALPHA, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
+	stbir_resize_arbitrary2(NULL, input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, NULL, n, 3, STBIR_FLAG_NONPREMUL_ALPHA, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
 
 	char output[200];
 	sprintf(output, "test-output/premul-%s", file);
 	stbi_write_png(output, new_w, new_h, n, output_data, 0);
 
-	stbir_resize_arbitrary(input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, n, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
+	stbir_resize_arbitrary2(NULL, input_data, w, h, 0, output_data, new_w, new_h, 0, 0, 0, 1, 1, NULL, n, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
 
 	sprintf(output, "test-output/nopremul-%s", file);
 	stbi_write_png(output, new_w, new_h, n, output_data, 0);
@@ -362,13 +379,13 @@ void test_subpixel_1()
 
 	unsigned char output_data[16 * 16];
 
-	stbir_resize_arbitrary(image, 8, 8, 0, output_data, 16, 16, 0, 0, 0, 1, 1, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
+	stbir_resize_arbitrary2(NULL, image, 8, 8, 0, output_data, 16, 16, 0, 0, 0, 1, 1, NULL, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
 
 	unsigned char output_left[8 * 16];
 	unsigned char output_right[8 * 16];
 
-	stbir_resize_arbitrary(image, 8, 8, 0, output_left, 8, 16, 0, 0, 0, 0.5f, 1, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
-	stbir_resize_arbitrary(image, 8, 8, 0, output_right, 8, 16, 0, 0.5f, 0, 1, 1, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
+	stbir_resize_arbitrary2(NULL, image, 8, 8, 0, output_left, 8, 16, 0, 0, 0, 0.5f, 1, NULL, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
+	stbir_resize_arbitrary2(NULL, image, 8, 8, 0, output_right, 8, 16, 0, 0.5f, 0, 1, 1, NULL, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
 
 	for (int x = 0; x < 8; x++)
 	{
@@ -407,8 +424,8 @@ void test_subpixel_2()
 	unsigned char output_data_1[16 * 16];
 	unsigned char output_data_2[16 * 16];
 
-	stbir_resize_arbitrary(image, 8, 8, 0, output_data_1, 16, 16, 0, 0, 0, 1, 1, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_EDGE_WRAP, STBIR_EDGE_WRAP, STBIR_COLORSPACE_SRGB);
-	stbir_resize_arbitrary(large_image, 32, 32, 0, output_data_2, 16, 16, 0, 0.25f, 0.25f, 0.5f, 0.5f, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
+	stbir_resize_arbitrary2(NULL, image, 8, 8, 0, output_data_1, 16, 16, 0, 0, 0, 1, 1, NULL, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_WRAP, STBIR_EDGE_WRAP, STBIR_COLORSPACE_SRGB);
+	stbir_resize_arbitrary2(NULL, large_image, 32, 32, 0, output_data_2, 16, 16, 0, 0.25f, 0.25f, 0.5f, 0.5f, NULL, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
 
 	{for (int x = 0; x < 16; x++)
 	{
@@ -430,7 +447,7 @@ void test_subpixel_3()
 	unsigned char output_data_1[32 * 32];
 	unsigned char output_data_2[32 * 32];
 
-	stbir_resize_uint8_subpixel(image, 8, 8, output_data_1, 32, 32, 0, 0, 1, 1, 1, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP);
+	stbir_resize_region(image, 8, 8, 0, output_data_1, 32, 32, 0, STBIR_TYPE_UINT8, 1,0,-1, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_LINEAR, NULL, 0, 0, 1, 1);
 	stbir_resize_uint8(image, 8, 8, 0, output_data_2, 32, 32, 0, 1);
 
 	for (int x = 0; x < 32; x++)
@@ -452,7 +469,7 @@ void test_subpixel_4()
 
 	unsigned char output[8 * 8];
 
-	stbir_resize_arbitrary(image, 8, 8, 0, output, 8, 8, 0, 0, 0, 1, 1, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_BILINEAR, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_LINEAR);
+	stbir_resize_arbitrary2(NULL, image, 8, 8, 0, output, 8, 8, 0, 0, 0, 1, 1, NULL, 1, -1, 0, STBIR_TYPE_UINT8, STBIR_FILTER_BILINEAR, STBIR_FILTER_BILINEAR, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_LINEAR);
 	STBIR_ASSERT(memcmp(image, output, 8 * 8) == 0);
 }
 
