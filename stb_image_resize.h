@@ -94,6 +94,7 @@ typedef enum
 	STBIR_EDGE_CLAMP   = 1,
 	STBIR_EDGE_REFLECT = 2,
 	STBIR_EDGE_WRAP    = 3,
+	STBIR_EDGE_ZERO    = 4,
 } stbir_edge;
 
 // This function adds the ability to specify how requests to sample off the edge of the image are handled.
@@ -593,6 +594,9 @@ static int stbir__edge_wrap_slow(stbir_edge edge, int n, int max)
 {
 	switch (edge)
 	{
+	case STBIR_EDGE_ZERO:
+		return 0;
+
 	case STBIR_EDGE_CLAMP:
 		if (n < 0)
 			return 0;
@@ -600,7 +604,7 @@ static int stbir__edge_wrap_slow(stbir_edge edge, int n, int max)
 		if (n >= max)
 			return max - 1;
 
-		return n;
+		return n; // NOTREACHED
 
 	case STBIR_EDGE_REFLECT:
 	{
@@ -621,7 +625,7 @@ static int stbir__edge_wrap_slow(stbir_edge edge, int n, int max)
 				return max2 - n - 1;
 		}
 
-		return n;
+		return n; // NOTREACHED
 	}
 
 	case STBIR_EDGE_WRAP:
@@ -636,6 +640,7 @@ static int stbir__edge_wrap_slow(stbir_edge edge, int n, int max)
 
 			return (m);
 		}
+		return n;  // NOTREACHED
 
 	default:
 		STBIR__UNIMPLEMENTED("Unimplemented edge type");
