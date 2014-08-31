@@ -81,13 +81,25 @@ STBIRDEF int stbir_resize_uint8(     const unsigned char *input_pixels , int inp
                                            unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
                                      int num_channels);
 
-STBIRDEF int stbir_resize_uint8_srgb(const unsigned char *input_pixels , int input_w , int input_h , int input_stride_in_bytes,
-                                           unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-                                     int num_channels);
-
 STBIRDEF int stbir_resize_float(     const float *input_pixels , int input_w , int input_h , int input_stride_in_bytes,
                                            float *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
                                      int num_channels);
+
+
+//
+// The following functions interpret image data as gamma-corrected sRGB. 
+// Specify STBIR_ALPHA_CHANNEL_NONE if you have no alpha channel,
+// or otherwise provide the index of the alpha channel. By default,
+// alpha channel is linear even if colors are sRGB.
+
+#define STBIR_ALPHA_CHANNEL_NONE        -1
+#define STBIR_FLAG_PREMULTIPLIED_ALPHA  (1 << 0) // If this flag is not set, the specified alpha channel will be multiplied into all other channels before resampling, then divided back out after.
+#define STBIR_FLAG_GAMMA_CORRECT_ALPHA  (1 << 1) // The specified alpha channel should be handled as gamma-corrected value even when doing sRGB operations.
+
+STBIRDEF int stbir_resize_uint8_srgb(const unsigned char *input_pixels , int input_w , int input_h , int input_stride_in_bytes,
+                                           unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
+                                     int num_channels, int alpha_channel, int flags);
+
 
 typedef enum
 {
@@ -100,7 +112,7 @@ typedef enum
 // This function adds the ability to specify how requests to sample off the edge of the image are handled.
 STBIRDEF int stbir_resize_uint8_srgb_edgemode(const unsigned char *input_pixels , int input_w , int input_h , int input_stride_in_bytes,
                                                     unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-                                              int num_channels,
+                                              int num_channels, int alpha_channel, int flags,
                                               stbir_edge edge_wrap_mode);
 
 //////////////////////////////////////////////////////////////////////////////
@@ -109,7 +121,7 @@ STBIRDEF int stbir_resize_uint8_srgb_edgemode(const unsigned char *input_pixels 
 //
 // This extends the easy-to-use API as follows:
 //
-//	   * Alpha-channel can be processed separately
+//     * Alpha-channel can be processed separately
 //       * If alpha_channel is not STBIR_ALPHA_CHANNEL_NONE
 //         * Alpha channel will not be gamma corrected (unless flags&STBIR_FLAG_GAMMA_CORRECT)
 //         * Filters can be weighted by alpha channel (if flags&STBIR_FLAG_NONPREMUL_ALPHA)
@@ -127,9 +139,6 @@ typedef enum
 	STBIR_FILTER_CATMULLROM  = 4,
 	STBIR_FILTER_MITCHELL    = 5,
 } stbir_filter;
-
-#define STBIR_FLAG_NONPREMUL_ALPHA      (1 << 0) // The specified alpha channel will be multiplied into all other channels before resampling, then divided back out after.
-#define STBIR_FLAG_GAMMA_CORRECT_ALPHA  (1 << 1) // The specified alpha channel should be handled as gamma-corrected value even when doing sRGB operations.
 
 typedef enum
 {
@@ -159,7 +168,6 @@ STBIRDEF int stbir_resize_float_generic( const float *input_pixels         , int
                                          stbir_edge edge_wrap_mode, stbir_filter filter, stbir_colorspace space, 
                                          void *alloc_context);
 
-#define STBIR_ALPHA_CHANNEL_NONE       -1
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -942,7 +950,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 		break;
 	}
 
-	if (stbir_info->flags & STBIR_FLAG_NONPREMUL_ALPHA)
+	if (!(stbir_info->flags & STBIR_FLAG_PREMULTIPLIED_ALPHA))
 	{
 		for (x = -stbir__get_filter_pixel_margin_horizontal(stbir_info); x < max_x; x++)
 		{
@@ -1125,7 +1133,7 @@ static stbir__inline void stbir__encode_pixel(stbir__info* stbir_info, void* out
 	int n;
 	float divide_alpha = 1;
 
-	if (stbir_info->flags&STBIR_FLAG_NONPREMUL_ALPHA) {
+	if (!(stbir_info->flags&STBIR_FLAG_PREMULTIPLIED_ALPHA)) {
 		float alpha = encode_buffer[encode_pixel_index + alpha_channel];
 		float reciprocal_alpha = alpha ? 1.0f / alpha : 0;
 		for (n = 0; n < channels; n++)
@@ -1558,7 +1566,7 @@ static int stbir__resize_allocated(stbir__info *stbir_info,
 	if (alpha_channel < 0)
 		flags = STBIR_FLAG_GAMMA_CORRECT_ALPHA; // this shouldn't be necessary in the long run, but safety for now
 
-	if (!(flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA) || (flags&STBIR_FLAG_NONPREMUL_ALPHA))
+	if (!(flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA) || !(flags&STBIR_FLAG_PREMULTIPLIED_ALPHA))
 		STBIR_ASSERT(alpha_channel >= 0 && alpha_channel < channels);
 
 	if (alpha_channel >= channels)
@@ -1786,16 +1794,6 @@ STBIRDEF int stbir_resize_uint8(     const unsigned char *input_pixels , int inp
 		STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_LINEAR);
 }
 
-STBIRDEF int stbir_resize_uint8_srgb(const unsigned char *input_pixels , int input_w , int input_h , int input_stride_in_bytes,
-                                           unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-                                     int num_channels)
-{
-	return stbir_resize_arbitrary2(NULL, input_pixels, input_w, input_h, input_stride_in_bytes,
-		output_pixels, output_w, output_h, output_stride_in_bytes,
-		0,0,1,1,NULL,num_channels,-1,0, STBIR_TYPE_UINT8, STBIR_FILTER_DEFAULT, STBIR_FILTER_DEFAULT,
-		STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
-}
-
 STBIRDEF int stbir_resize_float(     const float *input_pixels , int input_w , int input_h , int input_stride_in_bytes,
                                            float *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
                                      int num_channels)
@@ -1806,14 +1804,24 @@ STBIRDEF int stbir_resize_float(     const float *input_pixels , int input_w , i
 		STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_LINEAR);
 }
 
+STBIRDEF int stbir_resize_uint8_srgb(const unsigned char *input_pixels , int input_w , int input_h , int input_stride_in_bytes,
+                                           unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
+                                     int num_channels, int alpha_channel, int flags)
+{
+	return stbir_resize_arbitrary2(NULL, input_pixels, input_w, input_h, input_stride_in_bytes,
+		output_pixels, output_w, output_h, output_stride_in_bytes,
+		0,0,1,1,NULL,num_channels,alpha_channel,flags, STBIR_TYPE_UINT8, STBIR_FILTER_DEFAULT, STBIR_FILTER_DEFAULT,
+		STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB);
+}
+
 STBIRDEF int stbir_resize_uint8_srgb_edgemode(const unsigned char *input_pixels , int input_w , int input_h , int input_stride_in_bytes,
                                                     unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-                                              int num_channels,
+                                              int num_channels, int alpha_channel, int flags,
                                               stbir_edge edge_wrap_mode)
 {
 	return stbir_resize_arbitrary2(NULL, input_pixels, input_w, input_h, input_stride_in_bytes,
 		output_pixels, output_w, output_h, output_stride_in_bytes,
-		0,0,1,1,NULL,num_channels,-1,0, STBIR_TYPE_UINT8, STBIR_FILTER_DEFAULT, STBIR_FILTER_DEFAULT,
+		0,0,1,1,NULL,num_channels,alpha_channel,flags, STBIR_TYPE_UINT8, STBIR_FILTER_DEFAULT, STBIR_FILTER_DEFAULT,
 		edge_wrap_mode, edge_wrap_mode, STBIR_COLORSPACE_SRGB);
 }
 
