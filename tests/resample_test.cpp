@@ -187,7 +187,7 @@ void convert_image(const F* input, T* output, int length)
 }
 
 template <typename T>
-void test_format(const char* file, float width_percent, float height_percent, stbir_type type, stbir_colorspace colorspace)
+void test_format(const char* file, float width_percent, float height_percent, stbir_datatype type, stbir_colorspace colorspace)
 {
 	int w, h, n;
 	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
@@ -228,7 +228,7 @@ void convert_image_float(const float* input, unsigned char* output, int length)
 		output[i] = (unsigned char)(input[i] * 255);
 }
 
-void test_float(const char* file, float width_percent, float height_percent, stbir_type type, stbir_colorspace colorspace)
+void test_float(const char* file, float width_percent, float height_percent, stbir_datatype type, stbir_colorspace colorspace)
 {
 	int w, h, n;
 	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
