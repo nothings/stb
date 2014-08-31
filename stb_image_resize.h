@@ -70,7 +70,7 @@ typedef uint32_t stbir_uint32;
 //     * alpha channel is treated identically to other channels.
 //     * colorspace is linear or sRGB as specified by function name
 //     * returned result is 1 for success or 0 in case of an error.
-//       In the case of an error an assert with be triggered, #define STBIR_ASSERT() to see it.
+//       #define STBIR_ASSERT() to trigger an assert on parameter validation errors.
 //     * Memory required grows approximately linearly with input and output size, but with
 //       discontinuities at input_w == output_w and input_h == output_h.
 //     * These functions use a "default" resampling filter defined at compile time. To change the filter,
@@ -86,15 +86,16 @@ STBIRDEF int stbir_resize_float(     const float *input_pixels , int input_w , i
                                      int num_channels);
 
 
-//
 // The following functions interpret image data as gamma-corrected sRGB. 
 // Specify STBIR_ALPHA_CHANNEL_NONE if you have no alpha channel,
-// or otherwise provide the index of the alpha channel. By default,
-// alpha channel is linear even if colors are sRGB.
+// or otherwise provide the index of the alpha channel. Flags value
+// of 0 will probably do the right thing if you're not sure what
+// the flags mean.
 
-#define STBIR_ALPHA_CHANNEL_NONE        -1
-#define STBIR_FLAG_PREMULTIPLIED_ALPHA  (1 << 0) // If this flag is not set, the specified alpha channel will be multiplied into all other channels before resampling, then divided back out after.
-#define STBIR_FLAG_GAMMA_CORRECT_ALPHA  (1 << 1) // The specified alpha channel should be handled as gamma-corrected value even when doing sRGB operations.
+#define STBIR_ALPHA_CHANNEL_NONE       -1
+
+#define STBIR_FLAG_PREMULTIPLIED_ALPHA    (1 << 0) // If this flag is not set, the specified alpha channel will be multiplied into all other channels before resampling, then divided back out after.
+#define STBIR_FLAG_ALPHA_USES_COLORSPACE  (1 << 1) // The specified alpha channel should be handled as gamma-corrected value even when doing sRGB operations.
 
 STBIRDEF int stbir_resize_uint8_srgb(const unsigned char *input_pixels , int input_w , int input_h , int input_stride_in_bytes,
                                            unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
@@ -870,7 +871,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			for (c = 0; c < channels; c++)
 				decode_buffer[decode_pixel_index + c] = stbir__srgb_uchar_to_linear_float[((const unsigned char*)input_data)[input_pixel_index + c]];
 
-			if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
+			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
 				decode_buffer[decode_pixel_index + alpha_channel] = ((float)((const unsigned char*)input_data)[input_pixel_index + alpha_channel]) / 255;
 		}
 		break;
@@ -893,7 +894,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			for (c = 0; c < channels; c++)
 				decode_buffer[decode_pixel_index + c] = stbir__srgb_to_linear(((float)((const unsigned short*)input_data)[input_pixel_index + c]) / 65535);
 
-			if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
+			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
 				decode_buffer[decode_pixel_index + alpha_channel] = ((float)((const unsigned short*)input_data)[input_pixel_index + alpha_channel]) / 65535;
 		}
 		break;
@@ -916,7 +917,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			for (c = 0; c < channels; c++)
 				decode_buffer[decode_pixel_index + c] = stbir__srgb_to_linear((float)(((double)((const unsigned int*)input_data)[input_pixel_index + c]) / 4294967295));
 
-			if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
+			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
 				decode_buffer[decode_pixel_index + alpha_channel] = (float)(((double)((const unsigned int*)input_data)[input_pixel_index + alpha_channel]) / 4294967295);
 		}
 		break;
@@ -939,7 +940,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			for (c = 0; c < channels; c++)
 				decode_buffer[decode_pixel_index + c] = stbir__srgb_to_linear(((const float*)input_data)[input_pixel_index + c]);
 
-			if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
+			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
 				decode_buffer[decode_pixel_index + alpha_channel] = ((const float*)input_data)[input_pixel_index + alpha_channel];
 		}
 
@@ -1152,7 +1153,7 @@ static stbir__inline void stbir__encode_pixel(stbir__info* stbir_info, void* out
 		for (n = 0; n < channels; n++)
 			((unsigned char*)output_buffer)[output_pixel_index + n] = stbir__linear_uchar_to_srgb_uchar[(unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + n]) * 255)];
 
-		if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
+		if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
 			((unsigned char*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255);
 
 		break;
@@ -1166,7 +1167,7 @@ static stbir__inline void stbir__encode_pixel(stbir__info* stbir_info, void* out
 		for (n = 0; n < channels; n++)
 			((unsigned short*)output_buffer)[output_pixel_index + n] = (unsigned short)(stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n])) * 65535);
 
-		if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
+		if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
 			((unsigned short*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255);
 
 		break;
@@ -1180,7 +1181,7 @@ static stbir__inline void stbir__encode_pixel(stbir__info* stbir_info, void* out
 		for (n = 0; n < channels; n++)
 			((unsigned int*)output_buffer)[output_pixel_index + n] = (unsigned int)(((double)stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n]))) * 4294967295);
 
-		if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
+		if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
 			((unsigned int*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned int)(((double)stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel])) * 4294967295);
 
 		break;
@@ -1194,7 +1195,7 @@ static stbir__inline void stbir__encode_pixel(stbir__info* stbir_info, void* out
 		for (n = 0; n < channels; n++)
 			((float*)output_buffer)[output_pixel_index + n] = stbir__linear_to_srgb(encode_buffer[encode_pixel_index + n]);
 
-		if (!(stbir_info->flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA))
+		if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
 			((float*)output_buffer)[output_pixel_index + alpha_channel] = encode_buffer[encode_pixel_index + alpha_channel];
 
 		break;
@@ -1564,9 +1565,9 @@ static int stbir__resize_allocated(stbir__info *stbir_info,
 		return 0;
 
 	if (alpha_channel < 0)
-		flags = STBIR_FLAG_GAMMA_CORRECT_ALPHA; // this shouldn't be necessary in the long run, but safety for now
+		flags = STBIR_FLAG_ALPHA_USES_COLORSPACE; // this shouldn't be necessary in the long run, but safety for now
 
-	if (!(flags&STBIR_FLAG_GAMMA_CORRECT_ALPHA) || !(flags&STBIR_FLAG_PREMULTIPLIED_ALPHA))
+	if (!(flags&STBIR_FLAG_ALPHA_USES_COLORSPACE) || !(flags&STBIR_FLAG_PREMULTIPLIED_ALPHA))
 		STBIR_ASSERT(alpha_channel >= 0 && alpha_channel < channels);
 
 	if (alpha_channel >= channels)
