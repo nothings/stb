@@ -1160,90 +1160,136 @@ static float* stbir__get_ring_buffer_scanline(int get_scanline, float* ring_buff
 }
 
 
-static stbir__inline void stbir__encode_pixel(stbir__info* stbir_info, void* output_buffer, int output_pixel_index, float* encode_buffer, int encode_pixel_index, int channels, int alpha_channel, int decode)
+// @OPTIMIZE: embed stbir__encode_pixel and move switch out of per-pixel loop
+static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void *output_buffer, float *encode_buffer, int channels, int alpha_channel, int decode)
 {
+	int x;
 	int n;
-	float divide_alpha = 1;
 
-	if (!(stbir_info->flags&STBIR_FLAG_PREMULTIPLIED_ALPHA)) {
-		float alpha = encode_buffer[encode_pixel_index + alpha_channel];
-		float reciprocal_alpha = alpha ? 1.0f / alpha : 0;
-		for (n = 0; n < channels; n++)
-			if (n != alpha_channel)
-				encode_buffer[encode_pixel_index + n] *= reciprocal_alpha;
+//		stbir__encode_pixel(stbir_info, output_buffer, x*channels, encode_buffer, x*channels, channels, alpha_channel, decode);
+
+	if (!(stbir_info->flags&STBIR_FLAG_PREMULTIPLIED_ALPHA)) 
+	{
+		for (x=0; x < num_pixels; ++x)
+		{
+			int output_pixel_index = x*channels;
+			int encode_pixel_index = x*channels;
+			float alpha = encode_buffer[encode_pixel_index + alpha_channel];
+			float reciprocal_alpha = alpha ? 1.0f / alpha : 0;
+			// @TODO: if final alpha=0, we actually want to have ignored alpha... set alpha to sRGB_to_linear(1/255)/(2^24) so floats will discard it?
+			for (n = 0; n < channels; n++)
+				if (n != alpha_channel)
+					encode_buffer[encode_pixel_index + n] *= reciprocal_alpha;
+		}
 	}
 
 	switch (decode)
 	{
 	case STBIR__DECODE(STBIR_TYPE_UINT8, STBIR_COLORSPACE_LINEAR):
-		for (n = 0; n < channels; n++)
-			((unsigned char*)output_buffer)[output_pixel_index + n] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + n]) * 255);
+		for (x=0; x < num_pixels; ++x)
+		{
+			int output_pixel_index = x*channels;
+			int encode_pixel_index = x*channels;
+
+			for (n = 0; n < channels; n++)
+				((unsigned char*)output_buffer)[output_pixel_index + n] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + n]) * 255);
+		}
 		break;
 
 	case STBIR__DECODE(STBIR_TYPE_UINT8, STBIR_COLORSPACE_SRGB):
-		for (n = 0; n < channels; n++)
-			((unsigned char*)output_buffer)[output_pixel_index + n] = stbir__linear_to_srgb_uchar(encode_buffer[encode_pixel_index + n]);
+		for (x=0; x < num_pixels; ++x)
+		{
+			int output_pixel_index = x*channels;
+			int encode_pixel_index = x*channels;
 
-		if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-			((unsigned char*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255);
 
+			for (n = 0; n < channels; n++)
+				((unsigned char*)output_buffer)[output_pixel_index + n] = stbir__linear_to_srgb_uchar(encode_buffer[encode_pixel_index + n]);
+
+			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
+				((unsigned char*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255);
+		}
 		break;
 
 	case STBIR__DECODE(STBIR_TYPE_UINT16, STBIR_COLORSPACE_LINEAR):
-		for (n = 0; n < channels; n++)
-			((unsigned short*)output_buffer)[output_pixel_index + n] = (unsigned short)(stbir__saturate(encode_buffer[encode_pixel_index + n]) * 65535);
+		for (x=0; x < num_pixels; ++x)
+		{
+			int output_pixel_index = x*channels;
+			int encode_pixel_index = x*channels;
+
+			for (n = 0; n < channels; n++)
+				((unsigned short*)output_buffer)[output_pixel_index + n] = (unsigned short)(stbir__saturate(encode_buffer[encode_pixel_index + n]) * 65535);
+		}
 		break;
 
 	case STBIR__DECODE(STBIR_TYPE_UINT16, STBIR_COLORSPACE_SRGB):
-		for (n = 0; n < channels; n++)
-			((unsigned short*)output_buffer)[output_pixel_index + n] = (unsigned short)(stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n])) * 65535);
+		for (x=0; x < num_pixels; ++x)
+		{
+			int output_pixel_index = x*channels;
+			int encode_pixel_index = x*channels;
 
-		if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-			((unsigned short*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255);
+			for (n = 0; n < channels; n++)
+				((unsigned short*)output_buffer)[output_pixel_index + n] = (unsigned short)(stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n])) * 65535);
+
+			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
+				((unsigned short*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255);
+		}
 
 		break;
 
 	case STBIR__DECODE(STBIR_TYPE_UINT32, STBIR_COLORSPACE_LINEAR):
-		for (n = 0; n < channels; n++)
-			((unsigned int*)output_buffer)[output_pixel_index + n] = (unsigned int)(((double)stbir__saturate(encode_buffer[encode_pixel_index + n])) * 4294967295);
+		for (x=0; x < num_pixels; ++x)
+		{
+			int output_pixel_index = x*channels;
+			int encode_pixel_index = x*channels;
+
+			for (n = 0; n < channels; n++)
+				((unsigned int*)output_buffer)[output_pixel_index + n] = (unsigned int)(((double)stbir__saturate(encode_buffer[encode_pixel_index + n])) * 4294967295);
+		}
 		break;
 
 	case STBIR__DECODE(STBIR_TYPE_UINT32, STBIR_COLORSPACE_SRGB):
-		for (n = 0; n < channels; n++)
-			((unsigned int*)output_buffer)[output_pixel_index + n] = (unsigned int)(((double)stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n]))) * 4294967295);
+		for (x=0; x < num_pixels; ++x)
+		{
+			int output_pixel_index = x*channels;
+			int encode_pixel_index = x*channels;
 
-		if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-			((unsigned int*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned int)(((double)stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel])) * 4294967295);
+			for (n = 0; n < channels; n++)
+				((unsigned int*)output_buffer)[output_pixel_index + n] = (unsigned int)(((double)stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n]))) * 4294967295);
 
+			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
+				((unsigned int*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned int)(((double)stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel])) * 4294967295);
+		}
 		break;
 
 	case STBIR__DECODE(STBIR_TYPE_FLOAT, STBIR_COLORSPACE_LINEAR):
-		for (n = 0; n < channels; n++)
-			((float*)output_buffer)[output_pixel_index + n] = encode_buffer[encode_pixel_index + n];
+		for (x=0; x < num_pixels; ++x)
+		{
+			int output_pixel_index = x*channels;
+			int encode_pixel_index = x*channels;
+
+			for (n = 0; n < channels; n++)
+				((float*)output_buffer)[output_pixel_index + n] = encode_buffer[encode_pixel_index + n];
+		}
 		break;
 
 	case STBIR__DECODE(STBIR_TYPE_FLOAT, STBIR_COLORSPACE_SRGB):
-		for (n = 0; n < channels; n++)
-			((float*)output_buffer)[output_pixel_index + n] = stbir__linear_to_srgb(encode_buffer[encode_pixel_index + n]);
+		for (x=0; x < num_pixels; ++x)
+		{
+			int output_pixel_index = x*channels;
+			int encode_pixel_index = x*channels;
 
-		if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-			((float*)output_buffer)[output_pixel_index + alpha_channel] = encode_buffer[encode_pixel_index + alpha_channel];
+			for (n = 0; n < channels; n++)
+				((float*)output_buffer)[output_pixel_index + n] = stbir__linear_to_srgb(encode_buffer[encode_pixel_index + n]);
 
+			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
+				((float*)output_buffer)[output_pixel_index + alpha_channel] = encode_buffer[encode_pixel_index + alpha_channel];
+		}
 		break;
 
 	default:
 		STBIR__UNIMPLEMENTED("Unknown type/colorspace/channels combination.");
 		break;
-	}
-}
-
-// @OPTIMIZE: embed stbir__encode_pixel and move switch out of per-pixel loop
-static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void *output_buffer, float *encode_buffer, int channels, int alpha_channel, int decode)
-{
-	int x;
-	for (x=0; x < num_pixels; ++x)
-	{
-		stbir__encode_pixel(stbir_info, output_buffer, x*channels, encode_buffer, x*channels, channels, alpha_channel, decode);
 	}
 }
 
