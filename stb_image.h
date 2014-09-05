@@ -766,7 +766,7 @@ static void stbi__refill_buffer(stbi__context *s)
    int n = (s->io.read)(s->io_user_data,(char*)s->buffer_start,s->buflen);
    if (n == 0) {
       // at end of file, treat same as if from memory, but need to handle case
-      // where s->img_buffer isn't pointing to safe memory, stbi__err.g. 0-byte file
+      // where s->img_buffer isn't pointing to safe memory, e.g. 0-byte file
       s->read_from_callbacks = 0;
       s->img_buffer = s->buffer_start;
       s->img_buffer_end = s->buffer_start+1;
@@ -864,7 +864,7 @@ static stbi__uint32 stbi__get32le(stbi__context *s)
 //////////////////////////////////////////////////////////////////////////////
 //
 //  generic converter from built-in img_n to req_comp
-//    individual types do this automatically as much as possible (stbi__err.g. jpeg
+//    individual types do this automatically as much as possible (e.g. jpeg
 //    does all cases internally since it needs to colorspace convert anyway,
 //    and it never has alpha, so very few cases ). png can automatically
 //    interleave an alpha=255 channel, but falls back to this for other cases
@@ -1611,12 +1611,12 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
    z->img_mcu_y = (s->img_y + z->img_mcu_h-1) / z->img_mcu_h;
 
    for (i=0; i < s->img_n; ++i) {
-      // number of effective pixels (stbi__err.g. for non-interleaved MCU)
+      // number of effective pixels (e.g. for non-interleaved MCU)
       z->img_comp[i].x = (s->img_x * z->img_comp[i].h + h_max-1) / h_max;
       z->img_comp[i].y = (s->img_y * z->img_comp[i].v + v_max-1) / v_max;
       // to simplify generation, we'll allocate enough memory to decode
       // the bogus oversized data from using interleaved MCUs and their
-      // big blocks (stbi__err.g. a 16x16 iMCU on an image of width 33); we won't
+      // big blocks (e.g. a 16x16 iMCU on an image of width 33); we won't
       // discard the extra data until colorspace conversion
       z->img_comp[i].w2 = z->img_mcu_x * z->img_comp[i].h * 8;
       z->img_comp[i].h2 = z->img_mcu_y * z->img_comp[i].v * 8;
@@ -1636,7 +1636,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
    return 1;
 }
 
-// use comparisons since in some cases we handle more than one case (stbi__err.g. stbi__SOF)
+// use comparisons since in some cases we handle more than one case (e.g. stbi__SOF)
 #define stbi__DNL(x)         ((x) == 0xdc)
 #define stbi__SOI(x)         ((x) == 0xd8)
 #define stbi__EOI(x)         ((x) == 0xd9)
@@ -2025,7 +2025,7 @@ stbi_inline static int stbi__bit_reverse(int v, int bits)
 {
    STBI_ASSERT(bits <= 16);
    // to bit reverse n bits, reverse 16 and shift
-   // stbi__err.g. 11 bits, bit reverse and shift away 5
+   // e.g. 11 bits, bit reverse and shift away 5
    return stbi__bitreverse16(v) >> (16-bits);
 }
 
