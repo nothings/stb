@@ -46,6 +46,13 @@ void stbir_free(void* context, void* memory)
 {
 }
 
+void stbir_progress(float p)
+{
+	STBIR_ASSERT(p >= 0 && p <= 1);
+}
+
+#define STBIR_PROGRESS_REPORT stbir_progress
+
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_STATIC
 #include "stb_image_resize.h"

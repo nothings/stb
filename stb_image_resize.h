@@ -223,6 +223,19 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
 // (s0, t0) & (s1, t1) are the top-left and bottom right corner (uv addressing style: [0, 1]x[0, 1]) of a region of the input image to use.
 
 
+// Define this if you want a progress report.
+// Example:
+// void my_progress_report(float progress)
+// {
+//     printf("Progress: %f%%\n", progress*100);
+// }
+//
+// #define STBIR_PROGRESS_REPORT my_progress_report
+
+#ifndef STBIR_PROGRESS_REPORT
+#define STBIR_PROGRESS_REPORT(float_0_to_1)
+#endif
+
 //
 //
 ////   end header file   /////////////////////////////////////////////////////
@@ -1447,6 +1460,8 @@ static void stbir__buffer_loop_upsample(stbir__info* stbir_info)
 
 		// Now all buffers should be ready to write a row of vertical sampling.
 		stbir__resample_vertical_upsample(stbir_info, y, in_first_scanline, in_last_scanline, in_center_of_out);
+
+		STBIR_PROGRESS_REPORT((float)y / stbir_info->output_h);
 	}
 }
 
@@ -1529,6 +1544,8 @@ static void stbir__buffer_loop_downsample(stbir__info* stbir_info)
 
 		// Now the horizontal buffer is ready to write to all ring buffer rows.
 		stbir__resample_vertical_downsample(stbir_info, y, out_first_scanline, out_last_scanline, out_center_of_in);
+
+		STBIR_PROGRESS_REPORT((float)(y + stbir__get_filter_pixel_margin_vertical(stbir_info)) / (max_y + stbir__get_filter_pixel_margin_vertical(stbir_info)));
 	}
 
 	stbir__empty_ring_buffer(stbir_info, stbir_info->output_h);
