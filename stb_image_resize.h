@@ -1,3 +1,5 @@
+#define STBIR_DEBUG_OVERWRITE_TEST
+
 /* stb_image_resize - v0.50 - public domain image resampling
    no warranty implied; use at your own risk
 
@@ -627,7 +629,8 @@ stbir__inline static stbir__contributors* stbir__get_contributor(stbir__info* st
 
 stbir__inline static float* stbir__get_coefficient(stbir__info* stbir_info, int n, int c)
 {
-	return &stbir_info->horizontal_coefficients[stbir__get_filter_pixel_width(stbir_info->horizontal_filter, stbir_info->input_w, stbir_info->output_w, stbir_info->horizontal_scale)*n + c];
+	int width =	stbir__get_filter_pixel_width(stbir_info->horizontal_filter, stbir_info->input_w, stbir_info->output_w, stbir_info->horizontal_scale);
+	return &stbir_info->horizontal_coefficients[width*n + c];
 }
 
 static int stbir__edge_wrap_slow(stbir_edge edge, int n, int max)
@@ -1166,8 +1169,6 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 	int x;
 	int n;
 
-//		stbir__encode_pixel(stbir_info, output_buffer, x*channels, encode_buffer, x*channels, channels, alpha_channel, decode);
-
 	if (!(stbir_info->flags&STBIR_FLAG_PREMULTIPLIED_ALPHA)) 
 	{
 		for (x=0; x < num_pixels; ++x)
@@ -1627,7 +1628,7 @@ static int stbir__resize_allocated(stbir__info *info,
 	unsigned char overwrite_output_after_pre[OVERWRITE_ARRAY_SIZE];
 	unsigned char overwrite_tempmem_after_pre[OVERWRITE_ARRAY_SIZE];
 
-	stbir_size_t begin_forbidden = width_stride_output * (output_h - 1) + output_w * channels * stbir__type_size[type];
+	size_t begin_forbidden = width_stride_output * (info->output_h - 1) + info->output_w * info->channels * stbir__type_size[type];
 	memcpy(overwrite_output_before_pre, &((unsigned char*)output_data)[-OVERWRITE_ARRAY_SIZE], OVERWRITE_ARRAY_SIZE);
 	memcpy(overwrite_output_after_pre, &((unsigned char*)output_data)[begin_forbidden], OVERWRITE_ARRAY_SIZE);
 	memcpy(overwrite_tempmem_before_pre, &((unsigned char*)tempmem)[-OVERWRITE_ARRAY_SIZE], OVERWRITE_ARRAY_SIZE);

@@ -22,6 +22,8 @@
 #include <sys/timeb.h>
 #endif
 
+#include <direct.h>
+
 #define MT_SIZE 624
 static size_t g_aiMT[MT_SIZE];
 static size_t g_iMTI = 0;
@@ -74,7 +76,7 @@ inline float mtfrand()
 }
 
 
-void test_suite();
+void test_suite(int argc, char **argv);
 
 int main(int argc, char** argv)
 {
@@ -85,7 +87,7 @@ int main(int argc, char** argv)
 	int out_w, out_h, out_stride;
 
 #if 1
-	test_suite();
+	test_suite(argc, argv);
 	return 0;
 #endif
 
@@ -473,9 +475,17 @@ void test_subpixel_4()
 	STBIR_ASSERT(memcmp(image, output, 8 * 8) == 0);
 }
 
-void test_suite()
+void test_suite(int argc, char **argv)
 {
 	int i;
+	char *barbara;
+
+	_mkdir("test-output");
+
+	if (argc > 1)
+		barbara = argv[1];
+	else
+		barbara = "barbara.png";
 
 	#if 0 // linear_to_srgb_uchar table
 	for (i=0; i < 256; ++i) {
@@ -491,30 +501,93 @@ void test_suite()
 	test_subpixel_3();
 	test_subpixel_4();
 
-	test_premul("barbara.png");
+	test_premul(barbara);
 
 	for (i = 0; i < 10; i++)
-		test_subpixel("barbara.png", 0.5f, 0.5f, (float)i / 10, 1);
+		test_subpixel(barbara, 0.5f, 0.5f, (float)i / 10, 1);
 
 	for (i = 0; i < 10; i++)
-		test_subpixel("barbara.png", 0.5f, 0.5f, 1, (float)i / 10);
+		test_subpixel(barbara, 0.5f, 0.5f, 1, (float)i / 10);
 
 	for (i = 0; i < 10; i++)
-		test_subpixel("barbara.png", 2, 2, (float)i / 10, 1);
+		test_subpixel(barbara, 2, 2, (float)i / 10, 1);
 
 	for (i = 0; i < 10; i++)
-		test_subpixel("barbara.png", 2, 2, 1, (float)i / 10);
+		test_subpixel(barbara, 2, 2, 1, (float)i / 10);
 
 	// Channels test
-	test_channels("barbara.png", 0.5f, 0.5f, 1);
-	test_channels("barbara.png", 0.5f, 0.5f, 2);
-	test_channels("barbara.png", 0.5f, 0.5f, 3);
-	test_channels("barbara.png", 0.5f, 0.5f, 4);
+	test_channels(barbara, 0.5f, 0.5f, 1);
+	test_channels(barbara, 0.5f, 0.5f, 2);
+	test_channels(barbara, 0.5f, 0.5f, 3);
+	test_channels(barbara, 0.5f, 0.5f, 4);
 
-	test_channels("barbara.png", 2, 2, 1);
-	test_channels("barbara.png", 2, 2, 2);
-	test_channels("barbara.png", 2, 2, 3);
-	test_channels("barbara.png", 2, 2, 4);
+	test_channels(barbara, 2, 2, 1);
+	test_channels(barbara, 2, 2, 2);
+	test_channels(barbara, 2, 2, 3);
+	test_channels(barbara, 2, 2, 4);
+
+	// filter tests
+	resize_image(barbara, 2, 2, STBIR_FILTER_NEAREST, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-nearest.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_BILINEAR, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bilinear.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_BICUBIC, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bicubic.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-catmullrom.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_MITCHELL, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-mitchell.png");
+
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_NEAREST, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-nearest.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_BILINEAR, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bilinear.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_BICUBIC, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bicubic.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-catmullrom.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_MITCHELL, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-mitchell.png");
+
+	for (i = 10; i < 100; i++)
+	{
+		char outname[200];
+		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
+		resize_image(barbara, (float)i / 100, 1, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
+	}
+
+	for (i = 110; i < 500; i += 10)
+	{
+		char outname[200];
+		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
+		resize_image(barbara, (float)i / 100, 1, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
+	}
+
+	for (i = 10; i < 100; i++)
+	{
+		char outname[200];
+		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
+		resize_image(barbara, 1, (float)i / 100, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
+	}
+
+	for (i = 110; i < 500; i += 10)
+	{
+		char outname[200];
+		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
+		resize_image(barbara, 1, (float)i / 100, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
+	}
+
+	for (i = 50; i < 200; i += 10)
+	{
+		char outname[200];
+		sprintf(outname, "test-output/barbara-width-height-%d.jpg", i);
+		resize_image(barbara, 100 / (float)i, (float)i / 100, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
+	}
+
+	test_format<unsigned short>(barbara, 0.5, 2.0, STBIR_TYPE_UINT16, STBIR_COLORSPACE_SRGB);
+	test_format<unsigned short>(barbara, 0.5, 2.0, STBIR_TYPE_UINT16, STBIR_COLORSPACE_LINEAR);
+	test_format<unsigned short>(barbara, 2.0, 0.5, STBIR_TYPE_UINT16, STBIR_COLORSPACE_SRGB);
+	test_format<unsigned short>(barbara, 2.0, 0.5, STBIR_TYPE_UINT16, STBIR_COLORSPACE_LINEAR);
+
+	test_format<unsigned int>(barbara, 0.5, 2.0, STBIR_TYPE_UINT32, STBIR_COLORSPACE_SRGB);
+	test_format<unsigned int>(barbara, 0.5, 2.0, STBIR_TYPE_UINT32, STBIR_COLORSPACE_LINEAR);
+	test_format<unsigned int>(barbara, 2.0, 0.5, STBIR_TYPE_UINT32, STBIR_COLORSPACE_SRGB);
+	test_format<unsigned int>(barbara, 2.0, 0.5, STBIR_TYPE_UINT32, STBIR_COLORSPACE_LINEAR);
+
+	test_float(barbara, 0.5, 2.0, STBIR_TYPE_FLOAT, STBIR_COLORSPACE_SRGB);
+	test_float(barbara, 0.5, 2.0, STBIR_TYPE_FLOAT, STBIR_COLORSPACE_LINEAR);
+	test_float(barbara, 2.0, 0.5, STBIR_TYPE_FLOAT, STBIR_COLORSPACE_SRGB);
+	test_float(barbara, 2.0, 0.5, STBIR_TYPE_FLOAT, STBIR_COLORSPACE_LINEAR);
 
 	// Edge behavior tests
 	resize_image("hgradient.png", 2, 2, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_LINEAR, "test-output/hgradient-clamp.png");
@@ -530,69 +603,6 @@ void test_suite()
 	resize_image("gamma_colors.jpg", .5f, .5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_REFLECT, STBIR_COLORSPACE_SRGB, "test-output/gamma_colors.jpg");
 	resize_image("gamma_2.2.jpg", .5f, .5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_REFLECT, STBIR_COLORSPACE_SRGB, "test-output/gamma_2.2.jpg");
 	resize_image("gamma_dalai_lama_gray.jpg", .5f, .5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_REFLECT, STBIR_COLORSPACE_SRGB, "test-output/gamma_dalai_lama_gray.jpg");
-
-	// filter tests
-	resize_image("barbara.png", 2, 2, STBIR_FILTER_NEAREST, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-nearest.png");
-	resize_image("barbara.png", 2, 2, STBIR_FILTER_BILINEAR, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bilinear.png");
-	resize_image("barbara.png", 2, 2, STBIR_FILTER_BICUBIC, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bicubic.png");
-	resize_image("barbara.png", 2, 2, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-catmullrom.png");
-	resize_image("barbara.png", 2, 2, STBIR_FILTER_MITCHELL, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-mitchell.png");
-
-	resize_image("barbara.png", 0.5f, 0.5f, STBIR_FILTER_NEAREST, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-nearest.png");
-	resize_image("barbara.png", 0.5f, 0.5f, STBIR_FILTER_BILINEAR, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bilinear.png");
-	resize_image("barbara.png", 0.5f, 0.5f, STBIR_FILTER_BICUBIC, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bicubic.png");
-	resize_image("barbara.png", 0.5f, 0.5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-catmullrom.png");
-	resize_image("barbara.png", 0.5f, 0.5f, STBIR_FILTER_MITCHELL, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-mitchell.png");
-
-	for (i = 10; i < 100; i++)
-	{
-		char outname[200];
-		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
-		resize_image("barbara.png", (float)i / 100, 1, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
-	}
-
-	for (i = 110; i < 500; i += 10)
-	{
-		char outname[200];
-		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
-		resize_image("barbara.png", (float)i / 100, 1, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
-	}
-
-	for (i = 10; i < 100; i++)
-	{
-		char outname[200];
-		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
-		resize_image("barbara.png", 1, (float)i / 100, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
-	}
-
-	for (i = 110; i < 500; i += 10)
-	{
-		char outname[200];
-		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
-		resize_image("barbara.png", 1, (float)i / 100, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
-	}
-
-	for (i = 50; i < 200; i += 10)
-	{
-		char outname[200];
-		sprintf(outname, "test-output/barbara-width-height-%d.jpg", i);
-		resize_image("barbara.png", 100 / (float)i, (float)i / 100, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
-	}
-
-	test_format<unsigned short>("barbara.png", 0.5, 2.0, STBIR_TYPE_UINT16, STBIR_COLORSPACE_SRGB);
-	test_format<unsigned short>("barbara.png", 0.5, 2.0, STBIR_TYPE_UINT16, STBIR_COLORSPACE_LINEAR);
-	test_format<unsigned short>("barbara.png", 2.0, 0.5, STBIR_TYPE_UINT16, STBIR_COLORSPACE_SRGB);
-	test_format<unsigned short>("barbara.png", 2.0, 0.5, STBIR_TYPE_UINT16, STBIR_COLORSPACE_LINEAR);
-
-	test_format<unsigned int>("barbara.png", 0.5, 2.0, STBIR_TYPE_UINT32, STBIR_COLORSPACE_SRGB);
-	test_format<unsigned int>("barbara.png", 0.5, 2.0, STBIR_TYPE_UINT32, STBIR_COLORSPACE_LINEAR);
-	test_format<unsigned int>("barbara.png", 2.0, 0.5, STBIR_TYPE_UINT32, STBIR_COLORSPACE_SRGB);
-	test_format<unsigned int>("barbara.png", 2.0, 0.5, STBIR_TYPE_UINT32, STBIR_COLORSPACE_LINEAR);
-
-	test_float("barbara.png", 0.5, 2.0, STBIR_TYPE_FLOAT, STBIR_COLORSPACE_SRGB);
-	test_float("barbara.png", 0.5, 2.0, STBIR_TYPE_FLOAT, STBIR_COLORSPACE_LINEAR);
-	test_float("barbara.png", 2.0, 0.5, STBIR_TYPE_FLOAT, STBIR_COLORSPACE_SRGB);
-	test_float("barbara.png", 2.0, 0.5, STBIR_TYPE_FLOAT, STBIR_COLORSPACE_LINEAR);
 }
 
 

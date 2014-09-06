@@ -84,5 +84,9 @@ LINK32=link.exe
 
 SOURCE=.\resample_test.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=..\stb_image_resize.h
+# End Source File
 # End Target
 # End Project
