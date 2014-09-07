@@ -787,8 +787,9 @@ static void stbir__calculate_coefficients_downsample(stbir__info* stbir_info, st
 
 	for (i = 0; i <= out_last_pixel - out_first_pixel; i++)
 	{
-		float in_pixel_center = (float)(i + out_first_pixel) + 0.5f;
-		coefficient_group[i] = stbir__filter_info_table[filter].kernel((out_center_of_in - in_pixel_center)/scale_ratio);
+		float out_pixel_center = (float)(i + out_first_pixel) + 0.5f;
+		float x = out_pixel_center - out_center_of_in;
+		coefficient_group[i] = stbir__filter_info_table[filter].kernel(x) * scale_ratio;
 	}
 }
 
@@ -1719,7 +1720,7 @@ static int stbir__resize_allocated(stbir__info *info,
 		info->ring_buffer = STBIR__NEXT_MEMPTR(info->decode_buffer, info->decode_buffer_pixels * info->channels * sizeof(float), float);
 		info->encode_buffer = STBIR__NEXT_MEMPTR(info->ring_buffer, info->ring_buffer_length_bytes * stbir__get_filter_pixel_width_horizontal(info), float);
 
-		STBIR__DEBUG_ASSERT((size_t)STBIR__NEXT_MEMPTR(info->encode_buffer, info->channels * sizeof(float), unsigned char) == (size_t)tempmem + tempmem_size_in_bytes);
+		STBIR__DEBUG_ASSERT((size_t)STBIR__NEXT_MEMPTR(info->encode_buffer, info->output_w * info->channels * sizeof(float), unsigned char) == (size_t)tempmem + tempmem_size_in_bytes);
 	}
 	else
 	{

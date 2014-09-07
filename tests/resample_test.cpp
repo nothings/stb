@@ -647,19 +647,6 @@ void test_suite(int argc, char **argv)
 	}
 	#endif
 
-	/*resize_image("white-stripes.png", 0.5f, 0.5f, STBIR_FILTER_BOX, STBIR_EDGE_WRAP, STBIR_COLORSPACE_LINEAR, "test-output/white-stripes-down-50-nearest.png");
-	resize_image("white-stripes.png", 0.5f, 0.5f, STBIR_FILTER_BILINEAR, STBIR_EDGE_WRAP, STBIR_COLORSPACE_LINEAR, "test-output/white-stripes-down-50-bilinear.png");
-	resize_image("white-stripes.png", 0.5f, 0.5f, STBIR_FILTER_BICUBIC, STBIR_EDGE_WRAP, STBIR_COLORSPACE_LINEAR, "test-output/white-stripes-down-50-bicubic.png");
-	resize_image("white-stripes.png", 0.5f, 0.5f, STBIR_FILTER_MITCHELL, STBIR_EDGE_WRAP, STBIR_COLORSPACE_LINEAR, "test-output/white-stripes-down-50-mitchell.png");
-	resize_image("white-stripes.png", 0.5f, 0.5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_WRAP, STBIR_COLORSPACE_LINEAR, "test-output/white-stripes-down-50-catmullrom.png");
-
-	resize_image("white-stripes.png", 0.25f, 0.25f, STBIR_FILTER_BOX, STBIR_EDGE_WRAP, STBIR_COLORSPACE_LINEAR, "test-output/white-stripes-down-25-nearest.png");
-	resize_image("white-stripes.png", 0.25f, 0.25f, STBIR_FILTER_BILINEAR, STBIR_EDGE_WRAP, STBIR_COLORSPACE_LINEAR, "test-output/white-stripes-down-25-bilinear.png");
-	resize_image("white-stripes.png", 0.25f, 0.25f, STBIR_FILTER_BICUBIC, STBIR_EDGE_WRAP, STBIR_COLORSPACE_LINEAR, "test-output/white-stripes-down-25-bicubic.png");
-	resize_image("white-stripes.png", 0.25f, 0.25f, STBIR_FILTER_MITCHELL, STBIR_EDGE_WRAP, STBIR_COLORSPACE_LINEAR, "test-output/white-stripes-down-25-mitchell.png");
-	resize_image("white-stripes.png", 0.25f, 0.25f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_WRAP, STBIR_COLORSPACE_LINEAR, "test-output/white-stripes-down-25-catmullrom.png");
-
-	return;*/
 	test_filters();
 
 	test_subpixel_1();
