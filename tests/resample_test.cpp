@@ -614,7 +614,7 @@ void test_suite(int argc, char **argv)
 				sums[3] += stbir__filter_bilinear(x+o);
 			}
 			for (i=0; i < 4; ++i)
-				STBIR_ASSERT(sums[i] >= 1.0 - 0.01 && sums[i] <= 1.0 + 0.01);
+				STBIR_ASSERT(sums[i] >= 1.0 - 0.001 && sums[i] <= 1.0 + 0.001);
 		}
 
 		#if 1	
