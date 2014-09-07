@@ -4550,7 +4550,7 @@ static stbi_uc *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int 
 
 static int      stbi__pnm_isspace(char c)
 {
-   return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+   return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
 }
 
 static void     stbi__pnm_skipspace(stbi__context *s, char *c)
