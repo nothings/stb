@@ -1,5 +1,3 @@
-#define STBIR_DEBUG_OVERWRITE_TEST
-
 /* stb_image_resize - v0.50 - public domain image resampling
    no warranty implied; use at your own risk
 
@@ -507,7 +505,7 @@ static unsigned char stbir__linear_to_srgb_uchar(float f)
 
 static float stbir__filter_box(float x)
 {
-	if (x < -0.5f)
+	if (x <= -0.5f)
 		return 0;
 	else if (x > 0.5f)
 		return 0;
