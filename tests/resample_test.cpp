@@ -566,6 +566,22 @@ void verify_box(void)
 	STBIR_ASSERT(output11[j][i] == ((t+32)>>6));
 }
 
+void verify_filter_normalized(stbir_filter filter, unsigned char* output, int output_size)
+{
+	int value = 64;
+
+	int i, j;
+	for (j = 0; j < 8; ++j)
+		for (i = 0; i < 8; ++i)
+			image88[j][i] = value;
+
+	stbir_resize_uint8_generic(image88[0], 8, 8, 0, output, output_size, output_size, 0, 1, -1, 0, STBIR_EDGE_CLAMP, filter, STBIR_COLORSPACE_LINEAR, NULL);
+
+	for (j = 0; j < output_size; ++j)
+		for (i = 0; i < output_size; ++i)
+			STBIR_ASSERT(value == output[j*output_size + i]);
+}
+
 void test_filters(void)
 {
 	int i,j;
@@ -588,6 +604,30 @@ void test_filters(void)
 		for (i=0; i < 8; ++i)
 			image88[j][i] = i&2 ? 255 : 0;
 	verify_box();
+
+	verify_filter_normalized(STBIR_FILTER_BOX, &output88[0][0], 8);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output88[0][0], 8);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output88[0][0], 8);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output88[0][0], 8);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output88[0][0], 8);
+
+	verify_filter_normalized(STBIR_FILTER_BOX, &output44[0][0], 4);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output44[0][0], 4);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output44[0][0], 4);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output44[0][0], 4);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output44[0][0], 4);
+
+	verify_filter_normalized(STBIR_FILTER_BOX, &output22[0][0], 2);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output22[0][0], 2);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output22[0][0], 2);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output22[0][0], 2);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output22[0][0], 2);
+
+	verify_filter_normalized(STBIR_FILTER_BOX, &output11[0][0], 1);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output11[0][0], 1);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output11[0][0], 1);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output11[0][0], 1);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output11[0][0], 1);
 }
 
 
