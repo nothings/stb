@@ -136,7 +136,7 @@ STBIRDEF int stbir_resize_uint8_srgb_edgemode(const unsigned char *input_pixels 
 typedef enum
 {
 	STBIR_FILTER_DEFAULT     = 0,  // use same filter type that easy-to-use API chooses
-	STBIR_FILTER_NEAREST     = 1,
+	STBIR_FILTER_BOX         = 1,
 	STBIR_FILTER_BILINEAR    = 2,
 	STBIR_FILTER_BICUBIC     = 3,  // A cubic b spline
 	STBIR_FILTER_CATMULLROM  = 4,
@@ -487,9 +487,9 @@ static unsigned char stbir__linear_to_srgb_uchar(float f)
 	return (unsigned char) v;
 }
 
-static float stbir__filter_nearest(float x)
+static float stbir__filter_box(float x)
 {
-	if (x <= -0.5f)
+	if (x < -0.5f)
 		return 0;
 	else if (x > 0.5f)
 		return 0;
@@ -545,7 +545,7 @@ static float stbir__filter_mitchell(float x)
 
 static stbir__filter_info stbir__filter_info_table[] = {
 		{ NULL,                    0.0f },
-		{ stbir__filter_nearest,    0.5f }, // 0.000001?
+		{ stbir__filter_box    ,    0.5f },
 		{ stbir__filter_bilinear,   1.0f },
 		{ stbir__filter_bicubic,    2.0f },
 		{ stbir__filter_catmullrom, 2.0f },
