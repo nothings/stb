@@ -601,6 +601,41 @@ void test_suite(int argc, char **argv)
 	else
 		barbara = "barbara.png";
 
+	#if 1
+	{
+		float x,y;
+		for (x = -1; x < 1; x += 0.05f) {
+			float sums[4] = {0};
+			float o;
+			for (o=-5; o <= 5; ++o) {
+				sums[0] += stbir__filter_mitchell(x+o);
+				sums[1] += stbir__filter_catmullrom(x+o);
+				sums[2] += stbir__filter_bicubic(x+o);
+				sums[3] += stbir__filter_bilinear(x+o);
+			}
+			for (i=0; i < 4; ++i)
+				STBIR_ASSERT(sums[i] >= 1.0 - 0.01 && sums[i] <= 1.0 + 0.01);
+		}
+
+		#if 1	
+		for (y = 0.11f; y < 1; y += 0.01f) {
+			for (x = -1; x < 1; x += 0.05f) {
+				float sums[4] = {0};
+				float o;
+				for (o=-5; o <= 5; o += y) {
+					sums[0] += y * stbir__filter_mitchell(x+o);
+					sums[1] += y * stbir__filter_catmullrom(x+o);
+					sums[2] += y * stbir__filter_bicubic(x+o);
+					sums[3] += y * stbir__filter_bilinear(x+o);
+				}
+				for (i=0; i < 3; ++i)
+					STBIR_ASSERT(sums[i] >= 1.0 - 0.02 && sums[i] <= 1.0 + 0.02);
+			}
+		}
+		#endif
+	}
+	#endif
+
 	#if 0 // linear_to_srgb_uchar table
 	for (i=0; i < 256; ++i) {
 		float f = stbir__srgb_to_linear((i+0.5f)/256.0f);
