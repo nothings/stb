@@ -56,7 +56,7 @@
     Jean-Marc Lienher (gif)                      Won Chun
     Tom Seddon (pic)                             the Horde3D community
     Thatcher Ulrich (psd)                        Janez Zemva
-                                                 Jonathan Blow
+    Ken Miller (pgm, ppm)                        Jonathan Blow
                                                  Laurent Gomila
  Extensions, features                            Aruelien Pocheville
     Jetro Lauha (stbi_info)                      Ryamond Barbiero
@@ -514,6 +514,9 @@ static stbi_uc *stbi__pic_load(stbi__context *s, int *x, int *y, int *comp, int 
 static int      stbi__gif_test(stbi__context *s);
 static stbi_uc *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
 static int      stbi__gif_info(stbi__context *s, int *x, int *y, int *comp);
+static int      stbi__pnm_test(stbi__context *s);
+static stbi_uc *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
+static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp);
 
 
 // this is not threadsafe
@@ -568,6 +571,7 @@ static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp
    if (stbi__gif_test(s))  return stbi__gif_load(s,x,y,comp,req_comp);
    if (stbi__psd_test(s))  return stbi__psd_load(s,x,y,comp,req_comp);
    if (stbi__pic_test(s))  return stbi__pic_load(s,x,y,comp,req_comp);
+   if (stbi__pnm_test(s))  return stbi__pnm_load(s,x,y,comp,req_comp);
 
    #ifndef STBI_NO_HDR
    if (stbi__hdr_test(s)) {
@@ -4500,6 +4504,120 @@ static int stbi__pic_info(stbi__context *s, int *x, int *y, int *comp)
    return 1;
 }
 
+// *************************************************************************************************
+// Portable Gray Map and Portable Pixel Map loader
+// by Ken Miller
+//
+// PGM: http://netpbm.sourceforge.net/doc/pgm.html
+// PPM: http://netpbm.sourceforge.net/doc/ppm.html
+//
+// Known limitations:
+//    Does not support comments in the header section
+//    Does not support ASCII image data (formats P2 and P3)
+
+static int      stbi__pnm_test(stbi__context *s)
+{
+   char p, t;
+   p = (char) stbi__get8(s);
+   t = (char) stbi__get8(s);
+   if (p != 'P' || (t != '5' && t != '6')) {
+       stbi__rewind( s );
+       return 0;
+   }
+   return 1;
+}
+
+static stbi_uc *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp)
+{
+   stbi_uc *out;
+   if (!stbi__pnm_info(s, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n)) {
+       return 0;
+   }
+   *x = s->img_x;
+   *y = s->img_y;
+   *comp = s->img_n;
+
+   out = stbi__malloc(s->img_n * s->img_x * s->img_y);
+   if (!out) return stbi__errpuc("outofmem", "Out of memory");
+   stbi__getn(s, out, s->img_n * s->img_x * s->img_y);
+
+   if (req_comp && req_comp != s->img_n) {
+      out = stbi__convert_format(out, s->img_n, req_comp, s->img_x, s->img_y);
+      if (out == NULL) return out; // stbi__convert_format frees input on failure
+   }
+   return out;
+}
+
+static int      stbi__pnm_isspace(char c)
+{
+   return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+}
+
+static void     stbi__pnm_skipspace(stbi__context *s, char *c)
+{
+   while (!stbi__at_eof(s) && stbi__pnm_isspace(*c)) {
+      *c = (char) stbi__get8(s);
+   }
+}
+
+static int      stbi__pnm_isdigit(char c)
+{
+   return c >= '0' && c <= '9';
+}
+
+static int      stbi__pnm_getinteger(stbi__context *s, char *c)
+{
+   int value = 0;
+
+   while (!stbi__at_eof(s) && stbi__pnm_isdigit(*c)) {
+      value *= 10;
+      value += *c - '0';
+      *c = (char) stbi__get8(s);
+   }
+
+   return value;
+}
+
+static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
+{
+   char c, p, t;
+
+   stbi__rewind( s );
+
+   // Get identifier
+   p = (char) stbi__get8(s);
+   t = (char) stbi__get8(s);
+   if (p != 'P' || (t != '5' && t != '6')) {
+       stbi__rewind( s );
+       return 0;
+   }
+
+   // '5' is 1-component .pgm; '6' is 3-component .ppm
+   *comp = (t == '6') ? 3 : 1;
+
+   c = (char) stbi__get8(s);
+
+   // skip whitespace
+   stbi__pnm_skipspace(s, &c);
+
+   // read width
+   *x = stbi__pnm_getinteger(s, &c);
+
+   // skip whitespace
+   stbi__pnm_skipspace(s, &c);
+
+   // read height
+   *y = stbi__pnm_getinteger(s, &c);
+
+   // skip whitespace
+   stbi__pnm_skipspace(s, &c);
+
+   // read max value
+   stbi__pnm_getinteger(s, &c);
+
+   return 1;
+}
+
 static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 {
    if (stbi__jpeg_info(s, x, y, comp))
@@ -4513,6 +4631,8 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
    if (stbi__psd_info(s, x, y, comp))
        return 1;
    if (stbi__pic_info(s, x, y, comp))
+       return 1;
+   if (stbi__pnm_info(s, x, y, comp))
        return 1;
    #ifndef STBI_NO_HDR
    if (stbi__hdr_info(s, x, y, comp))
