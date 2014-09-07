@@ -222,7 +222,7 @@ void resize_image(const char* filename, float width_percent, float height_percen
 
 	unsigned char* output_data = (unsigned char*)malloc(out_w * out_h * n);
 
-	stbir_resize(input_data, w, h, 0, output_data, out_w, out_h, 0, STBIR_TYPE_UINT8, n, 0, 0, edge, edge, filter, filter, colorspace, &g_context);
+	stbir_resize(input_data, w, h, 0, output_data, out_w, out_h, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0, edge, edge, filter, filter, colorspace, &g_context);
 
 	stbi_image_free(input_data);
 
@@ -257,7 +257,7 @@ void test_format(const char* file, float width_percent, float height_percent, st
 
 	T* output_data = (T*)malloc(new_w * new_h * n * sizeof(T));
 
-	stbir_resize(T_data, w, h, 0, output_data, new_w, new_h, 0, type, n, 0, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, colorspace, &g_context);
+	stbir_resize(T_data, w, h, 0, output_data, new_w, new_h, 0, type, n, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, colorspace, &g_context);
 
 	free(T_data);
 	stbi_image_free(input_data);
