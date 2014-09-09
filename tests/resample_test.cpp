@@ -631,6 +631,22 @@ void test_filters(void)
 	verify_filter_normalized(STBIR_FILTER_BICUBIC, 1, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 1, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 1, value);
+
+	{
+		// This test is designed to produce coefficients that are very badly denormalized.
+		int v = 556;
+
+		unsigned int input[100 * 100];
+		unsigned int output[11 * 11];
+
+		for (j = 0; j < 100 * 100; ++j)
+			input[j] = v;
+
+		stbir_resize(input, 100, 100, 0, output, 11, 11, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BILINEAR, STBIR_FILTER_BILINEAR, STBIR_COLORSPACE_LINEAR, NULL);
+
+		for (j = 0; j < 11 * 11; ++j)
+			STBIR_ASSERT(v == output[j]);
+	}
 }
 
 
@@ -663,8 +679,8 @@ void test_suite(int argc, char **argv)
 		}
 
 		#if 1	
-		for (y = 0.11f; y < 1; y += 0.01f) {
-			for (x = -1; x < 1; x += 0.05f) {
+		for (y = 0.11f; y < 1; y += 0.01f) {  // Step
+			for (x = -1; x < 1; x += 0.05f) { // Phase
 				float sums[4] = {0};
 				float o;
 				for (o=-5; o <= 5; o += y) {

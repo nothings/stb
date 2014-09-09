@@ -793,8 +793,7 @@ static void stbir__calculate_coefficients_downsample(stbir__info* stbir_info, st
 	}
 }
 
-#ifdef STBIR_DEBUG
-static void stbir__check_downsample_coefficients(stbir__info* stbir_info)
+static void stbir__normalize_downsample_coefficients(stbir__info* stbir_info)
 {
 	int i;
 	for (i = 0; i < stbir_info->output_w; i++)
@@ -813,10 +812,19 @@ static void stbir__check_downsample_coefficients(stbir__info* stbir_info)
 		}
 
 		STBIR__DEBUG_ASSERT(total > 0.9f);
-		STBIR__DEBUG_ASSERT(total <= 1.0f + 1.0f / (pow(2.0f, 8.0f * stbir__type_size[stbir_info->type]) - 1));
+		STBIR__DEBUG_ASSERT(total < 1.1f);
+
+		float scale = 1 / total;
+
+		for (j = 0; j < stbir__get_horizontal_contributors(stbir_info); j++)
+		{
+			if (i >= stbir_info->horizontal_contributors[j].n0 && i <= stbir_info->horizontal_contributors[j].n1)
+				*stbir__get_coefficient(stbir_info, j, i - stbir_info->horizontal_contributors[j].n0) *= scale;
+			else if (i < stbir_info->horizontal_contributors[j].n0)
+				break;
+		}
 	}
 }
-#endif
 
 // Each scan line uses the same kernel values so we should calculate the kernel
 // values once and then we can use them for every scan line.
@@ -858,9 +866,7 @@ static void stbir__calculate_horizontal_filters(stbir__info* stbir_info)
 			stbir__calculate_coefficients_downsample(stbir_info, stbir_info->horizontal_filter, scale_ratio, out_first_pixel, out_last_pixel, out_center_of_in, stbir__get_contributor(stbir_info, n), stbir__get_coefficient(stbir_info, n, 0));
 		}
 
-#ifdef STBIR_DEBUG
-		stbir__check_downsample_coefficients(stbir_info);
-#endif
+		stbir__normalize_downsample_coefficients(stbir_info);
 	}
 }
 
