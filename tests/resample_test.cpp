@@ -384,44 +384,46 @@ void test_subpixel(const char* file, float width_percent, float height_percent, 
 	free(output_data);
 }
 
-void test_premul(const char* file)
+unsigned char* pixel(unsigned char* buffer, int x, int y, int c, int w, int n)
 {
-	int w, h, n;
-	unsigned char* input_data = stbi_load(file, &w, &h, &n, 4);
-	n = 4;
+	return &buffer[y*w*n + x*n + c];
+}
 
-	if (input_data == NULL)
-		return;
+void test_premul()
+{
+	unsigned char input[2 * 2 * 4];
+	unsigned char output[1 * 1 * 4];
 
+	memset(input, 0, sizeof(input));
 
-	// Set alpha for the top half.
-	for (int x = 0; x < w; x++)
-	{
-		for (int y = 0; y < h / 2; y++)
-			input_data[(y*w + x)*n + 3] = input_data[(y*w + x)*n + 0];
-	}
+	// Top left - solid red
+	*pixel(input, 0, 0, 0, 2, 4) = 255;
+	*pixel(input, 0, 0, 3, 2, 4) = 255;
 
-	stbi_write_png("test-output/premul-original.png", w, h, n, input_data, 0);
+	// Bottom left - solid red
+	*pixel(input, 0, 1, 0, 2, 4) = 255;
+	*pixel(input, 0, 1, 3, 2, 4) = 255;
 
-	int new_w = (int)(w * .1);
-	int new_h = (int)(h * .1);
+	// Top right - transparent green
+	*pixel(input, 1, 0, 1, 2, 4) = 255;
+	*pixel(input, 1, 0, 3, 2, 4) = 25;
 
-	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
+	// Bottom right - transparent green
+	*pixel(input, 1, 1, 1, 2, 4) = 255;
+	*pixel(input, 1, 1, 3, 2, 4) = 25;
 
-	stbir_resize_uint8_generic(input_data, w, h, 0, output_data, new_w, new_h, 0, n, n - 1, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context);
+	stbir_resize_uint8_generic(input, 2, 2, 0, output, 1, 1, 0, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, &g_context);
 
-	char output[200];
-	sprintf(output, "test-output/premul-%s", file);
-	stbi_write_png(output, new_w, new_h, n, output_data, 0);
+	float r = 1.0f;
+	float g = 1.0f;
+	float ra = 1.0;
+	float ga = (float)25 / 255;
+	float a = (ra + ga) / 2;
 
-	stbir_resize_uint8_generic(input_data, w, h, 0, output_data, new_w, new_h, 0, n, n - 1, STBIR_FLAG_PREMULTIPLIED_ALPHA, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context);
-
-	sprintf(output, "test-output/nopremul-%s", file);
-	stbi_write_png(output, new_w, new_h, n, output_data, 0);
-
-	stbi_image_free(input_data);
-
-	free(output_data);
+	STBIR_ASSERT(output[0] == (int)(r * ra / 2 / a * 255 + 0.5f)); // 232
+	STBIR_ASSERT(output[1] == (int)(g * ga / 2 / a * 255 + 0.5f)); // 23
+	STBIR_ASSERT(output[2] == 0);
+	STBIR_ASSERT(output[3] == (int)(a * 255 + 0.5f)); // 140
 }
 
 // test that splitting a pow-2 image into tiles produces identical results
@@ -713,7 +715,7 @@ void test_suite(int argc, char **argv)
 	test_subpixel_3();
 	test_subpixel_4();
 
-	test_premul(barbara);
+	test_premul();
 
 	for (i = 0; i < 10; i++)
 		test_subpixel(barbara, 0.5f, 0.5f, (float)i / 10, 1);
