@@ -1520,11 +1520,12 @@ static void stbir__buffer_loop_downsample(stbir__info* stbir_info)
 	float scale_ratio = stbir_info->vertical_scale;
 	int output_h = stbir_info->output_h;
 	float in_pixels_radius = stbir__filter_info_table[stbir_info->vertical_filter].support / scale_ratio;
-	int max_y = stbir_info->input_h + stbir__get_filter_pixel_margin_vertical(stbir_info);
+	int pixel_margin = stbir__get_filter_pixel_margin_vertical(stbir_info);
+	int max_y = stbir_info->input_h + pixel_margin;
 
 	STBIR__DEBUG_ASSERT(!stbir__use_height_upsampling(stbir_info));
 
-	for (y = -stbir__get_filter_pixel_margin_vertical(stbir_info); y < max_y; y++)
+	for (y = -pixel_margin; y < max_y; y++)
 	{
 		float out_center_of_in; // Center of the current out scanline in the in scanline space
 		int out_first_scanline, out_last_scanline;
@@ -1550,7 +1551,7 @@ static void stbir__buffer_loop_downsample(stbir__info* stbir_info)
 		// Now the horizontal buffer is ready to write to all ring buffer rows.
 		stbir__resample_vertical_downsample(stbir_info, y, out_first_scanline, out_last_scanline, out_center_of_in);
 
-		STBIR_PROGRESS_REPORT((float)(y + stbir__get_filter_pixel_margin_vertical(stbir_info)) / (max_y + stbir__get_filter_pixel_margin_vertical(stbir_info)));
+		STBIR_PROGRESS_REPORT((float)(y + pixel_margin) / (stbir_info->input_h + pixel_margin * 2));
 	}
 
 	stbir__empty_ring_buffer(stbir_info, stbir_info->output_h);
@@ -1738,10 +1739,14 @@ static int stbir__resize_allocated(stbir__info *info,
 
 	stbir__calculate_horizontal_filters(info);
 
+	STBIR_PROGRESS_REPORT(0);
+
 	if (stbir__use_height_upsampling(info))
 		stbir__buffer_loop_upsample(info);
 	else
 		stbir__buffer_loop_downsample(info);
+
+	STBIR_PROGRESS_REPORT(1);
 
 #ifdef STBIR_DEBUG_OVERWRITE_TEST
 	STBIR__DEBUG_ASSERT(memcmp(overwrite_output_before_pre, &((unsigned char*)output_data)[-OVERWRITE_ARRAY_SIZE], OVERWRITE_ARRAY_SIZE) == 0);
