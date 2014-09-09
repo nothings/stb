@@ -1210,7 +1210,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			int encode_pixel_index = x*channels;
 
 			for (n = 0; n < channels; n++)
-				((unsigned char*)output_buffer)[output_pixel_index + n] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + n]) * 255);
+				((unsigned char*)output_buffer)[output_pixel_index + n] = (unsigned char)(round(stbir__saturate(encode_buffer[encode_pixel_index + n]) * 255));
 		}
 		break;
 
@@ -1225,7 +1225,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 				((unsigned char*)output_buffer)[output_pixel_index + n] = stbir__linear_to_srgb_uchar(encode_buffer[encode_pixel_index + n]);
 
 			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-				((unsigned char*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255);
+				((unsigned char*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(round(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255));
 		}
 		break;
 
@@ -1236,7 +1236,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			int encode_pixel_index = x*channels;
 
 			for (n = 0; n < channels; n++)
-				((unsigned short*)output_buffer)[output_pixel_index + n] = (unsigned short)(stbir__saturate(encode_buffer[encode_pixel_index + n]) * 65535);
+				((unsigned short*)output_buffer)[output_pixel_index + n] = (unsigned short)(round(stbir__saturate(encode_buffer[encode_pixel_index + n]) * 65535));
 		}
 		break;
 
@@ -1247,10 +1247,10 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			int encode_pixel_index = x*channels;
 
 			for (n = 0; n < channels; n++)
-				((unsigned short*)output_buffer)[output_pixel_index + n] = (unsigned short)(stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n])) * 65535);
+				((unsigned short*)output_buffer)[output_pixel_index + n] = (unsigned short)(round(stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n])) * 65535));
 
 			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-				((unsigned short*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned char)(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 255);
+				((unsigned short*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned short)(round(stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel]) * 65535));
 		}
 
 		break;
@@ -1262,7 +1262,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			int encode_pixel_index = x*channels;
 
 			for (n = 0; n < channels; n++)
-				((unsigned int*)output_buffer)[output_pixel_index + n] = (unsigned int)(((double)stbir__saturate(encode_buffer[encode_pixel_index + n])) * 4294967295);
+				((unsigned int*)output_buffer)[output_pixel_index + n] = (unsigned int)(round(((double)stbir__saturate(encode_buffer[encode_pixel_index + n])) * 4294967295));
 		}
 		break;
 
@@ -1273,10 +1273,10 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			int encode_pixel_index = x*channels;
 
 			for (n = 0; n < channels; n++)
-				((unsigned int*)output_buffer)[output_pixel_index + n] = (unsigned int)(((double)stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n]))) * 4294967295);
+				((unsigned int*)output_buffer)[output_pixel_index + n] = (unsigned int)(round(((double)stbir__linear_to_srgb(stbir__saturate(encode_buffer[encode_pixel_index + n]))) * 4294967295));
 
 			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-				((unsigned int*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned int)(((double)stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel])) * 4294967295);
+				((unsigned int*)output_buffer)[output_pixel_index + alpha_channel] = (unsigned int)(round(((double)stbir__saturate(encode_buffer[encode_pixel_index + alpha_channel])) * 4294967295));
 		}
 		break;
 

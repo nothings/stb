@@ -563,7 +563,7 @@ void verify_box(void)
 			STBIR_ASSERT(output44[j][i] == ((n+2)>>2));
 			t += n;
 		}
-	STBIR_ASSERT(output11[j][i] == ((t+32)>>6));
+	STBIR_ASSERT(output11[0][0] == ((t+32)>>6));
 }
 
 void verify_filter_normalized(stbir_filter filter, unsigned char* output, int output_size)
