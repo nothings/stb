@@ -528,9 +528,9 @@ static float stbir__filter_bicubic(float x)
 	x = (float)fabs(x);
 
 	if (x < 1.0f)
-		return 0.66666666666f + x*x*(0.5f*x  - 1);
+		return (4 + x*x*(3*x - 6))/6;
 	else if (x < 2.0f)
-		return 1.3333333333f + x*(-2 + x*(1 - 0.16666666f * x));
+		return (8 + x*(-12 + x*(6 - x)))/6;
 
 	return (0.0f);
 }
@@ -552,9 +552,9 @@ static float stbir__filter_mitchell(float x)
 	x = (float)fabs(x);
 
 	if (x < 1.0f)
-		return 0.8888888888f + x*x*(1.1666666666666f * x - 2.0f);
+		return (16 + x*x*(21 * x - 36))/18;
 	else if (x < 2.0f)
-		return 1.777777777777f + x*(-3.3333333333f + x*(2 - 0.3888888888888f*x));
+		return (32 + x*(-60 + x*(36 - 7*x)))/18;
 
 	return (0.0f);
 }

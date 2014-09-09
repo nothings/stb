@@ -530,6 +530,7 @@ void test_subpixel_4()
 	STBIR_ASSERT(memcmp(image, output, 8 * 8) == 0);
 }
 
+static unsigned int  image88_int[8][8];
 static unsigned char image88 [8][8];
 static unsigned char output88[8][8];
 static unsigned char output44[4][4];
@@ -566,16 +567,12 @@ void verify_box(void)
 	STBIR_ASSERT(output11[0][0] == ((t+32)>>6));
 }
 
-void verify_filter_normalized(stbir_filter filter, unsigned char* output, int output_size)
+void verify_filter_normalized(stbir_filter filter, int output_size, int value)
 {
-	int value = 64;
-
 	int i, j;
-	for (j = 0; j < 8; ++j)
-		for (i = 0; i < 8; ++i)
-			image88[j][i] = value;
+	unsigned int output[64];
 
-	stbir_resize_uint8_generic(image88[0], 8, 8, 0, output, output_size, output_size, 0, 1, -1, 0, STBIR_EDGE_CLAMP, filter, STBIR_COLORSPACE_LINEAR, NULL);
+	stbir_resize(image88_int[0], 8, 8, 0, output, output_size, output_size, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, filter, filter, STBIR_COLORSPACE_LINEAR, NULL);
 
 	for (j = 0; j < output_size; ++j)
 		for (i = 0; i < output_size; ++i)
@@ -605,29 +602,35 @@ void test_filters(void)
 			image88[j][i] = i&2 ? 255 : 0;
 	verify_box();
 
-	verify_filter_normalized(STBIR_FILTER_BOX, &output88[0][0], 8);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output88[0][0], 8);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output88[0][0], 8);
-	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output88[0][0], 8);
-	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output88[0][0], 8);
+	int value = 64;
 
-	verify_filter_normalized(STBIR_FILTER_BOX, &output44[0][0], 4);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output44[0][0], 4);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output44[0][0], 4);
-	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output44[0][0], 4);
-	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output44[0][0], 4);
+	for (j = 0; j < 8; ++j)
+		for (i = 0; i < 8; ++i)
+			image88_int[j][i] = value;
 
-	verify_filter_normalized(STBIR_FILTER_BOX, &output22[0][0], 2);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output22[0][0], 2);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output22[0][0], 2);
-	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output22[0][0], 2);
-	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output22[0][0], 2);
+	verify_filter_normalized(STBIR_FILTER_BOX, 8, value);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, 8, value);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, 8, value);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 8, value);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, 8, value);
 
-	verify_filter_normalized(STBIR_FILTER_BOX, &output11[0][0], 1);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output11[0][0], 1);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output11[0][0], 1);
-	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output11[0][0], 1);
-	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output11[0][0], 1);
+	verify_filter_normalized(STBIR_FILTER_BOX, 4, value);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, 4, value);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, 4, value);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 4, value);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, 4, value);
+
+	verify_filter_normalized(STBIR_FILTER_BOX, 2, value);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, 2, value);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, 2, value);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 2, value);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, 2, value);
+
+	verify_filter_normalized(STBIR_FILTER_BOX, 1, value);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, 1, value);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, 1, value);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 1, value);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, 1, value);
 }
 
 
@@ -671,7 +674,7 @@ void test_suite(int argc, char **argv)
 					sums[3] += y * stbir__filter_bilinear(x+o);
 				}
 				for (i=0; i < 3; ++i)
-					STBIR_ASSERT(sums[i] >= 1.0 - 0.02 && sums[i] <= 1.0 + 0.02);
+					STBIR_ASSERT(sums[i] >= 1.0 - 0.0170 && sums[i] <= 1.0 + 0.0170);
 			}
 		}
 		#endif
