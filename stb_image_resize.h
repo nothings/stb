@@ -1040,10 +1040,9 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 		for (x = -stbir__get_filter_pixel_margin_horizontal(stbir_info); x < max_x; x++)
 		{
 			int decode_pixel_index = x * channels;
-			float alpha = decode_buffer[decode_pixel_index + alpha_channel];
 
-			if (alpha == 0)
-				alpha = decode_buffer[decode_pixel_index + alpha_channel] = (float)1 / 17179869184; // 1/2^34 should be small enough that it won't affect anything.
+			// If the alpha value is 0 it will clobber the color values. Make sure it's not.
+			float alpha = (decode_buffer[decode_pixel_index + alpha_channel] += (float)1 / 17179869184); // 1/2^34 should be small enough that it won't affect anything.
 
 			for (c = 0; c < channels; c++)
 			{
@@ -1226,12 +1225,16 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 		for (x=0; x < num_pixels; ++x)
 		{
 			int pixel_index = x*channels;
+
 			float alpha = encode_buffer[pixel_index + alpha_channel];
 			STBIR__DEBUG_ASSERT(alpha > 0);
 			float reciprocal_alpha = alpha ? 1.0f / alpha : 0;
 			for (n = 0; n < channels; n++)
 				if (n != alpha_channel)
 					encode_buffer[pixel_index + n] *= reciprocal_alpha;
+
+			// We added in a small epsilon to prevent the color channel from being deleted with zero alpha. Remove it now.
+			encode_buffer[pixel_index + alpha_channel] -= (float)1 / 17179869184; // 1/2^34 should be small enough that it won't affect anything.
 		}
 	}
 
