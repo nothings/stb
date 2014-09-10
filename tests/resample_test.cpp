@@ -45,7 +45,7 @@ void* stbir_malloc(void* context, size_t size)
 void stbir_free(void* context, void* memory)
 {
 	if (!context)
-		return free(memory);
+		free(memory);
 }
 
 void stbir_progress(float p)
