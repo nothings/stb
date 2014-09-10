@@ -384,17 +384,20 @@ void test_subpixel(const char* file, float width_percent, float height_percent, 
 	free(output_data);
 }
 
-unsigned char* pixel(unsigned char* buffer, int x, int y, int c, int w, int n)
+unsigned int* pixel(unsigned int* buffer, int x, int y, int c, int w, int n)
 {
 	return &buffer[y*w*n + x*n + c];
 }
 
 void test_premul()
 {
-	unsigned char input[2 * 2 * 4];
-	unsigned char output[1 * 1 * 4];
+	unsigned int input[2 * 2 * 4];
+	unsigned int output[1 * 1 * 4];
+	unsigned int output2[2 * 2 * 4];
 
 	memset(input, 0, sizeof(input));
+
+	// First a test to make sure premul is working properly.
 
 	// Top left - solid red
 	*pixel(input, 0, 0, 0, 2, 4) = 255;
@@ -412,18 +415,50 @@ void test_premul()
 	*pixel(input, 1, 1, 1, 2, 4) = 255;
 	*pixel(input, 1, 1, 3, 2, 4) = 25;
 
-	stbir_resize_uint8_generic(input, 2, 2, 0, output, 1, 1, 0, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, &g_context);
+	stbir_resize(input, 2, 2, 0, output, 1, 1, 0, STBIR_TYPE_UINT32, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, &g_context);
 
-	float r = 1.0f;
-	float g = 1.0f;
-	float ra = 1.0;
-	float ga = (float)25 / 255;
+	float r = (float)255 / 4294967296;
+	float g = (float)255 / 4294967296;
+	float ra = (float)255 / 4294967296;
+	float ga = (float)25 / 4294967296;
 	float a = (ra + ga) / 2;
 
-	STBIR_ASSERT(output[0] == (int)(r * ra / 2 / a * 255 + 0.5f)); // 232
-	STBIR_ASSERT(output[1] == (int)(g * ga / 2 / a * 255 + 0.5f)); // 23
+	STBIR_ASSERT(output[0] == (int)(r * ra / 2 / a * 4294967296 + 0.5f)); // 232
+	STBIR_ASSERT(output[1] == (int)(g * ga / 2 / a * 4294967296 + 0.5f)); // 23
 	STBIR_ASSERT(output[2] == 0);
-	STBIR_ASSERT(output[3] == (int)(a * 255 + 0.5f)); // 140
+	STBIR_ASSERT(output[3] == (int)(a * 4294967296 + 0.5f)); // 140
+
+	// Now a test to make sure it doesn't clobber existing values.
+
+	// Top right - completely transparent green
+	*pixel(input, 1, 0, 1, 2, 4) = 255;
+	*pixel(input, 1, 0, 3, 2, 4) = 0;
+
+	// Bottom right - completely transparent green
+	*pixel(input, 1, 1, 1, 2, 4) = 255;
+	*pixel(input, 1, 1, 3, 2, 4) = 0;
+
+	stbir_resize(input, 2, 2, 0, output2, 2, 2, 0, STBIR_TYPE_UINT32, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, &g_context);
+
+	STBIR_ASSERT(*pixel(output2, 0, 0, 0, 2, 4) == 255);
+	STBIR_ASSERT(*pixel(output2, 0, 0, 1, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 0, 0, 2, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 0, 0, 3, 2, 4) == 255);
+
+	STBIR_ASSERT(*pixel(output2, 0, 1, 0, 2, 4) == 255);
+	STBIR_ASSERT(*pixel(output2, 0, 1, 1, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 0, 1, 2, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 0, 1, 3, 2, 4) == 255);
+
+	STBIR_ASSERT(*pixel(output2, 1, 0, 0, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 1, 0, 1, 2, 4) == 255);
+	STBIR_ASSERT(*pixel(output2, 1, 0, 2, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 1, 0, 3, 2, 4) == 0);
+
+	STBIR_ASSERT(*pixel(output2, 1, 1, 0, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 1, 1, 1, 2, 4) == 255);
+	STBIR_ASSERT(*pixel(output2, 1, 1, 2, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 1, 1, 3, 2, 4) == 0);
 }
 
 // test that splitting a pow-2 image into tiles produces identical results

@@ -795,12 +795,13 @@ static void stbir__calculate_coefficients_downsample(stbir__info* stbir_info, st
 
 static void stbir__normalize_downsample_coefficients(stbir__info* stbir_info)
 {
+	int num_contributors = stbir__get_horizontal_contributors(stbir_info);
 	int i;
 	for (i = 0; i < stbir_info->output_w; i++)
 	{
 		float total = 0;
 		int j;
-		for (j = 0; j < stbir__get_horizontal_contributors(stbir_info); j++)
+		for (j = 0; j < num_contributors; j++)
 		{
 			if (i >= stbir_info->horizontal_contributors[j].n0 && i <= stbir_info->horizontal_contributors[j].n1)
 			{
@@ -816,13 +817,22 @@ static void stbir__normalize_downsample_coefficients(stbir__info* stbir_info)
 
 		float scale = 1 / total;
 
-		for (j = 0; j < stbir__get_horizontal_contributors(stbir_info); j++)
+		for (j = 0; j < num_contributors; j++)
 		{
 			if (i >= stbir_info->horizontal_contributors[j].n0 && i <= stbir_info->horizontal_contributors[j].n1)
 				*stbir__get_coefficient(stbir_info, j, i - stbir_info->horizontal_contributors[j].n0) *= scale;
 			else if (i < stbir_info->horizontal_contributors[j].n0)
 				break;
 		}
+	}
+
+	// Using min to avoid writing into invalid pixels.
+	for (i = 0; i < num_contributors; i++)
+	{
+		stbir__contributors* contributors = &stbir_info->horizontal_contributors[i];
+		STBIR__DEBUG_ASSERT(contributors->n1 >= contributors->n0);
+
+		contributors->n1 = stbir__min(contributors->n1, stbir_info->output_w - 1);
 	}
 }
 
@@ -1014,6 +1024,10 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 		{
 			int decode_pixel_index = x * channels;
 			float alpha = decode_buffer[decode_pixel_index + alpha_channel];
+
+			if (alpha == 0)
+				alpha = decode_buffer[decode_pixel_index + alpha_channel] = (float)1 / 17179869184; // 1/2^34 should be small enough that it won't affect anything.
+
 			for (c = 0; c < channels; c++)
 			{
 				if (c == alpha_channel)
@@ -1129,12 +1143,10 @@ static void stbir__resample_horizontal_downsample(stbir__info* stbir_info, int n
 
 		int in_x = x - filter_pixel_margin;
 		int in_pixel_index = in_x * channels;
-		int max_n = stbir__min(n1, output_w-1);
+		int max_n = n1;
 		int coefficient_group = x*kernel_pixel_width;
 
-		STBIR__DEBUG_ASSERT(n1 >= n0);
-
-		// Using min and max to avoid writing into invalid pixels.
+		// Using max to avoid writing into invalid pixels.
 		for (k = stbir__max(n0, 0); k <= max_n; k++)
 		{
 			int coefficient_index = (k - n0) + coefficient_group;
@@ -1199,8 +1211,8 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			int output_pixel_index = x*channels;
 			int encode_pixel_index = x*channels;
 			float alpha = encode_buffer[encode_pixel_index + alpha_channel];
+			STBIR__DEBUG_ASSERT(alpha > 0);
 			float reciprocal_alpha = alpha ? 1.0f / alpha : 0;
-			// @TODO: if final alpha=0, we actually want to have ignored alpha... set alpha to sRGB_to_linear(1/255)/(2^24) so floats will discard it?
 			for (n = 0; n < channels; n++)
 				if (n != alpha_channel)
 					encode_buffer[encode_pixel_index + n] *= reciprocal_alpha;
