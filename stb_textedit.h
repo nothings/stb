@@ -142,6 +142,10 @@
 //                                 required for WORDLEFT/WORDRIGHT
 //    STB_TEXTEDIT_K_WORDLEFT    keyboard input to move cursor left one word // e.g. ctrl-LEFT
 //    STB_TEXTEDIT_K_WORDRIGHT   keyboard input to move cursor right one word // e.g. ctrl-RIGHT
+//    STB_TEXTEDIT_K_LINESTART2  secondary keyboard input to move cursor to start of line
+//    STB_TEXTEDIT_K_LINEEND2    secondary keyboard input to move cursor to end of line
+//    STB_TEXTEDIT_K_TEXTSTART2  secondary keyboard input to move cursor to start of text
+//    STB_TEXTEDIT_K_TEXTEND2    secondary keyboard input to move cursor to end of text
 //
 // Todo:
 //    STB_TEXTEDIT_K_PGUP        keyboard input to move cursor up a page
@@ -917,23 +921,35 @@ retry:
          state->has_preferred_x = 0;
          break;
          
+#ifdef STB_TEXTEDIT_K_TEXTSTART2
+      case STB_TEXTEDIT_K_TEXTSTART2:
+#endif
       case STB_TEXTEDIT_K_TEXTSTART:
          state->cursor = state->select_start = state->select_end = 0;
          state->has_preferred_x = 0;
          break;
 
+#ifdef STB_TEXTEDIT_K_TEXTEND2
+      case STB_TEXTEDIT_K_TEXTEND2:
+#endif
       case STB_TEXTEDIT_K_TEXTEND:
          state->cursor = STB_TEXTEDIT_STRINGLEN(str);
          state->select_start = state->select_end = 0;
          state->has_preferred_x = 0;
          break;
         
+#ifdef STB_TEXTEDIT_K_TEXTSTART2
+      case STB_TEXTEDIT_K_TEXTSTART2 | STB_TEXTEDIT_K_SHIFT:
+#endif
       case STB_TEXTEDIT_K_TEXTSTART | STB_TEXTEDIT_K_SHIFT:
          stb_textedit_prep_selection_at_cursor(state);
          state->cursor = state->select_end = 0;
          state->has_preferred_x = 0;
          break;
 
+#ifdef STB_TEXTEDIT_K_TEXTEND2
+      case STB_TEXTEDIT_K_TEXTEND2 | STB_TEXTEDIT_K_SHIFT:
+#endif
       case STB_TEXTEDIT_K_TEXTEND | STB_TEXTEDIT_K_SHIFT:
          stb_textedit_prep_selection_at_cursor(state);
          state->cursor = state->select_end = STB_TEXTEDIT_STRINGLEN(str);
@@ -941,6 +957,9 @@ retry:
          break;
 
 
+#ifdef STB_TEXTEDIT_K_LINESTART2
+      case STB_TEXTEDIT_K_LINESTART2:
+#endif
       case STB_TEXTEDIT_K_LINESTART: {
          StbFindState find;
          stb_textedit_clamp(str, state);
@@ -951,6 +970,9 @@ retry:
          break;
       }
 
+#ifdef STB_TEXTEDIT_K_LINEEND2
+      case STB_TEXTEDIT_K_LINEEND2:
+#endif
       case STB_TEXTEDIT_K_LINEEND: {
          StbFindState find;
          stb_textedit_clamp(str, state);
@@ -961,6 +983,9 @@ retry:
          break;
       }
 
+#ifdef STB_TEXTEDIT_K_LINESTART2
+      case STB_TEXTEDIT_K_LINESTART2 | STB_TEXTEDIT_K_SHIFT:
+#endif
       case STB_TEXTEDIT_K_LINESTART | STB_TEXTEDIT_K_SHIFT: {
          StbFindState find;
          stb_textedit_clamp(str, state);
@@ -971,6 +996,9 @@ retry:
          break;
       }
 
+#ifdef STB_TEXTEDIT_K_LINEEND2
+      case STB_TEXTEDIT_K_LINEEND2 | STB_TEXTEDIT_K_SHIFT:
+#endif
       case STB_TEXTEDIT_K_LINEEND | STB_TEXTEDIT_K_SHIFT: {
          StbFindState find;
          stb_textedit_clamp(str, state);
