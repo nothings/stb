@@ -241,6 +241,15 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
 #define STBIR_PROGRESS_REPORT(float_0_to_1)
 #endif
 
+// This value is added to alpha just before premultiplication to avoid
+// zeroing out color values. It is equivalent to 2^-80. If you don't want
+// that behavior (it may interfere if you have floating point images with
+// very small alpha values) then you can define STBIR_NO_ALPHA_EPSILON to
+// disable it.
+#ifndef STBIR_EPSILON
+#define STBIR_EPSILON ((float)1 / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20))
+#endif
+
 //
 //
 ////   end header file   /////////////////////////////////////////////////////
@@ -1035,6 +1044,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 		break;
 	}
 
+#ifndef STBIR_NO_ALPHA_EPSILON
 	if (!(stbir_info->flags & STBIR_FLAG_PREMULTIPLIED_ALPHA))
 	{
 		for (x = -stbir__get_filter_pixel_margin_horizontal(stbir_info); x < max_x; x++)
@@ -1042,7 +1052,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			int decode_pixel_index = x * channels;
 
 			// If the alpha value is 0 it will clobber the color values. Make sure it's not.
-			float alpha = (decode_buffer[decode_pixel_index + alpha_channel] += (float)1 / 17179869184); // 1/2^34 should be small enough that it won't affect anything.
+			float alpha = (decode_buffer[decode_pixel_index + alpha_channel] += STBIR_EPSILON);
 
 			for (c = 0; c < channels; c++)
 			{
@@ -1053,6 +1063,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			}
 		}
 	}
+#endif
 
 	if (edge_horizontal == STBIR_EDGE_ZERO)
 	{
@@ -1220,7 +1231,8 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 	int x;
 	int n;
 
-	if (!(stbir_info->flags&STBIR_FLAG_PREMULTIPLIED_ALPHA)) 
+#ifndef STBIR_NO_ALPHA_EPSILON
+	if (!(stbir_info->flags&STBIR_FLAG_PREMULTIPLIED_ALPHA))
 	{
 		for (x=0; x < num_pixels; ++x)
 		{
@@ -1234,9 +1246,10 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 					encode_buffer[pixel_index + n] *= reciprocal_alpha;
 
 			// We added in a small epsilon to prevent the color channel from being deleted with zero alpha. Remove it now.
-			encode_buffer[pixel_index + alpha_channel] -= (float)1 / 17179869184; // 1/2^34 should be small enough that it won't affect anything.
+			encode_buffer[pixel_index + alpha_channel] -= STBIR_EPSILON;
 		}
 	}
+#endif
 
 	switch (decode)
 	{
