@@ -1512,7 +1512,7 @@ static void stbir__empty_ring_buffer(stbir__info* stbir_info, int first_necessar
 				int output_row_start = stbir_info->ring_buffer_first_scanline * output_stride_bytes;
 				float* ring_buffer_entry = stbir__get_ring_buffer_entry(ring_buffer, stbir_info->ring_buffer_begin_index, ring_buffer_length);
 				stbir__encode_scanline(stbir_info, output_w, (char *) output_data + output_row_start, ring_buffer_entry, channels, alpha_channel, decode);
-				STBIR_PROGRESS_REPORT((float)stbir_info->ring_buffer_first_scanline / output_w);
+				STBIR_PROGRESS_REPORT((float)stbir_info->ring_buffer_first_scanline / stbir_info->output_h);
 			}
 
 			if (stbir_info->ring_buffer_first_scanline == stbir_info->ring_buffer_last_scanline)
