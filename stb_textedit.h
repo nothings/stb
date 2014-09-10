@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.4  - public domain - Sean Barrett
+// stb_textedit.h - v1.5  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -30,6 +30,7 @@
 //
 // VERSION HISTORY
 //
+//   1.5  (2014-09-10) add support for secondary keys for OS X
 //   1.4  (2014-08-17) fix signed/unsigned warnings
 //   1.3  (2014-06-19) fix mouse clicking to round to nearest char boundary
 //   1.2  (2014-05-27) fix some RAD types that had crept into the new code
@@ -43,6 +44,7 @@
 //
 //   Ulf Winklemann: move-by-word in 1.1
 //   Scott Graham: mouse selection bugfix in 1.3
+//   Fabian Giesen: secondary key inputs in 1.5
 //
 // USAGE
 //
