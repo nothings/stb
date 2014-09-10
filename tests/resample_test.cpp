@@ -30,7 +30,7 @@ public:
 	void* memory;
 } g_context;
 
-void* stbir_malloc(void* context, size_t size)
+void* stbir_malloc(size_t size, void* context)
 {
 	if (!context)
 		return malloc(size);
@@ -42,7 +42,7 @@ void* stbir_malloc(void* context, size_t size)
 	return real_context->memory;
 }
 
-void stbir_free(void* context, void* memory)
+void stbir_free(void* memory, void* context)
 {
 	if (!context)
 		return free(memory);

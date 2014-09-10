@@ -7,9 +7,9 @@
 
    #define STBIR_ASSERT(x) to avoid using assert.h.
 
-   #define STBIR_MALLOC(context,size) and STBIR_FREE(context,ptr) to avoid using stdlib.h malloc.
-	   Each function makes exactly one call to malloc/free, so to avoid allocations,
-		pass in a temp memory block as context and return that from MALLOC.
+   #define STBIR_MALLOC(size,context) and STBIR_FREE(ptr,context) to avoid using stdlib.h malloc.
+      Each function makes exactly one call to malloc/free, so to avoid allocations,
+      pass in a temp memory block as context and return that from MALLOC.
 
    QUICK NOTES:
       Written with emphasis on usage and speed. Only the resize operation is
@@ -274,8 +274,8 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
 #ifndef STBIR_MALLOC
 #include <stdlib.h>
 
-#define STBIR_MALLOC(c,x) malloc(x)
-#define STBIR_FREE(c,x)   free(x)
+#define STBIR_MALLOC(x,c) malloc(x)
+#define STBIR_FREE(x,c)   free(x)
 #endif
 
 #ifndef _MSC_VER
@@ -1831,7 +1831,7 @@ static int stbir__resize_arbitrary(
 	stbir__calculate_transform(&info, s0,t0,s1,t1,transform);
 	stbir__choose_filter(&info, h_filter, v_filter);
 	memory_required = stbir__calculate_memory(&info);
-	extra_memory = STBIR_MALLOC(alloc_context, memory_required);
+	extra_memory = STBIR_MALLOC(memory_required, alloc_context);
 
 	if (!extra_memory)
 		return 0;
@@ -1842,7 +1842,7 @@ static int stbir__resize_arbitrary(
 	                                        edge_horizontal, edge_vertical,
 	                                        colorspace, extra_memory, memory_required);
 
-	STBIR_FREE(alloc_context, extra_memory);
+	STBIR_FREE(extra_memory, alloc_context);
 
 	return result;
 }
