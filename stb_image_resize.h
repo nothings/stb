@@ -445,7 +445,7 @@ static float stbir__srgb_uchar_to_linear_float[256] = {
 // sRGB transition values, scaled by 1<<28
 static int stbir__srgb_offset_to_linear_scaled[256] =
 {
-		40579,    121738,    202897,    284056,    365216,    446375,    527534,	608693,
+	    40579,    121738,    202897,    284056,    365216,    446375,    527534,    608693,
 	   689852,    771011,    852421,    938035,   1028466,   1123787,   1224073,   1329393,
 	  1439819,   1555418,   1676257,   1802402,   1933917,   2070867,   2213313,   2361317,
 	  2514938,   2674237,   2839271,   3010099,   3186776,   3369359,   3557903,   3752463,
@@ -499,16 +499,25 @@ static unsigned char stbir__linear_to_srgb_uchar(float f)
 {
 	int x = (int) (f * (1 << 28)); // has headroom so you don't need to clamp
 	int v = 0;
+	int i;
 
-	if (x >= stbir__srgb_offset_to_linear_scaled[ v+128 ]) v += 128;
-	if (x >= stbir__srgb_offset_to_linear_scaled[ v+ 64 ]) v +=  64;
-	if (x >= stbir__srgb_offset_to_linear_scaled[ v+ 32 ]) v +=  32;
-	if (x >= stbir__srgb_offset_to_linear_scaled[ v+ 16 ]) v +=  16;
-	if (x >= stbir__srgb_offset_to_linear_scaled[ v+  8 ]) v +=   8;
-	if (x >= stbir__srgb_offset_to_linear_scaled[ v+  4 ]) v +=   4;
-	if (x >= stbir__srgb_offset_to_linear_scaled[ v+  2 ]) v +=   2;
-	if (x >= stbir__srgb_offset_to_linear_scaled[ v+  1 ]) v +=   1;
-	return (unsigned char) v;
+	// Everything below 128 is off by 1. This fixes that.
+	int fix = 0;
+
+	// Adding 1 to 0 with the fix gives incorrect results for input 0. This fixes that.
+	if (x < 81000)
+		return 0;
+
+	i =    128; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i; else fix = 1;
+	i = v + 64; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v + 32; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v + 16; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v + 8;  if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v + 4;  if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v + 2;  if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v + 1;  if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+
+	return (unsigned char)v + fix;
 }
 
 static float stbir__filter_box(float x)
@@ -1245,7 +1254,6 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 		{
 			int output_pixel_index = x*channels;
 			int encode_pixel_index = x*channels;
-
 
 			for (n = 0; n < channels; n++)
 				((unsigned char*)output_buffer)[output_pixel_index + n] = stbir__linear_to_srgb_uchar(encode_buffer[encode_pixel_index + n]);

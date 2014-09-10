@@ -734,6 +734,9 @@ void test_suite(int argc, char **argv)
 	}
 	#endif
 
+	for (i = 0; i < 256; i++)
+		STBIR_ASSERT(stbir__linear_to_srgb_uchar(stbir__srgb_to_linear(float(i)/255)) == i);
+
 	#if 0 // linear_to_srgb_uchar table
 	for (i=0; i < 256; ++i) {
 		float f = stbir__srgb_to_linear((i+0.5f)/256.0f);
