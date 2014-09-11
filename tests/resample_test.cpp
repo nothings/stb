@@ -810,20 +810,21 @@ void test_suite(int argc, char **argv)
 	}
 #endif
 
+#if 0 // linear_to_srgb_uchar table
+	for (i=0; i < 256; ++i) {
+		float f = stbir__srgb_to_linear((i-0.5f)/255.0f);
+		printf("%9d, ", (int) ((f) * (1<<28)));
+		if ((i & 7) == 7)
+			printf("\n");
+	}
+#endif
+
 	for (i = 0; i < 256; i++) {
 		float f = stbir__srgb_to_linear(float(i) / 255);
 		int n = stbir__linear_to_srgb_uchar(f);
 		STBIR_ASSERT(n == i);
 	}
 
-#if 0 // linear_to_srgb_uchar table
-	for (i=0; i < 256; ++i) {
-		float f = stbir__srgb_to_linear((i+0.5f)/256.0f);
-		printf("%9d, ", (int) ((f) * (1<<28)));
-		if ((i & 7) == 7)
-			printf("\n");
-	}
-#endif
 
 	test_filters();
 
