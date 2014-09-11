@@ -48,8 +48,10 @@ void stbir_free(void* memory, void* context)
 		return free(memory);
 }
 
+//#include <stdio.h>
 void stbir_progress(float p)
 {
+	//printf("%f\n", p);
 	STBIR_ASSERT(p >= 0 && p <= 1);
 }
 
@@ -373,7 +375,7 @@ void test_subpixel(const char* file, float width_percent, float height_percent, 
 
 	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
 
-	stbir_resize_region(input_data, w, h, 0, output_data, new_w, new_h, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, 0, 0, s1, t1);
+	stbir_resize_region(input_data, w, h, 0, output_data, new_w, new_h, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, 0, 0, s1, t1);
 
 	stbi_image_free(input_data);
 
@@ -684,6 +686,72 @@ void test_filters(void)
 		for (j = 0; j < 11 * 11; ++j)
 			STBIR_ASSERT(v == output[j]);
 	}
+
+	{
+		// Now test the trapezoid filter for downsampling.
+		unsigned int input[3 * 1];
+		unsigned int output[2 * 1];
+
+		input[0] = 0;
+		input[1] = 255;
+		input[2] = 127;
+
+		stbir_resize(input, 3, 1, 0, output, 2, 1, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+
+		STBIR_ASSERT(output[0] == (int)round((float)(input[0] * 2 + input[1]) / 3));
+		STBIR_ASSERT(output[1] == (int)round((float)(input[2] * 2 + input[1]) / 3));
+
+		stbir_resize(input, 1, 3, 0, output, 1, 2, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+
+		STBIR_ASSERT(output[0] == (int)round((float)(input[0] * 2 + input[1]) / 3));
+		STBIR_ASSERT(output[1] == (int)round((float)(input[2] * 2 + input[1]) / 3));
+	}
+
+	{
+		// Now test the trapezoid filter for upsampling.
+		unsigned int input[2 * 1];
+		unsigned int output[3 * 1];
+
+		input[0] = 0;
+		input[1] = 255;
+
+		stbir_resize(input, 2, 1, 0, output, 3, 1, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+
+		STBIR_ASSERT(output[0] == input[0]);
+		STBIR_ASSERT(output[1] == (input[0] + input[1]) / 2);
+		STBIR_ASSERT(output[2] == input[1]);
+
+		stbir_resize(input, 1, 2, 0, output, 1, 3, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+
+		STBIR_ASSERT(output[0] == input[0]);
+		STBIR_ASSERT(output[1] == (input[0] + input[1]) / 2);
+		STBIR_ASSERT(output[2] == input[1]);
+	}
+
+	{
+		// Now for some fun.
+		unsigned char input[2 * 1];
+		unsigned char output[127 * 1];
+
+		input[0] = 0;
+		input[1] = 255;
+
+		stbir_resize(input, 2, 1, 0, output, 127, 1, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+		STBIR_ASSERT(output[0] == 0);
+		STBIR_ASSERT(output[127 / 2 - 1] == 0);
+		STBIR_ASSERT(output[127 / 2] == 128);
+		STBIR_ASSERT(output[127 / 2 + 1] == 255);
+		STBIR_ASSERT(output[126] == 255);
+		stbi_write_png("test-output/trapezoid-upsample-horizontal.png", 127, 1, 1, output, 0);
+
+		stbir_resize(input, 1, 2, 0, output, 1, 127, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+		STBIR_ASSERT(output[0] == 0);
+		STBIR_ASSERT(output[127 / 2 - 1] == 0);
+		STBIR_ASSERT(output[127 / 2] == 128);
+		STBIR_ASSERT(output[127 / 2 + 1] == 255);
+		STBIR_ASSERT(output[126] == 255);
+		stbi_write_png("test-output/trapezoid-upsample-vertical.png", 1, 127, 1, output, 0);
+	}
 }
 
 
@@ -699,52 +767,54 @@ void test_suite(int argc, char **argv)
 	else
 		barbara = "barbara.png";
 
-	#if 1
+#if 1
 	{
-		float x,y;
+		float x, y;
 		for (x = -1; x < 1; x += 0.05f) {
-			float sums[4] = {0};
+			float sums[5] = { 0 };
 			float o;
-			for (o=-5; o <= 5; ++o) {
-				sums[0] += stbir__filter_mitchell(x+o);
-				sums[1] += stbir__filter_catmullrom(x+o);
-				sums[2] += stbir__filter_bicubic(x+o);
-				sums[3] += stbir__filter_bilinear(x+o);
+			for (o = -5; o <= 5; ++o) {
+				sums[0] += stbir__filter_mitchell(x + o, 1);
+				sums[1] += stbir__filter_catmullrom(x + o, 1);
+				sums[2] += stbir__filter_bicubic(x + o, 1);
+				sums[3] += stbir__filter_bilinear(x + o, 1);
+				sums[4] += stbir__filter_trapezoid(x + o, 0.5f);
 			}
-			for (i=0; i < 4; ++i)
+			for (i = 0; i < 5; ++i)
 				STBIR_ASSERT(sums[i] >= 1.0 - 0.001 && sums[i] <= 1.0 + 0.001);
 		}
 
-		#if 1	
+#if 1	
 		for (y = 0.11f; y < 1; y += 0.01f) {  // Step
 			for (x = -1; x < 1; x += 0.05f) { // Phase
-				float sums[4] = {0};
+				float sums[5] = { 0 };
 				float o;
-				for (o=-5; o <= 5; o += y) {
-					sums[0] += y * stbir__filter_mitchell(x+o);
-					sums[1] += y * stbir__filter_catmullrom(x+o);
-					sums[2] += y * stbir__filter_bicubic(x+o);
-					sums[3] += y * stbir__filter_bilinear(x+o);
+				for (o = -5; o <= 5; o += y) {
+					sums[0] += y * stbir__filter_mitchell(x + o, 1);
+					sums[1] += y * stbir__filter_catmullrom(x + o, 1);
+					sums[2] += y * stbir__filter_bicubic(x + o, 1);
+					sums[4] += y * stbir__filter_trapezoid(x + o, 0.5f);
+					sums[3] += y * stbir__filter_bilinear(x + o, 1);
 				}
-				for (i=0; i < 3; ++i)
+				for (i = 0; i < 3; ++i)
 					STBIR_ASSERT(sums[i] >= 1.0 - 0.0170 && sums[i] <= 1.0 + 0.0170);
 			}
 		}
-		#endif
+#endif
 	}
-	#endif
+#endif
 
 	for (i = 0; i < 256; i++)
-		STBIR_ASSERT(stbir__linear_to_srgb_uchar(stbir__srgb_to_linear(float(i)/255)) == i);
+		STBIR_ASSERT(stbir__linear_to_srgb_uchar(stbir__srgb_to_linear(float(i) / 255)) == i);
 
-	#if 0 // linear_to_srgb_uchar table
+#if 0 // linear_to_srgb_uchar table
 	for (i=0; i < 256; ++i) {
 		float f = stbir__srgb_to_linear((i+0.5f)/256.0f);
 		printf("%9d, ", (int) ((f) * (1<<28)));
 		if ((i & 7) == 7)
 			printf("\n");
 	}
-	#endif
+#endif
 
 	test_filters();
 
