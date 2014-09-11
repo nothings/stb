@@ -19,14 +19,11 @@
           supported filters see the stbir_filter enum. To add a new filter,
           write a filter function and add it to stbir__filter_info_table.
 
-   STBIR_MAX_CHANNELS: defaults to 16, if you need more, bump it up
-
    Revisions:
       0.50 (2014-??-??) first released version
 
    TODO:
       Installable filters
-      Specify wrap and filter modes independently for each axis
       Resize that respects alpha test coverage
          (Reference code: FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage:
          https://code.google.com/p/nvidia-texture-tools/source/browse/trunk/src/nvimage/FloatImage.cpp )
@@ -130,7 +127,7 @@ STBIRDEF int stbir_resize_uint8_srgb_edgemode(const unsigned char *input_pixels 
 //     * Alpha-channel can be processed separately
 //       * If alpha_channel is not STBIR_ALPHA_CHANNEL_NONE
 //         * Alpha channel will not be gamma corrected (unless flags&STBIR_FLAG_GAMMA_CORRECT)
-//         * Filters can be weighted by alpha channel (if flags&STBIR_FLAG_NONPREMUL_ALPHA)
+//         * Filters will be weighted by alpha channel (unless flags&STBIR_FLAG_PREMULTIPLIED_ALPHA)
 //     * Filter can be selected explicitly
 //     * uint16 image type
 //     * sRGB colorspace available for all types
@@ -246,8 +243,8 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
 // that behavior (it may interfere if you have floating point images with
 // very small alpha values) then you can define STBIR_NO_ALPHA_EPSILON to
 // disable it.
-#ifndef STBIR_EPSILON
-#define STBIR_EPSILON ((float)1 / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20))
+#ifndef STBIR_ALPHA_EPSILON
+#define STBIR_ALPHA_EPSILON ((float)1 / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20))
 #endif
 
 //
@@ -315,10 +312,6 @@ typedef unsigned char stbir__validate_uint32[sizeof(stbir_uint32) == 4 ? 1 : -1]
 
 #ifndef STBIR_DEFAULT_FILTER_DOWNSAMPLE
 #define STBIR_DEFAULT_FILTER_DOWNSAMPLE  STBIR_FILTER_MITCHELL
-#endif
-
-#ifndef STBIR_MAX_CHANNELS
-#define STBIR_MAX_CHANNELS  16
 #endif
 
 #define STBIR__UNUSED_PARAM(s) s=s;
@@ -534,11 +527,11 @@ static unsigned char stbir__linear_to_srgb_uchar(float f)
 
 static float stbir__filter_trapezoid(float x, float scale)
 {
-	STBIR__DEBUG_ASSERT(scale <= 1);
-	x = (float)fabs(x);
-
 	float halfscale = scale / 2;
 	float t = 0.5f + halfscale;
+	STBIR__DEBUG_ASSERT(scale <= 1);
+
+	x = (float)fabs(x);
 
 	if (x >= t)
 		return 0;
@@ -870,6 +863,7 @@ static void stbir__normalize_downsample_coefficients(stbir__info* stbir_info)
 	int i;
 	for (i = 0; i < stbir_info->output_w; i++)
 	{
+		float scale;
 		float total = 0;
 		int j;
 		for (j = 0; j < num_contributors; j++)
@@ -886,7 +880,7 @@ static void stbir__normalize_downsample_coefficients(stbir__info* stbir_info)
 		STBIR__DEBUG_ASSERT(total > 0.9f);
 		STBIR__DEBUG_ASSERT(total < 1.1f);
 
-		float scale = 1 / total;
+		scale = 1 / total;
 
 		for (j = 0; j < num_contributors; j++)
 		{
@@ -1097,7 +1091,11 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			int decode_pixel_index = x * channels;
 
 			// If the alpha value is 0 it will clobber the color values. Make sure it's not.
-			float alpha = (decode_buffer[decode_pixel_index + alpha_channel] += STBIR_EPSILON);
+			float alpha = decode_buffer[decode_pixel_index + alpha_channel];
+			if (stbir_info->type != STBIR_TYPE_FLOAT) {
+				alpha += STBIR_ALPHA_EPSILON;
+				decode_buffer[decode_pixel_index + alpha_channel] = alpha;
+			}
 
 			for (c = 0; c < channels; c++)
 			{
@@ -1270,7 +1268,6 @@ static float* stbir__get_ring_buffer_scanline(int get_scanline, float* ring_buff
 }
 
 
-// @OPTIMIZE: embed stbir__encode_pixel and move switch out of per-pixel loop
 static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void *output_buffer, float *encode_buffer, int channels, int alpha_channel, int decode)
 {
 	int x;
@@ -1284,14 +1281,14 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			int pixel_index = x*channels;
 
 			float alpha = encode_buffer[pixel_index + alpha_channel];
-			STBIR__DEBUG_ASSERT(alpha > 0);
 			float reciprocal_alpha = alpha ? 1.0f / alpha : 0;
 			for (n = 0; n < channels; n++)
 				if (n != alpha_channel)
 					encode_buffer[pixel_index + n] *= reciprocal_alpha;
 
-			// We added in a small epsilon to prevent the color channel from being deleted with zero alpha. Remove it now.
-			encode_buffer[pixel_index + alpha_channel] -= STBIR_EPSILON;
+			// We added in a small epsilon to prevent the color channel from being deleted with zero alpha.
+			// Because we only add it for integer types, it will automatically be discarded on integer
+			// conversion.
 		}
 	}
 #endif
@@ -1306,7 +1303,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			for (n = 0; n < channels; n++)
 			{
 				int index = pixel_index + n;
-				((unsigned char*)output_buffer)[index] = (unsigned char)(round(stbir__saturate(encode_buffer[index]) * 255));
+				((unsigned char*)output_buffer)[index] = (unsigned char)(floor(stbir__saturate(encode_buffer[index]) * 255 + 0.5f));
 			}
 		}
 		break;
@@ -1323,7 +1320,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			}
 
 			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-				((unsigned char*)output_buffer)[pixel_index + alpha_channel] = (unsigned char)(round(stbir__saturate(encode_buffer[pixel_index + alpha_channel]) * 255));
+				((unsigned char*)output_buffer)[pixel_index + alpha_channel] = (unsigned char)(floor(stbir__saturate(encode_buffer[pixel_index + alpha_channel]) * 255+0.5f));
 		}
 		break;
 
@@ -1335,7 +1332,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			for (n = 0; n < channels; n++)
 			{
 				int index = pixel_index + n;
-				((unsigned short*)output_buffer)[index] = (unsigned short)(round(stbir__saturate(encode_buffer[index]) * 65535));
+				((unsigned short*)output_buffer)[index] = (unsigned short)(floor(stbir__saturate(encode_buffer[index]) * 65535+0.5f));
 			}
 		}
 		break;
@@ -1348,11 +1345,11 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			for (n = 0; n < channels; n++)
 			{
 				int index = pixel_index + n;
-				((unsigned short*)output_buffer)[index] = (unsigned short)(round(stbir__linear_to_srgb(stbir__saturate(encode_buffer[index])) * 65535));
+				((unsigned short*)output_buffer)[index] = (unsigned short)(floor(stbir__linear_to_srgb(stbir__saturate(encode_buffer[index])) * 65535 + 0.5f));
 			}
 
 			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-				((unsigned short*)output_buffer)[pixel_index + alpha_channel] = (unsigned short)(round(stbir__saturate(encode_buffer[pixel_index + alpha_channel]) * 65535));
+				((unsigned short*)output_buffer)[pixel_index + alpha_channel] = (unsigned short)(floor(stbir__saturate(encode_buffer[pixel_index + alpha_channel]) * 65535 + 0.5f));
 		}
 
 		break;
@@ -1365,7 +1362,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			for (n = 0; n < channels; n++)
 			{
 				int index = pixel_index + n;
-				((unsigned int*)output_buffer)[index] = (unsigned int)(round(((double)stbir__saturate(encode_buffer[index])) * 4294967295));
+				((unsigned int*)output_buffer)[index] = (unsigned int)(floor(((double)stbir__saturate(encode_buffer[index])) * 4294967295 + 0.5f));
 			}
 		}
 		break;
@@ -1378,11 +1375,11 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			for (n = 0; n < channels; n++)
 			{
 				int index = pixel_index + n;
-				((unsigned int*)output_buffer)[index] = (unsigned int)(round(((double)stbir__linear_to_srgb(stbir__saturate(encode_buffer[index]))) * 4294967295));
+				((unsigned int*)output_buffer)[index] = (unsigned int)(floor(((double)stbir__linear_to_srgb(stbir__saturate(encode_buffer[index]))) * 4294967295 + 0.5f));
 			}
 
 			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-				((unsigned int*)output_buffer)[pixel_index + alpha_channel] = (unsigned int)(round(((double)stbir__saturate(encode_buffer[pixel_index + alpha_channel])) * 4294967295));
+				((unsigned int*)output_buffer)[pixel_index + alpha_channel] = (unsigned int)(floor(((double)stbir__saturate(encode_buffer[pixel_index + alpha_channel])) * 4294967295 + 0.5f));
 		}
 		break;
 
@@ -1769,10 +1766,9 @@ static int stbir__resize_allocated(stbir__info *info,
 	memcpy(overwrite_tempmem_after_pre, &((unsigned char*)tempmem)[tempmem_size_in_bytes], OVERWRITE_ARRAY_SIZE);
 #endif
 
-	STBIR_ASSERT(info->channels <= STBIR_MAX_CHANNELS);
 	STBIR_ASSERT(info->channels >= 0);
 
-	if (info->channels > STBIR_MAX_CHANNELS || info->channels < 0)
+	if (info->channels < 0)
 		return 0;
 
 	STBIR_ASSERT(info->horizontal_filter < STBIR__ARRAY_SIZE(stbir__filter_info_table));
