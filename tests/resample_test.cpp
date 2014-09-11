@@ -819,12 +819,23 @@ void test_suite(int argc, char **argv)
 	}
 #endif
 
+	// old tests that hacky fix worked on - test that
+	// every uint8 maps to itself
 	for (i = 0; i < 256; i++) {
 		float f = stbir__srgb_to_linear(float(i) / 255);
 		int n = stbir__linear_to_srgb_uchar(f);
 		STBIR_ASSERT(n == i);
 	}
 
+	// new tests that hacky fix failed for - test that
+	// values adjacent to uint8 round to nearest uint8
+	for (i = 0; i < 256; i++) {
+		for (float y = -0.49f; y <= 0.491f; y += 0.01f) {
+			float f = stbir__srgb_to_linear((i+y) / 255.0f);
+			int n = stbir__linear_to_srgb_uchar(f);
+			STBIR_ASSERT(n == i);
+		}
+	}
 
 	test_filters();
 
