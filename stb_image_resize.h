@@ -843,6 +843,15 @@ static void stbir__calculate_coefficients_upsample(stbir__info* stbir_info, stbi
 
 	for (i = 0; i <= in_last_pixel - in_first_pixel; i++)
 		coefficient_group[i] *= filter_scale;
+
+	for (i = in_last_pixel - in_first_pixel; i >= 0; i--)
+	{
+		if (coefficient_group[i])
+			break;
+
+		// This line has no weight. We can skip it.
+		contributor->n1 = contributor->n0 + i - 1;
+	}
 }
 
 static void stbir__calculate_coefficients_downsample(stbir__info* stbir_info, stbir_filter filter, float scale_ratio, int out_first_pixel, int out_last_pixel, float out_center_of_in, stbir__contributors* contributor, float* coefficient_group)
@@ -861,6 +870,15 @@ static void stbir__calculate_coefficients_downsample(stbir__info* stbir_info, st
 		float out_pixel_center = (float)(i + out_first_pixel) + 0.5f;
 		float x = out_pixel_center - out_center_of_in;
 		coefficient_group[i] = stbir__filter_info_table[filter].kernel(x, scale_ratio) * scale_ratio;
+	}
+
+	for (i = out_last_pixel - out_first_pixel; i >= 0; i--)
+	{
+		if (coefficient_group[i])
+			break;
+
+		// This line has no weight. We can skip it.
+		contributor->n1 = contributor->n0 + i - 1;
 	}
 }
 
