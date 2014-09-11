@@ -1561,7 +1561,7 @@ static void stbir__buffer_loop_upsample(stbir__info* stbir_info)
 				else
 				{
 					stbir_info->ring_buffer_first_scanline++;
-					stbir_info->ring_buffer_begin_index = (stbir_info->ring_buffer_begin_index + 1) % stbir__get_filter_pixel_width_horizontal(stbir_info);
+					stbir_info->ring_buffer_begin_index = (stbir_info->ring_buffer_begin_index + 1) % stbir__get_filter_pixel_width_vertical(stbir_info);
 				}
 			}
 		}
