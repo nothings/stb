@@ -30,7 +30,7 @@ public:
 	void* memory;
 } g_context;
 
-void* stbir_malloc(void* context, size_t size)
+void* stbir_malloc(size_t size, void* context)
 {
 	if (!context)
 		return malloc(size);
@@ -42,14 +42,16 @@ void* stbir_malloc(void* context, size_t size)
 	return real_context->memory;
 }
 
-void stbir_free(void* context, void* memory)
+void stbir_free(void* memory, void* context)
 {
 	if (!context)
 		free(memory);
 }
 
+//#include <stdio.h>
 void stbir_progress(float p)
 {
+	//printf("%f\n", p);
 	STBIR_ASSERT(p >= 0 && p <= 1);
 }
 
@@ -373,7 +375,7 @@ void test_subpixel(const char* file, float width_percent, float height_percent, 
 
 	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
 
-	stbir_resize_region(input_data, w, h, 0, output_data, new_w, new_h, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, 0, 0, s1, t1);
+	stbir_resize_region(input_data, w, h, 0, output_data, new_w, new_h, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, 0, 0, s1, t1);
 
 	stbi_image_free(input_data);
 
@@ -384,44 +386,81 @@ void test_subpixel(const char* file, float width_percent, float height_percent, 
 	free(output_data);
 }
 
-void test_premul(const char* file)
+unsigned int* pixel(unsigned int* buffer, int x, int y, int c, int w, int n)
 {
-	int w, h, n;
-	unsigned char* input_data = stbi_load(file, &w, &h, &n, 4);
-	n = 4;
+	return &buffer[y*w*n + x*n + c];
+}
 
-	if (input_data == NULL)
-		return;
+void test_premul()
+{
+	unsigned int input[2 * 2 * 4];
+	unsigned int output[1 * 1 * 4];
+	unsigned int output2[2 * 2 * 4];
 
+	memset(input, 0, sizeof(input));
 
-	// Set alpha for the top half.
-	for (int x = 0; x < w; x++)
-	{
-		for (int y = 0; y < h / 2; y++)
-			input_data[(y*w + x)*n + 3] = input_data[(y*w + x)*n + 0];
-	}
+	// First a test to make sure premul is working properly.
 
-	stbi_write_png("test-output/premul-original.png", w, h, n, input_data, 0);
+	// Top left - solid red
+	*pixel(input, 0, 0, 0, 2, 4) = 255;
+	*pixel(input, 0, 0, 3, 2, 4) = 255;
 
-	int new_w = (int)(w * .1);
-	int new_h = (int)(h * .1);
+	// Bottom left - solid red
+	*pixel(input, 0, 1, 0, 2, 4) = 255;
+	*pixel(input, 0, 1, 3, 2, 4) = 255;
 
-	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
+	// Top right - transparent green
+	*pixel(input, 1, 0, 1, 2, 4) = 255;
+	*pixel(input, 1, 0, 3, 2, 4) = 25;
 
-	stbir_resize_uint8_generic(input_data, w, h, 0, output_data, new_w, new_h, 0, n, n - 1, 0, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context);
+	// Bottom right - transparent green
+	*pixel(input, 1, 1, 1, 2, 4) = 255;
+	*pixel(input, 1, 1, 3, 2, 4) = 25;
 
-	char output[200];
-	sprintf(output, "test-output/premul-%s", file);
-	stbi_write_png(output, new_w, new_h, n, output_data, 0);
+	stbir_resize(input, 2, 2, 0, output, 1, 1, 0, STBIR_TYPE_UINT32, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, &g_context);
 
-	stbir_resize_uint8_generic(input_data, w, h, 0, output_data, new_w, new_h, 0, n, n - 1, STBIR_FLAG_PREMULTIPLIED_ALPHA, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context);
+	float r = (float)255 / 4294967296;
+	float g = (float)255 / 4294967296;
+	float ra = (float)255 / 4294967296;
+	float ga = (float)25 / 4294967296;
+	float a = (ra + ga) / 2;
 
-	sprintf(output, "test-output/nopremul-%s", file);
-	stbi_write_png(output, new_w, new_h, n, output_data, 0);
+	STBIR_ASSERT(output[0] == (int)(r * ra / 2 / a * 4294967296 + 0.5f)); // 232
+	STBIR_ASSERT(output[1] == (int)(g * ga / 2 / a * 4294967296 + 0.5f)); // 23
+	STBIR_ASSERT(output[2] == 0);
+	STBIR_ASSERT(output[3] == (int)(a * 4294967296 + 0.5f)); // 140
 
-	stbi_image_free(input_data);
+	// Now a test to make sure it doesn't clobber existing values.
 
-	free(output_data);
+	// Top right - completely transparent green
+	*pixel(input, 1, 0, 1, 2, 4) = 255;
+	*pixel(input, 1, 0, 3, 2, 4) = 0;
+
+	// Bottom right - completely transparent green
+	*pixel(input, 1, 1, 1, 2, 4) = 255;
+	*pixel(input, 1, 1, 3, 2, 4) = 0;
+
+	stbir_resize(input, 2, 2, 0, output2, 2, 2, 0, STBIR_TYPE_UINT32, 4, 3, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, &g_context);
+
+	STBIR_ASSERT(*pixel(output2, 0, 0, 0, 2, 4) == 255);
+	STBIR_ASSERT(*pixel(output2, 0, 0, 1, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 0, 0, 2, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 0, 0, 3, 2, 4) == 255);
+
+	STBIR_ASSERT(*pixel(output2, 0, 1, 0, 2, 4) == 255);
+	STBIR_ASSERT(*pixel(output2, 0, 1, 1, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 0, 1, 2, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 0, 1, 3, 2, 4) == 255);
+
+	STBIR_ASSERT(*pixel(output2, 1, 0, 0, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 1, 0, 1, 2, 4) == 255);
+	STBIR_ASSERT(*pixel(output2, 1, 0, 2, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 1, 0, 3, 2, 4) == 0);
+
+	STBIR_ASSERT(*pixel(output2, 1, 1, 0, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 1, 1, 1, 2, 4) == 255);
+	STBIR_ASSERT(*pixel(output2, 1, 1, 2, 2, 4) == 0);
+	STBIR_ASSERT(*pixel(output2, 1, 1, 3, 2, 4) == 0);
 }
 
 // test that splitting a pow-2 image into tiles produces identical results
@@ -530,6 +569,7 @@ void test_subpixel_4()
 	STBIR_ASSERT(memcmp(image, output, 8 * 8) == 0);
 }
 
+static unsigned int  image88_int[8][8];
 static unsigned char image88 [8][8];
 static unsigned char output88[8][8];
 static unsigned char output44[4][4];
@@ -563,19 +603,15 @@ void verify_box(void)
 			STBIR_ASSERT(output44[j][i] == ((n+2)>>2));
 			t += n;
 		}
-	STBIR_ASSERT(output11[j][i] == ((t+32)>>6));
+	STBIR_ASSERT(output11[0][0] == ((t+32)>>6));
 }
 
-void verify_filter_normalized(stbir_filter filter, unsigned char* output, int output_size)
+void verify_filter_normalized(stbir_filter filter, int output_size, int value)
 {
-	int value = 64;
-
 	int i, j;
-	for (j = 0; j < 8; ++j)
-		for (i = 0; i < 8; ++i)
-			image88[j][i] = value;
+	unsigned int output[64];
 
-	stbir_resize_uint8_generic(image88[0], 8, 8, 0, output, output_size, output_size, 0, 1, -1, 0, STBIR_EDGE_CLAMP, filter, STBIR_COLORSPACE_LINEAR, NULL);
+	stbir_resize(image88_int[0], 8, 8, 0, output, output_size, output_size, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, filter, filter, STBIR_COLORSPACE_LINEAR, NULL);
 
 	for (j = 0; j < output_size; ++j)
 		for (i = 0; i < output_size; ++i)
@@ -605,29 +641,117 @@ void test_filters(void)
 			image88[j][i] = i&2 ? 255 : 0;
 	verify_box();
 
-	verify_filter_normalized(STBIR_FILTER_BOX, &output88[0][0], 8);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output88[0][0], 8);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output88[0][0], 8);
-	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output88[0][0], 8);
-	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output88[0][0], 8);
+	int value = 64;
 
-	verify_filter_normalized(STBIR_FILTER_BOX, &output44[0][0], 4);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output44[0][0], 4);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output44[0][0], 4);
-	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output44[0][0], 4);
-	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output44[0][0], 4);
+	for (j = 0; j < 8; ++j)
+		for (i = 0; i < 8; ++i)
+			image88_int[j][i] = value;
 
-	verify_filter_normalized(STBIR_FILTER_BOX, &output22[0][0], 2);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output22[0][0], 2);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output22[0][0], 2);
-	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output22[0][0], 2);
-	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output22[0][0], 2);
+	verify_filter_normalized(STBIR_FILTER_BOX, 8, value);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, 8, value);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, 8, value);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 8, value);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, 8, value);
 
-	verify_filter_normalized(STBIR_FILTER_BOX, &output11[0][0], 1);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, &output11[0][0], 1);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, &output11[0][0], 1);
-	verify_filter_normalized(STBIR_FILTER_CATMULLROM, &output11[0][0], 1);
-	verify_filter_normalized(STBIR_FILTER_MITCHELL, &output11[0][0], 1);
+	verify_filter_normalized(STBIR_FILTER_BOX, 4, value);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, 4, value);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, 4, value);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 4, value);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, 4, value);
+
+	verify_filter_normalized(STBIR_FILTER_BOX, 2, value);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, 2, value);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, 2, value);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 2, value);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, 2, value);
+
+	verify_filter_normalized(STBIR_FILTER_BOX, 1, value);
+	verify_filter_normalized(STBIR_FILTER_BILINEAR, 1, value);
+	verify_filter_normalized(STBIR_FILTER_BICUBIC, 1, value);
+	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 1, value);
+	verify_filter_normalized(STBIR_FILTER_MITCHELL, 1, value);
+
+	{
+		// This test is designed to produce coefficients that are very badly denormalized.
+		int v = 556;
+
+		unsigned int input[100 * 100];
+		unsigned int output[11 * 11];
+
+		for (j = 0; j < 100 * 100; ++j)
+			input[j] = v;
+
+		stbir_resize(input, 100, 100, 0, output, 11, 11, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BILINEAR, STBIR_FILTER_BILINEAR, STBIR_COLORSPACE_LINEAR, NULL);
+
+		for (j = 0; j < 11 * 11; ++j)
+			STBIR_ASSERT(v == output[j]);
+	}
+
+	{
+		// Now test the trapezoid filter for downsampling.
+		unsigned int input[3 * 1];
+		unsigned int output[2 * 1];
+
+		input[0] = 0;
+		input[1] = 255;
+		input[2] = 127;
+
+		stbir_resize(input, 3, 1, 0, output, 2, 1, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+
+		STBIR_ASSERT(output[0] == (int)round((float)(input[0] * 2 + input[1]) / 3));
+		STBIR_ASSERT(output[1] == (int)round((float)(input[2] * 2 + input[1]) / 3));
+
+		stbir_resize(input, 1, 3, 0, output, 1, 2, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+
+		STBIR_ASSERT(output[0] == (int)round((float)(input[0] * 2 + input[1]) / 3));
+		STBIR_ASSERT(output[1] == (int)round((float)(input[2] * 2 + input[1]) / 3));
+	}
+
+	{
+		// Now test the trapezoid filter for upsampling.
+		unsigned int input[2 * 1];
+		unsigned int output[3 * 1];
+
+		input[0] = 0;
+		input[1] = 255;
+
+		stbir_resize(input, 2, 1, 0, output, 3, 1, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+
+		STBIR_ASSERT(output[0] == input[0]);
+		STBIR_ASSERT(output[1] == (input[0] + input[1]) / 2);
+		STBIR_ASSERT(output[2] == input[1]);
+
+		stbir_resize(input, 1, 2, 0, output, 1, 3, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+
+		STBIR_ASSERT(output[0] == input[0]);
+		STBIR_ASSERT(output[1] == (input[0] + input[1]) / 2);
+		STBIR_ASSERT(output[2] == input[1]);
+	}
+
+	{
+		// Now for some fun.
+		unsigned char input[2 * 1];
+		unsigned char output[127 * 1];
+
+		input[0] = 0;
+		input[1] = 255;
+
+		stbir_resize(input, 2, 1, 0, output, 127, 1, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+		STBIR_ASSERT(output[0] == 0);
+		STBIR_ASSERT(output[127 / 2 - 1] == 0);
+		STBIR_ASSERT(output[127 / 2] == 128);
+		STBIR_ASSERT(output[127 / 2 + 1] == 255);
+		STBIR_ASSERT(output[126] == 255);
+		stbi_write_png("test-output/trapezoid-upsample-horizontal.png", 127, 1, 1, output, 0);
+
+		stbir_resize(input, 1, 2, 0, output, 1, 127, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
+		STBIR_ASSERT(output[0] == 0);
+		STBIR_ASSERT(output[127 / 2 - 1] == 0);
+		STBIR_ASSERT(output[127 / 2] == 128);
+		STBIR_ASSERT(output[127 / 2 + 1] == 255);
+		STBIR_ASSERT(output[126] == 255);
+		stbi_write_png("test-output/trapezoid-upsample-vertical.png", 1, 127, 1, output, 0);
+	}
 }
 
 
@@ -643,49 +767,54 @@ void test_suite(int argc, char **argv)
 	else
 		barbara = "barbara.png";
 
-	#if 1
+#if 1
 	{
-		float x,y;
+		float x, y;
 		for (x = -1; x < 1; x += 0.05f) {
-			float sums[4] = {0};
+			float sums[5] = { 0 };
 			float o;
-			for (o=-5; o <= 5; ++o) {
-				sums[0] += stbir__filter_mitchell(x+o);
-				sums[1] += stbir__filter_catmullrom(x+o);
-				sums[2] += stbir__filter_bicubic(x+o);
-				sums[3] += stbir__filter_bilinear(x+o);
+			for (o = -5; o <= 5; ++o) {
+				sums[0] += stbir__filter_mitchell(x + o, 1);
+				sums[1] += stbir__filter_catmullrom(x + o, 1);
+				sums[2] += stbir__filter_bicubic(x + o, 1);
+				sums[3] += stbir__filter_bilinear(x + o, 1);
+				sums[4] += stbir__filter_trapezoid(x + o, 0.5f);
 			}
-			for (i=0; i < 4; ++i)
+			for (i = 0; i < 5; ++i)
 				STBIR_ASSERT(sums[i] >= 1.0 - 0.001 && sums[i] <= 1.0 + 0.001);
 		}
 
-		#if 1	
-		for (y = 0.11f; y < 1; y += 0.01f) {
-			for (x = -1; x < 1; x += 0.05f) {
-				float sums[4] = {0};
+#if 1	
+		for (y = 0.11f; y < 1; y += 0.01f) {  // Step
+			for (x = -1; x < 1; x += 0.05f) { // Phase
+				float sums[5] = { 0 };
 				float o;
-				for (o=-5; o <= 5; o += y) {
-					sums[0] += y * stbir__filter_mitchell(x+o);
-					sums[1] += y * stbir__filter_catmullrom(x+o);
-					sums[2] += y * stbir__filter_bicubic(x+o);
-					sums[3] += y * stbir__filter_bilinear(x+o);
+				for (o = -5; o <= 5; o += y) {
+					sums[0] += y * stbir__filter_mitchell(x + o, 1);
+					sums[1] += y * stbir__filter_catmullrom(x + o, 1);
+					sums[2] += y * stbir__filter_bicubic(x + o, 1);
+					sums[4] += y * stbir__filter_trapezoid(x + o, 0.5f);
+					sums[3] += y * stbir__filter_bilinear(x + o, 1);
 				}
-				for (i=0; i < 3; ++i)
-					STBIR_ASSERT(sums[i] >= 1.0 - 0.02 && sums[i] <= 1.0 + 0.02);
+				for (i = 0; i < 3; ++i)
+					STBIR_ASSERT(sums[i] >= 1.0 - 0.0170 && sums[i] <= 1.0 + 0.0170);
 			}
 		}
-		#endif
+#endif
 	}
-	#endif
+#endif
 
-	#if 0 // linear_to_srgb_uchar table
+	for (i = 0; i < 256; i++)
+		STBIR_ASSERT(stbir__linear_to_srgb_uchar(stbir__srgb_to_linear(float(i) / 255)) == i);
+
+#if 0 // linear_to_srgb_uchar table
 	for (i=0; i < 256; ++i) {
 		float f = stbir__srgb_to_linear((i+0.5f)/256.0f);
 		printf("%9d, ", (int) ((f) * (1<<28)));
 		if ((i & 7) == 7)
 			printf("\n");
 	}
-	#endif
+#endif
 
 	test_filters();
 
@@ -694,7 +823,13 @@ void test_suite(int argc, char **argv)
 	test_subpixel_3();
 	test_subpixel_4();
 
-	test_premul(barbara);
+	test_premul();
+
+	// Some tests to make sure errors don't pop up with strange filter/dimension combinations.
+	stbir_resize(image88, 8, 8, 0, output88, 4, 16, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context);
+	stbir_resize(image88, 8, 8, 0, output88, 4, 16, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_BOX, STBIR_COLORSPACE_SRGB, &g_context);
+	stbir_resize(image88, 8, 8, 0, output88, 16, 4, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context);
+	stbir_resize(image88, 8, 8, 0, output88, 16, 4, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_BOX, STBIR_COLORSPACE_SRGB, &g_context);
 
 	for (i = 0; i < 10; i++)
 		test_subpixel(barbara, 0.5f, 0.5f, (float)i / 10, 1);
