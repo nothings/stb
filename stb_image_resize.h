@@ -1,34 +1,132 @@
-/* stb_image_resize - v0.50 - public domain image resampling
-   no warranty implied; use at your own risk
+/*  stb_image_resize - v0.90 - public domain image resizing
+    by Jorge L Rodriguez (@VinoBS) - 2014
+	http://github.com/nothings/stb
 
-   Do this:
-      #define STB_IMAGE_RESIZE_IMPLEMENTATION
-   before you include this file in *one* C or C++ file to create the implementation.
+    Written with emphasis on usage and speed. Only scaling is
+    currently supported, no rotations or translations.
 
-   #define STBIR_ASSERT(x) to avoid using assert.h.
+	DOCUMENTATION
 
-   #define STBIR_MALLOC(size,context) and STBIR_FREE(ptr,context) to avoid using stdlib.h malloc.
-      Each function makes exactly one call to malloc/free, so to avoid allocations,
-      pass in a temp memory block as context and return that from MALLOC.
+		COMPILING & LINKING
+			In one C/C++ file that #includes this file, do this:
+				#define STB_IMAGE_RESIZE_IMPLEMENTATION
+			before the #include. That will create the implementation in that file.
 
-   QUICK NOTES:
-      Written with emphasis on usage and speed. Only the resize operation is
-          currently supported, no rotations or translations.
+		API
+			See the "header file" section of the source for API documentation.
 
-      Supports arbitrary resize for separable filters. For a list of
-          supported filters see the stbir_filter enum. To add a new filter,
-          write a filter function and add it to stbir__filter_info_table.
+		MEMORY ALLOCATION
+			The resize functions here perform a single memory allocation using
+			malloc. To control the memory allocation, before the #include that
+			triggers the implementation, do:
 
-   Revisions:
-      0.50 (2014-??-??) first released version
+				#define STBIR_MALLOC(size,context) ...
+				#define STBIR_FREE(ptr,context)    ...
 
-   TODO:
-      Installable filters
-      Resize that respects alpha test coverage
-         (Reference code: FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage:
-         https://code.google.com/p/nvidia-texture-tools/source/browse/trunk/src/nvimage/FloatImage.cpp )
+			Each resize function makes exactly one call to malloc/free, so to use
+			temp memory, store the temp memory in the context and return that.
 
-   Initial implementation by Jorge L Rodriguez, @VinoBS
+		ASSERT
+			Define STBIR_ASSERT(boolval) to override assert() and not use assert.h
+
+		DEFAULT FILTERS
+			For functions which don't provide explicit control over what filters
+			to use, you can change the compile-time defaults with
+
+				#define STBIR_DEFAULT_FILTER_UPSAMPLE     STBIR_FILTER_something
+				#define STBIR_DEFAULT_FILTER_DOWNSAMPLE   STBIR_FILTER_something
+
+			See stbir_filter in the header-file section for the list of filters.
+
+		NEW FILTERS
+			A number of 1D filter kernels are used. For a list of
+			supported filters see the stbir_filter enum. To add a new filter,
+			write a filter function and add it to stbir__filter_info_table.
+
+		PROGRESS
+			For interactive use with slow resize operations, you can install
+			a progress-report callback:
+
+				#define STBIR_PROGRESS_REPORT(val) my_progress_report(val)
+
+			The parameter val is a float which goes from 0 to 1 as progress is made.
+
+			For example:
+
+				void my_progress_report(float progress)
+				{
+					printf("Progress: %f%%\n", progress*100);
+				}
+
+		ALPHA CHANNEL
+			Most of the resizing functions provide the ability to control how
+			the alpha channel of an image is processed. The important things
+			to know about this:
+
+			1. The best mathematically-behaved version of alpha to use is
+			called "premultiplied alpha", in which the other color channels
+			have had the alpha value multiplied in. If you use premultiplied
+			alpha, linear filtering (such as image resampling done by this
+			library, or performed in texture units on GPUs) does the "right
+			thing". While premultiplied alpha is standard in the movie CGI
+			industry, it is still uncommon in the videogame/real-time world.
+
+			If you linearly filter non-premultiplied alpha, strange effects
+			occur. (For example, the average of 1% opaque bright green
+			and 99% opaque black produces 50% transparent dark green when
+			non-premultiplied, whereas premultiplied it produces 50%
+			transparent near-black. The former introduces green energy
+			that doesn't exist in the source.)
+
+			2. Artists should not edit premultiplied-alpha images; artists
+			want non-premultiplied alpha images. Thus, art tools generally output
+			non-premultiplied alpha images.
+
+			3. You will get best results in most cases by converting images
+			to premultiplied alpha before processing them mathematically.
+
+			4. If you pass the flag STBIR_FLAG_ALPHA_PREMULTIPLIED, the
+			resizer does not do anything special for the alpha channel;
+			it is resampled identically to other channels.
+
+			5. If you do not pass the flag STBIR_FLAG_ALPHA_PREMULTIPLIED,
+			then the resizer weights the contribution of input pixels
+			based on their alpha values, or, equivalently, it multiplies
+			the alpha value into the color channels, resamples, then divides
+			by the resultant alpha value. Input pixels which have alpha=0 do
+			not contribute at all to output pixels unless _all_ of the input
+			pixels affecting that output pixel have alpha=0, in which case
+			the result for that pixel is the same as it would be without
+			STBIR_FLAG_ALPHA_PREMULTIPLIED. However, this is only true for
+			input images in integer formats. For input images in float format,
+			input pixels with alpha=0 have no effect, and output pixels
+			which have alpha=0 will be 0 in all channels. (For float images,
+			you can manually achieve the same result by adding a tiny epsilon
+			value to the alpha channel of every image, and then subtracting
+			or clamping it at the end.)
+
+			6. You can separately control whether the alpha channel is
+			interpreted as linear or affected by the colorspace. By default
+			it is linear; you almost never want to apply the colorspace.
+			(For example, graphics hardware does not apply sRGB conversion
+			to the alpha channel.)
+
+	ADDITIONAL CONTRIBUTORS
+	   Sean Barrett: API design, optimizations
+			
+	REVISIONS
+		0.90 (2014-??-??) first released version
+
+	LICENSE
+		This software is in the public domain. Where that dedication is not
+		recognized, you are granted a perpetual, irrevocable license to copy
+		and modify this file as you see fit.
+
+	TODO
+		Installable filters
+		Resize that respects alpha test coverage
+			(Reference code: FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage:
+			https://code.google.com/p/nvidia-texture-tools/source/browse/trunk/src/nvimage/FloatImage.cpp )
 */
 
 #ifndef STBIR_INCLUDE_STB_IMAGE_RESIZE_H
@@ -92,9 +190,9 @@ STBIRDEF int stbir_resize_float(     const float *input_pixels , int input_w , i
 #define STBIR_ALPHA_CHANNEL_NONE       -1
 
 // Set this flag if your texture has premultiplied alpha. Otherwise, stbir will
-// use alpha-correct resampling by multiplying the the specified alpha channel
-// into all other channels before resampling, then dividing back out after.
-#define STBIR_FLAG_PREMULTIPLIED_ALPHA    (1 << 0)
+// use alpha-weighted resampling (effectively premultiplying, resampling,
+// then unpremultiplying).
+#define STBIR_FLAG_ALPHA_PREMULTIPLIED    (1 << 0)
 // The specified alpha channel should be handled as gamma-corrected value even
 // when doing sRGB operations.
 #define STBIR_FLAG_ALPHA_USES_COLORSPACE  (1 << 1)
@@ -127,7 +225,7 @@ STBIRDEF int stbir_resize_uint8_srgb_edgemode(const unsigned char *input_pixels 
 //     * Alpha-channel can be processed separately
 //       * If alpha_channel is not STBIR_ALPHA_CHANNEL_NONE
 //         * Alpha channel will not be gamma corrected (unless flags&STBIR_FLAG_GAMMA_CORRECT)
-//         * Filters will be weighted by alpha channel (unless flags&STBIR_FLAG_PREMULTIPLIED_ALPHA)
+//         * Filters will be weighted by alpha channel (unless flags&STBIR_FLAG_ALPHA_PREMULTIPLIED)
 //     * Filter can be selected explicitly
 //     * uint16 image type
 //     * sRGB colorspace available for all types
@@ -224,29 +322,6 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
                                    float s0, float t0, float s1, float t1);
 // (s0, t0) & (s1, t1) are the top-left and bottom right corner (uv addressing style: [0, 1]x[0, 1]) of a region of the input image to use.
 
-
-// Define this if you want a progress report.
-// Example:
-// void my_progress_report(float progress)
-// {
-//     printf("Progress: %f%%\n", progress*100);
-// }
-//
-// #define STBIR_PROGRESS_REPORT my_progress_report
-
-#ifndef STBIR_PROGRESS_REPORT
-#define STBIR_PROGRESS_REPORT(float_0_to_1)
-#endif
-
-// This value is added to alpha just before premultiplication to avoid
-// zeroing out color values. It is equivalent to 2^-80. If you don't want
-// that behavior (it may interfere if you have floating point images with
-// very small alpha values) then you can define STBIR_NO_ALPHA_EPSILON to
-// disable it.
-#ifndef STBIR_ALPHA_EPSILON
-#define STBIR_ALPHA_EPSILON ((float)1 / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20))
-#endif
-
 //
 //
 ////   end header file   /////////////////////////////////////////////////////
@@ -279,9 +354,8 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
 
 #ifndef STBIR_MALLOC
 #include <stdlib.h>
-
-#define STBIR_MALLOC(x,c) malloc(x)
-#define STBIR_FREE(x,c)   free(x)
+#define STBIR_MALLOC(size,c) malloc(size)
+#define STBIR_FREE(ptr,c)   free(ptr)
 #endif
 
 #ifndef _MSC_VER
@@ -313,6 +387,21 @@ typedef unsigned char stbir__validate_uint32[sizeof(stbir_uint32) == 4 ? 1 : -1]
 #ifndef STBIR_DEFAULT_FILTER_DOWNSAMPLE
 #define STBIR_DEFAULT_FILTER_DOWNSAMPLE  STBIR_FILTER_MITCHELL
 #endif
+
+#ifndef STBIR_PROGRESS_REPORT
+#define STBIR_PROGRESS_REPORT(float_0_to_1)
+#endif
+
+// This value is added to alpha just before premultiplication to avoid
+// zeroing out color values. It is equivalent to 2^-80. If you don't want
+// that behavior (it may interfere if you have floating point images with
+// very small alpha values) then you can define STBIR_NO_ALPHA_EPSILON to
+// disable it.
+#ifndef STBIR_ALPHA_EPSILON
+#define STBIR_ALPHA_EPSILON ((float)1 / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20))
+#endif
+
+
 
 #define STBIR__UNUSED_PARAM(s) s=s;
 
@@ -1077,7 +1166,7 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 	}
 
 #ifndef STBIR_NO_ALPHA_EPSILON
-	if (!(stbir_info->flags & STBIR_FLAG_PREMULTIPLIED_ALPHA))
+	if (!(stbir_info->flags & STBIR_FLAG_ALPHA_PREMULTIPLIED))
 	{
 		for (x = -stbir__get_filter_pixel_margin_horizontal(stbir_info); x < max_x; x++)
 		{
@@ -1267,7 +1356,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 	int n;
 
 #ifndef STBIR_NO_ALPHA_EPSILON
-	if (!(stbir_info->flags&STBIR_FLAG_PREMULTIPLIED_ALPHA))
+	if (!(stbir_info->flags&STBIR_FLAG_ALPHA_PREMULTIPLIED))
 	{
 		for (x=0; x < num_pixels; ++x)
 		{
@@ -1773,9 +1862,9 @@ static int stbir__resize_allocated(stbir__info *info,
 		return 0;
 
 	if (alpha_channel < 0)
-		flags |= STBIR_FLAG_ALPHA_USES_COLORSPACE | STBIR_FLAG_PREMULTIPLIED_ALPHA;
+		flags |= STBIR_FLAG_ALPHA_USES_COLORSPACE | STBIR_FLAG_ALPHA_PREMULTIPLIED;
 
-	if (!(flags&STBIR_FLAG_ALPHA_USES_COLORSPACE) || !(flags&STBIR_FLAG_PREMULTIPLIED_ALPHA))
+	if (!(flags&STBIR_FLAG_ALPHA_USES_COLORSPACE) || !(flags&STBIR_FLAG_ALPHA_PREMULTIPLIED))
 		STBIR_ASSERT(alpha_channel >= 0 && alpha_channel < info->channels);
 
 	if (alpha_channel >= info->channels)
