@@ -1,37 +1,132 @@
-/* stb_image_resize - v0.50 - public domain image resampling
-   no warranty implied; use at your own risk
+/*  stb_image_resize - v0.90 - public domain image resizing
+    by Jorge L Rodriguez (@VinoBS) - 2014
+	http://github.com/nothings/stb
 
-   Do this:
-      #define STB_IMAGE_RESIZE_IMPLEMENTATION
-   before you include this file in *one* C or C++ file to create the implementation.
+    Written with emphasis on usage and speed. Only scaling is
+    currently supported, no rotations or translations.
 
-   #define STBIR_ASSERT(x) to avoid using assert.h.
+	DOCUMENTATION
 
-   #define STBIR_MALLOC(size,context) and STBIR_FREE(ptr,context) to avoid using stdlib.h malloc.
-      Each function makes exactly one call to malloc/free, so to avoid allocations,
-      pass in a temp memory block as context and return that from MALLOC.
+		COMPILING & LINKING
+			In one C/C++ file that #includes this file, do this:
+				#define STB_IMAGE_RESIZE_IMPLEMENTATION
+			before the #include. That will create the implementation in that file.
 
-   QUICK NOTES:
-      Written with emphasis on usage and speed. Only the resize operation is
-          currently supported, no rotations or translations.
+		API
+			See the "header file" section of the source for API documentation.
 
-      Supports arbitrary resize for separable filters. For a list of
-          supported filters see the stbir_filter enum. To add a new filter,
-          write a filter function and add it to stbir__filter_info_table.
+		MEMORY ALLOCATION
+			The resize functions here perform a single memory allocation using
+			malloc. To control the memory allocation, before the #include that
+			triggers the implementation, do:
 
-   STBIR_MAX_CHANNELS: defaults to 16, if you need more, bump it up
+				#define STBIR_MALLOC(size,context) ...
+				#define STBIR_FREE(ptr,context)    ...
 
-   Revisions:
-      0.50 (2014-??-??) first released version
+			Each resize function makes exactly one call to malloc/free, so to use
+			temp memory, store the temp memory in the context and return that.
 
-   TODO:
-      Installable filters
-      Specify wrap and filter modes independently for each axis
-      Resize that respects alpha test coverage
-         (Reference code: FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage:
-         https://code.google.com/p/nvidia-texture-tools/source/browse/trunk/src/nvimage/FloatImage.cpp )
+		ASSERT
+			Define STBIR_ASSERT(boolval) to override assert() and not use assert.h
 
-   Initial implementation by Jorge L Rodriguez, @VinoBS
+		DEFAULT FILTERS
+			For functions which don't provide explicit control over what filters
+			to use, you can change the compile-time defaults with
+
+				#define STBIR_DEFAULT_FILTER_UPSAMPLE     STBIR_FILTER_something
+				#define STBIR_DEFAULT_FILTER_DOWNSAMPLE   STBIR_FILTER_something
+
+			See stbir_filter in the header-file section for the list of filters.
+
+		NEW FILTERS
+			A number of 1D filter kernels are used. For a list of
+			supported filters see the stbir_filter enum. To add a new filter,
+			write a filter function and add it to stbir__filter_info_table.
+
+		PROGRESS
+			For interactive use with slow resize operations, you can install
+			a progress-report callback:
+
+				#define STBIR_PROGRESS_REPORT(val) my_progress_report(val)
+
+			The parameter val is a float which goes from 0 to 1 as progress is made.
+
+			For example:
+
+				void my_progress_report(float progress)
+				{
+					printf("Progress: %f%%\n", progress*100);
+				}
+
+		ALPHA CHANNEL
+			Most of the resizing functions provide the ability to control how
+			the alpha channel of an image is processed. The important things
+			to know about this:
+
+			1. The best mathematically-behaved version of alpha to use is
+			called "premultiplied alpha", in which the other color channels
+			have had the alpha value multiplied in. If you use premultiplied
+			alpha, linear filtering (such as image resampling done by this
+			library, or performed in texture units on GPUs) does the "right
+			thing". While premultiplied alpha is standard in the movie CGI
+			industry, it is still uncommon in the videogame/real-time world.
+
+			If you linearly filter non-premultiplied alpha, strange effects
+			occur. (For example, the average of 1% opaque bright green
+			and 99% opaque black produces 50% transparent dark green when
+			non-premultiplied, whereas premultiplied it produces 50%
+			transparent near-black. The former introduces green energy
+			that doesn't exist in the source.)
+
+			2. Artists should not edit premultiplied-alpha images; artists
+			want non-premultiplied alpha images. Thus, art tools generally output
+			non-premultiplied alpha images.
+
+			3. You will get best results in most cases by converting images
+			to premultiplied alpha before processing them mathematically.
+
+			4. If you pass the flag STBIR_FLAG_ALPHA_PREMULTIPLIED, the
+			resizer does not do anything special for the alpha channel;
+			it is resampled identically to other channels.
+
+			5. If you do not pass the flag STBIR_FLAG_ALPHA_PREMULTIPLIED,
+			then the resizer weights the contribution of input pixels
+			based on their alpha values, or, equivalently, it multiplies
+			the alpha value into the color channels, resamples, then divides
+			by the resultant alpha value. Input pixels which have alpha=0 do
+			not contribute at all to output pixels unless _all_ of the input
+			pixels affecting that output pixel have alpha=0, in which case
+			the result for that pixel is the same as it would be without
+			STBIR_FLAG_ALPHA_PREMULTIPLIED. However, this is only true for
+			input images in integer formats. For input images in float format,
+			input pixels with alpha=0 have no effect, and output pixels
+			which have alpha=0 will be 0 in all channels. (For float images,
+			you can manually achieve the same result by adding a tiny epsilon
+			value to the alpha channel of every image, and then subtracting
+			or clamping it at the end.)
+
+			6. You can separately control whether the alpha channel is
+			interpreted as linear or affected by the colorspace. By default
+			it is linear; you almost never want to apply the colorspace.
+			(For example, graphics hardware does not apply sRGB conversion
+			to the alpha channel.)
+
+	ADDITIONAL CONTRIBUTORS
+	   Sean Barrett: API design, optimizations
+			
+	REVISIONS
+		0.90 (2014-??-??) first released version
+
+	LICENSE
+		This software is in the public domain. Where that dedication is not
+		recognized, you are granted a perpetual, irrevocable license to copy
+		and modify this file as you see fit.
+
+	TODO
+		Installable filters
+		Resize that respects alpha test coverage
+			(Reference code: FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage:
+			https://code.google.com/p/nvidia-texture-tools/source/browse/trunk/src/nvimage/FloatImage.cpp )
 */
 
 #ifndef STBIR_INCLUDE_STB_IMAGE_RESIZE_H
@@ -95,9 +190,9 @@ STBIRDEF int stbir_resize_float(     const float *input_pixels , int input_w , i
 #define STBIR_ALPHA_CHANNEL_NONE       -1
 
 // Set this flag if your texture has premultiplied alpha. Otherwise, stbir will
-// use alpha-correct resampling by multiplying the the specified alpha channel
-// into all other channels before resampling, then dividing back out after.
-#define STBIR_FLAG_PREMULTIPLIED_ALPHA    (1 << 0)
+// use alpha-weighted resampling (effectively premultiplying, resampling,
+// then unpremultiplying).
+#define STBIR_FLAG_ALPHA_PREMULTIPLIED    (1 << 0)
 // The specified alpha channel should be handled as gamma-corrected value even
 // when doing sRGB operations.
 #define STBIR_FLAG_ALPHA_USES_COLORSPACE  (1 << 1)
@@ -130,7 +225,7 @@ STBIRDEF int stbir_resize_uint8_srgb_edgemode(const unsigned char *input_pixels 
 //     * Alpha-channel can be processed separately
 //       * If alpha_channel is not STBIR_ALPHA_CHANNEL_NONE
 //         * Alpha channel will not be gamma corrected (unless flags&STBIR_FLAG_GAMMA_CORRECT)
-//         * Filters can be weighted by alpha channel (if flags&STBIR_FLAG_NONPREMUL_ALPHA)
+//         * Filters will be weighted by alpha channel (unless flags&STBIR_FLAG_ALPHA_PREMULTIPLIED)
 //     * Filter can be selected explicitly
 //     * uint16 image type
 //     * sRGB colorspace available for all types
@@ -227,29 +322,6 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
                                    float s0, float t0, float s1, float t1);
 // (s0, t0) & (s1, t1) are the top-left and bottom right corner (uv addressing style: [0, 1]x[0, 1]) of a region of the input image to use.
 
-
-// Define this if you want a progress report.
-// Example:
-// void my_progress_report(float progress)
-// {
-//     printf("Progress: %f%%\n", progress*100);
-// }
-//
-// #define STBIR_PROGRESS_REPORT my_progress_report
-
-#ifndef STBIR_PROGRESS_REPORT
-#define STBIR_PROGRESS_REPORT(float_0_to_1)
-#endif
-
-// This value is added to alpha just before premultiplication to avoid
-// zeroing out color values. It is equivalent to 2^-80. If you don't want
-// that behavior (it may interfere if you have floating point images with
-// very small alpha values) then you can define STBIR_NO_ALPHA_EPSILON to
-// disable it.
-#ifndef STBIR_EPSILON
-#define STBIR_EPSILON ((float)1 / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20))
-#endif
-
 //
 //
 ////   end header file   /////////////////////////////////////////////////////
@@ -282,9 +354,8 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
 
 #ifndef STBIR_MALLOC
 #include <stdlib.h>
-
-#define STBIR_MALLOC(x,c) malloc(x)
-#define STBIR_FREE(x,c)   free(x)
+#define STBIR_MALLOC(size,c) malloc(size)
+#define STBIR_FREE(ptr,c)   free(ptr)
 #endif
 
 #ifndef _MSC_VER
@@ -317,9 +388,20 @@ typedef unsigned char stbir__validate_uint32[sizeof(stbir_uint32) == 4 ? 1 : -1]
 #define STBIR_DEFAULT_FILTER_DOWNSAMPLE  STBIR_FILTER_MITCHELL
 #endif
 
-#ifndef STBIR_MAX_CHANNELS
-#define STBIR_MAX_CHANNELS  16
+#ifndef STBIR_PROGRESS_REPORT
+#define STBIR_PROGRESS_REPORT(float_0_to_1)
 #endif
+
+// This value is added to alpha just before premultiplication to avoid
+// zeroing out color values. It is equivalent to 2^-80. If you don't want
+// that behavior (it may interfere if you have floating point images with
+// very small alpha values) then you can define STBIR_NO_ALPHA_EPSILON to
+// disable it.
+#ifndef STBIR_ALPHA_EPSILON
+#define STBIR_ALPHA_EPSILON ((float)1 / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20))
+#endif
+
+
 
 #define STBIR__UNUSED_PARAM(s) s=s;
 
@@ -457,38 +539,38 @@ static float stbir__srgb_uchar_to_linear_float[256] = {
 // sRGB transition values, scaled by 1<<28
 static int stbir__srgb_offset_to_linear_scaled[256] =
 {
-	    40579,    121738,    202897,    284056,    365216,    446375,    527534,    608693,
-	   689852,    771011,    852421,    938035,   1028466,   1123787,   1224073,   1329393,
-	  1439819,   1555418,   1676257,   1802402,   1933917,   2070867,   2213313,   2361317,
-	  2514938,   2674237,   2839271,   3010099,   3186776,   3369359,   3557903,   3752463,
-	  3953090,   4159840,   4372764,   4591913,   4817339,   5049091,   5287220,   5531775,
-	  5782804,   6040356,   6304477,   6575216,   6852618,   7136729,   7427596,   7725263,
-	  8029775,   8341176,   8659511,   8984821,   9317151,   9656544,  10003040,  10356683,
-	 10717513,  11085572,  11460901,  11843540,  12233529,  12630908,  13035717,  13447994,
-	 13867779,  14295110,  14730025,  15172563,  15622760,  16080655,  16546285,  17019686,
-	 17500894,  17989948,  18486882,  18991734,  19504536,  20025326,  20554138,  21091010,
-	 21635972,  22189062,  22750312,  23319758,  23897432,  24483368,  25077600,  25680162,
-	 26291086,  26910406,  27538152,  28174360,  28819058,  29472282,  30134062,  30804430,
-	 31483418,  32171058,  32867378,  33572412,  34286192,  35008744,  35740104,  36480296,
-	 37229356,  37987316,  38754196,  39530036,  40314860,  41108700,  41911584,  42723540,
-	 43544600,  44374792,  45214140,  46062680,  46920440,  47787444,  48663720,  49549300,
-	 50444212,  51348480,  52262136,  53185204,  54117712,  55059688,  56011160,  56972156,
-	 57942704,  58922824,  59912552,  60911908,  61920920,  62939616,  63968024,  65006168,
-	 66054072,  67111760,  68179272,  69256616,  70343832,  71440936,  72547952,  73664920,
-	 74791848,  75928776,  77075720,  78232704,  79399760,  80576904,  81764168,  82961576,
-	 84169152,  85386920,  86614904,  87853120,  89101608,  90360384,  91629480,  92908904,
-	 94198688,  95498864,  96809440,  98130456,  99461928, 100803872, 102156320, 103519296,
-	104892824, 106276920, 107671616, 109076928, 110492880, 111919504, 113356808, 114804824,
-	116263576, 117733080, 119213360, 120704448, 122206352, 123719104, 125242720, 126777232,
-	128322648, 129879000, 131446312, 133024600, 134613888, 136214192, 137825552, 139447968,
-	141081456, 142726080, 144381808, 146048704, 147726768, 149416016, 151116496, 152828192,
-	154551168, 156285408, 158030944, 159787808, 161556000, 163335568, 165126512, 166928864,
-	168742640, 170567856, 172404544, 174252704, 176112384, 177983568, 179866320, 181760640,
-	183666528, 185584032, 187513168, 189453952, 191406400, 193370544, 195346384, 197333952,
-	199333264, 201344352, 203367216, 205401904, 207448400, 209506752, 211576960, 213659056,
-	215753056, 217858976, 219976832, 222106656, 224248464, 226402272, 228568096, 230745952,
-	232935872, 235137872, 237351968, 239578176, 241816512, 244066992, 246329648, 248604512,
-	250891568, 253190848, 255502368, 257826160, 260162240, 262510608, 264871312, 267244336,
+	        0,     40738,    122216,    203693,    285170,    366648,    448125,    529603,
+	   611080,    692557,    774035,    855852,    942009,   1033024,   1128971,   1229926,
+	  1335959,   1447142,   1563542,   1685229,   1812268,   1944725,   2082664,   2226148,
+	  2375238,   2529996,   2690481,   2856753,   3028870,   3206888,   3390865,   3580856,
+	  3776916,   3979100,   4187460,   4402049,   4622919,   4850123,   5083710,   5323731,
+	  5570236,   5823273,   6082892,   6349140,   6622065,   6901714,   7188133,   7481369,
+	  7781466,   8088471,   8402427,   8723380,   9051372,   9386448,   9728650,  10078021,
+	 10434603,  10798439,  11169569,  11548036,  11933879,  12327139,  12727857,  13136073,
+	 13551826,  13975156,  14406100,  14844697,  15290987,  15745007,  16206795,  16676389,
+	 17153826,  17639142,  18132374,  18633560,  19142734,  19659934,  20185196,  20718552,
+	 21260042,  21809696,  22367554,  22933648,  23508010,  24090680,  24681686,  25281066,
+	 25888850,  26505076,  27129772,  27762974,  28404716,  29055026,  29713942,  30381490,
+	 31057708,  31742624,  32436272,  33138682,  33849884,  34569912,  35298800,  36036568,
+	 36783260,  37538896,  38303512,  39077136,  39859796,  40651528,  41452360,  42262316,
+	 43081432,  43909732,  44747252,  45594016,  46450052,  47315392,  48190064,  49074096,
+	 49967516,  50870356,  51782636,  52704392,  53635648,  54576432,  55526772,  56486700,
+	 57456236,  58435408,  59424248,  60422780,  61431036,  62449032,  63476804,  64514376,
+	 65561776,  66619028,  67686160,  68763192,  69850160,  70947088,  72053992,  73170912,
+	 74297864,  75434880,  76581976,  77739184,  78906536,  80084040,  81271736,  82469648,
+	 83677792,  84896192,  86124888,  87363888,  88613232,  89872928,  91143016,  92423512,
+	 93714432,  95015816,  96327688,  97650056,  98982952, 100326408, 101680440, 103045072,
+	104420320, 105806224, 107202800, 108610064, 110028048, 111456776, 112896264, 114346544,
+	115807632, 117279552, 118762328, 120255976, 121760536, 123276016, 124802440, 126339832,
+	127888216, 129447616, 131018048, 132599544, 134192112, 135795792, 137410592, 139036528,
+	140673648, 142321952, 143981456, 145652208, 147334208, 149027488, 150732064, 152447968,
+	154175200, 155913792, 157663776, 159425168, 161197984, 162982240, 164777968, 166585184,
+	168403904, 170234160, 172075968, 173929344, 175794320, 177670896, 179559120, 181458992,
+	183370528, 185293776, 187228736, 189175424, 191133888, 193104112, 195086128, 197079968,
+	199085648, 201103184, 203132592, 205173888, 207227120, 209292272, 211369392, 213458480,
+	215559568, 217672656, 219797792, 221934976, 224084240, 226245600, 228419056, 230604656,
+	232802400, 235012320, 237234432, 239468736, 241715280, 243974080, 246245120, 248528464,
+	250824112, 253132064, 255452368, 257785040, 260130080, 262487520, 264857376, 267239664,
 };
 
 static float stbir__srgb_to_linear(float f)
@@ -513,32 +595,25 @@ static unsigned char stbir__linear_to_srgb_uchar(float f)
 	int v = 0;
 	int i;
 
-	// Everything below 128 is off by 1. This fixes that.
-	int fix = 0;
+	i = v + 128; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v +  64; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v +  32; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v +  16; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v +   8; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v +   4; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v +   2; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+	i = v +   1; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
 
-	// Adding 1 to 0 with the fix gives incorrect results for input 0. This fixes that.
-	if (x < 81000)
-		return 0;
-
-	i =    128; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i; else fix = 1;
-	i = v + 64; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
-	i = v + 32; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
-	i = v + 16; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
-	i = v + 8;  if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
-	i = v + 4;  if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
-	i = v + 2;  if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
-	i = v + 1;  if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
-
-	return (unsigned char)v + fix;
+	return (unsigned char) v;
 }
 
 static float stbir__filter_trapezoid(float x, float scale)
 {
-	STBIR__DEBUG_ASSERT(scale <= 1);
-	x = (float)fabs(x);
-
 	float halfscale = scale / 2;
 	float t = 0.5f + halfscale;
+	STBIR__DEBUG_ASSERT(scale <= 1);
+
+	x = (float)fabs(x);
 
 	if (x >= t)
 		return 0;
@@ -917,6 +992,7 @@ static void stbir__normalize_downsample_coefficients(stbir__info* stbir_info)
 
 	for (i = 0; i < stbir_info->output_w; i++)
 	{
+		float scale;
 		float total = 0;
 
 		for (j = 0; j < num_contributors; j++)
@@ -933,7 +1009,7 @@ static void stbir__normalize_downsample_coefficients(stbir__info* stbir_info)
 		STBIR__DEBUG_ASSERT(total > 0.9f);
 		STBIR__DEBUG_ASSERT(total < 1.1f);
 
-		float scale = 1 / total;
+		scale = 1 / total;
 
 		for (j = 0; j < num_contributors; j++)
 		{
@@ -1168,14 +1244,18 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 	}
 
 #ifndef STBIR_NO_ALPHA_EPSILON
-	if (!(stbir_info->flags & STBIR_FLAG_PREMULTIPLIED_ALPHA))
+	if (!(stbir_info->flags & STBIR_FLAG_ALPHA_PREMULTIPLIED))
 	{
 		for (x = -stbir__get_filter_pixel_margin_horizontal(stbir_info); x < max_x; x++)
 		{
 			int decode_pixel_index = x * channels;
 
 			// If the alpha value is 0 it will clobber the color values. Make sure it's not.
-			float alpha = (decode_buffer[decode_pixel_index + alpha_channel] += STBIR_EPSILON);
+			float alpha = decode_buffer[decode_pixel_index + alpha_channel];
+			if (stbir_info->type != STBIR_TYPE_FLOAT) {
+				alpha += STBIR_ALPHA_EPSILON;
+				decode_buffer[decode_pixel_index + alpha_channel] = alpha;
+			}
 
 			for (c = 0; c < channels; c++)
 			{
@@ -1351,28 +1431,27 @@ static float* stbir__get_ring_buffer_scanline(int get_scanline, float* ring_buff
 }
 
 
-// @OPTIMIZE: embed stbir__encode_pixel and move switch out of per-pixel loop
 static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void *output_buffer, float *encode_buffer, int channels, int alpha_channel, int decode)
 {
 	int x;
 	int n;
 
 #ifndef STBIR_NO_ALPHA_EPSILON
-	if (!(stbir_info->flags&STBIR_FLAG_PREMULTIPLIED_ALPHA))
+	if (!(stbir_info->flags&STBIR_FLAG_ALPHA_PREMULTIPLIED))
 	{
 		for (x=0; x < num_pixels; ++x)
 		{
 			int pixel_index = x*channels;
 
 			float alpha = encode_buffer[pixel_index + alpha_channel];
-			STBIR__DEBUG_ASSERT(alpha > 0);
 			float reciprocal_alpha = alpha ? 1.0f / alpha : 0;
 			for (n = 0; n < channels; n++)
 				if (n != alpha_channel)
 					encode_buffer[pixel_index + n] *= reciprocal_alpha;
 
-			// We added in a small epsilon to prevent the color channel from being deleted with zero alpha. Remove it now.
-			encode_buffer[pixel_index + alpha_channel] -= STBIR_EPSILON;
+			// We added in a small epsilon to prevent the color channel from being deleted with zero alpha.
+			// Because we only add it for integer types, it will automatically be discarded on integer
+			// conversion.
 		}
 	}
 #endif
@@ -1387,7 +1466,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			for (n = 0; n < channels; n++)
 			{
 				int index = pixel_index + n;
-				((unsigned char*)output_buffer)[index] = (unsigned char)(round(stbir__saturate(encode_buffer[index]) * 255));
+				((unsigned char*)output_buffer)[index] = (unsigned char)(floor(stbir__saturate(encode_buffer[index]) * 255 + 0.5f));
 			}
 		}
 		break;
@@ -1404,7 +1483,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			}
 
 			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-				((unsigned char*)output_buffer)[pixel_index + alpha_channel] = (unsigned char)(round(stbir__saturate(encode_buffer[pixel_index + alpha_channel]) * 255));
+				((unsigned char*)output_buffer)[pixel_index + alpha_channel] = (unsigned char)(floor(stbir__saturate(encode_buffer[pixel_index + alpha_channel]) * 255+0.5f));
 		}
 		break;
 
@@ -1416,7 +1495,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			for (n = 0; n < channels; n++)
 			{
 				int index = pixel_index + n;
-				((unsigned short*)output_buffer)[index] = (unsigned short)(round(stbir__saturate(encode_buffer[index]) * 65535));
+				((unsigned short*)output_buffer)[index] = (unsigned short)(floor(stbir__saturate(encode_buffer[index]) * 65535+0.5f));
 			}
 		}
 		break;
@@ -1429,11 +1508,11 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			for (n = 0; n < channels; n++)
 			{
 				int index = pixel_index + n;
-				((unsigned short*)output_buffer)[index] = (unsigned short)(round(stbir__linear_to_srgb(stbir__saturate(encode_buffer[index])) * 65535));
+				((unsigned short*)output_buffer)[index] = (unsigned short)(floor(stbir__linear_to_srgb(stbir__saturate(encode_buffer[index])) * 65535 + 0.5f));
 			}
 
 			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-				((unsigned short*)output_buffer)[pixel_index + alpha_channel] = (unsigned short)(round(stbir__saturate(encode_buffer[pixel_index + alpha_channel]) * 65535));
+				((unsigned short*)output_buffer)[pixel_index + alpha_channel] = (unsigned short)(floor(stbir__saturate(encode_buffer[pixel_index + alpha_channel]) * 65535 + 0.5f));
 		}
 
 		break;
@@ -1446,7 +1525,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			for (n = 0; n < channels; n++)
 			{
 				int index = pixel_index + n;
-				((unsigned int*)output_buffer)[index] = (unsigned int)(round(((double)stbir__saturate(encode_buffer[index])) * 4294967295));
+				((unsigned int*)output_buffer)[index] = (unsigned int)(floor(((double)stbir__saturate(encode_buffer[index])) * 4294967295 + 0.5f));
 			}
 		}
 		break;
@@ -1459,11 +1538,11 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			for (n = 0; n < channels; n++)
 			{
 				int index = pixel_index + n;
-				((unsigned int*)output_buffer)[index] = (unsigned int)(round(((double)stbir__linear_to_srgb(stbir__saturate(encode_buffer[index]))) * 4294967295));
+				((unsigned int*)output_buffer)[index] = (unsigned int)(floor(((double)stbir__linear_to_srgb(stbir__saturate(encode_buffer[index]))) * 4294967295 + 0.5f));
 			}
 
 			if (!(stbir_info->flags&STBIR_FLAG_ALPHA_USES_COLORSPACE))
-				((unsigned int*)output_buffer)[pixel_index + alpha_channel] = (unsigned int)(round(((double)stbir__saturate(encode_buffer[pixel_index + alpha_channel])) * 4294967295));
+				((unsigned int*)output_buffer)[pixel_index + alpha_channel] = (unsigned int)(floor(((double)stbir__saturate(encode_buffer[pixel_index + alpha_channel])) * 4294967295 + 0.5f));
 		}
 		break;
 
@@ -1848,10 +1927,9 @@ static int stbir__resize_allocated(stbir__info *info,
 	memcpy(overwrite_tempmem_after_pre, &((unsigned char*)tempmem)[tempmem_size_in_bytes], OVERWRITE_ARRAY_SIZE);
 #endif
 
-	STBIR_ASSERT(info->channels <= STBIR_MAX_CHANNELS);
 	STBIR_ASSERT(info->channels >= 0);
 
-	if (info->channels > STBIR_MAX_CHANNELS || info->channels < 0)
+	if (info->channels < 0)
 		return 0;
 
 	STBIR_ASSERT(info->horizontal_filter < STBIR__ARRAY_SIZE(stbir__filter_info_table));
@@ -1863,9 +1941,9 @@ static int stbir__resize_allocated(stbir__info *info,
 		return 0;
 
 	if (alpha_channel < 0)
-		flags |= STBIR_FLAG_ALPHA_USES_COLORSPACE | STBIR_FLAG_PREMULTIPLIED_ALPHA;
+		flags |= STBIR_FLAG_ALPHA_USES_COLORSPACE | STBIR_FLAG_ALPHA_PREMULTIPLIED;
 
-	if (!(flags&STBIR_FLAG_ALPHA_USES_COLORSPACE) || !(flags&STBIR_FLAG_PREMULTIPLIED_ALPHA))
+	if (!(flags&STBIR_FLAG_ALPHA_USES_COLORSPACE) || !(flags&STBIR_FLAG_ALPHA_PREMULTIPLIED))
 		STBIR_ASSERT(alpha_channel >= 0 && alpha_channel < info->channels);
 
 	if (alpha_channel >= info->channels)

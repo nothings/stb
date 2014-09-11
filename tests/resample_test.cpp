@@ -45,7 +45,7 @@ void* stbir_malloc(size_t size, void* context)
 void stbir_free(void* memory, void* context)
 {
 	if (!context)
-		return free(memory);
+		free(memory);
 }
 
 //#include <stdio.h>
@@ -425,10 +425,10 @@ void test_premul()
 	float ga = (float)25 / 4294967296;
 	float a = (ra + ga) / 2;
 
-	STBIR_ASSERT(output[0] == (int)(r * ra / 2 / a * 4294967296 + 0.5f)); // 232
-	STBIR_ASSERT(output[1] == (int)(g * ga / 2 / a * 4294967296 + 0.5f)); // 23
+	STBIR_ASSERT(output[0] == (unsigned int)(r * ra / 2 / a * 4294967296 + 0.5f)); // 232
+	STBIR_ASSERT(output[1] == (unsigned int)(g * ga / 2 / a * 4294967296 + 0.5f)); // 23
 	STBIR_ASSERT(output[2] == 0);
-	STBIR_ASSERT(output[3] == (int)(a * 4294967296 + 0.5f)); // 140
+	STBIR_ASSERT(output[3] == (unsigned int)(a * 4294967296 + 0.5f)); // 140
 
 	// Now a test to make sure it doesn't clobber existing values.
 
@@ -606,7 +606,7 @@ void verify_box(void)
 	STBIR_ASSERT(output11[0][0] == ((t+32)>>6));
 }
 
-void verify_filter_normalized(stbir_filter filter, int output_size, int value)
+void verify_filter_normalized(stbir_filter filter, int output_size, unsigned int value)
 {
 	int i, j;
 	unsigned int output[64];
@@ -616,6 +616,11 @@ void verify_filter_normalized(stbir_filter filter, int output_size, int value)
 	for (j = 0; j < output_size; ++j)
 		for (i = 0; i < output_size; ++i)
 			STBIR_ASSERT(value == output[j*output_size + i]);
+}
+
+float round2(float f)
+{
+	return (float) floor(f+0.5f); // round() isn't C standard pre-C99
 }
 
 void test_filters(void)
@@ -673,7 +678,7 @@ void test_filters(void)
 
 	{
 		// This test is designed to produce coefficients that are very badly denormalized.
-		int v = 556;
+		unsigned int v = 556;
 
 		unsigned int input[100 * 100];
 		unsigned int output[11 * 11];
@@ -698,13 +703,13 @@ void test_filters(void)
 
 		stbir_resize(input, 3, 1, 0, output, 2, 1, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
 
-		STBIR_ASSERT(output[0] == (int)round((float)(input[0] * 2 + input[1]) / 3));
-		STBIR_ASSERT(output[1] == (int)round((float)(input[2] * 2 + input[1]) / 3));
+		STBIR_ASSERT(output[0] == (unsigned int)round2((float)(input[0] * 2 + input[1]) / 3));
+		STBIR_ASSERT(output[1] == (unsigned int)round2((float)(input[2] * 2 + input[1]) / 3));
 
 		stbir_resize(input, 1, 3, 0, output, 1, 2, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_BOX, STBIR_COLORSPACE_LINEAR, NULL);
 
-		STBIR_ASSERT(output[0] == (int)round((float)(input[0] * 2 + input[1]) / 3));
-		STBIR_ASSERT(output[1] == (int)round((float)(input[2] * 2 + input[1]) / 3));
+		STBIR_ASSERT(output[0] == (unsigned int)round2((float)(input[0] * 2 + input[1]) / 3));
+		STBIR_ASSERT(output[1] == (unsigned int)round2((float)(input[2] * 2 + input[1]) / 3));
 	}
 
 	{
@@ -767,6 +772,7 @@ void test_suite(int argc, char **argv)
 	else
 		barbara = "barbara.png";
 
+	// check what cases we need normalization for
 #if 1
 	{
 		float x, y;
@@ -804,17 +810,32 @@ void test_suite(int argc, char **argv)
 	}
 #endif
 
-	for (i = 0; i < 256; i++)
-		STBIR_ASSERT(stbir__linear_to_srgb_uchar(stbir__srgb_to_linear(float(i) / 255)) == i);
-
 #if 0 // linear_to_srgb_uchar table
 	for (i=0; i < 256; ++i) {
-		float f = stbir__srgb_to_linear((i+0.5f)/256.0f);
+		float f = stbir__srgb_to_linear((i-0.5f)/255.0f);
 		printf("%9d, ", (int) ((f) * (1<<28)));
 		if ((i & 7) == 7)
 			printf("\n");
 	}
 #endif
+
+	// old tests that hacky fix worked on - test that
+	// every uint8 maps to itself
+	for (i = 0; i < 256; i++) {
+		float f = stbir__srgb_to_linear(float(i) / 255);
+		int n = stbir__linear_to_srgb_uchar(f);
+		STBIR_ASSERT(n == i);
+	}
+
+	// new tests that hacky fix failed for - test that
+	// values adjacent to uint8 round to nearest uint8
+	for (i = 0; i < 256; i++) {
+		for (float y = -0.49f; y <= 0.491f; y += 0.01f) {
+			float f = stbir__srgb_to_linear((i+y) / 255.0f);
+			int n = stbir__linear_to_srgb_uchar(f);
+			STBIR_ASSERT(n == i);
+		}
+	}
 
 	test_filters();
 
