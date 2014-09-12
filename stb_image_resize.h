@@ -47,13 +47,19 @@
 			For interactive use with slow resize operations, you can install
 			a progress-report callback:
 
-				#define STBIR_PROGRESS_REPORT(val) my_progress_report(val)
+				#define STBIR_PROGRESS_REPORT(val)   some_func(val)
 
 			The parameter val is a float which goes from 0 to 1 as progress is made.
 
 			For example:
 
-				void my_progress_report(float progress)
+				static void my_progress_report(float progress);
+				#define STBIR_PROGRESS_REPORT(val) my_progress_report(val)
+
+				#define STB_IMAGE_RESIZE_IMPLEMENTATION
+				#include "stb_image_resize.h"
+
+				static void my_progress_report(float progress)
 				{
 					printf("Progress: %f%%\n", progress*100);
 				}
@@ -87,7 +93,9 @@
 
 			4. If you pass the flag STBIR_FLAG_ALPHA_PREMULTIPLIED, the
 			resizer does not do anything special for the alpha channel;
-			it is resampled identically to other channels.
+			it is resampled identically to other channels. This produces
+			the correct results for premultiplied-alpha images, but produces
+			less-than-ideal results for non-premultiplied-alpha images.
 
 			5. If you do not pass the flag STBIR_FLAG_ALPHA_PREMULTIPLIED,
 			then the resizer weights the contribution of input pixels
@@ -105,7 +113,11 @@
 			value to the alpha channel of every image, and then subtracting
 			or clamping it at the end.)
 
-			6. You can separately control whether the alpha channel is
+			6. You can suppress the behavior described in #5 and make
+			all-0-alpha pixels have 0 in all channels by #defining
+			STBIR_NO_ALPHA_EPSILON.
+
+			7. You can separately control whether the alpha channel is
 			interpreted as linear or affected by the colorspace. By default
 			it is linear; you almost never want to apply the colorspace.
 			(For example, graphics hardware does not apply sRGB conversion
@@ -123,7 +135,8 @@
 		and modify this file as you see fit.
 
 	TODO
-		Installable filters
+	    Don't decode all of the image data when only processing a subtile
+		Installable filters?
 		Resize that respects alpha test coverage
 			(Reference code: FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage:
 			https://code.google.com/p/nvidia-texture-tools/source/browse/trunk/src/nvimage/FloatImage.cpp )
@@ -640,7 +653,7 @@ static float stbir__support_trapezoid(float scale)
 
 static float stbir__filter_bilinear(float x, float s)
 {
-	STBIR__UNUSED_PARAM(s)
+	STBIR__UNUSED_PARAM(s);
 
 	x = (float)fabs(x);
 
@@ -652,7 +665,7 @@ static float stbir__filter_bilinear(float x, float s)
 
 static float stbir__filter_bicubic(float x, float s)
 {
-	STBIR__UNUSED_PARAM(s)
+	STBIR__UNUSED_PARAM(s);
 
 	x = (float)fabs(x);
 
@@ -666,7 +679,7 @@ static float stbir__filter_bicubic(float x, float s)
 
 static float stbir__filter_catmullrom(float x, float s)
 {
-	STBIR__UNUSED_PARAM(s)
+	STBIR__UNUSED_PARAM(s);
 
 	x = (float)fabs(x);
 
@@ -680,7 +693,7 @@ static float stbir__filter_catmullrom(float x, float s)
 
 static float stbir__filter_mitchell(float x, float s)
 {
-	STBIR__UNUSED_PARAM(s)
+	STBIR__UNUSED_PARAM(s);
 
 	x = (float)fabs(x);
 
@@ -694,19 +707,19 @@ static float stbir__filter_mitchell(float x, float s)
 
 static float stbir__support_zero(float s)
 {
-	STBIR__UNUSED_PARAM(s)
+	STBIR__UNUSED_PARAM(s);
 	return 0;
 }
 
 static float stbir__support_one(float s)
 {
-	STBIR__UNUSED_PARAM(s)
+	STBIR__UNUSED_PARAM(s);
 	return 1;
 }
 
 static float stbir__support_two(float s)
 {
-	STBIR__UNUSED_PARAM(s)
+	STBIR__UNUSED_PARAM(s);
 	return 2;
 }
 
@@ -1281,7 +1294,6 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 		break;
 	}
 
-#ifndef STBIR_NO_ALPHA_EPSILON
 	if (!(stbir_info->flags & STBIR_FLAG_ALPHA_PREMULTIPLIED))
 	{
 		for (x = -stbir__get_filter_pixel_margin_horizontal(stbir_info); x < max_x; x++)
@@ -1290,11 +1302,12 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 
 			// If the alpha value is 0 it will clobber the color values. Make sure it's not.
 			float alpha = decode_buffer[decode_pixel_index + alpha_channel];
+#ifndef STBIR_NO_ALPHA_EPSILON
 			if (stbir_info->type != STBIR_TYPE_FLOAT) {
 				alpha += STBIR_ALPHA_EPSILON;
 				decode_buffer[decode_pixel_index + alpha_channel] = alpha;
 			}
-
+#endif
 			for (c = 0; c < channels; c++)
 			{
 				if (c == alpha_channel)
@@ -1304,7 +1317,6 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 			}
 		}
 	}
-#endif
 
 	if (edge_horizontal == STBIR_EDGE_ZERO)
 	{
@@ -1474,7 +1486,6 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 	int x;
 	int n;
 
-#ifndef STBIR_NO_ALPHA_EPSILON
 	if (!(stbir_info->flags&STBIR_FLAG_ALPHA_PREMULTIPLIED))
 	{
 		for (x=0; x < num_pixels; ++x)
@@ -1492,7 +1503,6 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 			// conversion.
 		}
 	}
-#endif
 
 	switch (decode)
 	{
