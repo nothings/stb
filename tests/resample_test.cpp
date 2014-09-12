@@ -584,7 +584,7 @@ void test_subpixel_4()
 
 	unsigned char output[8 * 8];
 
-	stbir_resize_region(image, 8, 8, 0, output, 8, 8, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BILINEAR, STBIR_FILTER_BILINEAR, STBIR_COLORSPACE_LINEAR, &g_context, 0, 0, 1, 1);
+	stbir_resize_region(image, 8, 8, 0, output, 8, 8, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_TRIANGLE, STBIR_FILTER_TRIANGLE, STBIR_COLORSPACE_LINEAR, &g_context, 0, 0, 1, 1);
 	STBIR_ASSERT(memcmp(image, output, 8 * 8) == 0);
 }
 
@@ -672,26 +672,26 @@ void test_filters(void)
 			image88_int[j][i] = value;
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 8, value);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, 8, value);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, 8, value);
+	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 8, value);
+	verify_filter_normalized(STBIR_FILTER_CUBIC, 8, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 8, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 8, value);
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 4, value);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, 4, value);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, 4, value);
+	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 4, value);
+	verify_filter_normalized(STBIR_FILTER_CUBIC, 4, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 4, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 4, value);
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 2, value);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, 2, value);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, 2, value);
+	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 2, value);
+	verify_filter_normalized(STBIR_FILTER_CUBIC, 2, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 2, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 2, value);
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 1, value);
-	verify_filter_normalized(STBIR_FILTER_BILINEAR, 1, value);
-	verify_filter_normalized(STBIR_FILTER_BICUBIC, 1, value);
+	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 1, value);
+	verify_filter_normalized(STBIR_FILTER_CUBIC, 1, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 1, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 1, value);
 
@@ -705,7 +705,7 @@ void test_filters(void)
 		for (j = 0; j < 100 * 100; ++j)
 			input[j] = v;
 
-		stbir_resize(input, 100, 100, 0, output, 11, 11, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BILINEAR, STBIR_FILTER_BILINEAR, STBIR_COLORSPACE_LINEAR, NULL);
+		stbir_resize(input, 100, 100, 0, output, 11, 11, 0, STBIR_TYPE_UINT32, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_TRIANGLE, STBIR_FILTER_TRIANGLE, STBIR_COLORSPACE_LINEAR, NULL);
 
 		for (j = 0; j < 11 * 11; ++j)
 			STBIR_ASSERT(v == output[j]);
@@ -821,8 +821,8 @@ void test_suite(int argc, char **argv)
 			for (o = -5; o <= 5; ++o) {
 				sums[0] += stbir__filter_mitchell(x + o, 1);
 				sums[1] += stbir__filter_catmullrom(x + o, 1);
-				sums[2] += stbir__filter_bicubic(x + o, 1);
-				sums[3] += stbir__filter_bilinear(x + o, 1);
+				sums[2] += stbir__filter_cubic(x + o, 1);
+				sums[3] += stbir__filter_triangle(x + o, 1);
 				sums[4] += stbir__filter_trapezoid(x + o, 0.5f);
 			}
 			for (i = 0; i < 5; ++i)
@@ -837,9 +837,9 @@ void test_suite(int argc, char **argv)
 				for (o = -5; o <= 5; o += y) {
 					sums[0] += y * stbir__filter_mitchell(x + o, 1);
 					sums[1] += y * stbir__filter_catmullrom(x + o, 1);
-					sums[2] += y * stbir__filter_bicubic(x + o, 1);
+					sums[2] += y * stbir__filter_cubic(x + o, 1);
 					sums[4] += y * stbir__filter_trapezoid(x + o, 0.5f);
-					sums[3] += y * stbir__filter_bilinear(x + o, 1);
+					sums[3] += y * stbir__filter_triangle(x + o, 1);
 				}
 				for (i = 0; i < 3; ++i)
 					STBIR_ASSERT(sums[i] >= 1.0 - 0.0170 && sums[i] <= 1.0 + 0.0170);
@@ -916,14 +916,14 @@ void test_suite(int argc, char **argv)
 
 	// filter tests
 	resize_image(barbara, 2, 2, STBIR_FILTER_BOX       , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-nearest.png");
-	resize_image(barbara, 2, 2, STBIR_FILTER_BILINEAR  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bilinear.png");
-	resize_image(barbara, 2, 2, STBIR_FILTER_BICUBIC   , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bicubic.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_TRIANGLE  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bilinear.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_CUBIC     , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bicubic.png");
 	resize_image(barbara, 2, 2, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-catmullrom.png");
 	resize_image(barbara, 2, 2, STBIR_FILTER_MITCHELL  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-mitchell.png");
 
 	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_BOX       , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-nearest.png");
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_BILINEAR  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bilinear.png");
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_BICUBIC   , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bicubic.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_TRIANGLE  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bilinear.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CUBIC     , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bicubic.png");
 	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-catmullrom.png");
 	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_MITCHELL  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-mitchell.png");
 

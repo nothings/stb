@@ -135,7 +135,7 @@
 		and modify this file as you see fit.
 
 	TODO
-	    Don't decode all of the image data when only processing a subtile
+	    Don't decode all of the image data when only processing a partial tile
 		Installable filters?
 		Resize that respects alpha test coverage
 			(Reference code: FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage:
@@ -247,11 +247,11 @@ STBIRDEF int stbir_resize_uint8_srgb_edgemode(const unsigned char *input_pixels 
 typedef enum
 {
 	STBIR_FILTER_DEFAULT     = 0,  // use same filter type that easy-to-use API chooses
-	STBIR_FILTER_BOX         = 1,  // Is actually a trapezoid. See https://developer.nvidia.com/content/non-power-two-mipmapping
-	STBIR_FILTER_BILINEAR    = 2,
-	STBIR_FILTER_BICUBIC     = 3,  // A cubic b spline
-	STBIR_FILTER_CATMULLROM  = 4,
-	STBIR_FILTER_MITCHELL    = 5,
+	STBIR_FILTER_BOX         = 1,  // Actually a trapezoid. See https://developer.nvidia.com/content/non-power-two-mipmapping
+	STBIR_FILTER_TRIANGLE    = 2,  // On upsampling, produces same results as bilinear texture filtering
+	STBIR_FILTER_CUBIC       = 3,  // A cubic b-spline: why this one ????????????
+	STBIR_FILTER_CATMULLROM  = 4,  // interpolating cubic spline
+	STBIR_FILTER_MITCHELL    = 5,  // Mitchell-Netrevalli filter with B=1/3, C=1/3
 } stbir_filter;
 
 typedef enum
@@ -651,7 +651,7 @@ static float stbir__support_trapezoid(float scale)
 	return 0.5f + scale / 2;
 }
 
-static float stbir__filter_bilinear(float x, float s)
+static float stbir__filter_triangle(float x, float s)
 {
 	STBIR__UNUSED_PARAM(s);
 
@@ -663,7 +663,7 @@ static float stbir__filter_bilinear(float x, float s)
 		return 0;
 }
 
-static float stbir__filter_bicubic(float x, float s)
+static float stbir__filter_cubic(float x, float s)
 {
 	STBIR__UNUSED_PARAM(s);
 
@@ -726,8 +726,8 @@ static float stbir__support_two(float s)
 static stbir__filter_info stbir__filter_info_table[] = {
 		{ NULL,                     stbir__support_zero },
 		{ stbir__filter_trapezoid,  stbir__support_trapezoid },
-		{ stbir__filter_bilinear,   stbir__support_one },
-		{ stbir__filter_bicubic,    stbir__support_two },
+		{ stbir__filter_triangle,   stbir__support_one },
+		{ stbir__filter_cubic,      stbir__support_two },
 		{ stbir__filter_catmullrom, stbir__support_two },
 		{ stbir__filter_mitchell,   stbir__support_two },
 };
