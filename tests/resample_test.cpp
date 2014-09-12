@@ -754,12 +754,26 @@ void test_filters(void)
 
 	// checkerboard
 	{
+		unsigned char input[64][64];
+		unsigned char output[16][16];
+		int i,j;
+		for (j=0; j < 64; ++j)
+			for (i=0; i < 64; ++i)
+				input[j][i] = (i^j)&1 ? 255 : 0;
+		stbir_resize_uint8_generic(input[0], 64, 64, 0, output[0],16,16,0, 1,-1,0,STBIR_EDGE_WRAP,STBIR_FILTER_DEFAULT,STBIR_COLORSPACE_LINEAR,0);
+		for (j=0; j < 16; ++j)
+			for (i=0; i < 16; ++i)
+				STBIR_ASSERT(output[j][i] == 128);
+		stbir_resize_uint8_srgb_edgemode(input[0], 64, 64, 0, output[0],16,16,0, 1,-1,0,STBIR_EDGE_WRAP);
+		for (j=0; j < 16; ++j)
+			for (i=0; i < 16; ++i)
+				STBIR_ASSERT(output[j][i] == 188);
 
 
 	}
 
 	{
-		// Now for some fun.
+		// Test trapezoid box filter
 		unsigned char input[2 * 1];
 		unsigned char output[127 * 1];
 
