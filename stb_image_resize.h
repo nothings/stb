@@ -403,7 +403,11 @@ typedef unsigned char stbir__validate_uint32[sizeof(stbir_uint32) == 4 ? 1 : -1]
 
 
 
-#define STBIR__UNUSED_PARAM(s) s=s;
+#ifdef _MSC_VER
+#define STBIR__UNUSED_PARAM(v)  (void)(v)
+#else
+#define STBIR__UNUSED_PARAM(v)  (void)sizeof(v)
+#endif
 
 // must match stbir_datatype
 static unsigned char stbir__type_size[] = {
