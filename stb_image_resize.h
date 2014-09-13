@@ -565,6 +565,10 @@ static float stbir__srgb_uchar_to_linear_float[256] = {
 };
 
 // sRGB transition values, scaled by 1<<28
+// note that if you only scaled by 1<<16, all the values would be 4K smaller,
+// so [1] would be ~10, and so that would have around 5% error (10 +- 0.5)
+// at the boundary between uint8 0 and 1. This also means that a 64K-entry table
+// would have the same 5% error there.
 static int stbir__srgb_offset_to_linear_scaled[256] =
 {
             0,     40738,    122216,    203693,    285170,    366648,    448125,    529603,
