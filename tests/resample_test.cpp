@@ -141,6 +141,34 @@ static void resizer(int argc, char **argv)
 	exit(0);
 }
 
+static void performance(int argc, char **argv)
+{
+	unsigned char* input_pixels;
+	unsigned char* output_pixels;
+	int w, h, count;
+	int n, i;
+	int out_w, out_h, srgb=1;
+	input_pixels = stbi_load(argv[1], &w, &h, &n, 0);
+    #if 1
+    out_w = w/4; out_h h/4; count=100; // 1
+    #elif 0
+	out_w = w*2; out_h = h/4; count=20; // 2   // note this is structured pessimily, would be much faster to downsample vertically first
+    #elif 0
+    out_w = w/4; out_h = h*2; count=50; // 3
+    #elif 0
+    out_w = w*3; out_h = h*3; count=5; srgb=0; // 4
+    #else
+    out_w = w*3; out_h = h*3; count=3; // 5   // this is dominated by linear->sRGB conversion
+    #endif
+
+	output_pixels = (unsigned char*) malloc(out_w*out_h*n);
+    for (i=0; i < count; ++i)
+        if (srgb)
+	        stbir_resize_uint8_srgb(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n, -1,0);
+        else
+	        stbir_resize_uint8(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n);
+	exit(0);
+}
 
 void test_suite(int argc, char **argv);
 
@@ -153,6 +181,7 @@ int main(int argc, char** argv)
 	int out_w, out_h, out_stride;
 
 	//resizer(argc, argv);
+    //performance(argc, argv);
 
 #if 1
 	test_suite(argc, argv);
@@ -619,10 +648,10 @@ void verify_box(void)
 			      + image88[j*2+0][i*2+1]
 				  + image88[j*2+1][i*2+0]
 				  + image88[j*2+1][i*2+1];
-			STBIR_ASSERT(output44[j][i] == ((n+2)>>2));
+			STBIR_ASSERT(output44[j][i] == ((n+2)>>2) || output44[j][i] == ((n+1)>>2)); // can't guarantee exact rounding due to numerical precision
 			t += n;
 		}
-	STBIR_ASSERT(output11[0][0] == ((t+32)>>6));
+	STBIR_ASSERT(output11[0][0] == ((t+32)>>6) || output11[0][0] == ((t+31)>>6)); // can't guarantee exact rounding due to numerical precision
 }
 
 void verify_filter_normalized(stbir_filter filter, int output_size, unsigned int value)
@@ -645,6 +674,8 @@ float round2(float f)
 void test_filters(void)
 {
 	int i,j;
+
+	mtsrand(0);
 
 	for (i=0; i < sizeof(image88); ++i)
 		image88[0][i] = mtrand() & 255;
@@ -673,25 +704,25 @@ void test_filters(void)
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 8, value);
 	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 8, value);
-	verify_filter_normalized(STBIR_FILTER_CUBIC, 8, value);
+	verify_filter_normalized(STBIR_FILTER_CUBICBSPLINE, 8, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 8, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 8, value);
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 4, value);
 	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 4, value);
-	verify_filter_normalized(STBIR_FILTER_CUBIC, 4, value);
+	verify_filter_normalized(STBIR_FILTER_CUBICBSPLINE, 4, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 4, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 4, value);
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 2, value);
 	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 2, value);
-	verify_filter_normalized(STBIR_FILTER_CUBIC, 2, value);
+	verify_filter_normalized(STBIR_FILTER_CUBICBSPLINE, 2, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 2, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 2, value);
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 1, value);
 	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 1, value);
-	verify_filter_normalized(STBIR_FILTER_CUBIC, 1, value);
+	verify_filter_normalized(STBIR_FILTER_CUBICBSPLINE, 1, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 1, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 1, value);
 
@@ -915,17 +946,17 @@ void test_suite(int argc, char **argv)
 	test_channels(barbara, 2, 2, 4);
 
 	// filter tests
-	resize_image(barbara, 2, 2, STBIR_FILTER_BOX       , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-nearest.png");
-	resize_image(barbara, 2, 2, STBIR_FILTER_TRIANGLE  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bilinear.png");
-	resize_image(barbara, 2, 2, STBIR_FILTER_CUBIC     , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bicubic.png");
-	resize_image(barbara, 2, 2, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-catmullrom.png");
-	resize_image(barbara, 2, 2, STBIR_FILTER_MITCHELL  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-mitchell.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_BOX         , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-nearest.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_TRIANGLE    , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bilinear.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_CUBICBSPLINE, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bicubic.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_CATMULLROM  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-catmullrom.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_MITCHELL    , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-mitchell.png");
 
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_BOX       , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-nearest.png");
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_TRIANGLE  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bilinear.png");
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CUBIC     , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bicubic.png");
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-catmullrom.png");
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_MITCHELL  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-mitchell.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_BOX         , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-nearest.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_TRIANGLE    , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bilinear.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CUBICBSPLINE, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bicubic.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CATMULLROM  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-catmullrom.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_MITCHELL    , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-mitchell.png");
 
 	for (i = 10; i < 100; i++)
 	{
