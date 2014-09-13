@@ -809,26 +809,14 @@ static int stbir__get_total_vertical_coefficients(stbir__info* info)
          * stbir__get_coefficient_width      (info->vertical_filter, info->vertical_scale);
 }
 
-stbir__inline static stbir__contributors* stbir__get_contributor(stbir__contributors* contributors, int n)
+static stbir__contributors* stbir__get_contributor(stbir__contributors* contributors, int n)
 {
     return &contributors[n];
 }
 
-stbir__inline static stbir__contributors* stbir__get_horizontal_contributor(stbir__info* stbir_info, int n)
-{
-    STBIR__DEBUG_ASSERT(n >= 0 && n < stbir_info->horizontal_num_contributors);
-    return stbir__get_contributor(stbir_info->horizontal_contributors, n);
-}
-
-stbir__inline static stbir__contributors* stbir__get_vertical_contributor(stbir__info* stbir_info, int n)
-{
-    STBIR__DEBUG_ASSERT(n >= 0 && n < stbir_info->vertical_num_contributors);
-    return stbir__get_contributor(stbir_info->vertical_contributors, n);
-}
-
 // For perf reasons this code is duplicated in stbir__resample_horizontal_upsample/downsample,
 // if you change it here change it there too.
-stbir__inline static float* stbir__get_coefficient(float* coefficients, stbir_filter filter, float scale, int n, int c)
+static float* stbir__get_coefficient(float* coefficients, stbir_filter filter, float scale, int n, int c)
 {
     int width = stbir__get_coefficient_width(filter, scale);
     return &coefficients[width*n + c];
