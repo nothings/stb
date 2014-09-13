@@ -246,12 +246,12 @@ STBIRDEF int stbir_resize_uint8_srgb_edgemode(const unsigned char *input_pixels 
 
 typedef enum
 {
-	STBIR_FILTER_DEFAULT     = 0,  // use same filter type that easy-to-use API chooses
-	STBIR_FILTER_BOX         = 1,  // Actually a trapezoid. See https://developer.nvidia.com/content/non-power-two-mipmapping
-	STBIR_FILTER_TRIANGLE    = 2,  // On upsampling, produces same results as bilinear texture filtering
-	STBIR_FILTER_CUBIC       = 3,  // A cubic b-spline: why this one ????????????
-	STBIR_FILTER_CATMULLROM  = 4,  // interpolating cubic spline
-	STBIR_FILTER_MITCHELL    = 5,  // Mitchell-Netrevalli filter with B=1/3, C=1/3
+	STBIR_FILTER_DEFAULT      = 0,  // use same filter type that easy-to-use API chooses
+	STBIR_FILTER_BOX          = 1,  // A trapezoid w/1-pixel wide ramps, same result as box for integer scale ratios
+	STBIR_FILTER_TRIANGLE     = 2,  // On upsampling, produces same results as bilinear texture filtering
+	STBIR_FILTER_CUBICBSPLINE = 3,  // The cubic b-spline (aka Mitchell-Netrevalli with B=1,C=0), gaussian-esque
+	STBIR_FILTER_CATMULLROM   = 4,  // An interpolating cubic spline
+	STBIR_FILTER_MITCHELL     = 5,  // Mitchell-Netrevalli filter with B=1/3, C=1/3
 } stbir_filter;
 
 typedef enum

@@ -673,25 +673,25 @@ void test_filters(void)
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 8, value);
 	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 8, value);
-	verify_filter_normalized(STBIR_FILTER_CUBIC, 8, value);
+	verify_filter_normalized(STBIR_FILTER_CUBICBSPLINE, 8, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 8, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 8, value);
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 4, value);
 	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 4, value);
-	verify_filter_normalized(STBIR_FILTER_CUBIC, 4, value);
+	verify_filter_normalized(STBIR_FILTER_CUBICBSPLINE, 4, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 4, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 4, value);
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 2, value);
 	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 2, value);
-	verify_filter_normalized(STBIR_FILTER_CUBIC, 2, value);
+	verify_filter_normalized(STBIR_FILTER_CUBICBSPLINE, 2, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 2, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 2, value);
 
 	verify_filter_normalized(STBIR_FILTER_BOX, 1, value);
 	verify_filter_normalized(STBIR_FILTER_TRIANGLE, 1, value);
-	verify_filter_normalized(STBIR_FILTER_CUBIC, 1, value);
+	verify_filter_normalized(STBIR_FILTER_CUBICBSPLINE, 1, value);
 	verify_filter_normalized(STBIR_FILTER_CATMULLROM, 1, value);
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 1, value);
 
@@ -915,17 +915,17 @@ void test_suite(int argc, char **argv)
 	test_channels(barbara, 2, 2, 4);
 
 	// filter tests
-	resize_image(barbara, 2, 2, STBIR_FILTER_BOX       , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-nearest.png");
-	resize_image(barbara, 2, 2, STBIR_FILTER_TRIANGLE  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bilinear.png");
-	resize_image(barbara, 2, 2, STBIR_FILTER_CUBIC     , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bicubic.png");
-	resize_image(barbara, 2, 2, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-catmullrom.png");
-	resize_image(barbara, 2, 2, STBIR_FILTER_MITCHELL  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-mitchell.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_BOX         , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-nearest.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_TRIANGLE    , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bilinear.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_CUBICBSPLINE, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-bicubic.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_CATMULLROM  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-catmullrom.png");
+	resize_image(barbara, 2, 2, STBIR_FILTER_MITCHELL    , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-upsample-mitchell.png");
 
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_BOX       , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-nearest.png");
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_TRIANGLE  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bilinear.png");
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CUBIC     , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bicubic.png");
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-catmullrom.png");
-	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_MITCHELL  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-mitchell.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_BOX         , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-nearest.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_TRIANGLE    , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bilinear.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CUBICBSPLINE, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-bicubic.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CATMULLROM  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-catmullrom.png");
+	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_MITCHELL    , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-mitchell.png");
 
 	for (i = 10; i < 100; i++)
 	{
