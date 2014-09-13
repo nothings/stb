@@ -84,5 +84,9 @@ LINK32=link.exe
 
 SOURCE=.\make_readme.c
 # End Source File
+# Begin Source File
+
+SOURCE=.\README.list
+# End Source File
 # End Target
 # End Project
