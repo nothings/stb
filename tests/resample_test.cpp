@@ -141,6 +141,21 @@ static void resizer(int argc, char **argv)
 	exit(0);
 }
 
+static void performance(int argc, char **argv)
+{
+	unsigned char* input_pixels;
+	unsigned char* output_pixels;
+	int w, h;
+	int n, i;
+	int out_w, out_h;
+	input_pixels = stbi_load(argv[1], &w, &h, &n, 0);
+	out_w = w/4;
+	out_h = h/4;
+	output_pixels = (unsigned char*) malloc(out_w*out_h*n);
+   for (i=0; i < 100; ++i)
+	   stbir_resize_uint8_srgb(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n, -1,0);
+	exit(0);
+}
 
 void test_suite(int argc, char **argv);
 
@@ -153,6 +168,7 @@ int main(int argc, char** argv)
 	int out_w, out_h, out_stride;
 
 	//resizer(argc, argv);
+   performance(argc, argv);
 
 #if 1
 	test_suite(argc, argv);

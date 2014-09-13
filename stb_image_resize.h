@@ -1429,16 +1429,64 @@ static void stbir__resample_horizontal_downsample(stbir__info* stbir_info, int n
         int max_n = n1;
         int coefficient_group = coefficient_width * x;
 
-        for (k = n0; k <= max_n; k++)
-        {
-            int out_pixel_index = k * channels;
-            float coefficient = horizontal_coefficients[coefficient_group + k - n0];
-            int c;
+        switch (channels) {
+            case 1:
+                for (k = n0; k <= max_n; k++)
+                {
+                    int out_pixel_index = k * 1;
+                    float coefficient = horizontal_coefficients[coefficient_group + k - n0];
+                    STBIR__DEBUG_ASSERT(coefficient != 0);
+                    output_buffer[out_pixel_index + 0] += decode_buffer[in_pixel_index + 0] * coefficient;
+                }
+                break;
 
-            STBIR__DEBUG_ASSERT(coefficient != 0);
+            case 2:
+                for (k = n0; k <= max_n; k++)
+                {
+                    int out_pixel_index = k * 2;
+                    float coefficient = horizontal_coefficients[coefficient_group + k - n0];
+                    STBIR__DEBUG_ASSERT(coefficient != 0);
+                    output_buffer[out_pixel_index + 0] += decode_buffer[in_pixel_index + 0] * coefficient;
+                    output_buffer[out_pixel_index + 1] += decode_buffer[in_pixel_index + 1] * coefficient;
+                }
+                break;
 
-            for (c = 0; c < channels; c++)
-                output_buffer[out_pixel_index + c] += decode_buffer[in_pixel_index + c] * coefficient;
+            case 3:
+                for (k = n0; k <= max_n; k++)
+                {
+                    int out_pixel_index = k * 3;
+                    float coefficient = horizontal_coefficients[coefficient_group + k - n0];
+                    STBIR__DEBUG_ASSERT(coefficient != 0);
+                    output_buffer[out_pixel_index + 0] += decode_buffer[in_pixel_index + 0] * coefficient;
+                    output_buffer[out_pixel_index + 1] += decode_buffer[in_pixel_index + 1] * coefficient;
+                    output_buffer[out_pixel_index + 2] += decode_buffer[in_pixel_index + 2] * coefficient;
+                }
+                break;
+
+            case 4:
+                for (k = n0; k <= max_n; k++)
+                {
+                    int out_pixel_index = k * 4;
+                    float coefficient = horizontal_coefficients[coefficient_group + k - n0];
+                    STBIR__DEBUG_ASSERT(coefficient != 0);
+                    output_buffer[out_pixel_index + 0] += decode_buffer[in_pixel_index + 0] * coefficient;
+                    output_buffer[out_pixel_index + 1] += decode_buffer[in_pixel_index + 1] * coefficient;
+                    output_buffer[out_pixel_index + 2] += decode_buffer[in_pixel_index + 2] * coefficient;
+                    output_buffer[out_pixel_index + 3] += decode_buffer[in_pixel_index + 3] * coefficient;
+                }
+                break;
+
+            default:
+                for (k = n0; k <= max_n; k++)
+                {
+                    int c;
+                    int out_pixel_index = k * channels;
+                    float coefficient = horizontal_coefficients[coefficient_group + k - n0];
+                    STBIR__DEBUG_ASSERT(coefficient != 0);
+                    for (c = 0; c < channels; c++)
+                        output_buffer[out_pixel_index + c] += decode_buffer[in_pixel_index + c] * coefficient;
+                }
+                break;
         }
     }
 }
@@ -1717,13 +1765,51 @@ static void stbir__resample_vertical_downsample(stbir__info* stbir_info, int n, 
 
         float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
 
-        for (x = 0; x < output_w; x++)
-        {
-            int in_pixel_index = x * channels;
+        switch (channels) {
+            case 1:
+                for (x = 0; x < output_w; x++)
+                {
+                    int in_pixel_index = x * 1;
+                    ring_buffer_entry[in_pixel_index + 0] += horizontal_buffer[in_pixel_index + 0] * coefficient;
+                }
+                break;
+            case 2:
+                for (x = 0; x < output_w; x++)
+                {
+                    int in_pixel_index = x * 2;
+                    ring_buffer_entry[in_pixel_index + 0] += horizontal_buffer[in_pixel_index + 0] * coefficient;
+                    ring_buffer_entry[in_pixel_index + 1] += horizontal_buffer[in_pixel_index + 1] * coefficient;
+                }
+                break;
+            case 3:
+                for (x = 0; x < output_w; x++)
+                {
+                    int in_pixel_index = x * 3;
+                    ring_buffer_entry[in_pixel_index + 0] += horizontal_buffer[in_pixel_index + 0] * coefficient;
+                    ring_buffer_entry[in_pixel_index + 1] += horizontal_buffer[in_pixel_index + 1] * coefficient;
+                    ring_buffer_entry[in_pixel_index + 2] += horizontal_buffer[in_pixel_index + 2] * coefficient;
+                }
+                break;
+            case 4:
+                for (x = 0; x < output_w; x++)
+                {
+                    int in_pixel_index = x * 4;
+                    ring_buffer_entry[in_pixel_index + 0] += horizontal_buffer[in_pixel_index + 0] * coefficient;
+                    ring_buffer_entry[in_pixel_index + 1] += horizontal_buffer[in_pixel_index + 1] * coefficient;
+                    ring_buffer_entry[in_pixel_index + 2] += horizontal_buffer[in_pixel_index + 2] * coefficient;
+                    ring_buffer_entry[in_pixel_index + 3] += horizontal_buffer[in_pixel_index + 3] * coefficient;
+                }
+                break;
+            default:
+                for (x = 0; x < output_w; x++)
+                {
+                    int in_pixel_index = x * channels;
 
-            int c;
-            for (c = 0; c < channels; c++)
-                ring_buffer_entry[in_pixel_index + c] += horizontal_buffer[in_pixel_index + c] * coefficient;
+                    int c;
+                    for (c = 0; c < channels; c++)
+                        ring_buffer_entry[in_pixel_index + c] += horizontal_buffer[in_pixel_index + c] * coefficient;
+                }
+                break;
         }
     }
 }
