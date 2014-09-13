@@ -12,7 +12,11 @@
                 #define STB_IMAGE_RESIZE_IMPLEMENTATION
             before the #include. That will create the implementation in that file.
 
-        API
+        VERY QUICK GUIDE
+            A typical resize of a in_w by in_h image to out_w by out_h with 4 channels where channel #3 is the alpha channel might look like:
+                int success = stbir_resize_uint8_srgb_edgemode(input_pixels, in_w, in_h, 0, output_pixels, out_w, out_h, 0, 4, 3, 0, STBIR_EDGE_CLAMP);
+
+        FULL API
             See the "header file" section of the source for API documentation.
 
         MEMORY ALLOCATION
