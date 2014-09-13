@@ -150,7 +150,7 @@ static void performance(int argc, char **argv)
 	int out_w, out_h, srgb=1;
 	input_pixels = stbi_load(argv[1], &w, &h, &n, 0);
     #if 1
-    out_w = w/4; out_h h/4; count=100; // 1
+    out_w = w/4; out_h = h/4; count=100; // 1
     #elif 0
 	out_w = w*2; out_h = h/4; count=20; // 2   // note this is structured pessimily, would be much faster to downsample vertically first
     #elif 0
@@ -174,89 +174,10 @@ void test_suite(int argc, char **argv);
 
 int main(int argc, char** argv)
 {
-	unsigned char* input_data;
-	unsigned char* output_data;
-	int w, h;
-	int n;
-	int out_w, out_h, out_stride;
-
 	//resizer(argc, argv);
     //performance(argc, argv);
 
-#if 1
 	test_suite(argc, argv);
-	return 0;
-#endif
-
-	if (argc <= 1)
-	{
-		printf("No input image\n");
-		return 1;
-	}
-
-	input_data = stbi_load(argv[1], &w, &h, &n, 0);
-	if (!input_data)
-	{
-		printf("Input image could not be loaded");
-		return 1;
-	}
-
-	out_w = 512;
-	out_h = 512;
-	out_stride = (out_w + 10) * n;
-
-	output_data = (unsigned char*)malloc(out_stride * out_h);
-
-	int in_w = 512;
-	int in_h = 512;
-
-	float s0 = 0.25f;
-	float t0 = 0.25f;
-	float s1 = 0.75f;
-	float t1 = 0.75f;
-
-	// Cut out the outside 64 pixels all around to test the stride.
-	int border = 64;
-	STBIR_ASSERT(in_w + border <= w);
-	STBIR_ASSERT(in_h + border <= h);
-
-#ifdef PERF_TEST
-	struct timeb initial_time_millis, final_time_millis;
-
-	long average = 0;
-	for (int j = 0; j < 10; j++)
-	{
-		ftime(&initial_time_millis);
-		for (int i = 0; i < 100; i++)
-			stbir_resize(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, STBIR_TYPE_UINT8, n, n - 1, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context);
-		ftime(&final_time_millis);
-		long lapsed_ms = (long)(final_time_millis.time - initial_time_millis.time) * 1000 + (final_time_millis.millitm - initial_time_millis.millitm);
-		printf("Resample: %dms\n", lapsed_ms);
-
-		average += lapsed_ms;
-	}
-
-	average /= 10;
-
-	printf("Average: %dms\n", average);
-
-	stbi_image_free(input_data);
-
-	stbi_write_png("output.png", out_w, out_h, n, output_data, out_stride);
-#else
-	stbir_resize_region(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, STBIR_TYPE_UINT8, n, n-1, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, s0, t0, s1, t1);
-
-	stbi_write_png("output-region.png", out_w, out_h, n, output_data, out_stride);
-
-	stbir_resize_subpixel(input_data + w * border * n + border * n, in_w, in_h, w*n, output_data, out_w, out_h, out_stride, STBIR_TYPE_UINT8, n, n-1, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, in_w*s0, in_h*t0, 0.5f, 0.5f);
-
-	stbi_write_png("output-subpixel.png", out_w, out_h, n, output_data, out_stride);
-
-	stbi_image_free(input_data);
-#endif
-
-	free(output_data);
-
 	return 0;
 }
 
