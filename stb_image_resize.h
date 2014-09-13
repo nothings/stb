@@ -1393,10 +1393,10 @@ static void stbir__resample_horizontal_upsample(stbir__info* stbir_info, int n, 
         {
             int in_pixel_index = k * channels;
             float coefficient = horizontal_coefficients[coefficient_group + coefficient_counter++];
+            int c;
 
             STBIR__DEBUG_ASSERT(coefficient != 0);
 
-            int c;
             for (c = 0; c < channels; c++)
                 output_buffer[out_pixel_index + c] += decode_buffer[in_pixel_index + c] * coefficient;
         }
@@ -1433,10 +1433,10 @@ static void stbir__resample_horizontal_downsample(stbir__info* stbir_info, int n
         {
             int out_pixel_index = k * channels;
             float coefficient = horizontal_coefficients[coefficient_group + k - n0];
+            int c;
 
             STBIR__DEBUG_ASSERT(coefficient != 0);
 
-            int c;
             for (c = 0; c < channels; c++)
                 output_buffer[out_pixel_index + c] += decode_buffer[in_pixel_index + c] * coefficient;
         }
