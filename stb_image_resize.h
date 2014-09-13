@@ -1430,18 +1430,18 @@ static void stbir__resample_horizontal_downsample(stbir__info* stbir_info, int n
 
     STBIR__DEBUG_ASSERT(!stbir__use_width_upsampling(stbir_info));
 
-    for (x = 0; x < max_x; x++)
-    {
-        int n0 = horizontal_contributors[x].n0;
-        int n1 = horizontal_contributors[x].n1;
+    switch (channels) {
+        case 1:
+            for (x = 0; x < max_x; x++)
+            {
+                int n0 = horizontal_contributors[x].n0;
+                int n1 = horizontal_contributors[x].n1;
 
-        int in_x = x - filter_pixel_margin;
-        int in_pixel_index = in_x * channels;
-        int max_n = n1;
-        int coefficient_group = coefficient_width * x;
+                int in_x = x - filter_pixel_margin;
+                int in_pixel_index = in_x * 1;
+                int max_n = n1;
+                int coefficient_group = coefficient_width * x;
 
-        switch (channels) {
-            case 1:
                 for (k = n0; k <= max_n; k++)
                 {
                     int out_pixel_index = k * 1;
@@ -1449,9 +1449,20 @@ static void stbir__resample_horizontal_downsample(stbir__info* stbir_info, int n
                     STBIR__DEBUG_ASSERT(coefficient != 0);
                     output_buffer[out_pixel_index + 0] += decode_buffer[in_pixel_index + 0] * coefficient;
                 }
-                break;
+            }
+            break;
 
-            case 2:
+        case 2:
+            for (x = 0; x < max_x; x++)
+            {
+                int n0 = horizontal_contributors[x].n0;
+                int n1 = horizontal_contributors[x].n1;
+
+                int in_x = x - filter_pixel_margin;
+                int in_pixel_index = in_x * 2;
+                int max_n = n1;
+                int coefficient_group = coefficient_width * x;
+
                 for (k = n0; k <= max_n; k++)
                 {
                     int out_pixel_index = k * 2;
@@ -1460,9 +1471,20 @@ static void stbir__resample_horizontal_downsample(stbir__info* stbir_info, int n
                     output_buffer[out_pixel_index + 0] += decode_buffer[in_pixel_index + 0] * coefficient;
                     output_buffer[out_pixel_index + 1] += decode_buffer[in_pixel_index + 1] * coefficient;
                 }
-                break;
+            }
+            break;
 
-            case 3:
+        case 3:
+            for (x = 0; x < max_x; x++)
+            {
+                int n0 = horizontal_contributors[x].n0;
+                int n1 = horizontal_contributors[x].n1;
+
+                int in_x = x - filter_pixel_margin;
+                int in_pixel_index = in_x * 3;
+                int max_n = n1;
+                int coefficient_group = coefficient_width * x;
+
                 for (k = n0; k <= max_n; k++)
                 {
                     int out_pixel_index = k * 3;
@@ -1472,9 +1494,20 @@ static void stbir__resample_horizontal_downsample(stbir__info* stbir_info, int n
                     output_buffer[out_pixel_index + 1] += decode_buffer[in_pixel_index + 1] * coefficient;
                     output_buffer[out_pixel_index + 2] += decode_buffer[in_pixel_index + 2] * coefficient;
                 }
-                break;
+            }
+            break;
 
-            case 4:
+        case 4:
+            for (x = 0; x < max_x; x++)
+            {
+                int n0 = horizontal_contributors[x].n0;
+                int n1 = horizontal_contributors[x].n1;
+
+                int in_x = x - filter_pixel_margin;
+                int in_pixel_index = in_x * 4;
+                int max_n = n1;
+                int coefficient_group = coefficient_width * x;
+
                 for (k = n0; k <= max_n; k++)
                 {
                     int out_pixel_index = k * 4;
@@ -1485,9 +1518,20 @@ static void stbir__resample_horizontal_downsample(stbir__info* stbir_info, int n
                     output_buffer[out_pixel_index + 2] += decode_buffer[in_pixel_index + 2] * coefficient;
                     output_buffer[out_pixel_index + 3] += decode_buffer[in_pixel_index + 3] * coefficient;
                 }
-                break;
+            }
+            break;
 
-            default:
+        default:
+            for (x = 0; x < max_x; x++)
+            {
+                int n0 = horizontal_contributors[x].n0;
+                int n1 = horizontal_contributors[x].n1;
+
+                int in_x = x - filter_pixel_margin;
+                int in_pixel_index = in_x * channels;
+                int max_n = n1;
+                int coefficient_group = coefficient_width * x;
+
                 for (k = n0; k <= max_n; k++)
                 {
                     int c;
@@ -1497,8 +1541,8 @@ static void stbir__resample_horizontal_downsample(stbir__info* stbir_info, int n
                     for (c = 0; c < channels; c++)
                         output_buffer[out_pixel_index + c] += decode_buffer[in_pixel_index + c] * coefficient;
                 }
-                break;
-        }
+            }
+            break;
     }
 }
 
