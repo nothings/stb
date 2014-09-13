@@ -82,7 +82,7 @@
             and 99% opaque black produces 50% transparent dark green when
             non-premultiplied, whereas premultiplied it produces 50%
             transparent near-black. The former introduces green energy
-            that doesn't exist in the source.)
+            that doesn't exist in the source image.)
 
             2. Artists should not edit premultiplied-alpha images; artists
             want non-premultiplied alpha images. Thus, art tools generally output
