@@ -181,7 +181,7 @@ int main(int argc, char** argv)
 	int out_w, out_h, out_stride;
 
 	//resizer(argc, argv);
-    //performance(argc, argv);
+    performance(argc, argv);
 
 #if 1
 	test_suite(argc, argv);
