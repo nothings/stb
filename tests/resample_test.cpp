@@ -145,15 +145,28 @@ static void performance(int argc, char **argv)
 {
 	unsigned char* input_pixels;
 	unsigned char* output_pixels;
-	int w, h;
+	int w, h, count;
 	int n, i;
-	int out_w, out_h;
+	int out_w, out_h, srgb=1;
 	input_pixels = stbi_load(argv[1], &w, &h, &n, 0);
-	out_w = w/4;
-	out_h = h/4;
+    #if 0
+    out_w = w/4; out_h h/4; count=100; // 1
+    #elif 0
+	out_w = w*2; out_h = h/4; count=20; // 2   // note this is structured pessimily, would be much faster to downsample vertically first
+    #elif 0
+    out_w = w/4; out_h = h*2; count=50; // 3
+    #elif 0
+    out_w = w*3; out_h = h*3; count=5; srgb=0; // 4
+    #else
+    out_w = w*3; out_h = h*3; count=3; // 5   // this is dominated by linear->sRGB conversion
+    #endif
+
 	output_pixels = (unsigned char*) malloc(out_w*out_h*n);
-   for (i=0; i < 100; ++i)
-	   stbir_resize_uint8_srgb(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n, -1,0);
+    for (i=0; i < count; ++i)
+        if (srgb)
+	        stbir_resize_uint8_srgb(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n, -1,0);
+        else
+	        stbir_resize_uint8(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n);
 	exit(0);
 }
 
