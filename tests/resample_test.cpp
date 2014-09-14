@@ -750,6 +750,40 @@ void test_filters(void)
 	}
 }
 
+#define UMAX32   4294967295U
+
+static void write32(char *filename, stbir_uint32 *output, int w, int h)
+{
+    stbir_uint8 *data = (stbir_uint8*) malloc(w*h*3);
+    for (int i=0; i < w*h*3; ++i)
+        data[i] = output[i]>>24;
+    stbi_write_png(filename, w, h, 3, data, 0);
+    free(data);
+}
+
+static void test_32(void)
+{
+    int w=100,h=120,x,y, out_w,out_h;
+    stbir_uint32 *input  = (stbir_uint32*) malloc(4 * 3 * w * h);
+    stbir_uint32 *output = (stbir_uint32*) malloc(4 * 3 * 3*w * 3*h);
+    for (y=0; y < h; ++y) {
+        for (x=0; x < w; ++x) {
+            input[y*3*w + x*3 + 0] = x * ( UMAX32/w );
+            input[y*3*w + x*3 + 1] = y * ( UMAX32/h );
+            input[y*3*w + x*3 + 2] = UMAX32/2;
+        }
+    }
+    out_w = w*33/16;
+    out_h = h*33/16;
+    stbir_resize(input,w,h,0,output,out_w,out_h,0,STBIR_TYPE_UINT32,3,-1,0,STBIR_EDGE_CLAMP,STBIR_EDGE_CLAMP,STBIR_FILTER_DEFAULT,STBIR_FILTER_DEFAULT,STBIR_COLORSPACE_LINEAR,NULL);
+    write32("test-output/seantest_1.png", output,out_w,out_h);
+
+    out_w = w*16/33;
+    out_h = h*16/33;
+    stbir_resize(input,w,h,0,output,out_w,out_h,0,STBIR_TYPE_UINT32,3,-1,0,STBIR_EDGE_CLAMP,STBIR_EDGE_CLAMP,STBIR_FILTER_DEFAULT,STBIR_FILTER_DEFAULT,STBIR_COLORSPACE_LINEAR,NULL);
+    write32("test-output/seantest_2.png", output,out_w,out_h);
+}
+
 
 void test_suite(int argc, char **argv)
 {
@@ -757,6 +791,8 @@ void test_suite(int argc, char **argv)
 	char *barbara;
 
 	_mkdir("test-output");
+
+    test_32();
 
 	if (argc > 1)
 		barbara = argv[1];
