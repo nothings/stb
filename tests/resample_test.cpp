@@ -799,10 +799,6 @@ void test_suite(int argc, char **argv)
 	else
 		barbara = "barbara.png";
 
-	test_format<unsigned short>(barbara, 0.5, 2.0, STBIR_TYPE_UINT16, STBIR_COLORSPACE_SRGB);
-    test_32();
-
-
 	// check what cases we need normalization for
 #if 1
 	{
@@ -876,6 +872,8 @@ void test_suite(int argc, char **argv)
 	test_subpixel_4();
 
 	test_premul();
+
+	test_32();
 
 	// Some tests to make sure errors don't pop up with strange filter/dimension combinations.
 	stbir_resize(image88, 8, 8, 0, output88, 4, 16, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context);
