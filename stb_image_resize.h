@@ -17,12 +17,12 @@
       stbir_resize_float(...)
       stbir_resize_uint8_srgb( input_pixels , in_w , in_h , 0,
                                output_pixels, out_w, out_h, 0,
-                               num_channels , alpha_ chan , 0)
+                               num_channels , alpha_chan  , 0)
       stbir_resize_uint8_srgb_edgemode(
                                input_pixels , in_w , in_h , 0, 
                                output_pixels, out_w, out_h, 0, 
-                               num_channels , alpha_chan , 0, STBIR_EDGE_CLAMP)
-                                                              WRAP/REFLECT/ZERO
+                               num_channels , alpha_chan  , 0, STBIR_EDGE_CLAMP)
+                                                               WRAP/REFLECT/ZERO
 
    FULL API
       See the "header file" section of the source for API documentation.
