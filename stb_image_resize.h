@@ -146,6 +146,13 @@
          (For example, graphics hardware does not apply sRGB conversion
          to the alpha channel.)
 
+      IEEE FLOAT OPTIMIZATIONS
+         Some optimizations in this library make use of IEEE floating point
+         numbers. If you are on a system that uses non-IEEE floats then you can
+         disable these optimizations and use a somewhat slower fallback with
+
+            #define STBIR_NON_IEEE_FLOAT
+
    ADDITIONAL CONTRIBUTORS
       Sean Barrett: API design, optimizations
          
@@ -677,8 +684,74 @@ static float stbir__linear_to_srgb(float f)
         return 1.055f * (float)pow(f, 1 / 2.4f) - 0.055f;
 }
 
+#ifndef STBIR_NON_IEEE_FLOAT
+
+// From https://gist.github.com/rygorous/2203834
+
+typedef union
+{
+    stbir_uint32 u;
+    float f;
+    struct
+    {
+        stbir_uint32 Mantissa : 23;
+        stbir_uint32 Exponent : 8;
+        stbir_uint32 Sign : 1;
+    };
+} stbir__FP32;
+
+static const stbir_uint32 fp32_to_srgb8_tab3[64] = {
+    0x0b0f01cb, 0x0bf401ae, 0x0ccb0195, 0x0d950180, 0x0e56016e, 0x0f0d015e, 0x0fbc0150, 0x10630143,
+    0x11070264, 0x1238023e, 0x1357021d, 0x14660201, 0x156601e9, 0x165a01d3, 0x174401c0, 0x182401af,
+    0x18fe0331, 0x1a9602fe, 0x1c1502d2, 0x1d7e02ad, 0x1ed4028d, 0x201a0270, 0x21520256, 0x227d0240,
+    0x239f0443, 0x25c003fe, 0x27bf03c4, 0x29a10392, 0x2b6a0367, 0x2d1d0341, 0x2ebe031f, 0x304d0300,
+    0x31d105b0, 0x34a80555, 0x37520507, 0x39d504c5, 0x3c37048b, 0x3e7c0458, 0x40a8042a, 0x42bd0401,
+    0x44c20798, 0x488e071e, 0x4c1c06b6, 0x4f76065d, 0x52a50610, 0x55ac05cc, 0x5892058f, 0x5b590559,
+    0x5e0c0a23, 0x631c0980, 0x67db08f6, 0x6c55087f, 0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
+    0x06970158, 0x07420142, 0x07e30130, 0x087b0120, 0x090b0112, 0x09940106, 0x0a1700fc, 0x0a9500f2,
+};
+
+static stbir_uint8 stbir__linear_to_srgb_uchar(float in)
+{
+    static const stbir__FP32 almostone = { 0x3f7fffff }; // 1-eps
+    static const stbir__FP32 lutthresh = { 0x3b800000 }; // 2^(-8)
+    static const stbir__FP32 linearsc  = { 0x454c5d00 };
+    static const stbir__FP32 float2int = { (127 + 23) << 23 };
+    stbir__FP32 f;
+
+    // Clamp to [0, 1-eps]; these two values map to 0 and 1, respectively.
+    // The tests are carefully written so that NaNs map to 0, same as in the reference
+    // implementation.
+    if (!(in > 0.0f)) // written this way to catch NaNs
+        in = 0.0f;
+    if (in > almostone.f)
+        in = almostone.f;
+
+    // Check which region this value falls into
+    f.f = in;
+    if (f.f < lutthresh.f) // linear region
+    {
+        f.f *= linearsc.f;
+        f.f += float2int.f; // use "magic value" to get float->int with rounding.
+        return (stbir_uint8)(f.u & 255);
+    }
+    else // non-linear region
+    {
+        // Unpack bias, scale from table
+        stbir_uint32 tab = fp32_to_srgb8_tab3[(f.u >> 20) & 63];
+        stbir_uint32 bias = (tab >> 16) << 9;
+        stbir_uint32 scale = tab & 0xffff;
+
+        // Grab next-highest mantissa bits and perform linear interpolation
+        stbir_uint32 t = (f.u >> 12) & 0xff;
+        return (stbir_uint8)((bias + scale*t) >> 16);
+    }
+}
+
+#else
+
 // Used as a starting point to save time in the binary search in stbir__linear_to_srgb_uchar.
-static unsigned char stbr__linear_uchar_to_srgb_uchar[] = {
+static stbir_uint8 stbr__linear_uchar_to_srgb_uchar[] = {
     0, 12, 21, 28, 33, 38, 42, 46, 49, 52, 55, 58, 61, 63, 66, 68, 70, 73, 75, 77, 79, 81, 82, 84, 86, 88, 89, 91, 93, 94,
     96, 97, 99, 100, 102, 103, 104, 106, 107, 109, 110, 111, 112, 114, 115, 116, 117, 118, 120, 121, 122, 123, 124, 125, 126,
     127, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 142, 143, 144, 145, 146, 147, 148, 149, 150,
@@ -692,7 +765,7 @@ static unsigned char stbr__linear_uchar_to_srgb_uchar[] = {
     251, 251, 252, 252, 253, 253, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
 };
 
-static unsigned char stbir__linear_to_srgb_uchar(float f)
+static stbir_uint8 stbir__linear_to_srgb_uchar(float f)
 {
     int x = (int) (f * (1 << 28)); // has headroom so you don't need to clamp
     int v = stbr__linear_uchar_to_srgb_uchar[(int)(f * 255)]; // Make a guess at the value with a table.
@@ -704,8 +777,10 @@ static unsigned char stbir__linear_to_srgb_uchar(float f)
     i = v + 2; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
     i = v + 1; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
 
-    return (unsigned char) v;
+    return (stbir_uint8) v;
 }
+
+#endif
 
 static float stbir__filter_trapezoid(float x, float scale)
 {

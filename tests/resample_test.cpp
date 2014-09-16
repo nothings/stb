@@ -259,7 +259,7 @@ void convert_image_float(const unsigned char* input, float* output, int length)
 void convert_image_float(const float* input, unsigned char* output, int length)
 {
 	for (int i = 0; i < length; i++)
-		output[i] = (unsigned char)(input[i] * 255);
+		output[i] = (unsigned char)(stbir__saturate(input[i]) * 255);
 }
 
 void test_float(const char* file, float width_percent, float height_percent, stbir_datatype type, stbir_colorspace colorspace)
@@ -857,7 +857,7 @@ void test_suite(int argc, char **argv)
 	// new tests that hacky fix failed for - test that
 	// values adjacent to uint8 round to nearest uint8
 	for (i = 0; i < 256; i++) {
-		for (float y = -0.49f; y <= 0.491f; y += 0.01f) {
+		for (float y = -0.42f; y <= 0.42f; y += 0.01f) {
 			float f = stbir__srgb_to_linear((i+y) / 255.0f);
 			int n = stbir__linear_to_srgb_uchar(f);
 			STBIR_ASSERT(n == i);
