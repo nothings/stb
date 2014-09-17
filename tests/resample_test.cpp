@@ -132,8 +132,8 @@ static void resizer(int argc, char **argv)
 	int n;
 	int out_w, out_h;
 	input_pixels = stbi_load(argv[1], &w, &h, &n, 0);
-	out_w = w/4;
-	out_h = h/4;
+	out_w = w*3;
+	out_h = h*3;
 	output_pixels = (unsigned char*) malloc(out_w*out_h*n);
 	//stbir_resize_uint8_srgb(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n, -1,0);
 	stbir_resize_uint8(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n);
@@ -148,8 +148,7 @@ static void performance(int argc, char **argv)
 	int w, h, count;
 	int n, i;
 	int out_w, out_h, srgb=1;
-	input_pixels = stbi_load(argv[1], &w, &h, &n, 4);
-    n=4;
+	input_pixels = stbi_load(argv[1], &w, &h, &n, 0);
     #if 0
     out_w = w/4; out_h = h/4; count=100; // 1
     #elif 0
@@ -159,15 +158,15 @@ static void performance(int argc, char **argv)
     #elif 0
     out_w = w*3; out_h = h*3; count=2; srgb=0; // 4
     #else
-    out_w = w*3; out_h = h*3; count=1; // 5   // this is dominated by linear->sRGB conversion
+    out_w = w*3; out_h = h*3; count=2; // 5   // this is dominated by linear->sRGB conversion
     #endif
 
 	output_pixels = (unsigned char*) malloc(out_w*out_h*n);
     for (i=0; i < count; ++i)
         if (srgb)
-	        stbir_resize_uint8_srgb(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n, 3,0);
+	        stbir_resize_uint8_srgb(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, n,-1,0);
         else
-	        stbir_resize(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, STBIR_TYPE_UINT8, n, 3, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, NULL);
+	        stbir_resize(input_pixels, w, h, 0, output_pixels, out_w, out_h, 0, STBIR_TYPE_UINT8, n,-1, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT, STBIR_FILTER_DEFAULT, STBIR_COLORSPACE_LINEAR, NULL);
 	exit(0);
 }
 

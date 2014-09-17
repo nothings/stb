@@ -1903,6 +1903,9 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
 
     memset(encode_buffer, 0, output_w * sizeof(float) * channels);
 
+    // I tried reblocking this for better cache usage of encode_buffer
+    // (using x_outer, k, x_inner), but it lost speed. -- stb
+
     coefficient_counter = 0;
     switch (channels) {
         case 1:
@@ -1911,9 +1914,9 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
                 int coefficient_index = coefficient_counter++;
                 float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
                 float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
-                for (x = 0; x < output_w; x++)
+                for (x = 0; x < output_w; ++x)
                 {
-                    int in_pixel_index = x * channels;
+                    int in_pixel_index = x * 1;
                     encode_buffer[in_pixel_index + 0] += ring_buffer_entry[in_pixel_index + 0] * coefficient;
                 }
             }
@@ -1924,9 +1927,9 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
                 int coefficient_index = coefficient_counter++;
                 float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
                 float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
-                for (x = 0; x < output_w; x++)
+                for (x = 0; x < output_w; ++x)
                 {
-                    int in_pixel_index = x * channels;
+                    int in_pixel_index = x * 2;
                     encode_buffer[in_pixel_index + 0] += ring_buffer_entry[in_pixel_index + 0] * coefficient;
                     encode_buffer[in_pixel_index + 1] += ring_buffer_entry[in_pixel_index + 1] * coefficient;
                 }
@@ -1938,9 +1941,9 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
                 int coefficient_index = coefficient_counter++;
                 float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
                 float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
-                for (x = 0; x < output_w; x++)
+                for (x = 0; x < output_w; ++x)
                 {
-                    int in_pixel_index = x * channels;
+                    int in_pixel_index = x * 3;
                     encode_buffer[in_pixel_index + 0] += ring_buffer_entry[in_pixel_index + 0] * coefficient;
                     encode_buffer[in_pixel_index + 1] += ring_buffer_entry[in_pixel_index + 1] * coefficient;
                     encode_buffer[in_pixel_index + 2] += ring_buffer_entry[in_pixel_index + 2] * coefficient;
@@ -1953,9 +1956,9 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
                 int coefficient_index = coefficient_counter++;
                 float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
                 float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
-                for (x = 0; x < output_w; x++)
+                for (x = 0; x < output_w; ++x)
                 {
-                    int in_pixel_index = x * channels;
+                    int in_pixel_index = x * 4;
                     encode_buffer[in_pixel_index + 0] += ring_buffer_entry[in_pixel_index + 0] * coefficient;
                     encode_buffer[in_pixel_index + 1] += ring_buffer_entry[in_pixel_index + 1] * coefficient;
                     encode_buffer[in_pixel_index + 2] += ring_buffer_entry[in_pixel_index + 2] * coefficient;
@@ -1969,7 +1972,7 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
                 int coefficient_index = coefficient_counter++;
                 float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
                 float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
-                for (x = 0; x < output_w; x++)
+                for (x = 0; x < output_w; ++x)
                 {
                     int in_pixel_index = x * channels;
                     int c;
