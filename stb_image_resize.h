@@ -5,6 +5,7 @@
    Written with emphasis on usability, portability, and efficiency. (No
    SIMD or threads, so it be easily outperformed by libs that use those.)
    Only scaling and translation is supported, no rotations or shears.
+   Easy API downsamples w/Mitchell filter, upsamples w/cubic interpolation.
 
    COMPILING & LINKING
       In one C/C++ file that #includes this file, do this:
@@ -28,6 +29,15 @@
       See the "header file" section of the source for API documentation.
 
    ADDITIONAL DOCUMENTATION
+
+      SRGB & FLOATING POINT REPRESENTATION
+         Some srgb-related code in this library relies on floats being 32-bit
+         IEEE floating point, and relies on a specific bitpacking order of C
+         bitfields. If you are on a system that uses non-IEEE floats or packs
+         C bitfields in the opposite order, then you can use a slower fallback
+         codepath by defining STBIR_NON_IEEE_FLOAT. (We didn't make this choice
+         idly; using mostly-but-not-100%-portable-code for this is a massive
+         speedup, especially upsampling where colorspace conversion dominates.)
 
       MEMORY ALLOCATION
          The resize functions here perform a single memory allocation using
@@ -146,18 +156,11 @@
          (For example, graphics hardware does not apply sRGB conversion
          to the alpha channel.)
 
-      IEEE FLOAT OPTIMIZATIONS
-         Some optimizations in this library make use of IEEE floating point
-         numbers. If you are on a system that uses non-IEEE floats then you can
-         disable these optimizations and use a somewhat slower fallback with
-
-            #define STBIR_NON_IEEE_FLOAT
-
    ADDITIONAL CONTRIBUTORS
       Sean Barrett: API design, optimizations
          
    REVISIONS
-      0.90 (2014-??-??) first released version
+      0.90 (2014-09-17) first released version
 
    LICENSE
       This software is in the public domain. Where that dedication is not
@@ -167,7 +170,7 @@
    TODO
       Don't decode all of the image data when only processing a partial tile
       Don't use full-width decode buffers when only processing a partial tile
-      When doing huge upscaling, break scanlines into smaller blocks that fit in L1 cache
+      When processing wide images, break processing into tiles so data fits in L1 cache
       Installable filters?
       Resize that respects alpha test coverage
          (Reference code: FloatImage::alphaTestCoverage and FloatImage::scaleAlphaToCoverage:
