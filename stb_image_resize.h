@@ -22,7 +22,7 @@
                                input_pixels , in_w , in_h , 0, 
                                output_pixels, out_w, out_h, 0, 
                                num_channels , alpha_chan  , 0, STBIR_EDGE_CLAMP)
-                                                               WRAP/REFLECT/ZERO
+                                                            // WRAP/REFLECT/ZERO
 
    FULL API
       See the "header file" section of the source for API documentation.
@@ -629,11 +629,81 @@ static float stbir__srgb_uchar_to_linear_float[256] = {
     0.982251f, 0.991102f, 1.0f
 };
 
+static float stbir__srgb_to_linear(float f)
+{
+    if (f <= 0.04045f)
+        return f / 12.92f;
+    else
+        return (float)pow((f + 0.055f) / 1.055f, 2.4f);
+}
+
+static float stbir__linear_to_srgb(float f)
+{
+    if (f <= 0.0031308f)
+        return f * 12.92f;
+    else
+        return 1.055f * (float)pow(f, 1 / 2.4f) - 0.055f;
+}
+
+#ifndef STBIR_NON_IEEE_FLOAT
+// From https://gist.github.com/rygorous/2203834
+
+typedef union
+{
+    stbir_uint32 u;
+    float f;
+    struct
+    {
+        stbir_uint32 Mantissa : 23;
+        stbir_uint32 Exponent : 8;
+        stbir_uint32 Sign : 1;
+    };
+} stbir__FP32;
+
+static const stbir_uint32 fp32_to_srgb8_tab4[104] = {
+    0x0073000d, 0x007a000d, 0x0080000d, 0x0087000d, 0x008d000d, 0x0094000d, 0x009a000d, 0x00a1000d,
+    0x00a7001a, 0x00b4001a, 0x00c1001a, 0x00ce001a, 0x00da001a, 0x00e7001a, 0x00f4001a, 0x0101001a,
+    0x010e0033, 0x01280033, 0x01410033, 0x015b0033, 0x01750033, 0x018f0033, 0x01a80033, 0x01c20033,
+    0x01dc0067, 0x020f0067, 0x02430067, 0x02760067, 0x02aa0067, 0x02dd0067, 0x03110067, 0x03440067,
+    0x037800ce, 0x03df00ce, 0x044600ce, 0x04ad00ce, 0x051400ce, 0x057b00c5, 0x05dd00bc, 0x063b00b5,
+    0x06970158, 0x07420142, 0x07e30130, 0x087b0120, 0x090b0112, 0x09940106, 0x0a1700fc, 0x0a9500f2,
+    0x0b0f01cb, 0x0bf401ae, 0x0ccb0195, 0x0d950180, 0x0e56016e, 0x0f0d015e, 0x0fbc0150, 0x10630143,
+    0x11070264, 0x1238023e, 0x1357021d, 0x14660201, 0x156601e9, 0x165a01d3, 0x174401c0, 0x182401af,
+    0x18fe0331, 0x1a9602fe, 0x1c1502d2, 0x1d7e02ad, 0x1ed4028d, 0x201a0270, 0x21520256, 0x227d0240,
+    0x239f0443, 0x25c003fe, 0x27bf03c4, 0x29a10392, 0x2b6a0367, 0x2d1d0341, 0x2ebe031f, 0x304d0300,
+    0x31d105b0, 0x34a80555, 0x37520507, 0x39d504c5, 0x3c37048b, 0x3e7c0458, 0x40a8042a, 0x42bd0401,
+    0x44c20798, 0x488e071e, 0x4c1c06b6, 0x4f76065d, 0x52a50610, 0x55ac05cc, 0x5892058f, 0x5b590559,
+    0x5e0c0a23, 0x631c0980, 0x67db08f6, 0x6c55087f, 0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
+};
+ 
+static stbir_uint8 stbir__linear_to_srgb_uchar(float in)
+{
+    static const stbir__FP32 almostone = { 0x3f7fffff }; // 1-eps
+    static const stbir__FP32 minval = { (127-13) << 23 };
+    stbir_uint32 tab,bias,scale,t;
+    stbir__FP32 f;
+ 
+    // Clamp to [2^(-13), 1-eps]; these two values map to 0 and 1, respectively.
+    // The tests are carefully written so that NaNs map to 0, same as in the reference
+    // implementation.
+    if (!(in > minval.f)) // written this way to catch NaNs
+        in = minval.f;
+    if (in > almostone.f)
+        in = almostone.f;
+ 
+    // Do the table lookup and unpack bias, scale
+    f.f = in;
+    tab = fp32_to_srgb8_tab4[(f.u - minval.u) >> 20];
+    bias = (tab >> 16) << 9;
+    scale = tab & 0xffff;
+ 
+    // Grab next-highest mantissa bits and perform linear interpolation
+    t = (f.u >> 12) & 0xff;
+    return (unsigned char) ((bias + scale*t) >> 16);
+}
+
+#else
 // sRGB transition values, scaled by 1<<28
-// note that if you only scaled by 1<<16, all the values would be 4K smaller,
-// so [1] would be ~10, and so that would have around 5% error (10 +- 0.5)
-// at the boundary between uint8 0 and 1. This also means that a 64K-entry table
-// would have the same 5% error there.
 static int stbir__srgb_offset_to_linear_scaled[256] =
 {
             0,     40738,    122216,    203693,    285170,    366648,    448125,    529603,
@@ -670,118 +740,24 @@ static int stbir__srgb_offset_to_linear_scaled[256] =
     250824112, 253132064, 255452368, 257785040, 260130080, 262487520, 264857376, 267239664,
 };
 
-static float stbir__srgb_to_linear(float f)
-{
-    if (f <= 0.04045f)
-        return f / 12.92f;
-    else
-        return (float)pow((f + 0.055f) / 1.055f, 2.4f);
-}
-
-static float stbir__linear_to_srgb(float f)
-{
-    if (f <= 0.0031308f)
-        return f * 12.92f;
-    else
-        return 1.055f * (float)pow(f, 1 / 2.4f) - 0.055f;
-}
-
-#ifndef STBIR_NON_IEEE_FLOAT
-
-// From https://gist.github.com/rygorous/2203834
-
-typedef union
-{
-    stbir_uint32 u;
-    float f;
-    struct
-    {
-        stbir_uint32 Mantissa : 23;
-        stbir_uint32 Exponent : 8;
-        stbir_uint32 Sign : 1;
-    };
-} stbir__FP32;
-
-static const stbir_uint32 fp32_to_srgb8_tab3[64] = {
-    0x0b0f01cb, 0x0bf401ae, 0x0ccb0195, 0x0d950180, 0x0e56016e, 0x0f0d015e, 0x0fbc0150, 0x10630143,
-    0x11070264, 0x1238023e, 0x1357021d, 0x14660201, 0x156601e9, 0x165a01d3, 0x174401c0, 0x182401af,
-    0x18fe0331, 0x1a9602fe, 0x1c1502d2, 0x1d7e02ad, 0x1ed4028d, 0x201a0270, 0x21520256, 0x227d0240,
-    0x239f0443, 0x25c003fe, 0x27bf03c4, 0x29a10392, 0x2b6a0367, 0x2d1d0341, 0x2ebe031f, 0x304d0300,
-    0x31d105b0, 0x34a80555, 0x37520507, 0x39d504c5, 0x3c37048b, 0x3e7c0458, 0x40a8042a, 0x42bd0401,
-    0x44c20798, 0x488e071e, 0x4c1c06b6, 0x4f76065d, 0x52a50610, 0x55ac05cc, 0x5892058f, 0x5b590559,
-    0x5e0c0a23, 0x631c0980, 0x67db08f6, 0x6c55087f, 0x70940818, 0x74a007bd, 0x787d076c, 0x7c330723,
-    0x06970158, 0x07420142, 0x07e30130, 0x087b0120, 0x090b0112, 0x09940106, 0x0a1700fc, 0x0a9500f2,
-};
-
-static stbir_uint8 stbir__linear_to_srgb_uchar(float in)
-{
-    static const stbir__FP32 almostone = { 0x3f7fffff }; // 1-eps
-    static const stbir__FP32 lutthresh = { 0x3b800000 }; // 2^(-8)
-    static const stbir__FP32 linearsc  = { 0x454c5d00 };
-    static const stbir__FP32 float2int = { (127 + 23) << 23 };
-    stbir__FP32 f;
-
-    // Clamp to [0, 1-eps]; these two values map to 0 and 1, respectively.
-    // The tests are carefully written so that NaNs map to 0, same as in the reference
-    // implementation.
-    if (!(in > 0.0f)) // written this way to catch NaNs
-        in = 0.0f;
-    if (in > almostone.f)
-        in = almostone.f;
-
-    // Check which region this value falls into
-    f.f = in;
-    if (f.f < lutthresh.f) // linear region
-    {
-        f.f *= linearsc.f;
-        f.f += float2int.f; // use "magic value" to get float->int with rounding.
-        return (stbir_uint8)(f.u & 255);
-    }
-    else // non-linear region
-    {
-        // Unpack bias, scale from table
-        stbir_uint32 tab = fp32_to_srgb8_tab3[(f.u >> 20) & 63];
-        stbir_uint32 bias = (tab >> 16) << 9;
-        stbir_uint32 scale = tab & 0xffff;
-
-        // Grab next-highest mantissa bits and perform linear interpolation
-        stbir_uint32 t = (f.u >> 12) & 0xff;
-        return (stbir_uint8)((bias + scale*t) >> 16);
-    }
-}
-
-#else
-
-// Used as a starting point to save time in the binary search in stbir__linear_to_srgb_uchar.
-static stbir_uint8 stbr__linear_uchar_to_srgb_uchar[] = {
-    0, 12, 21, 28, 33, 38, 42, 46, 49, 52, 55, 58, 61, 63, 66, 68, 70, 73, 75, 77, 79, 81, 82, 84, 86, 88, 89, 91, 93, 94,
-    96, 97, 99, 100, 102, 103, 104, 106, 107, 109, 110, 111, 112, 114, 115, 116, 117, 118, 120, 121, 122, 123, 124, 125, 126,
-    127, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 142, 143, 144, 145, 146, 147, 148, 149, 150,
-    151, 151, 152, 153, 154, 155, 156, 157, 157, 158, 159, 160, 161, 161, 162, 163, 164, 165, 165, 166, 167, 168, 168, 169,
-    170, 171, 171, 172, 173, 174, 174, 175, 176, 176, 177, 178, 179, 179, 180, 181, 181, 182, 183, 183, 184, 185, 185, 186,
-    187, 187, 188, 189, 189, 190, 191, 191, 192, 193, 193, 194, 194, 195, 196, 196, 197, 197, 198, 199, 199, 200, 201, 201,
-    202, 202, 203, 204, 204, 205, 205, 206, 206, 207, 208, 208, 209, 209, 210, 210, 211, 212, 212, 213, 213, 214, 214, 215,
-    215, 216, 217, 217, 218, 218, 219, 219, 220, 220, 221, 221, 222, 222, 223, 223, 224, 224, 225, 226, 226, 227, 227, 228,
-    228, 229, 229, 230, 230, 231, 231, 232, 232, 233, 233, 234, 234, 235, 235, 236, 236, 237, 237, 237, 238, 238, 239, 239,
-    240, 240, 241, 241, 242, 242, 243, 243, 244, 244, 245, 245, 245, 246, 246, 247, 247, 248, 248, 249, 249, 250, 250, 251,
-    251, 251, 252, 252, 253, 253, 254, 254, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255
-};
-
 static stbir_uint8 stbir__linear_to_srgb_uchar(float f)
 {
     int x = (int) (f * (1 << 28)); // has headroom so you don't need to clamp
-    int v = stbr__linear_uchar_to_srgb_uchar[(int)(f * 255)]; // Make a guess at the value with a table.
+    int v = 0;
     int i;
 
     // Refine the guess with a short binary search.
-    i = v + 8; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
-    i = v + 4; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
-    i = v + 2; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
-    i = v + 1; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+    i = v + 128; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+    i = v +  64; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+    i = v +  32; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+    i = v +  16; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+    i = v +   8; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+    i = v +   4; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+    i = v +   2; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
+    i = v +   1; if (x >= stbir__srgb_offset_to_linear_scaled[i]) v = i;
 
     return (stbir_uint8) v;
 }
-
 #endif
 
 static float stbir__filter_trapezoid(float x, float scale)
