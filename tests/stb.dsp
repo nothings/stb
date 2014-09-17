@@ -106,7 +106,15 @@ SOURCE=..\stb_dxt.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_herringbone_wang_tile.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_image.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_image_resize.h
 # End Source File
 # Begin Source File
 
