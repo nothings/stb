@@ -1,5 +1,5 @@
-// stb_truetype.h - v0.9 - public domain
-// authored from 2009-2013 by Sean Barrett / RAD Game Tools
+// stb_truetype.h - v0.99 - public domain
+// authored from 2009-2014 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
 //        parse files
@@ -21,7 +21,7 @@
 //   Mikko Mononen: compound shape support, more cmap formats
 //   Tor Andersson: kerning, subpixel rendering
 //
-//   Bug/warning reports:
+//   Bug/warning reports/fixes:
 //       "Zer" on mollyrocket (with fix)
 //       Cass Everitt
 //       stoiko (Haemimont Games)
@@ -33,9 +33,11 @@
 //       Anthony Pesch
 //       Johan Duparc
 //       Hou Qiming
+//       Fabian "ryg" Giesen
 //
 // VERSION HISTORY
 //
+//   0.99 (2014-09-18) fix multiple bugs with subpixel rendering (ryg)
 //   0.9  (2014-08-07) support certain mac/iOS fonts without an MS platformID
 //   0.8b (2014-07-07) fix a warning
 //   0.8  (2014-05-25) fix a few more warnings
