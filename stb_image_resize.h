@@ -31,13 +31,9 @@
    ADDITIONAL DOCUMENTATION
 
       SRGB & FLOATING POINT REPRESENTATION
-         Some srgb-related code in this library relies on floats being 32-bit
-         IEEE floating point, and relies on a specific bitpacking order of C
-         bitfields. If you are on a system that uses non-IEEE floats or packs
-         C bitfields in the opposite order, then you can use a slower fallback
-         codepath by defining STBIR_NON_IEEE_FLOAT. (We didn't make this choice
-         idly; using mostly-but-not-100%-portable-code for this is a massive
-         speedup, especially upsampling where colorspace conversion dominates.)
+         The sRGB functions presume IEEE floating point. If you do not have
+         IEEE floating point, define STBIR_NON_IEEE_FLOAT. This will use
+         a slower implementation.
 
       MEMORY ALLOCATION
          The resize functions here perform a single memory allocation using
@@ -655,12 +651,6 @@ typedef union
 {
     stbir_uint32 u;
     float f;
-    struct
-    {
-        stbir_uint32 Mantissa : 23;
-        stbir_uint32 Exponent : 8;
-        stbir_uint32 Sign : 1;
-    };
 } stbir__FP32;
 
 static const stbir_uint32 fp32_to_srgb8_tab4[104] = {
