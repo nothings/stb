@@ -145,7 +145,7 @@ extern void stbte_set_display(int x0, int y0, int x1, int y1);
 
 extern void stbte_draw(stbte_tilemap *tm);
 
-extern void stbte_tick(stbte_tilemap *tm, float dt);
+extern void stbte_tick(stbte_tilemap *tm, float time_in_seconds_since_last_frame);
 
 ////////////
 //
