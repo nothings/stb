@@ -63,7 +63,7 @@
     James "moose2000" Brown (iPhone PNG)         David Woo
     Ben "Disch" Wenger (io callbacks)            Roy Eltham
     Martin "SpartanJ" Golini                     Luke Graham
-                                                 Thomas Ruf
+    Omar Cornut (1/2/4-bit palettized PNG)       Thomas Ruf
                                                  John Bartholomew
  Optimizations & bugfixes                        Ken Hamada
     Fabian "ryg" Giesen                          Cort Stratton
@@ -2487,20 +2487,40 @@ static int stbi__paeth(int a, int b, int c)
 #define STBI__BYTECAST(x)  ((stbi_uc) ((x) & 255))  // truncate int to byte without warnings
 
 // create the png data from post-deflated data
-static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_len, int out_n, stbi__uint32 x, stbi__uint32 y)
+static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_len, int out_n, stbi__uint32 x, stbi__uint32 y, int depth)
 {
    stbi__context *s = a->s;
    stbi__uint32 i,j,stride = x*out_n;
+   stbi__uint32 img_len;
    int k;
    int img_n = s->img_n; // copy it into a local for later
+   int addr_shift;
+   unsigned int pixel_data_shift_addr_mask;
+   unsigned int pixel_data_shift_addr_lshift;
+   stbi_uc pixel_data_mask;
+
    STBI_ASSERT(out_n == s->img_n || out_n == s->img_n+1);
    a->out = (stbi_uc *) stbi__malloc(x * y * out_n);
    if (!a->out) return stbi__err("outofmem", "Out of memory");
+
+   img_len = (img_n * x) * y;
+   if (depth<8) img_len /= (8/depth);
+   else if (depth>8) img_len *= depth>>3;
+   img_len += y;
    if (s->img_x == x && s->img_y == y) {
-      if (raw_len != (img_n * x + 1) * y) return stbi__err("not enough pixels","Corrupt PNG");
+      if (raw_len != img_len) return stbi__err("not enough pixels","Corrupt PNG");
    } else { // interlaced:
-      if (raw_len < (img_n * x + 1) * y) return stbi__err("not enough pixels","Corrupt PNG");
+      if (raw_len < img_len) return stbi__err("not enough pixels","Corrupt PNG");
    }
+
+   switch (depth)
+   {
+   case 8: addr_shift = 0; pixel_data_shift_addr_mask = 0x00; pixel_data_shift_addr_lshift = 0; pixel_data_mask = 0xFF; break;
+   case 4: addr_shift = 1; pixel_data_shift_addr_mask = 0x01; pixel_data_shift_addr_lshift = 2; pixel_data_mask = 0x0F; break;
+   case 2: addr_shift = 2; pixel_data_shift_addr_mask = 0x03; pixel_data_shift_addr_lshift = 1; pixel_data_mask = 0x03; break;
+   case 1: addr_shift = 3; pixel_data_shift_addr_mask = 0x07; pixel_data_shift_addr_lshift = 0; pixel_data_mask = 0x01; break;
+   }
+
    for (j=0; j < y; ++j) {
       stbi_uc *cur = a->out + stride*j;
       stbi_uc *prior = cur - stride;
@@ -2508,65 +2528,74 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
       if (filter > 4) return stbi__err("invalid filter","Corrupt PNG");
       // if first row, use special filter that doesn't sample previous row
       if (j == 0) filter = first_row_filter[filter];
+      
+	  // Expanding the macro for reference (probably worth inlining the whole loop or at least splitting 8 vs 1/2/4)
+	  // - Depth 8          (((ARR[K     ])
+	  // - Depth 4          (((ARR[K >> 1]) >> ((k & 0x01) << 2)) & 0x0F)
+	  // - Depth 2          (((ARR[K >> 2]) >> ((k & 0x03) << 1)) & 0x03)
+	  // - Depth 1          (((ARR[K >> 3]) >> ((k & 0x07)      ) & 0x01)
+      #define PIXEL(ARR,K)	(((ARR[(K) >> addr_shift]) >> (((7-K) & pixel_data_shift_addr_mask) << pixel_data_shift_addr_lshift)) & pixel_data_mask)
+
       // handle first pixel explicitly
-      for (k=0; k < img_n; ++k) {
+	  int rawk=0;
+      for (k=0; k < img_n; ++k, ++rawk) {
          switch (filter) {
-            case STBI__F_none       : cur[k] = raw[k]; break;
-            case STBI__F_sub        : cur[k] = raw[k]; break;
-            case STBI__F_up         : cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
-            case STBI__F_avg        : cur[k] = STBI__BYTECAST(raw[k] + (prior[k]>>1)); break;
-            case STBI__F_paeth      : cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(0,prior[k],0)); break;
-            case STBI__F_avg_first  : cur[k] = raw[k]; break;
-            case STBI__F_paeth_first: cur[k] = raw[k]; break;
+            case STBI__F_none       : cur[k] = PIXEL(raw,rawk); break;
+            case STBI__F_sub        : cur[k] = PIXEL(raw,rawk); break;
+            case STBI__F_up         : cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + prior[k]); break;
+            case STBI__F_avg        : cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + (prior[k]>>1)); break;
+            case STBI__F_paeth      : cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + stbi__paeth(0,prior[k],0)); break;
+            case STBI__F_avg_first  : cur[k] = PIXEL(raw,rawk); break;
+            case STBI__F_paeth_first: cur[k] = PIXEL(raw,rawk); break;
          }
       }
       if (img_n != out_n) cur[img_n] = 255;
-      raw += img_n;
       cur += out_n;
       prior += out_n;
       // this is a little gross, so that we don't switch per-pixel or per-component
       if (img_n == out_n) {
          #define CASE(f) \
              case f:     \
-                for (i=x-1; i >= 1; --i, raw+=img_n,cur+=img_n,prior+=img_n) \
-                   for (k=0; k < img_n; ++k)
+                for (i=x-1; i >= 1; --i, cur+=img_n,prior+=img_n) \
+                   for (k=0; k < img_n; ++k, ++rawk)
          switch (filter) {
-            CASE(STBI__F_none)         cur[k] = raw[k]; break;
-            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(raw[k] + cur[k-img_n]); break;
-            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
-            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(raw[k] + ((prior[k] + cur[k-img_n])>>1)); break;
-            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-img_n],prior[k],prior[k-img_n])); break;
-            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(raw[k] + (cur[k-img_n] >> 1)); break;
-            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-img_n],0,0)); break;
+            CASE(STBI__F_none)         cur[k] = PIXEL(raw,rawk); break;
+            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + cur[k-img_n]); break;
+            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + prior[k]); break;
+            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + ((prior[k] + cur[k-img_n])>>1)); break;
+            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + stbi__paeth(cur[k-img_n],prior[k],prior[k-img_n])); break;
+            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + (cur[k-img_n] >> 1)); break;
+            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + stbi__paeth(cur[k-img_n],0,0)); break;
          }
          #undef CASE
       } else {
          STBI_ASSERT(img_n+1 == out_n);
          #define CASE(f) \
              case f:     \
-                for (i=x-1; i >= 1; --i, cur[img_n]=255,raw+=img_n,cur+=out_n,prior+=out_n) \
-                   for (k=0; k < img_n; ++k)
+                for (i=x-1; i >= 1; --i, cur[img_n]=255,cur+=out_n,prior+=out_n) \
+                   for (k=0; k < img_n; ++k, ++rawk)
          switch (filter) {
-            CASE(STBI__F_none)         cur[k] = raw[k]; break;
-            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(raw[k] + cur[k-out_n]); break;
-            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
-            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(raw[k] + ((prior[k] + cur[k-out_n])>>1)); break;
-            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-out_n],prior[k],prior[k-out_n])); break;
-            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(raw[k] + (cur[k-out_n] >> 1)); break;
-            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-out_n],0,0)); break;
+            CASE(STBI__F_none)         cur[k] = PIXEL(raw,k); break;
+            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + cur[k-out_n]); break;
+            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + prior[k]); break;
+            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + ((prior[k] + cur[k-out_n])>>1)); break;
+            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + stbi__paeth(cur[k-out_n],prior[k],prior[k-out_n])); break;
+            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + (cur[k-out_n] >> 1)); break;
+            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(PIXEL(raw,rawk) + stbi__paeth(cur[k-out_n],0,0)); break;
          }
          #undef CASE
       }
+	  raw+=(rawk+pixel_data_shift_addr_mask)>>addr_shift; // scanlines are aligned on byte boundaries
    }
    return 1;
 }
 
-static int stbi__create_png_image(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_len, int out_n, int interlaced)
+static int stbi__create_png_image(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_len, int out_n, int depth, int interlaced)
 {
    stbi_uc *final;
    int p;
    if (!interlaced)
-      return stbi__create_png_image_raw(a, raw, raw_len, out_n, a->s->img_x, a->s->img_y);
+      return stbi__create_png_image_raw(a, raw, raw_len, out_n, a->s->img_x, a->s->img_y, depth);
 
    // de-interlacing
    final = (stbi_uc *) stbi__malloc(a->s->img_x * a->s->img_y * out_n);
@@ -2580,7 +2609,7 @@ static int stbi__create_png_image(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_l
       x = (a->s->img_x - xorig[p] + xspc[p]-1) / xspc[p];
       y = (a->s->img_y - yorig[p] + yspc[p]-1) / yspc[p];
       if (x && y) {
-         if (!stbi__create_png_image_raw(a, raw, raw_len, out_n, x, y)) {
+         if (!stbi__create_png_image_raw(a, raw, raw_len, out_n, x, y, depth)) {
             free(final);
             return 0;
          }
@@ -2720,7 +2749,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
    stbi_uc palette[1024], pal_img_n=0;
    stbi_uc has_trans=0, tc[3];
    stbi__uint32 ioff=0, idata_limit=0, i, pal_len=0;
-   int first=1,k,interlace=0, is_iphone=0;
+   int first=1,k,interlace=0, depth=0, is_iphone=0;
    stbi__context *s = z->s;
 
    z->expanded = NULL;
@@ -2739,14 +2768,19 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             stbi__skip(s, c.length);
             break;
          case PNG_TYPE('I','H','D','R'): {
-            int depth,color,comp,filter;
+            int color,comp,filter;
             if (!first) return stbi__err("multiple IHDR","Corrupt PNG");
             first = 0;
             if (c.length != 13) return stbi__err("bad IHDR len","Corrupt PNG");
             s->img_x = stbi__get32be(s); if (s->img_x > (1 << 24)) return stbi__err("too large","Very large image (corrupt?)");
             s->img_y = stbi__get32be(s); if (s->img_y > (1 << 24)) return stbi__err("too large","Very large image (corrupt?)");
-            depth = stbi__get8(s);  if (depth != 8)        return stbi__err("8bit only","PNG not supported: 8-bit only");
+            depth = stbi__get8(s);  
             color = stbi__get8(s);  if (color > 6)         return stbi__err("bad ctype","Corrupt PNG");
+			if (color == 3) {
+				if (depth != 1 && depth != 2 && depth != 4 && depth != 8)  return stbi__err("1/2/4/8-bit only","PNG not supported: 1/2/4/8-bit only for palettized images"); // support 1/2/4 bpp for palettized.
+			} else {
+				if (depth != 8)  return stbi__err("8-bit only","PNG not supported: 8-bit only"); // greyscale images (color==0) would need the pixel data to be scaled (see PIXEL macro)
+			}
             if (color == 3) pal_img_n = 3; else if (color & 1) return stbi__err("bad ctype","Corrupt PNG");
             comp  = stbi__get8(s);  if (comp) return stbi__err("bad comp method","Corrupt PNG");
             filter= stbi__get8(s);  if (filter) return stbi__err("bad filter method","Corrupt PNG");
@@ -2829,7 +2863,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                s->img_out_n = s->img_n+1;
             else
                s->img_out_n = s->img_n;
-            if (!stbi__create_png_image(z, z->expanded, raw_len, s->img_out_n, interlace)) return 0;
+            if (!stbi__create_png_image(z, z->expanded, raw_len, s->img_out_n, depth, interlace)) return 0;
             if (has_trans)
                if (!stbi__compute_transparency(z, tc, s->img_out_n)) return 0;
             if (is_iphone && stbi__de_iphone_flag && s->img_out_n > 2)
