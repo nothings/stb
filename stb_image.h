@@ -13,7 +13,7 @@
           avoid problematic images and only need the trivial interface
 
       JPEG baseline (no JPEG progressive)
-      PNG 8-bit-per-channel only
+      PNG 1/2/4/8-bit-per-channel (16 bpc not supported)
 
       TGA (not sure what subset, if a subset)
       BMP non-1bpp, non-RLE
@@ -28,6 +28,7 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.xx (2014-09-26) 1/2/4-bit PNG support (both grayscale and paletted)
       1.46 (2014-08-26) fix broken tRNS chunk in non-paletted PNG
       1.45 (2014-08-16) workaround MSVC-ARM internal compiler error by wrapping malloc
       1.44 (2014-08-07) warnings
