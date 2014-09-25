@@ -2500,10 +2500,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
    a->out = (stbi_uc *) stbi__malloc(x * y * out_n);
    if (!a->out) return stbi__err("outofmem", "Out of memory");
 
-   img_len = (img_n * x) * y;
-   if (depth<8) img_len /= (8/depth);
-   else if (depth>8) img_len *= depth>>3;
-   img_len += y;
+   img_len = ((((img_n * x * depth) + 7) >> 3) + 1) * y;
    if (s->img_x == x && s->img_y == y) {
       if (raw_len != img_len) return stbi__err("not enough pixels","Corrupt PNG");
    } else { // interlaced:
@@ -2511,7 +2508,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
    }
 
    if (depth != 8) {
-	   line8 = (stbi_uc *) stbi__malloc((x+3) * out_n); // allocate buffer for one scanline
+	   line8 = (stbi_uc *) stbi__malloc((x+7) * out_n); // allocate buffer for one scanline
 	   if (!line8) return stbi__err("outofmem", "Out of memory");
    }
 
@@ -2533,35 +2530,31 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
           // unpack 1/2/4-bit into a 8-bit buffer. allows us to keep the common 8-bit path optimal at minimal cost for 1/2/4-bit
 		  // png guarante byte alignment, if width is not multiple of 8/4/2 we'll decode dummy trailing data that will be skipped in the later loop
 		  in = line8;
-		  stbi_uc* decode_in = raw;
 		  stbi_uc* decode_out = line8;
 		  stbi_uc scale = (color == 0) ? 0xFF/((1<<depth)-1) : 1; // scale grayscale values to 0..255 range
 		  if (depth == 4) {
-			  for (i=x*img_n; i >= 1; i-=2, decode_in++) {
-				  *decode_out++ = scale * ((*decode_in >> 4)       );
-				  *decode_out++ = scale * ((*decode_in     ) & 0x0f);
+			  for (k=x*img_n; k >= 1; k-=2, raw++) {
+				  *decode_out++ = scale * ((*raw >> 4)       );
+				  *decode_out++ = scale * ((*raw     ) & 0x0f);
 			  }
-			  raw+=(x*img_n+1)>>1;
 		  } else if (depth == 2) {
-			  for (i=x*img_n; i >= 1; i-=4, decode_in++) {
-				  *decode_out++ = scale * ((*decode_in >> 6)       );
-				  *decode_out++ = scale * ((*decode_in >> 4) & 0x03);
-				  *decode_out++ = scale * ((*decode_in >> 2) & 0x03);
-				  *decode_out++ = scale * ((*decode_in     ) & 0x03);
+			  for (k=x*img_n; k >= 1; k-=4, raw++) {
+				  *decode_out++ = scale * ((*raw >> 6)       );
+				  *decode_out++ = scale * ((*raw >> 4) & 0x03);
+				  *decode_out++ = scale * ((*raw >> 2) & 0x03);
+				  *decode_out++ = scale * ((*raw     ) & 0x03);
 			  }
-			  raw+=(x*img_n+3)>>2;
 		  } else if (depth == 1) {
-			  for (i=x*img_n; i >= 1; i-=8, decode_in++) {
-				  *decode_out++ = scale * ((*decode_in >> 7)       );
-				  *decode_out++ = scale * ((*decode_in >> 6) & 0x01);
-				  *decode_out++ = scale * ((*decode_in >> 5) & 0x01);
-				  *decode_out++ = scale * ((*decode_in >> 4) & 0x01);
-				  *decode_out++ = scale * ((*decode_in >> 3) & 0x01);
-				  *decode_out++ = scale * ((*decode_in >> 2) & 0x01);
-				  *decode_out++ = scale * ((*decode_in >> 1) & 0x01);
-				  *decode_out++ = scale * ((*decode_in     ) & 0x01);
+			  for (k=x*img_n; k >= 1; k-=8, raw++) {
+				  *decode_out++ = scale * ((*raw >> 7)       );
+				  *decode_out++ = scale * ((*raw >> 6) & 0x01);
+				  *decode_out++ = scale * ((*raw >> 5) & 0x01);
+				  *decode_out++ = scale * ((*raw >> 4) & 0x01);
+				  *decode_out++ = scale * ((*raw >> 3) & 0x01);
+				  *decode_out++ = scale * ((*raw >> 2) & 0x01);
+				  *decode_out++ = scale * ((*raw >> 1) & 0x01);
+				  *decode_out++ = scale * ((*raw     ) & 0x01);
 		      }
-			  raw+=(x*img_n+7)>>3;
 		  }
 	  }
 
@@ -2642,6 +2635,7 @@ static int stbi__create_png_image(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_l
       x = (a->s->img_x - xorig[p] + xspc[p]-1) / xspc[p];
       y = (a->s->img_y - yorig[p] + yspc[p]-1) / yspc[p];
       if (x && y) {
+		 stbi__uint32 img_len = ((((out_n * x * depth) + 7) >> 3) + 1) * y;
          if (!stbi__create_png_image_raw(a, raw, raw_len, out_n, x, y, depth, color)) {
             free(final);
             return 0;
@@ -2651,8 +2645,8 @@ static int stbi__create_png_image(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_l
                memcpy(final + (j*yspc[p]+yorig[p])*a->s->img_x*out_n + (i*xspc[p]+xorig[p])*out_n,
                       a->out + (j*x+i)*out_n, out_n);
          free(a->out);
-         raw += (x*out_n+1)*y;
-         raw_len -= (x*out_n+1)*y;
+         raw += img_len;
+         raw_len -= img_len;
       }
    }
    a->out = final;
