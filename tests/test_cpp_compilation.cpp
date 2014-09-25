@@ -15,3 +15,8 @@
 #include "stb_divide.h"
 #include "stb_image.h"
 #include "stb_herringbone_wang_tile.h"
+
+#define STBTE_DRAW_RECT(x0,y0,x1,y1,color)
+#define STBTE_DRAW_TILE(x,y,id,highlight)
+#define STB_TILEMAP_EDITOR_IMPLEMENTATION
+#include "stb_tilemap_editor.h"

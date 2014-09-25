@@ -1,5 +1,5 @@
-// stb_truetype.h - v0.9 - public domain
-// authored from 2009-2013 by Sean Barrett / RAD Game Tools
+// stb_truetype.h - v0.99 - public domain
+// authored from 2009-2014 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
 //        parse files
@@ -21,7 +21,7 @@
 //   Mikko Mononen: compound shape support, more cmap formats
 //   Tor Andersson: kerning, subpixel rendering
 //
-//   Bug/warning reports:
+//   Bug/warning reports/fixes:
 //       "Zer" on mollyrocket (with fix)
 //       Cass Everitt
 //       stoiko (Haemimont Games)
@@ -33,9 +33,11 @@
 //       Anthony Pesch
 //       Johan Duparc
 //       Hou Qiming
+//       Fabian "ryg" Giesen
 //
 // VERSION HISTORY
 //
+//   0.99 (2014-09-18) fix multiple bugs with subpixel rendering (ryg)
 //   0.9  (2014-08-07) support certain mac/iOS fonts without an MS platformID
 //   0.8b (2014-07-07) fix a warning
 //   0.8  (2014-05-25) fix a few more warnings
@@ -1385,14 +1387,21 @@ void stbtt_FreeShape(const stbtt_fontinfo *info, stbtt_vertex *v)
 void stbtt_GetGlyphBitmapBoxSubpixel(const stbtt_fontinfo *font, int glyph, float scale_x, float scale_y,float shift_x, float shift_y, int *ix0, int *iy0, int *ix1, int *iy1)
 {
    int x0,y0,x1,y1;
-   if (!stbtt_GetGlyphBox(font, glyph, &x0,&y0,&x1,&y1))
-      x0=y0=x1=y1=0; // e.g. space character
-   // now move to integral bboxes (treating pixels as little squares, what pixels get touched)?
-   if (ix0) *ix0 =  STBTT_ifloor(x0 * scale_x + shift_x);
-   if (iy0) *iy0 = -STBTT_iceil (y1 * scale_y + shift_y);
-   if (ix1) *ix1 =  STBTT_iceil (x1 * scale_x + shift_x);
-   if (iy1) *iy1 = -STBTT_ifloor(y0 * scale_y + shift_y);
+   if (!stbtt_GetGlyphBox(font, glyph, &x0,&y0,&x1,&y1)) {
+      // e.g. space character
+      if (ix0) *ix0 = 0;
+      if (iy0) *iy0 = 0;
+      if (ix1) *ix1 = 0;
+      if (iy1) *iy1 = 0;
+   } else {
+      // move to integral bboxes (treating pixels as little squares, what pixels get touched)?
+      if (ix0) *ix0 = STBTT_ifloor( x0 * scale_x + shift_x);
+      if (iy0) *iy0 = STBTT_ifloor(-y1 * scale_y + shift_y);
+      if (ix1) *ix1 = STBTT_iceil ( x1 * scale_x + shift_x);
+      if (iy1) *iy1 = STBTT_iceil (-y0 * scale_y + shift_y);
+   }
 }
+
 void stbtt_GetGlyphBitmapBox(const stbtt_fontinfo *font, int glyph, float scale_x, float scale_y, int *ix0, int *iy0, int *ix1, int *iy1)
 {
    stbtt_GetGlyphBitmapBoxSubpixel(font, glyph, scale_x, scale_y,0.0f,0.0f, ix0, iy0, ix1, iy1);
@@ -1639,9 +1648,9 @@ static void stbtt__rasterize(stbtt__bitmap *result, stbtt__point *pts, int *wcou
             a=j,b=k;
          }
          e[n].x0 = p[a].x * scale_x + shift_x;
-         e[n].y0 = p[a].y * y_scale_inv * vsubsample + shift_y;
+         e[n].y0 = (p[a].y * y_scale_inv + shift_y) * vsubsample;
          e[n].x1 = p[b].x * scale_x + shift_x;
-         e[n].y1 = p[b].y * y_scale_inv * vsubsample + shift_y;
+         e[n].y1 = (p[b].y * y_scale_inv + shift_y) * vsubsample;
          ++n;
       }
    }
