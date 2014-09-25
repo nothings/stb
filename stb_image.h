@@ -2508,55 +2508,55 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
    }
 
    if (depth != 8) {
-	   line8 = (stbi_uc *) stbi__malloc((x+7) * out_n); // allocate buffer for one scanline
-	   if (!line8) return stbi__err("outofmem", "Out of memory");
+      line8 = (stbi_uc *) stbi__malloc((x+7) * out_n); // allocate buffer for one scanline
+      if (!line8) return stbi__err("outofmem", "Out of memory");
    }
 
    for (j=0; j < y; ++j) {
-	  stbi_uc *in;
+      stbi_uc *in;
       stbi_uc *cur = a->out + stride*j;
       stbi_uc *prior = cur - stride;
       int filter = *raw++;
       if (filter > 4) {
-		  if (depth != 8) free(line8);
-		  return stbi__err("invalid filter","Corrupt PNG");
-	  }
+         if (depth != 8) free(line8);
+         return stbi__err("invalid filter","Corrupt PNG");
+      }
 
-	  if (depth == 8) {
-		  in = raw;
-		  raw += x*img_n;
-	  }
-	  else {
-          // unpack 1/2/4-bit into a 8-bit buffer. allows us to keep the common 8-bit path optimal at minimal cost for 1/2/4-bit
-		  // png guarante byte alignment, if width is not multiple of 8/4/2 we'll decode dummy trailing data that will be skipped in the later loop
-		  in = line8;
-		  stbi_uc* decode_out = line8;
-		  stbi_uc scale = (color == 0) ? 0xFF/((1<<depth)-1) : 1; // scale grayscale values to 0..255 range
-		  if (depth == 4) {
-			  for (k=x*img_n; k >= 1; k-=2, raw++) {
-				  *decode_out++ = scale * ((*raw >> 4)       );
-				  *decode_out++ = scale * ((*raw     ) & 0x0f);
-			  }
-		  } else if (depth == 2) {
-			  for (k=x*img_n; k >= 1; k-=4, raw++) {
-				  *decode_out++ = scale * ((*raw >> 6)       );
-				  *decode_out++ = scale * ((*raw >> 4) & 0x03);
-				  *decode_out++ = scale * ((*raw >> 2) & 0x03);
-				  *decode_out++ = scale * ((*raw     ) & 0x03);
-			  }
-		  } else if (depth == 1) {
-			  for (k=x*img_n; k >= 1; k-=8, raw++) {
-				  *decode_out++ = scale * ((*raw >> 7)       );
-				  *decode_out++ = scale * ((*raw >> 6) & 0x01);
-				  *decode_out++ = scale * ((*raw >> 5) & 0x01);
-				  *decode_out++ = scale * ((*raw >> 4) & 0x01);
-				  *decode_out++ = scale * ((*raw >> 3) & 0x01);
-				  *decode_out++ = scale * ((*raw >> 2) & 0x01);
-				  *decode_out++ = scale * ((*raw >> 1) & 0x01);
-				  *decode_out++ = scale * ((*raw     ) & 0x01);
-		      }
-		  }
-	  }
+      if (depth == 8) {
+         in = raw;
+         raw += x*img_n;
+      }
+      else {
+         // unpack 1/2/4-bit into a 8-bit buffer. allows us to keep the common 8-bit path optimal at minimal cost for 1/2/4-bit
+         // png guarante byte alignment, if width is not multiple of 8/4/2 we'll decode dummy trailing data that will be skipped in the later loop
+         in = line8;
+         stbi_uc* decode_out = line8;
+         stbi_uc scale = (color == 0) ? 0xFF/((1<<depth)-1) : 1; // scale grayscale values to 0..255 range
+         if (depth == 4) {
+            for (k=x*img_n; k >= 1; k-=2, raw++) {
+               *decode_out++ = scale * ((*raw >> 4)       );
+               *decode_out++ = scale * ((*raw     ) & 0x0f);
+            }
+         } else if (depth == 2) {
+            for (k=x*img_n; k >= 1; k-=4, raw++) {
+               *decode_out++ = scale * ((*raw >> 6)       );
+               *decode_out++ = scale * ((*raw >> 4) & 0x03);
+               *decode_out++ = scale * ((*raw >> 2) & 0x03);
+               *decode_out++ = scale * ((*raw     ) & 0x03);
+            }
+         } else if (depth == 1) {
+            for (k=x*img_n; k >= 1; k-=8, raw++) {
+               *decode_out++ = scale * ((*raw >> 7)       );
+               *decode_out++ = scale * ((*raw >> 6) & 0x01);
+               *decode_out++ = scale * ((*raw >> 5) & 0x01);
+               *decode_out++ = scale * ((*raw >> 4) & 0x01);
+               *decode_out++ = scale * ((*raw >> 3) & 0x01);
+               *decode_out++ = scale * ((*raw >> 2) & 0x01);
+               *decode_out++ = scale * ((*raw >> 1) & 0x01);
+               *decode_out++ = scale * ((*raw     ) & 0x01);
+            }
+         }
+      }
 
       // if first row, use special filter that doesn't sample previous row
       if (j == 0) filter = first_row_filter[filter];
@@ -2574,7 +2574,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
          }
       }
       if (img_n != out_n) cur[img_n] = 255;
-	  in += img_n;
+      in += img_n;
       cur += out_n;
       prior += out_n;
       // this is a little gross, so that we don't switch per-pixel or per-component
@@ -2635,7 +2635,7 @@ static int stbi__create_png_image(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_l
       x = (a->s->img_x - xorig[p] + xspc[p]-1) / xspc[p];
       y = (a->s->img_y - yorig[p] + yspc[p]-1) / yspc[p];
       if (x && y) {
-		 stbi__uint32 img_len = ((((out_n * x * depth) + 7) >> 3) + 1) * y;
+         stbi__uint32 img_len = ((((out_n * x * depth) + 7) >> 3) + 1) * y;
          if (!stbi__create_png_image_raw(a, raw, raw_len, out_n, x, y, depth, color)) {
             free(final);
             return 0;
@@ -4626,7 +4626,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
       1.45 (2014-08-16)
              fix MSVC-ARM internal compiler error by wrapping malloc
       1.44 (2014-08-07)
-		       various warning fixes from Ronny Chevalier
+               various warning fixes from Ronny Chevalier
       1.43 (2014-07-15)
              fix MSVC-only compiler problem in code changed in 1.42
       1.42 (2014-07-09)
