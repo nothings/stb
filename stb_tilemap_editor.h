@@ -263,7 +263,7 @@ extern void stbte_set_layername(stbte_tilemap *tm, int layer, const char *layern
 #error "Undo buffer size must be a power of 2"
 #endif
 
-#define STBTE_COLOR_TOOLBAR_BACKGROUND    0x606060
+#define STBTE_COLOR_TOOLBAR_BACKGROUND    0x606060 // stbte__color[STBTE__ctoolbar][STBTE__base][STBTE__idle]
 #define STBTE_COLOR_TILEMAP_BACKGROUND    0x000000
 #define STBTE_COLOR_TILEMAP_BORDER        0x203060
 #define STBTE_COLOR_TILEMAP_HIGHLIGHT     0xffffff
@@ -378,6 +378,7 @@ enum
 {
    STBTE__tool_select,
    STBTE__tool_brush,
+   STBTE__tool_erase,
    STBTE__tool_rect,
    STBTE__tool_eyedrop,
    STBTE__tool_fill,
@@ -391,7 +392,7 @@ enum
 };
 
 // icons are stored in the 0-31 range of ASCII in the font
-static int toolchar[] = { 26,24,20,23,22, 19,29,28, };
+static int toolchar[] = { 26,24,25,20,23,22, 19,29,28, };
 
 enum
 {
@@ -1440,6 +1441,10 @@ static void stbte__alert(const char *msg)
    stbte__ui.alert_timer = 3;
 }
 
+#define STBTE__BG(tm,layer) ((layer) == 0 ? (tm)->background_tile : STBTE__NO_TILE)
+
+
+
 static void stbte__brush_predict(stbte_tilemap *tm, short result[])
 {
    int layer_to_paint = tm->cur_layer;
@@ -1457,8 +1462,6 @@ static void stbte__brush_predict(stbte_tilemap *tm, short result[])
          continue;
 
       if (i != tm->solo_layer) {
-         short bg;
-
          // if there's a selected layer, can only paint on that
          if (tm->cur_layer >= 0 && i != tm->cur_layer)
             continue;
@@ -1471,9 +1474,8 @@ static void stbte__brush_predict(stbte_tilemap *tm, short result[])
          if (tm->layerinfo[i].locked == STBTE__locked)
             continue;
 
-         bg = i == 0 ? tm->background_tile : STBTE__NO_TILE;
          // if the layer is non-empty and protected, can't write to it
-         if (tm->layerinfo[i].locked == STBTE__protected && result[i] != bg)
+         if (tm->layerinfo[i].locked == STBTE__protected && result[i] != STBTE__BG(tm,i))
             continue;
       }
 
@@ -1500,8 +1502,6 @@ static void stbte__brush(stbte_tilemap *tm, int x, int y)
          continue;
 
       if (i != tm->solo_layer) {
-         short bg;
-
          // if there's a selected layer, can only paint on that
          if (tm->cur_layer >= 0 && i != tm->cur_layer)
             continue;
@@ -1514,9 +1514,8 @@ static void stbte__brush(stbte_tilemap *tm, int x, int y)
          if (tm->layerinfo[i].locked == STBTE__locked)
             continue;
 
-         bg = i == 0 ? tm->background_tile : STBTE__NO_TILE;
          // if the layer is non-empty and protected, can't write to it
-         if (tm->layerinfo[i].locked == STBTE__protected && tm->data[y][x][i] != bg)
+         if (tm->layerinfo[i].locked == STBTE__protected && tm->data[y][x][i] != STBTE__BG(tm,i))
             continue;
       }
 
@@ -1533,6 +1532,7 @@ enum
    STBTE__erase_none = -1,
    STBTE__erase_brushonly = 0,
    STBTE__erase_any = 1,
+   STBTE__erase_all = 2,
 };
 
 static int stbte__erase_predict(stbte_tilemap *tm, short result[], int allow_any)
@@ -1571,7 +1571,7 @@ static int stbte__erase_predict(stbte_tilemap *tm, short result[], int allow_any
 
    // if multiple layers are legit, first scan all for brush data
 
-   if (ti) {
+   if (ti && allow_any != STBTE__erase_all) {
       for (i=tm->num_layers-1; i >= 0; --i) {
          if (result[i] != ti->id)
             continue;
@@ -1579,7 +1579,7 @@ static int stbte__erase_predict(stbte_tilemap *tm, short result[], int allow_any
             continue;
          if (i == 0 && result[i] == tm->background_tile)
             return STBTE__erase_none;
-         result[i] = (i == 0 ? tm->background_tile : STBTE__NO_TILE);
+         result[i] = STBTE__BG(tm,i);
          return STBTE__erase_brushonly;
       }
    }
@@ -1595,10 +1595,13 @@ static int stbte__erase_predict(stbte_tilemap *tm, short result[], int allow_any
          continue;
       if (i == 0 && result[i] == tm->background_tile)
          return STBTE__erase_none;
-      result[i] = (i == 0 ? tm->background_tile : STBTE__NO_TILE);
-      return STBTE__erase_any;
+      result[i] = STBTE__BG(tm,i);
+      if (allow_any != STBTE__erase_all)
+         return STBTE__erase_any;
    }
 
+   if (allow_any == STBTE__erase_all)
+      return allow_any;
    return STBTE__erase_none;
 }
 
@@ -1641,7 +1644,7 @@ static int stbte__erase(stbte_tilemap *tm, int x, int y, int allow_any)
 
    // if multiple layers are legit, first scan all for brush data
 
-   if (ti) {
+   if (ti && allow_any != STBTE__erase_all) {
       for (i=tm->num_layers-1; i >= 0; --i) {
          if (tm->data[y][x][i] != ti->id)
             continue;
@@ -1650,7 +1653,7 @@ static int stbte__erase(stbte_tilemap *tm, int x, int y, int allow_any)
          if (i == 0 && tm->data[y][x][i] == tm->background_tile)
             return STBTE__erase_none;
          stbte__undo_record(tm,x,y,i,tm->data[y][x][i]);
-         tm->data[y][x][i] = (i == 0 ? tm->background_tile : STBTE__NO_TILE);
+         tm->data[y][x][i] = STBTE__BG(tm,i);
          return STBTE__erase_brushonly;
       }
    }
@@ -1667,10 +1670,12 @@ static int stbte__erase(stbte_tilemap *tm, int x, int y, int allow_any)
       if (i == 0 && tm->data[y][x][i] == tm->background_tile)
          return STBTE__erase_none;
       stbte__undo_record(tm,x,y,i,tm->data[y][x][i]);
-      tm->data[y][x][i] = (i == 0 ? tm->background_tile : STBTE__NO_TILE);
-      return STBTE__erase_any;
+      tm->data[y][x][i] = STBTE__BG(tm,i);
+      if (allow_any != STBTE__erase_all)
+         return STBTE__erase_any;
    }
-
+   if (allow_any == STBTE__erase_all)
+      return allow_any;
    return STBTE__erase_none;
 }
 
@@ -1735,12 +1740,14 @@ static void stbte__paste_stack(stbte_tilemap *tm, short result[], short dest[], 
          // check that we're allowed to write to it
          if (tm->layerinfo[i].hidden) return;
          if (tm->layerinfo[i].locked == STBTE__locked) return;
-         // if dragging w/o copy, we have to be allowed to erase
+         // if protected, dest has to be empty
+         if (tm->layerinfo[i].locked == STBTE__protected && dest[i] != STBTE__BG(tm,i)) return;
+         // if dragging w/o copy, we will try to erase stuff, which protection disallows
          if (dragging && tm->layerinfo[i].locked == STBTE__protected)
              return;
       }
       result[i] = dest[i];
-      if (src[i] != STBTE__NO_TILE)
+      if (src[i] != STBTE__BG(tm,i))
          result[i] = src[i];
       return;
    }
@@ -1749,7 +1756,7 @@ static void stbte__paste_stack(stbte_tilemap *tm, short result[], short dest[], 
       result[i] = dest[i];
       if (src[i] != STBTE__NO_TILE) {
          if (!tm->layerinfo[i].hidden && tm->layerinfo[i].locked != STBTE__locked)
-            if (!dragging || tm->layerinfo[i].locked == STBTE__unlocked)
+            if (tm->layerinfo[i].locked == STBTE__unlocked || (!dragging && dest[i] == STBTE__BG(tm,i)))
                result[i] = src[i];
          }
    }
@@ -2133,11 +2140,36 @@ static void stbte__tile(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy)
                if (STBTE__IS_HOT(id) && STBTE__INACTIVE()) {
                   stbte__activate(id);
                   stbte__begin_undo(tm);
-                  stbte__ui.brush_state = stbte__erase(tm, mapx, mapy, 1);
+                  if (stbte__erase(tm, mapx, mapy, STBTE__erase_any) == STBTE__erase_brushonly)
+                     stbte__ui.brush_state = STBTE__erase_brushonly;
+                  else
+                     stbte__ui.brush_state = STBTE__erase_any;
                }
                break;
             case STBTE__leftup:
             case STBTE__rightup:
+               if (STBTE__IS_MAP_ACTIVE()) {
+                  stbte__end_undo(tm);
+                  stbte__activate(0);
+               }
+               break;
+         }
+         break;
+
+      case STBTE__tool_erase:
+         switch (stbte__ui.event) {
+            case STBTE__mousemove:
+               if (STBTE__IS_MAP_ACTIVE() && over)
+                  stbte__erase(tm, mapx, mapy, STBTE__erase_all);
+               break;
+            case STBTE__leftdown:
+               if (STBTE__IS_HOT(id) && STBTE__INACTIVE()) {
+                  stbte__activate(id);
+                  stbte__begin_undo(tm);
+                  stbte__erase(tm, mapx, mapy, STBTE__erase_all);
+               }
+               break;
+            case STBTE__leftup:
                if (STBTE__IS_MAP_ACTIVE()) {
                   stbte__end_undo(tm);
                   stbte__activate(0);
@@ -2237,6 +2269,8 @@ static void stbte__toolbar(stbte_tilemap *tm, int x0, int y0, int w, int h)
    for (i=0; i < STBTE__num_tool; ++i) {
       int highlight=0;
       highlight = (stbte__ui.tool == i);
+      if (i == STBTE__tool_undo || i == STBTE__tool_grid)
+          x += 8;
       if (i == STBTE__tool_grid && stbte__ui.show_grid)
          highlight=1;
       if (i == STBTE__tool_fill)
@@ -2262,8 +2296,6 @@ static void stbte__toolbar(stbte_tilemap *tm, int x0, int y0, int w, int h)
          }
       }
       x += 13;
-      if (i+1 == STBTE__tool_undo || i+1 == STBTE__tool_grid)
-          x += 8;
    }
 
    x += 8;
@@ -2427,11 +2459,16 @@ static void stbte__palette_of_tiles(stbte_tilemap *tm, int x0, int y0, int w, in
    int i,x,y;
    int num_vis_rows = (h-6) / tm->palette_spacing_y;
    int num_columns = (w-2-6) / tm->palette_spacing_x;
-   int num_total_rows = (tm->cur_palette_count + num_columns-1) / num_columns; // ceil()
+   int num_total_rows;
    int column,row;
    int x1 = x0+w, y1=y0+h;
    x = x0+2;
    y = y0+6;
+
+   if (num_columns == 0)
+      return;
+
+   num_total_rows = (tm->cur_palette_count + num_columns-1) / num_columns; // ceil()
 
    column = 0;
    row    = -tm->palette_scroll;   
