@@ -1,4 +1,4 @@
-// stb_tilemap_editor.h - v0.10 - Sean Barrett - http://nothings.org/stb
+// stb_tilemap_editor.h - v0.20 - Sean Barrett - http://nothings.org/stb
 // placed in the public domain - not copyrighted - first released 2014-09
 //
 // Embeddable tilemap editor for C/C++
@@ -70,9 +70,13 @@
 //   stbte_tilemap keeps its own undo state. (The clipboard is global, so
 //   either approach allows cut&pasting between levels.)
 //
+// REVISION HISTORY
+//
+//   0.20 - 2014-09-27 - eraser tool, bugfixes, new colorscheme
+//   0.10 - 2014-09-23 - initial release
+//
 // TODO
 //
-//   Eraser!!!
 //   Separate scroll state for each category
 //   Implement paint bucket
 //   Support STBTE_HITTEST_TILE above
@@ -263,45 +267,138 @@ extern void stbte_set_layername(stbte_tilemap *tm, int layer, const char *layern
 #error "Undo buffer size must be a power of 2"
 #endif
 
-#define STBTE_COLOR_TOOLBAR_BACKGROUND    0x606060 // stbte__color[STBTE__ctoolbar][STBTE__base][STBTE__idle]
-#define STBTE_COLOR_TILEMAP_BACKGROUND    0x000000
-#define STBTE_COLOR_TILEMAP_BORDER        0x203060
-#define STBTE_COLOR_TILEMAP_HIGHLIGHT     0xffffff
-#define STBTE_COLOR_PANEL_BACKGROUND      0x403010
-#define STBTE_COLOR_PANEL_OUTLINE         0xc08040
-#define STBTE_COLOR_PANEL_TEXT            0xffffff
-#define STBTE_COLOR_BUTTON_BACKGROUND     0x703870
-#define STBTE_COLOR_BUTTON_OUTLINE        0xc060c0
-#define STBTE_COLOR_BUTTON_TEXT           0xffffff
-#define STBTE_COLOR_BUTTON_DOWN           0xe080e0
-#define STBTE_COLOR_BUTTON_OVER           0xffc0ff
-#define STBTE_COLOR_BUTTON_TEXT_SELECTED  0x000000
-#define STBTE_COLOR_MICROBUTTON           0x40c040
-#define STBTE_COLOR_MICROBUTTON_DOWN      0xc0ffc0
-#define STBTE_COLOR_MICROBUTTON_FRAME     0x00ff00
-#define STBTE_COLOR_MICROBUTTON_OVER      0x80ff80
-#define STBTE_COLOR_TILEPALETTE_OUTLINE   0xffffff
-#define STBTE_COLOR_TILEPALETTE_BACKGROUND 0x000000
-#define STBTE_COLOR_MINIBUTTON_ICON       0xffffff
-#define STBTE_COLOR_SELECTION_OUTLINE1    0xdfdfdf
-#define STBTE_COLOR_SELECTION_OUTLINE2    0x303030
-#define STBTE_COLOR_GRID                  0x404040
+static int *stbte__colors;
 
-#define STBTE_COLOR_LAYERCONTROL                  0x6f6f6f
-#define STBTE_COLOR_LAYERCONTROL_OVER             0xcfcfcf
-#define STBTE_COLOR_LAYERCONTROL_DOWN             0xffffff
-#define STBTE_COLOR_LAYERCONTROL_TOGGLED          0xbfbfbf
-#define STBTE_COLOR_LAYERCONTROL_DISABLED         0x404040
-#define STBTE_COLOR_LAYERCONTROL_OUTLINE          0xffffff
-#define STBTE_COLOR_LAYERCONTROL_OUTLINE_DISABLED 0x202020
-#define STBTE_COLOR_LAYERCONTROL_TEXT             0xffffff
-#define STBTE_COLOR_LAYERCONTROL_TEXT_DOWN        0x5f5f5f
-#define STBTE_COLOR_LAYERCONTROL_TEXT_TOGGLED     0x000000
-#define STBTE_COLOR_LAYERCONTROL_TEXT_DISABLED    0x606060
+enum
+{
+   STBTE__base,
+   STBTE__outline,
+   STBTE__text,
 
-#define STBTE_COLOR_LAYERMASK_HIDE       0xffff55
-#define STBTE_COLOR_LAYERMASK_LOCK       0x5f55ff
-#define STBTE_COLOR_LAYERMASK_SOLO       0xff5f55
+   STBTE__num_color_aspects,
+};
+
+enum
+{
+   STBTE__idle,
+   STBTE__over,
+   STBTE__down,
+   STBTE__over_down,
+   STBTE__selected,
+   STBTE__selected_over,
+   STBTE__disabled,
+   STBTE__num_color_states,
+};
+
+enum
+{
+   STBTE__cexpander,
+   STBTE__ctoolbar,
+   STBTE__ctoolbar_button,
+   STBTE__cpanel,
+   STBTE__cpanel_sider,
+   STBTE__cpanel_sizer,
+   STBTE__cscrollbar,
+   STBTE__cmapsize,
+   STBTE__clayer_button,
+   STBTE__clayer_hide,
+   STBTE__clayer_lock,
+   STBTE__clayer_solo,
+   STBTE__ccategory_button,
+
+   STBTE__num_color_modes,
+};
+
+#ifdef STBTE__COLORPICKER
+static char *stbte__color_names[] =
+{
+   "expander", "toolbar", "tool button", "panel",
+   "panel c1", "panel c2", "scollbar", "map button",
+   "layer", "hide", "lock", "solo",
+   "category",
+};
+#endif // STBTE__COLORPICKER
+
+      // idle,    over,     down,    over&down, selected, sel&over, disabled
+static int stbte__color_table[STBTE__num_color_modes][STBTE__num_color_aspects][STBTE__num_color_states] =
+{
+   {
+      { 0x000000, 0x84987c, 0xdcdca8, 0xdcdca8, 0x40c040, 0x60d060, 0x505050, },
+      { 0xa4b090, 0xe0ec80, 0xffffc0, 0xffffc0, 0x80ff80, 0x80ff80, 0x606060, },
+      { 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },
+   }, {
+      { 0x808890, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, },
+      { 0x605860, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, 0x606060, },
+      { 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, },
+   }, {
+      { 0x3c5068, 0x7088a8, 0x647488, 0x94b4dc, 0x8890c4, 0x9caccc, 0x404040, },
+      { 0x889cb8, 0x889cb8, 0x889cb8, 0x889cb8, 0x84c4e8, 0xacc8ff, 0x0c0c08, },
+      { 0xbcc4cc, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x707074, },
+   }, {
+      { 0x403848, 0x403010, 0x403010, 0x403010, 0x403010, 0x403010, 0x303024, },
+      { 0x68546c, 0xc08040, 0xc08040, 0xc08040, 0xc08040, 0xc08040, 0x605030, },
+      { 0xf4e4ff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },
+   }, {
+      { 0xb4b04c, 0xacac60, 0xc0ffc0, 0xc0ffc0, 0x40c040, 0x60d060, 0x505050, },
+      { 0xa0a04c, 0xd0d04c, 0xffff80, 0xffff80, 0x80ff80, 0x80ff80, 0x606060, },
+      { 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },
+   }, {
+      { 0x40c440, 0x60d060, 0xc0ffc0, 0xc0ffc0, 0x40c040, 0x60d060, 0x505050, },
+      { 0x40c040, 0x80ff80, 0x80ff80, 0x80ff80, 0x80ff80, 0x80ff80, 0x606060, },
+      { 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },
+   }, {
+      { 0x9090ac, 0xa0a0b8, 0xbcb8cc, 0xbcb8cc, 0x909040, 0x909040, 0x909040, },
+      { 0xa0a0b8, 0xb0b4d0, 0xa0a0b8, 0xa0a0b8, 0xa0a050, 0xa0a050, 0xa0a050, },
+      { 0x808088, 0x808030, 0x808030, 0x808030, 0x808030, 0x808030, 0x808030, },
+   }, {
+      { 0x704c70, 0x885c8c, 0x9c68a4, 0xb870bc, 0xb490bc, 0xb490bc, 0x302828, },
+      { 0x646064, 0xcca8d4, 0xc060c0, 0xa07898, 0xe0b8e0, 0xe0b8e0, 0x403838, },
+      { 0xdccce4, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },
+   }, {
+      { 0x704c70, 0x885c8c, 0x9c68a4, 0xb870bc, 0xb490bc, 0xb490bc, 0x302828, },
+      { 0xb09cb4, 0xcca8d4, 0xc060c0, 0xa07898, 0xe0b8e0, 0xe0b8e0, 0x403838, },
+      { 0xdccce4, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0xffffff, 0x909090, },
+   }, {
+      { 0x646494, 0x888cb8, 0xb0b0b0, 0xb0b0cc, 0x9c9cf4, 0x8888b0, 0x50506c, },
+      { 0x9090a4, 0xb0b4d4, 0xb0b0dc, 0xb0b0cc, 0xd0d0fc, 0xd0d4f0, 0x606060, },
+      { 0xb4b4d4, 0xe4e4ff, 0xffffff, 0xffffff, 0xe0e4ff, 0xececff, 0x909090, },
+   }, {
+      { 0x646444, 0x888c64, 0xb0b0b0, 0xb0b088, 0xaca858, 0x88886c, 0x505050, },
+      { 0x88886c, 0xb0b490, 0xb0b0b0, 0xb0b088, 0xd8d898, 0xd0d4b0, 0x606060, },
+      { 0xb4b49c, 0xffffd8, 0xffffff, 0xffffd4, 0xffffdc, 0xffffcc, 0x909090, },
+   }, {
+      { 0x906464, 0xb48c8c, 0xd4b0b0, 0xdcb0b0, 0xff9c9c, 0xc88888, 0x505050, },
+      { 0xb47c80, 0xd4b4b8, 0xc4a8a8, 0xdcb0b0, 0xffc0c0, 0xfce8ec, 0x606060, },
+      { 0xe0b4b4, 0xffdcd8, 0xffd8d4, 0xffe0e4, 0xffece8, 0xffffff, 0x909090, },
+   }, {
+      { 0x403848, 0x403848, 0x403848, 0x886894, 0x7c80c8, 0x7c80c8, 0x302828, },
+      { 0x403848, 0x403848, 0x403848, 0x403848, 0x7c80c8, 0x7c80c8, 0x403838, },
+      { 0xc8c4c8, 0xffffff, 0xffffff, 0xffffff, 0xe8e8ec, 0xffffff, 0x909090, },
+   },
+};
+
+#define STBTE_COLOR_TILEMAP_BACKGROUND      0x000000
+#define STBTE_COLOR_TILEMAP_BORDER          0x203060
+#define STBTE_COLOR_TILEMAP_HIGHLIGHT       0xffffff
+#define STBTE_COLOR_GRID                    0x404040
+#define STBTE_COLOR_SELECTION_OUTLINE1      0xdfdfdf
+#define STBTE_COLOR_SELECTION_OUTLINE2      0x303030
+#define STBTE_COLOR_TILEPALETTE_OUTLINE     0xffffff
+#define STBTE_COLOR_TILEPALETTE_BACKGROUND  0x000000
+
+// disabled, selected, down, over
+static unsigned char stbte__state_to_index[2][2][2][2] =
+{
+   {
+      { { STBTE__idle    , STBTE__over          }, { STBTE__down    , STBTE__over_down }, },
+      { { STBTE__selected, STBTE__selected_over }, { STBTE__down    , STBTE__over_down }, },
+   },{
+      { { STBTE__disabled, STBTE__disabled      }, { STBTE__disabled, STBTE__disabled  }, },
+      { { STBTE__selected, STBTE__selected_over }, { STBTE__disabled, STBTE__disabled  }, },
+   }
+};
+#define STBTE__INDEX_FOR_STATE(disable,select,down,over) stbte__state_to_index[disable][select][down][over]
+#define STBTE__INDEX_FOR_ID(id,disable,select) STBTE__INDEX_FOR_STATE(disable,select,STBTE__IS_ACTIVE(id),STBTE__IS_HOT(id))
 
 #define STBTE__FONT_HEIGHT    9
 static short stbte__font_offset[95+16];
@@ -358,6 +455,7 @@ typedef short stbte__tiledata;
 enum
 {
    STBTE__panel_toolbar,
+   STBTE__panel_colorpick,
    STBTE__panel_info,
    STBTE__panel_layers,
    STBTE__panel_categories,
@@ -515,7 +613,8 @@ static void stbte__init_gui(void)
       stbte__ui.panel[i].delta_height = 0;
       stbte__ui.panel[i].side         = STBTE__side_left;
    }
-   stbte__ui.panel[STBTE__panel_toolbar].side = STBTE__side_top;
+   stbte__ui.panel[STBTE__panel_toolbar  ].side = STBTE__side_top;
+   stbte__ui.panel[STBTE__panel_colorpick].side = STBTE__side_right;
 
    if (stbte__ui.left_width == 0)
       stbte__ui.left_width = 80;
@@ -1070,7 +1169,33 @@ static int stbte__button_core(int id)
    return 0;
 }
 
-static int stbte__button(char *label, int x, int y, int textoff, int width, int id, int toggled)
+static void stbte__draw_box(int x0, int y0, int x1, int y1, int colormode, int colorindex)
+{
+   stbte__draw_rect (x0,y0,x1,y1, stbte__color_table[colormode][STBTE__base   ][colorindex]);
+   stbte__draw_frame(x0,y0,x1,y1, stbte__color_table[colormode][STBTE__outline][colorindex]);
+}
+
+static void stbte__draw_textbox(int x0, int y0, int x1, int y1, char *text, int xoff, int yoff, int colormode, int colorindex)
+{
+   stbte__draw_box(x0,y0,x1,y1,colormode,colorindex);
+   stbte__draw_text(x0+xoff,y0+yoff, text, x1-x0-xoff-1, stbte__color_table[colormode][STBTE__text][colorindex]);
+}
+
+static int stbte__button(int colormode, char *label, int x, int y, int textoff, int width, int id, int toggled, int disabled)
+{
+   int x0=x,y0=y, x1=x+width,y1=y+STBTE__BUTTON_HEIGHT;
+   int s = STBTE__BUTTON_INTERNAL_SPACING;
+
+   int over = !disabled && stbte__hittest(x0,y0,x1,y1,id);
+      
+   if (stbte__ui.event == STBTE__paint)
+      stbte__draw_textbox(x0,y0,x1,y1, label,s+textoff,s, colormode, STBTE__INDEX_FOR_ID(id,disabled,toggled));
+   if (disabled)
+      return 0;
+   return (stbte__button_core(id) == 1);
+}
+
+static int stbte__button_icon(int colormode, char ch, int x, int y, int width, int id, int toggled)
 {
    int x0=x,y0=y, x1=x+width,y1=y+STBTE__BUTTON_HEIGHT;
    int s = STBTE__BUTTON_INTERNAL_SPACING;
@@ -1078,104 +1203,55 @@ static int stbte__button(char *label, int x, int y, int textoff, int width, int 
    int over = stbte__hittest(x0,y0,x1,y1,id);
       
    if (stbte__ui.event == STBTE__paint) {
-      stbte__draw_rect (x0, y0, x1, y1, STBTE__IS_ACTIVE(id) || toggled ? STBTE_COLOR_BUTTON_DOWN : STBTE_COLOR_BUTTON_BACKGROUND);
-      stbte__draw_frame(x0, y0, x1, y1, STBTE__IS_HOT(id)    || toggled ? STBTE_COLOR_BUTTON_OVER : STBTE_COLOR_BUTTON_OUTLINE);
-      stbte__draw_text (x0+s+textoff, y0+s, label ,width-s*2, toggled ? STBTE_COLOR_BUTTON_TEXT : STBTE_COLOR_BUTTON_TEXT_SELECTED);
+      char label[2] = { ch, 0 };
+      int pad = (9 - stbte__get_char_width(ch))/2;
+      stbte__draw_textbox(x0,y0,x1,y1, label,s+pad,s, colormode, STBTE__INDEX_FOR_ID(id,0,toggled));
    }
    return (stbte__button_core(id) == 1);
 }
 
-static int stbte__button_icon(char ch, int x, int y, int width, int id, int toggled)
-{
-   int x0=x,y0=y, x1=x+width,y1=y+STBTE__BUTTON_HEIGHT;
-   int s = STBTE__BUTTON_INTERNAL_SPACING, pad;
-   char label[2] = { ch, 0 };
-
-   int over = stbte__hittest(x0,y0,x1,y1,id);
-      
-   if (stbte__ui.event == STBTE__paint) {
-      stbte__draw_rect (x0, y0, x1, y1, STBTE__IS_ACTIVE(id) || toggled ? STBTE_COLOR_BUTTON_DOWN : STBTE_COLOR_BUTTON_BACKGROUND);
-      stbte__draw_frame(x0, y0, x1, y1, STBTE__IS_HOT(id)    || toggled ? STBTE_COLOR_BUTTON_OVER : STBTE_COLOR_BUTTON_OUTLINE);
-      pad = (9 - stbte__get_char_width(ch))/2;
-      stbte__draw_text (x0+s+pad, y0+s, label ,9, toggled ? STBTE_COLOR_BUTTON_TEXT : STBTE_COLOR_BUTTON_TEXT_SELECTED);
-   }
-   return (stbte__button_core(id) == 1);
-}
-
-static int stbte__minibutton(int x, int y, int ch, int id)
+static int stbte__minibutton(int colormode, int x, int y, int ch, int id)
 {
    int x0 = x, y0 = y, x1 = x+8, y1 = y+7;
    int over = stbte__hittest(x0,y0,x1,y1,id);
    if (stbte__ui.event == STBTE__paint) {
       char str[2] = { ch,0 };
-      stbte__draw_rect (x0,y0,x1,y1, STBTE__IS_ACTIVE(id) ? STBTE_COLOR_MICROBUTTON_DOWN : STBTE_COLOR_MICROBUTTON);
-      stbte__draw_frame(x0,y0,x1,y1, STBTE__IS_HOT(id)    ? STBTE_COLOR_MICROBUTTON_OVER : STBTE_COLOR_MICROBUTTON_FRAME);
-      stbte__draw_text (x0+1,y0,str,99, STBTE_COLOR_MINIBUTTON_ICON);
+      stbte__draw_textbox(x0,y0,x1,y1, str,1,0,colormode, STBTE__INDEX_FOR_ID(id,0,0));
    }
    return stbte__button_core(id);
 }
 
-static int stbte__layerbutton(int x, int y, int ch, int id, int toggled, int disabled, int color)
+static int stbte__layerbutton(int x, int y, int ch, int id, int toggled, int disabled, int colormode)
 {
    int x0 = x, y0 = y, x1 = x+10, y1 = y+11;
-   int over = stbte__hittest(x0,y0,x1,y1,id);
+   int over = !disabled && stbte__hittest(x0,y0,x1,y1,id);
    if (stbte__ui.event == STBTE__paint) {
-      int rc = STBTE_COLOR_LAYERCONTROL;
-      int rf = STBTE_COLOR_LAYERCONTROL_OUTLINE;
-      int rt = STBTE_COLOR_LAYERCONTROL_TEXT;
-      if (toggled) {
-         rc = STBTE_COLOR_LAYERCONTROL_TOGGLED;
-         rt = STBTE_COLOR_LAYERCONTROL_TEXT_TOGGLED;
-      }
-      if (STBTE__IS_HOT(id)) {
-         rc = STBTE_COLOR_LAYERCONTROL_OVER;
-      }
-      if (STBTE__IS_ACTIVE(id)) {
-         rc = STBTE_COLOR_LAYERCONTROL_DOWN;
-         rt = STBTE_COLOR_LAYERCONTROL_TEXT_DOWN;
-      }
-      rc &= color;
-      rf &= color;
-      rt &= color;
-      if (disabled) {
-         rc = STBTE_COLOR_LAYERCONTROL_DISABLED;
-         rf = STBTE_COLOR_LAYERCONTROL_OUTLINE_DISABLED;
-         rt = STBTE_COLOR_LAYERCONTROL_TEXT_DISABLED;
-      }
-
-      stbte__draw_rect (x0,y0,x1,y1, rc);
-      stbte__draw_frame(x0,y0,x1,y1, rf);
-      {
-         char str[2] = { ch,0 };
-         int off = (9-stbte__get_char_width(ch))/2;
-         stbte__draw_text (x0+1+off,y0+2,str,99, rt);
-      }
+      char str[2] = { ch,0 };
+      int off = (9-stbte__get_char_width(ch))/2;
+      stbte__draw_textbox(x0,y0,x1,y1, str, off+1,2, colormode, STBTE__INDEX_FOR_ID(id,disabled,toggled));
    }
    if (disabled)
       return 0;
    return stbte__button_core(id);
 }
 
-
-static int stbte__microbutton(int x, int y, int size, int id, int c1, int c2, int toggled)
+static int stbte__microbutton(int x, int y, int size, int id, int colormode)
 {
    int x0 = x, y0 = y, x1 = x+size, y1 = y+size;
    int over = stbte__hittest(x0,y0,x1,y1,id);
    if (stbte__ui.event == STBTE__paint) {
-      stbte__draw_rect (x0,y0,x1,y1, STBTE__IS_ACTIVE(id) || toggled ? c2                           : c1                           );
-      stbte__draw_frame(x0,y0,x1,y1, STBTE__IS_HOT(id)               ? STBTE_COLOR_MICROBUTTON_OVER : STBTE_COLOR_MICROBUTTON_FRAME);
+      stbte__draw_box(x0,y0,x1,y1, colormode, STBTE__INDEX_FOR_ID(id,0,0));
    }
    return stbte__button_core(id);
 }
 
-static int stbte__microbutton_dragger(int x, int y, int size, int id, int c1, int c2, int toggled, int *pos)
+static int stbte__microbutton_dragger(int x, int y, int size, int id, int *pos)
 {
    int x0 = x, y0 = y, x1 = x+size, y1 = y+size;
    int over = stbte__hittest(x0,y0,x1,y1,id);
    switch (stbte__ui.event) {
       case STBTE__paint:
-         stbte__draw_rect (x0,y0,x1,y1, STBTE__IS_ACTIVE(id) || toggled ? c2                           : c1                           );
-         stbte__draw_frame(x0,y0,x1,y1, STBTE__IS_HOT(id)               ? STBTE_COLOR_MICROBUTTON_OVER : STBTE_COLOR_MICROBUTTON_FRAME);
+         stbte__draw_box(x0,y0,x1,y1, STBTE__cexpander, STBTE__INDEX_FOR_ID(id,0,0));
          break;
       case STBTE__leftdown:
          if (STBTE__IS_HOT(id) && STBTE__INACTIVE()) {
@@ -1205,16 +1281,11 @@ static int stbte__category_button(char *label, int x, int y, int width, int id, 
 
    int over = stbte__hittest(x0,y0,x1,y1,id);
       
-   if (stbte__ui.event == STBTE__paint) {
-      stbte__draw_rect (x0, y0, x1, y1, toggled ? STBTE_COLOR_BUTTON_DOWN : STBTE_COLOR_BUTTON_BACKGROUND);
-      stbte__draw_text (x0+s, y0+s, label ,width-s*2, STBTE__IS_HOT(id) ? STBTE_COLOR_BUTTON_TEXT : STBTE_COLOR_BUTTON_TEXT_SELECTED);
-   }
+   if (stbte__ui.event == STBTE__paint)
+      stbte__draw_textbox(x0,y0,x1,y1, label, s,s, STBTE__ccategory_button, STBTE__INDEX_FOR_ID(id,0,toggled));
 
    return (stbte__button_core(id) == 1);
 }
-
-#define STBTE_COLOR_SCROLLBAR_TRACK  0x808030
-#define STBTE_COLOR_SCROLLBAR_THUMB  0x909040
 
 static void stbte__scrollbar(int x, int y0, int y1, int *val, int v0, int v1, int num_vis, int id)
 {
@@ -1230,8 +1301,8 @@ static void stbte__scrollbar(int x, int y0, int y1, int *val, int v0, int v1, in
    over = stbte__hittest(x-1,y0,x+2,y1,id);
    switch (stbte__ui.event) {
       case STBTE__paint:
-         stbte__draw_rect(x,y0,x+1,y1, STBTE_COLOR_SCROLLBAR_TRACK);
-         stbte__draw_rect(x-1,thumbpos-3,x+2,thumbpos+4, STBTE_COLOR_SCROLLBAR_THUMB);
+         stbte__draw_rect(x,y0,x+1,y1, stbte__color_table[STBTE__cscrollbar][STBTE__text][STBTE__idle]);
+         stbte__draw_box(x-1,thumbpos-3,x+2,thumbpos+4, STBTE__cscrollbar, STBTE__INDEX_FOR_ID(id,0,0));
          break;
       case STBTE__leftdown:
          if (STBTE__IS_HOT(id) && STBTE__INACTIVE()) {
@@ -1289,9 +1360,9 @@ static void stbte__compute_panel_locations(stbte_tilemap *tm)
    int i, limit, w, k;
    int window_width  = stbte__ui.x1 - stbte__ui.x0;
    int window_height = stbte__ui.y1 - stbte__ui.y0;
-   int min_width[STBTE__num_panel]={0,0,0,0,0};
-   int height[STBTE__num_panel]={0,0,0,0,0};
-   int panel_active[STBTE__num_panel]={1,1,1,1,1};
+   int min_width[STBTE__num_panel]={0,0,0,0,0,0};
+   int height[STBTE__num_panel]={0,0,0,0,0,0};
+   int panel_active[STBTE__num_panel]={1,0,1,1,1,1};
    int vpos[4] = { 0,0,0,0 };
    stbte__panel *p = stbte__ui.panel;
    stbte__panel *pt = &p[STBTE__panel_toolbar];
@@ -1308,9 +1379,13 @@ static void stbte__compute_panel_locations(stbte_tilemap *tm)
    // determine which panels are active
    panel_active[STBTE__panel_categories] = tm->num_categories != 0;
    panel_active[STBTE__panel_layers    ] = tm->num_layers     >  1;
+#ifdef STBTE__COLORPICKER
+   panel_active[STBTE__panel_colorpick ] = 1;
+#endif
 
    // compute minimum widths for each panel (assuming they're on sides not top)
    min_width[STBTE__panel_info      ] = 8 + 11 + 7*tm->digits+17+7;               // estimate min width of "w:0000"
+   min_width[STBTE__panel_colorpick ] = 120;
    min_width[STBTE__panel_tiles     ] = 4 + tm->palette_spacing_x + 5;            // 5 for scrollbar
    min_width[STBTE__panel_categories] = 4 + 42 + 5;                               // 42 is enough to show ~7 chars; 5 for scrollbar
    min_width[STBTE__panel_layers    ] = 4 + 54 + 30*tm->has_layer_names;          // 2 digits plus 3 buttons plus scrollbar
@@ -1351,6 +1426,9 @@ static void stbte__compute_panel_locations(stbte_tilemap *tm)
       int anim = (int) (stbte__region[i].width * stbte__region[i].retracted);
       stbte__region[i].x = (i == STBTE__side_left) ? stbte__ui.x0 - anim : stbte__ui.x1 - stbte__region[i].width + anim;
    }
+
+   // color picker
+   height[STBTE__panel_colorpick] = 300;
 
    // info panel
    w = stbte__region[p[STBTE__panel_info].side].width;
@@ -1418,6 +1496,7 @@ enum
    STBTE__panel_mover,                    // p1 is panel ID, p2 is destination side
    STBTE__panel_sizer,                    // param panel ID
    STBTE__scrollbar_id,
+   STBTE__colorpick_id,
 };
 
 // id is:      [      24-bit data     : 7-bit identifer ]
@@ -1754,11 +1833,10 @@ static void stbte__paste_stack(stbte_tilemap *tm, short result[], short dest[], 
 
    for (i=0; i < tm->num_layers; ++i) {
       result[i] = dest[i];
-      if (src[i] != STBTE__NO_TILE) {
+      if (src[i] != STBTE__NO_TILE)
          if (!tm->layerinfo[i].hidden && tm->layerinfo[i].locked != STBTE__locked)
             if (tm->layerinfo[i].locked == STBTE__unlocked || (!dragging && dest[i] == STBTE__BG(tm,i)))
                result[i] = src[i];
-         }
    }
 }
 
@@ -1770,14 +1848,12 @@ static void stbte__clear_stack(stbte_tilemap *tm, short result[])
    i = tm->cur_layer;
    if (tm->solo_layer >= 0)
       i = tm->solo_layer;
-   if (i >= 0) {
-      result[i] = (i == 0 ? tm->background_tile : STBTE__NO_TILE);
-   } else {
-      for (i=0; i < tm->num_layers; ++i) {
+   if (i >= 0)
+      result[i] = STBTE__BG(tm,i);
+   else
+      for (i=0; i < tm->num_layers; ++i)
          if (!tm->layerinfo[i].hidden && tm->layerinfo[i].locked == STBTE__unlocked)
-            result[i] = (i == 0 ? tm->background_tile : STBTE__NO_TILE);
-      }
-   }
+            result[i] = STBTE__BG(tm,i);
 }
 
 // check if some map square is active
@@ -2275,7 +2351,7 @@ static void stbte__toolbar(stbte_tilemap *tm, int x0, int y0, int w, int h)
          highlight=1;
       if (i == STBTE__tool_fill)
          continue;
-      if (stbte__button_icon(toolchar[i], x, y, 13, STBTE__ID(STBTE__toolbarA, i), highlight)) {
+      if (stbte__button_icon(STBTE__ctoolbar_button, toolchar[i], x, y, 13, STBTE__ID(STBTE__toolbarA, i), highlight)) {
          switch (i) {
             case STBTE__tool_eyedrop:
                stbte__ui.eyedrop_last_layer = tm->num_layers; // flush eyedropper state
@@ -2299,17 +2375,17 @@ static void stbte__toolbar(stbte_tilemap *tm, int x0, int y0, int w, int h)
    }
 
    x += 8;
-   if (stbte__button("cut"  , x, y,10, 40, STBTE__ID(STBTE__toolbarB,0), 0)) {
+   if (stbte__button(STBTE__ctoolbar_button, "cut"  , x, y,10, 40, STBTE__ID(STBTE__toolbarB,0), 0, !stbte__ui.has_selection)) {
       if (stbte__ui.has_selection)
          stbte__copy_cut(tm, 1);
    }
    x += 42;
-   if (stbte__button("copy" , x, y, 5, 40, STBTE__ID(STBTE__toolbarB,1), 0)) {
+   if (stbte__button(STBTE__ctoolbar_button, "copy" , x, y, 5, 40, STBTE__ID(STBTE__toolbarB,1), 0, !stbte__ui.has_selection)) {
       if (stbte__ui.has_selection)
          stbte__copy_cut(tm, 0);
    }
    x += 42;
-   if (stbte__button("paste", x, y, 0, 40, STBTE__ID(STBTE__toolbarB,2), stbte__ui.pasting)) {
+   if (stbte__button(STBTE__ctoolbar_button, "paste", x, y, 0, 40, STBTE__ID(STBTE__toolbarB,2), stbte__ui.pasting, !stbte__ui.has_copy)) {
       if (stbte__ui.has_copy) {
          stbte__ui.pasting = 1;
          stbte__activate(STBTE__ID(STBTE__toolbarB,3));
@@ -2317,20 +2393,22 @@ static void stbte__toolbar(stbte_tilemap *tm, int x0, int y0, int w, int h)
    }
 }
 
+#define STBTE__TEXTCOLOR(n)  stbte__color_table[n][STBTE__text][STBTE__idle]
+
 static int stbte__info_value(char *label, int x, int y, int val, int digits, int id)
 {
    if (stbte__ui.event == STBTE__paint) {
       int off = 9-stbte__get_char_width(label[0]);
       char text[16];
       sprintf(text, label, digits, val);
-      stbte__draw_text_core(x+off,y, text, 999, STBTE_COLOR_PANEL_TEXT,1);
+      stbte__draw_text_core(x+off,y, text, 999, STBTE__TEXTCOLOR(STBTE__cpanel),1);
    }
    if (id) {
       x += 9+7*digits+4;
-      if (stbte__minibutton(x,y, '+', id + (0<<19)))
+      if (stbte__minibutton(STBTE__cmapsize, x,y, '+', STBTE__ID2(id,1,0)))
          val += (stbte__ui.shift ? 10 : 1);
       x += 9;
-      if (stbte__minibutton(x,y, '-', id + (1<<19)))
+      if (stbte__minibutton(STBTE__cmapsize, x,y, '-', STBTE__ID2(id,2,0)))
          val -= (stbte__ui.shift ? 10 : 1);
       if (val < 1) val = 1; else if (val > 4096) val = 4096;
    }
@@ -2363,7 +2441,7 @@ static void stbte__info(stbte_tilemap *tm, int x0, int y0, int w, int h)
    stbte__info_value(in_region ? "y:%*d" : "y:",x,y, (stbte__ui.hot_id>> 7)&4095, tm->digits, 0);
    y += 15;
    x = x0+2;
-   stbte__draw_text(x,y,"brush:",40,STBTE_COLOR_PANEL_TEXT);
+   stbte__draw_text(x,y,"brush:",40,STBTE__TEXTCOLOR(STBTE__cpanel));
    if (tm->cur_tile >= 0)
       STBTE_DRAW_TILE(x+43,y-3,tm->tiles[tm->cur_tile].id,1);
 }
@@ -2379,7 +2457,7 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
    y0 += 5;
    if (!tm->has_layer_names) {
       if (stbte__ui.event == STBTE__paint) {
-         stbte__draw_text(x0,y0, "Layers", w-4, STBTE_COLOR_PANEL_TEXT);
+         stbte__draw_text(x0,y0, "Layers", w-4, STBTE__TEXTCOLOR(STBTE__cpanel));
       }
       y0 += 11;
    }
@@ -2393,13 +2471,13 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
       if (i-tm->layer_scroll >= 0 && i-tm->layer_scroll < num_rows) {
          if (str == NULL)
             sprintf(str=text, "%2d", i+1);
-         if (stbte__button(str, x0,y,(i+1<10)*2,xoff-2, STBTE__ID(STBTE__layer,i), tm->cur_layer==i))
+         if (stbte__button(STBTE__clayer_button, str, x0,y,(i+1<10)*2,xoff-2, STBTE__ID(STBTE__layer,i), tm->cur_layer==i,0))
             tm->cur_layer = (tm->cur_layer == i ? -1 : i);
-         if (stbte__layerbutton(x0+xoff +  0,y+1,'H',STBTE__ID(STBTE__hide,i), tm->layerinfo[i].hidden,disabled,STBTE_COLOR_LAYERMASK_HIDE))
+         if (stbte__layerbutton(x0+xoff +  0,y+1,'H',STBTE__ID(STBTE__hide,i), tm->layerinfo[i].hidden,disabled,STBTE__clayer_hide))
             tm->layerinfo[i].hidden = !tm->layerinfo[i].hidden;
-         if (stbte__layerbutton(x0+xoff + 12,y+1,lockedchar[locked],STBTE__ID(STBTE__lock,i), locked!=0,disabled,STBTE_COLOR_LAYERMASK_LOCK))
+         if (stbte__layerbutton(x0+xoff + 12,y+1,lockedchar[locked],STBTE__ID(STBTE__lock,i), locked!=0,disabled,STBTE__clayer_lock))
             tm->layerinfo[i].locked = (locked+1)%3;
-         if (stbte__layerbutton(x0+xoff + 24,y+1,'S',STBTE__ID(STBTE__solo,i), tm->solo_layer==i,0,STBTE_COLOR_LAYERMASK_SOLO))
+         if (stbte__layerbutton(x0+xoff + 24,y+1,'S',STBTE__ID(STBTE__solo,i), tm->solo_layer==i,0,STBTE__clayer_solo))
             tm->solo_layer = (tm->solo_layer == i ? -1 : i);
          y += 15;
       }
@@ -2496,6 +2574,140 @@ static void stbte__palette_of_tiles(stbte_tilemap *tm, int x0, int y0, int w, in
    stbte__scrollbar(x1-4, y0+6, y1-2, &tm->palette_scroll, 0, num_total_rows, num_vis_rows, STBTE__ID(STBTE__scrollbar_id, STBTE__palette));
 }
 
+static int stbte__cp_mode, stbte__cp_aspect, stbte__cp_state, stbte__cp_index, stbte__save, stbte__cp_altered, stbte__color_copy;
+
+#ifdef STBTE__COLORPICKER
+static void stbte__dump_colorstate(void)
+{
+   int i,j,k;
+   printf("static int stbte__color_table[STBTE__num_color_modes][STBTE__num_color_aspects][STBTE__num_color_states] =\n");
+   printf("{\n");
+   printf("   {\n");
+   for (k=0; k < STBTE__num_color_modes; ++k) {
+      for (j=0; j < STBTE__num_color_aspects; ++j) {
+         printf("      { ");
+         for (i=0; i < STBTE__num_color_states; ++i) {
+            printf("0x%06x, ", stbte__color_table[k][j][i]);
+         }
+         printf("},\n");
+      }
+      if (k+1 < STBTE__num_color_modes)
+         printf("   }, {\n");
+      else
+         printf("   },\n");
+   }
+   printf("};\n");
+}
+
+static void stbte__slider(int x0, int w, int y, int *value, int id)
+{
+   int x1 = x0+w;
+   int pos = *value * w / 256;
+   int over = stbte__hittest(x0,y-2,x1,y+3,id);
+   switch (stbte__ui.event) {
+      case STBTE__paint:
+         stbte__draw_rect(x0,y,x1,y+1, 0x808080);
+         stbte__draw_rect(x0+pos-1,y-1,x0+pos+2,y+2, 0xffffff);
+         break;
+      case STBTE__leftdown:
+         if (STBTE__IS_HOT(id) && STBTE__INACTIVE())
+            stbte__activate(id);
+         // fall through
+      case STBTE__mousemove:
+         if (STBTE__IS_ACTIVE(id)) {
+            int v = (stbte__ui.mx-x0)*256/w;
+            if (v < 0) v = 0; else if (v > 255) v = 255;
+            *value = v;
+         }
+         break;
+      case STBTE__leftup:
+         if (STBTE__IS_ACTIVE(id)) {
+            stbte__activate(0);
+            stbte__dump_colorstate();
+         }
+         break;
+   }
+}
+
+static void stbte__colorpicker(int x0, int y0, int w, int h)
+{
+   int x1 = x0+w, y1 = y0+h, x,y, i;
+
+   x =  x0+2; y = y0+6;
+
+   y += 5;
+   x += 8;
+   
+   
+   {
+      int color = stbte__color_table[stbte__cp_mode][stbte__cp_aspect][stbte__cp_index];
+      int rgb[3];
+      if (stbte__cp_altered && stbte__cp_index == STBTE__idle)
+         color = stbte__save;
+
+      if (stbte__minibutton(STBTE__cmapsize, x1-20,y+ 5, 'C', STBTE__ID2(STBTE__colorpick_id,4,0)))
+         stbte__color_copy = color;
+      if (stbte__minibutton(STBTE__cmapsize, x1-20,y+15, 'P', STBTE__ID2(STBTE__colorpick_id,4,1)))
+         color = stbte__color_copy;
+
+      rgb[0] = color >> 16; rgb[1] = (color>>8)&255; rgb[2] = color & 255;
+      for (i=0; i < 3; ++i) {
+         stbte__slider(x+8,64, y, rgb+i, STBTE__ID2(STBTE__colorpick_id,3,i));
+         y += 15;
+      }
+      if (stbte__ui.event != STBTE__paint && stbte__ui.event != STBTE__tick)
+         stbte__color_table[stbte__cp_mode][stbte__cp_aspect][stbte__cp_index] = (rgb[0]<<16)|(rgb[1]<<8)|(rgb[2]);
+   }
+
+   y += 5;
+
+   // states
+   x = x0+2+35;
+   if (stbte__ui.event == STBTE__paint) {
+      static char *states[] = { "idle", "over", "down", "down&over", "selected", "selected&over", "disabled" };
+      stbte__draw_text(x, y+1, states[stbte__cp_index], x1-x-1, 0xffffff);
+   }
+
+   x = x0+24; y += 12;
+
+   for (i=3; i >= 0; --i) {
+      int state = 0 != (stbte__cp_state & (1 << i));
+      if (stbte__layerbutton(x,y, "OASD"[i], STBTE__ID2(STBTE__colorpick_id, 0,i), state,0, STBTE__clayer_button)) {
+         stbte__cp_state ^= (1 << i);
+         stbte__cp_index = stbte__state_to_index[0][0][0][stbte__cp_state];
+      }
+      x += 16;
+   }
+   x = x0+2; y += 18;
+
+   for (i=0; i < 3; ++i) {
+      static char *labels[] = { "Base", "Edge", "Text" };
+      if (stbte__button(STBTE__ctoolbar_button, labels[i], x,y,0,36, STBTE__ID2(STBTE__colorpick_id,1,i), stbte__cp_aspect==i,0))
+         stbte__cp_aspect = i;
+      x += 40;
+   }
+
+   y += 18;
+   x = x0+2;
+
+   for (i=0; i < STBTE__num_color_modes; ++i) {
+      if (stbte__button(STBTE__ctoolbar_button, stbte__color_names[i], x, y, 0,80, STBTE__ID2(STBTE__colorpick_id,2,i), stbte__cp_mode == i,0))
+         stbte__cp_mode = i;
+      y += 12;
+   }
+
+   // make the currently selected aspect flash, unless we're actively dragging color slider etc
+   if (stbte__ui.event == STBTE__tick) {
+      stbte__save = stbte__color_table[stbte__cp_mode][stbte__cp_aspect][STBTE__idle];
+      if ((stbte__ui.active_id & 127) != STBTE__colorpick_id) {
+         if ((stbte__ui.ms_time & 2047) < 200) {
+            stbte__color_table[stbte__cp_mode][stbte__cp_aspect][STBTE__idle] ^= 0x1f1f1f;
+            stbte__cp_altered = 1;
+         }
+      }
+   }
+}
+#endif
 
 static void stbte__editor_traverse(stbte_tilemap *tm)
 {
@@ -2560,15 +2772,14 @@ static void stbte__editor_traverse(stbte_tilemap *tm)
    for (i=0; i < STBTE__num_panel; ++i) {
       stbte__panel *p = &stbte__ui.panel[i];
       if (stbte__ui.event == STBTE__paint) {
-         stbte__draw_rect (p->x0,p->y0,p->x0+p->width,p->y0+p->height, STBTE_COLOR_PANEL_BACKGROUND);
-         stbte__draw_frame(p->x0,p->y0,p->x0+p->width,p->y0+p->height, STBTE_COLOR_PANEL_OUTLINE);
+         stbte__draw_box(p->x0,p->y0,p->x0+p->width,p->y0+p->height, STBTE__cpanel, STBTE__idle);
       }
       // obscure tilemap data underneath panel
       stbte__hittest(p->x0,p->y0,p->x0+p->width,p->y0+p->height, STBTE__ID2(STBTE__panel, i, 0));
       switch (i) {
          case STBTE__panel_toolbar:
             if (stbte__ui.event == STBTE__paint)
-               stbte__draw_rect(p->x0,p->y0,p->x0+p->width,p->y0+p->height, STBTE_COLOR_TOOLBAR_BACKGROUND);
+               stbte__draw_rect(p->x0,p->y0,p->x0+p->width,p->y0+p->height, stbte__color_table[STBTE__ctoolbar][STBTE__base][STBTE__idle]);
             stbte__toolbar(tm,p->x0,p->y0,p->width,p->height);
             break;
          case STBTE__panel_info:
@@ -2580,10 +2791,15 @@ static void stbte__editor_traverse(stbte_tilemap *tm)
          case STBTE__panel_categories:
             stbte__categories(tm,p->x0,p->y0,p->width,p->height);
             break;
+         case STBTE__panel_colorpick:
+#ifdef STBTE__COLORPICKER
+            stbte__colorpicker(p->x0,p->y0,p->width,p->height);
+#endif
+            break;
          case STBTE__panel_tiles:
             // erase boundary between categories and tiles if they're on same side
             if (stbte__ui.event == STBTE__paint && p->side == stbte__ui.panel[STBTE__panel_categories].side)
-               stbte__draw_rect(p->x0+1,p->y0-1,p->x0+p->width-1,p->y0+1, STBTE_COLOR_PANEL_BACKGROUND);
+               stbte__draw_rect(p->x0+1,p->y0-1,p->x0+p->width-1,p->y0+1, stbte__color_table[STBTE__cpanel][STBTE__base][STBTE__idle]);
             stbte__palette_of_tiles(tm,p->x0,p->y0,p->width,p->height);
             break;
       }
@@ -2591,7 +2807,7 @@ static void stbte__editor_traverse(stbte_tilemap *tm)
       for (j=0; j < 2; ++j) {
          int result;
          if (i == STBTE__panel_toolbar) continue;
-         result = stbte__microbutton(p->x0+p->width - 1 - 2*4 + 4*j,p->y0+2,3, STBTE__ID2(STBTE__panel, i, j+1), 0x808080,0xc0c0c0, 0);
+         result = stbte__microbutton(p->x0+p->width - 1 - 2*4 + 4*j,p->y0+2,3, STBTE__ID2(STBTE__panel, i, j+1), STBTE__cpanel_sider+j);
          if (result) {
             switch (j) {
                case 0: p->side = result > 0 ? STBTE__side_left : STBTE__side_right; break;
@@ -2614,7 +2830,7 @@ static void stbte__editor_traverse(stbte_tilemap *tm)
             width =  stbte__ui.left_width , x += stbte__region[i].width + 1;
          else
             width = -stbte__ui.right_width, x -= 6;
-         if (stbte__microbutton_dragger(x, stbte__region[i].y+2, 5, STBTE__ID(STBTE__region,i), 0x206020,0xffffff, 0, &width)) {
+         if (stbte__microbutton_dragger(x, stbte__region[i].y+2, 5, STBTE__ID(STBTE__region,i), &width)) {
             // if non-0, it is expanding, so retract it
             if (stbte__region[i].retracted == 0.0)
                stbte__region[i].retracted = 0.01f;
@@ -2638,7 +2854,7 @@ static void stbte__editor_traverse(stbte_tilemap *tm)
    if (stbte__ui.event == STBTE__paint && stbte__ui.alert_msg) {
       int w = stbte__text_width(stbte__ui.alert_msg);
       int x = (stbte__ui.x0+stbte__ui.x1)/2;
-      int y = (stbte__ui.y0+stbte__ui.y1)/2;
+      int y = (stbte__ui.y0+stbte__ui.y1)*5/6;
       stbte__draw_rect (x-w/2-4,y-8, x+w/2+4,y+8, 0x604020);
       stbte__draw_frame(x-w/2-4,y-8, x+w/2+4,y+8, 0x906030);
       stbte__draw_text (x-w/2,y-4, stbte__ui.alert_msg, w+1, 0xff8040);
@@ -2650,6 +2866,11 @@ static void stbte__editor_traverse(stbte_tilemap *tm)
          stbte__ui.alert_timer = 0;
          stbte__ui.alert_msg = 0;
       }
+   }
+
+   if (stbte__ui.event == STBTE__paint) {
+      stbte__color_table[stbte__cp_mode][stbte__cp_aspect][STBTE__idle] = stbte__save;
+      stbte__cp_altered = 0;
    }
 }
 
