@@ -1,26 +1,148 @@
-// stb_tilemap_editor.h - v0.20 - Sean Barrett - http://nothings.org/stb
+// stb_tilemap_editor.h - v0.30 - Sean Barrett - http://nothings.org/stb
 // placed in the public domain - not copyrighted - first released 2014-09
 //
 // Embeddable tilemap editor for C/C++
 //
 //
-// REVISION HISTORY
-//   0.30  properties release
-//          - properties panel for editing user-defined "object" properties
-//          - can link each tile to one other tile
-//          - keyboard interface
-//          - fix eraser tool bug (worked in complex cases, failed in simple)
-//          - undo/redo tools have visible disabled state
-//          - tiles on higher layers draw on top of adjacent lower-layer tiles
-//   0.20  erasable
-//          - eraser tool
-//          - fix bug when pasting into protected layer
-//          - better color scheme
-//          - internal-use color picker
-//   0.10  initial release 
+// TABLE OF CONTENTS
+//    FAQ
+//    How to compile/use the library
+//    Additional configuration macros
+//    API documentation
+//    Info on editing multiple levels
+//    Revision history
+//    Todo
+//    Credits
+//    License
 //
 //
-// COMPILING
+// FAQ
+//
+//   Q: What counts as a tilemap for this library?
+//
+//   A: An array of rectangles, where each rectangle contains a small
+//      stack of images.
+//
+//   Q: What are the limitations?
+//
+//   A: Maps are limited to 4096x4096 in dimension.
+//      Each map square can only contain a stack of at most 32 images.
+//      A map can only use up to 32768 distinct image tiles.
+//
+//   Q: How do I compile this?
+//
+//   A: You need to #define several symbols before #including it, but only
+//      in one file. This will cause all the function definitions to be
+//      generated in that file. See the "HOW TO COMPILE" section.
+//
+//   Q: What advantages does this have over a standalone editor?
+//
+//   A: For one, you can integrate the editor into your game so you can
+//      flip between editing and testing without even switching windows.
+//      For another, you don't need an XML parser to get at the map data.
+//
+//   Q: Can I live-edit my game maps?
+//
+//   A: Not really, the editor keeps its own map representation.
+//
+//   Q: How do I save and load maps?
+//
+//   A: You have to do this yourself. The editor provides serialization
+//      functions (get & set) for reading and writing the map it holds.
+//      You can choose whatever format you want to store the map to on
+//      disk; you just need to provide functions to convert. (For example,
+//      I actually store the editor's map representation to disk basically
+//      as-is; then I have a single function that converts from the editor
+//      map representation to the game representation, which is used both
+//      to go from editor-to-game and from loaded-map-to-game.)
+//
+//   Q: I want to have tiles change appearance based on what's
+//      adjacent, or other tile-display/substitution trickiness.
+//
+//   A: You can do this when you convert from the editor's map
+//      representation to the game representation, but there's
+//      no way to show this live in the editor.
+//
+//   Q: How do I scale the user interface?
+//
+//   A: Since you do all the rendering, you can scale up all the rendering
+//      calls that the library makes to you. If you do, (a) you need
+//      to also scale up the mouse coordinates, and (b) you may want
+//      to scale the map display back down so that you're only scaling
+//      the UI and not everything. See the next question.
+//
+//   Q: How do I scale the map display?
+//
+//   A: Use stbte_set_spacing() to change the size that the map is displayed
+//      at. Note that the "callbacks" to draw tiles are used for both drawing
+//      the map and drawing the tile palette, so that callback may need to
+//      draw at two different scales. You should choose the scales to match
+//       You can tell them apart because the
+//      tile palette gets NULL for the property pointer.
+//
+//   Q: How does object editing work?
+//
+//   A: One way to think of this is that in the editor, you're placing
+//      spawners, not objects. Each spawner must be tile-aligned, because
+//      it's only a tile editor. Each tile (stack of layers) gets
+//      an associated set of properties, and it's up to you to
+//      determine what properties should appear for a given tile,
+//      based on e.g. the spawners that are in it.
+//
+//   Q: How are properties themselves handled?
+//
+//   A: All properties, regardless of UI behavior, are internally floats.
+//      Each tile has an array of floats associated with it, which is
+//      passed back to you when drawing the tiles so you can draw
+//      objects appropriately modified by the properties.
+//
+//   Q: What if I want to have two different objects/spawners in
+//      one tile, both of which have their own properties?
+//
+//   A: Make sure STBTE_MAX_PROPERTIES is large enough for the sum of
+//      properties in both objects, and then you have to explicitly
+//      map the property slot #s to the appropriate objects. They'll
+//      still all appear in a single property panel; there's no way
+//      to get multiple panels.
+//
+//   Q: Can I do one-to-many linking?
+//
+//   A: The library only supports one link per tile. However, you
+//      can have multiple tiles all link to a single tile. So, you
+//      can fake one-to-many linking by linking in the reverse
+//      direction.
+//
+//   Q: What if I have two objects in the same tile, and they each
+//      need an independent link? Or I have two kinds of link associated
+//      with a single object?
+//
+//   A: There is no way to do this. (Unless you can reverse one link.)
+//
+//   Q: How does cut & paste interact with object properties & links?
+//
+//   A: Currently the library has no idea which properties or links
+//      are associated with which layers of a tile. So currently, the
+//      library will only copy properties & links if the layer panel
+//      is set to allow all layers to be copied, OR if you set the
+//      "props" in the layer panel to "always". Similarly, you can
+//      set "props" to "none" so it will never copy.
+//
+//   Q: What happens if the library gets a memory allocation failure
+//      while I'm editing? Will I lose my work?
+//
+//   A: The library allocates all editor memory when you create
+//      the tilemap. It allocates a maximally-sized map and a 
+//      fixed-size undo buffer (and the fixed-size copy buffer
+//      is static), and never allocates memory while it's running.
+//      So it can't fail due to running out of memory.
+//
+//   Q: What happens if the library crashes while I'm editing? Will
+//      I lose my work?
+//
+//   A: Yes. Save often.
+//
+//
+// HOW TO COMPILE
 //
 //   This header file contains both the header file and the
 //   implementation file in one. To create the implementation,
@@ -35,10 +157,10 @@
 //      // color = (r<<16)|(g<<8)|(b)
 //      
 //      void STBTE_DRAW_TILE(int x0, int y0,
-//                    unsigned short id, int highlight, stbte_props *data);
+//                    unsigned short id, int highlight, float *data);
 //      // this draws the tile image identified by 'id' in one of several
 //      // highlight modes (see STBTE_drawmode_* in the header section);
-//      // if 'data' is NULL, it's drawing the tile in a palette; if 'data'
+//      // if 'data' is NULL, it's drawing the tile in the palette; if 'data'
 //      // is not NULL, it's drawing a tile on the map, and that is the data
 //      // associated with that map tile
 //
@@ -72,8 +194,6 @@
 //      #define STBTE_PROP_NAME(int n, short *tiledata, float *params) ...
 //      // these return a string with the name for slot #n in the float
 //      // property list for the tile.
-//      // (if any), or
-//      // based on the values of other params. 
 //
 //      #define STBTE_PROP_MIN(int n, short *tiledata) ...your code here...
 //      #define STBTE_PROP_MAX(int n, short *tiledata) ...your code here...
@@ -121,9 +241,9 @@
 //      #define STBTE_MAX_TILEMAP_Y      200   // max 4096
 //      #define STBTE_MAX_LAYERS         8     // max 32
 //      #define STBTE_MAX_CATEGORIES     100
-//      #define STBTE_UNDO_BUFFER_BYTES  (1 << 20) // 1MB
+//      #define STBTE_UNDO_BUFFER_BYTES  (1 << 24) // 16 MB
 //      #define STBTE_MAX_COPY           90000  // e.g. 300x300
-//      #define STBTE_MAX_PROP           10     // max properties per tile
+//      #define STBTE_MAX_PROPERTIESERTIES     10     // max properties per tile
 //
 // API
 //
@@ -139,28 +259,38 @@
 //   either approach allows cut&pasting between levels.)
 //
 // REVISION HISTORY
-//
-//   0.20 - 2014-09-27 - eraser tool, bugfixes, new colorscheme
-//   0.10 - 2014-09-23 - initial release
+//   0.30  properties release
+//          - properties panel for editing user-defined "object" properties
+//          - can link each tile to one other tile
+//          - keyboard interface
+//          - fix eraser tool bug (worked in complex cases, failed in simple)
+//          - undo/redo tools have visible disabled state
+//          - tiles on higher layers draw on top of adjacent lower-layer tiles
+//   0.20  erasable release
+//          - eraser tool
+//          - fix bug when pasting into protected layer
+//          - better color scheme
+//          - internal-use color picker
+//   0.10  initial release 
 //
 // TODO
 //
 //   Separate scroll state for each category
 //   Implement paint bucket
 //   Support STBTE_HITTEST_TILE above
-//   Support STBTE_HITTEST_ICON above
 //  ?Cancel drags by clicking other button? - may be fixed
-//   Object properties (per-tile properties) 
 //   Finish support for toolbar at side
 //   Layer name buttons grow to fill box
+//
+// CREDITS
+//
+//   Written by Sean Barrett, September & October 2014.
 //
 // LICENSE
 //
 //   This software has been placed in the public domain by its author.
 //   Where that dedication is not recognized, you are granted a perpetual,
 //   irrevocable license to copy and modify this file as you see fit.
-
-
 
 
 
@@ -283,8 +413,12 @@ extern short* stbte_get_tile(stbte_tilemap *tm, int x, int y);
 // either one of the tile_id values from define_tile, or STBTE_EMPTY.
 
 extern float *stbte_get_properties(stbte_tilemap *tm, int x, int y);
+// get the property array associated with the tile at x,y. this is an
+// array of floats that is STBTE_MAX_PROPERTIES in length; you have to
+// interpret the slots according to the semantics you've chosen
 
-extern void stbte_get_link(stbte_tilemap *tm, int x, int y, int *dx, int *dy);
+extern void stbte_get_link(stbte_tilemap *tm, int x, int y, int *destx, int *desty);
+// gets the link associated with the tile at x,y.
 
 extern void stbte_set_dimensions(stbte_tilemap *tm, int max_x, int max_y);
 // set the dimensions of the level, overrides previous stbte_create_map()
@@ -297,6 +431,12 @@ extern void stbte_clear_map(stbte_tilemap *tm);
 extern void stbte_set_tile(stbte_tilemap *tm, int x, int y, int layer, signed short tile);
 // tile is your tile_id from define_tile, or STBTE_EMPTY
 
+extern void stbte_set_property(stbte_tilemap *tm, int x, int y, int n, float val);
+// set the value of the n'th slot of the tile at x,y
+
+extern void stbte_set_link(stbte_tilemap *tm, int x, int y, int destx, int desty);
+// set a link going from x,y to destx,desty. to force no link,
+// use destx=desty=-1
 
 ////////
 //
@@ -355,11 +495,20 @@ extern void stbte_set_layername(stbte_tilemap *tm, int layer, const char *layern
 #endif
 
 #ifndef STBTE_UNDO_BUFFER_BYTES
-#define STBTE_UNDO_BUFFER_BYTES  (1 << 20) // 1MB
+#define STBTE_UNDO_BUFFER_BYTES  (1 << 24) // 16 MB
 #endif
 
-#ifndef STBTE_MAX_PROP
-#define STBTE_MAX_PROP           10
+#ifndef STBTE_PROP_TYPE
+#define STBTE__NO_PROPS
+#define STBTE_PROP_TYPE(n,td,tp)   0
+#endif
+
+#ifndef STBTE_PROP_NAME
+#define STBTE_PROP_NAME(n,td,tp)  ""
+#endif
+
+#ifndef STBTE_MAX_PROPERTIES
+#define STBTE_MAX_PROPERTIES           10
 #endif
 
 #ifndef STBTE_PROP_MIN
@@ -378,6 +527,7 @@ extern void stbte_set_layername(stbte_tilemap *tm, int layer, const char *layern
 #define STBTE_FLOAT_CONTROL_GRANULARITY 4
 #endif
 
+
 #define STBTE__UNDO_BUFFER_COUNT  (STBTE_UNDO_BUFFER_BYTES>>1)
 
 #if STBTE_MAX_TILEMAP_X > 4096 || STBTE_MAX_TILEMAP_Y > 4096
@@ -390,7 +540,14 @@ extern void stbte_set_layername(stbte_tilemap *tm, int layer, const char *layern
 #error "Undo buffer size must be a power of 2"
 #endif
 
-static int *stbte__colors;
+#if STBTE_MAX_PROPERTIES == 0
+#define STBTE__NO_PROPS
+#endif
+
+#ifdef STBTE__NO_PROPS
+#undef STBTE_MAX_PROPERTIES
+#define STBTE_MAX_PROPERTIES 1  // so we can declare arrays
+#endif
 
 typedef struct
 {
@@ -639,6 +796,13 @@ static int toolchar[] = { 26,24,25,20,23,22,18, 19,17, 29,28, };
 
 enum
 {
+   STBTE__propmode_default,
+   STBTE__propmode_always,
+   STBTE__propmode_never,
+};
+
+enum
+{
    STBTE__paint,
 
    // from here down does hittesting
@@ -699,7 +863,13 @@ typedef struct
    float dt;
    stbte__panel panel[STBTE__num_panel];
    short copybuffer[STBTE_MAX_COPY][STBTE_MAX_LAYERS];
-   int copy_width,copy_height,has_copy;
+   float copyprops[STBTE_MAX_COPY][STBTE_MAX_PROPERTIES];
+#ifdef STBTE_ALLOW_LINK
+   stbte__link copylinks[STBTE_MAX_COPY];
+#endif
+   int copy_src_x, copy_src_y;
+   stbte_tilemap *copy_src;
+   int copy_width,copy_height,has_copy,copy_has_props;
 } stbte__ui_t;
 
 // there's only one UI system at a time, so we can globalize this
@@ -729,7 +899,7 @@ enum
 struct stbte_tilemap
 {
     stbte__tiledata data[STBTE_MAX_TILEMAP_Y][STBTE_MAX_TILEMAP_X][STBTE_MAX_LAYERS];
-    float props[STBTE_MAX_TILEMAP_Y][STBTE_MAX_TILEMAP_X][STBTE_MAX_PROP];
+    float props[STBTE_MAX_TILEMAP_Y][STBTE_MAX_TILEMAP_X][STBTE_MAX_PROPERTIES];
     #ifdef STBTE_ALLOW_LINK
     stbte__link link[STBTE_MAX_TILEMAP_Y][STBTE_MAX_TILEMAP_X];
     int linkcount[STBTE_MAX_TILEMAP_Y][STBTE_MAX_TILEMAP_X];
@@ -753,6 +923,7 @@ struct stbte_tilemap
     stbte__layer layerinfo[STBTE_MAX_LAYERS];
     int has_layer_names;
     int layer_scroll;
+    int propmode;
     int solo_layer;
     int undo_pos, undo_len, redo_len;
     short background_tile;
@@ -827,6 +998,7 @@ stbte_tilemap *stbte_create_map(int map_x, int map_y, int map_layers, int spacin
    tm->undo_pos = 0;
    tm->category_scroll = 0;
    tm->layer_scroll = 0;
+   tm->propmode = 0;
    tm->has_layer_names = 0;
    tm->undo_available_valid = 0;
 
@@ -933,18 +1105,43 @@ float *stbte_get_properties(stbte_tilemap *tm, int x, int y)
 
 void stbte_get_link(stbte_tilemap *tm, int x, int y, int *destx, int *desty)
 {
+   int gx=-1,gy=-1;
    STBTE_ASSERT(x >= 0 && x < tm->max_x && y >= 0 && y < tm->max_y);
 #ifdef STBTE_ALLOW_LINK
    if (x >= 0 && x < STBTE_MAX_TILEMAP_X && y >= 0 && y < STBTE_MAX_TILEMAP_Y) {
-      *destx = tm->link[y][x].x;
-      *desty = tm->link[y][x].y;
-      return;
+      gx = tm->link[y][x].x;
+      gy = tm->link[y][x].y;
+      if (gx >= 0)
+         if (!STBTE_ALLOW_LINK(tm->data[y][x], tm->props[y][x], tm->data[gy][gx], tm->props[gy][gx]))
+            gx = gy = -1;
    }
 #endif
-   *destx = -1;
-   *desty = -1;
+   *destx = gx;
+   *desty = gy;
 }
 
+void stbte_set_property(stbte_tilemap *tm, int x, int y, int n, float val)
+{
+   tm->props[y][x][n] = val;
+}
+
+static void stbte__set_link(stbte_tilemap *tm, int src_x, int src_y, int dest_x, int dest_y, int undo_mode);
+
+enum
+{
+   STBTE__undo_none,
+   STBTE__undo_record,
+   STBTE__undo_block,
+};
+
+void stbte_set_link(stbte_tilemap *tm, int x, int y, int destx, int desty)
+{
+#ifdef STBTE_ALLOW_LINK
+   stbte__set_link(tm, x, y, destx, desty, STBTE__undo_none);
+#else
+   STBTE_ASSERT(0);
+#endif
+}
 
 
 // returns an array of map_layers shorts. each short is either
@@ -967,7 +1164,7 @@ void stbte_clear_map(stbte_tilemap *tm)
       tm->data[0][i][0] = tm->background_tile;
       for (j=1; j < tm->num_layers; ++j)
          tm->data[0][i][j] = STBTE__NO_TILE;
-      for (j=0; j < STBTE_MAX_PROP; ++j)
+      for (j=0; j < STBTE_MAX_PROPERTIES; ++j)
          tm->props[0][i][j] = 0;
       #ifdef STBTE_ALLOW_LINK
       tm->link[0][i].x = -1;
@@ -1220,7 +1417,6 @@ static int stbte__undo_find_end(stbte_tilemap *tm)
    return pos;
 }
 
-static void stbte__set_link(stbte_tilemap *tm, int src_x, int src_y, int dest_x, int dest_y);
 static void stbte__undo(stbte_tilemap *tm)
 {
    int i, pos, endpos;
@@ -1256,7 +1452,7 @@ static void stbte__undo(stbte_tilemap *tm)
 #ifdef STBTE_ALLOW_LINK
             s0 = tm->link[y][x].x;
             s1 = tm->link[y][x].y;
-            stbte__set_link(tm, x,y, v, v2);
+            stbte__set_link(tm, x,y, v, v2, STBTE__undo_none);
 #endif
          }
          // write the redo entry
@@ -1325,7 +1521,7 @@ static void stbte__redo(stbte_tilemap *tm)
 #ifdef STBTE_ALLOW_LINK
             s0 = tm->link[y][x].x;
             s1 = tm->link[y][x].y;
-            stbte__set_link(tm, x,y,v,v2);
+            stbte__set_link(tm, x,y,v,v2, STBTE__undo_none);
 #endif
          }
          // don't use stbte__undo_record_prop because it's guarded
@@ -1371,7 +1567,7 @@ static int stbte__redo_available(stbte_tilemap *tm)
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #ifdef STBTE_ALLOW_LINK
-static void stbte__set_link(stbte_tilemap *tm, int src_x, int src_y, int dest_x, int dest_y)
+static void stbte__set_link(stbte_tilemap *tm, int src_x, int src_y, int dest_x, int dest_y, int undo_mode)
 {
    stbte__link *a;
    STBTE_ASSERT(src_x >= 0 && src_x < STBTE_MAX_TILEMAP_X && src_y >= 0 && src_y < STBTE_MAX_TILEMAP_Y);
@@ -1379,10 +1575,11 @@ static void stbte__set_link(stbte_tilemap *tm, int src_x, int src_y, int dest_x,
    // check if it's a do nothing
    if (a->x == dest_x && a->y == dest_y)
       return;
-   // otherwise, undo
-   stbte__begin_undo(tm);
-   stbte__undo_record_prop(tm, src_x, src_y, -1, a->x, a->y);
-   stbte__end_undo(tm);
+   if (undo_mode != STBTE__undo_none ) {
+      if (undo_mode == STBTE__undo_block) stbte__begin_undo(tm);
+      stbte__undo_record_prop(tm, src_x, src_y, -1, a->x, a->y);
+      if (undo_mode == STBTE__undo_block) stbte__end_undo(tm);
+   }
    // check if there's an existing link
    if (a->x >= 0) {
       // decrement existing link refcount
@@ -1864,6 +2061,11 @@ static void stbte__compute_panel_locations(stbte_tilemap *tm)
    int vpos[4] = { 0,0,0,0 };
    stbte__panel *p = stbte__ui.panel;
    stbte__panel *pt = &p[STBTE__panel_toolbar];
+#ifdef STBTE__NO_PROPS
+   int props = 0;
+#else
+   int props = 1;
+#endif
 
    for (i=0; i < 4; ++i) {
       stbte__region[i].active = 0;
@@ -1880,7 +2082,8 @@ static void stbte__compute_panel_locations(stbte_tilemap *tm)
 #ifdef STBTE__COLORPICKER
    panel_active[STBTE__panel_colorpick ] = 1;
 #endif
-   panel_active[STBTE__panel_props     ] = stbte__is_single_selection();
+
+   panel_active[STBTE__panel_props     ] = props && stbte__is_single_selection();
 
    // compute minimum widths for each panel (assuming they're on sides not top)
    min_width[STBTE__panel_info      ] = 8 + 11 + 7*tm->digits+17+7;               // estimate min width of "w:0000"
@@ -1940,7 +2143,7 @@ static void stbte__compute_panel_locations(stbte_tilemap *tm)
 
    // layers
    limit = 6 + stbte__ui.panel[STBTE__panel_layers].delta_height;
-   height[STBTE__panel_layers] = (tm->num_layers > limit ? limit : tm->num_layers)*15 + 7 + (tm->has_layer_names ? 0 : 11);
+   height[STBTE__panel_layers] = (tm->num_layers > limit ? limit : tm->num_layers)*15 + 7 + (tm->has_layer_names ? 0 : 11) + props*13;
 
    // categories
    limit = 6 + stbte__ui.panel[STBTE__panel_categories].delta_height;
@@ -1954,7 +2157,7 @@ static void stbte__compute_panel_locations(stbte_tilemap *tm)
    height[STBTE__panel_tiles] = ((tm->num_tiles+k-1)/k) * tm->palette_spacing_y + 8;
 
    // properties panel
-   height[STBTE__panel_props] = 9 + STBTE_MAX_PROP*14;
+   height[STBTE__panel_props] = 9 + STBTE_MAX_PROPERTIES*14;
 
    // now compute the locations of all the panels
    for (i=0; i < STBTE__num_panel; ++i) {
@@ -2310,6 +2513,21 @@ static void stbte__eyedrop(stbte_tilemap *tm, int x, int y)
    }
 }
 
+static int stbte__should_copy_properties(stbte_tilemap *tm)
+{
+   int i;
+   if (tm->propmode == STBTE__propmode_always)
+      return 1;
+   if (tm->propmode == STBTE__propmode_never)
+      return 0;
+   if (tm->solo_layer >= 0 || tm->cur_layer >= 0)
+      return 0;
+   for (i=0; i < tm->num_layers; ++i)
+      if (tm->layerinfo[i].hidden || tm->layerinfo[i].locked)
+         return 0;
+   return 1;
+}
+
 // compute the result of pasting into a tile non-destructively so we can preview it
 static void stbte__paste_stack(stbte_tilemap *tm, short result[], short dest[], short src[], int dragging)
 {
@@ -2393,9 +2611,17 @@ static void stbte__select_rect(stbte_tilemap *tm, int x0, int y0, int x1, int y1
    stbte__ui.select_y1 = (y0 < y1 ? y1 : y0);
 }
 
+static void stbte__copy_properties(float *dest, float *src)
+{
+   int i;
+   for (i=0; i < STBTE_MAX_PROPERTIES; ++i)
+      dest[i] = src[i];
+}
+
 static void stbte__copy_cut(stbte_tilemap *tm, int cut)
 {
    int i,j,n,w,h,p=0;
+   int copy_props = stbte__should_copy_properties(tm);
    if (!stbte__ui.has_selection)
       return;
    w = stbte__ui.select_x1 - stbte__ui.select_x0 + 1;
@@ -2432,6 +2658,14 @@ static void stbte__copy_cut(stbte_tilemap *tm, int cut)
                tm->data[j][i][n] = (n==0 ? tm->background_tile : -1);
             }
          }
+         if (copy_props) {
+            stbte__copy_properties(stbte__ui.copyprops[p], tm->props[j][i]);
+#ifdef STBTE_ALLOW_LINK
+            stbte__ui.copylinks[p] = tm->link[j][i];
+            if (cut)
+               stbte__set_link(tm, i,j,-1,-1, STBTE__undo_record);
+#endif
+         }
          ++p;
       }
    }
@@ -2440,7 +2674,26 @@ static void stbte__copy_cut(stbte_tilemap *tm, int cut)
    stbte__ui.copy_width = w;
    stbte__ui.copy_height = h;
    stbte__ui.has_copy = 1;
-   stbte__ui.has_selection = 0;
+   //stbte__ui.has_selection = 0;
+   stbte__ui.copy_has_props = copy_props;
+   stbte__ui.copy_src = tm; // used to give better semantics when copying links
+   stbte__ui.copy_src_x = stbte__ui.select_x0;
+   stbte__ui.copy_src_y = stbte__ui.select_y0;
+}
+
+static int stbte__in_rect(int x, int y, int x0, int y0, int w, int h)
+{
+   return x >= x0 && x < x0+w && y >= y0 && y < y0+h;
+}
+
+static int stbte__in_src_rect(int x, int y)
+{
+   return stbte__in_rect(x,y, stbte__ui.copy_src_x, stbte__ui.copy_src_y, stbte__ui.copy_width, stbte__ui.copy_height);
+}
+
+static int stbte__in_dest_rect(int x, int y, int destx, int desty)
+{
+   return stbte__in_rect(x,y, destx, desty, stbte__ui.copy_width, stbte__ui.copy_height);
 }
 
 static void stbte__paste(stbte_tilemap *tm, int mapx, int mapy)
@@ -2450,6 +2703,7 @@ static void stbte__paste(stbte_tilemap *tm, int mapx, int mapy)
    int i,j,k,p;
    int x = mapx - (w>>1);
    int y = mapy - (h>>1);
+   int copy_props = stbte__should_copy_properties(tm) && stbte__ui.copy_has_props;
    if (stbte__ui.has_copy == 0)
       return;
    stbte__begin_undo(tm);
@@ -2470,22 +2724,52 @@ static void stbte__paste(stbte_tilemap *tm, int mapx, int mapy)
                }
             }
          }
+         if (copy_props) {
+#ifdef STBTE_ALLOW_LINK
+            // need to decide how to paste a link, so there's a few cases
+            int destx = -1, desty = -1;
+            stbte__link *link = &stbte__ui.copylinks[p];
+
+            // check if link is within-rect
+            if (stbte__in_src_rect(link->x, link->y)) {
+               // new link should point to copy (but only if copy is within map)
+               destx = x + (link->x - stbte__ui.copy_src_x);
+               desty = y + (link->y - stbte__ui.copy_src_y);
+            } else if (tm == stbte__ui.copy_src) {
+               // if same map, then preserve link unless target is overwritten
+               if (!stbte__in_dest_rect(link->x,link->y,x,y)) {
+                  destx = link->x;
+                  desty = link->y;
+               }
+            }
+            // this is necessary for offset-copy, but also in case max_x/max_y has changed
+            if (destx < 0 || destx >= tm->max_x || desty < 0 || desty >= tm->max_y)
+               destx = -1, desty = -1;
+            stbte__set_link(tm, x+i, y+j, destx, desty, STBTE__undo_record);
+#endif
+            for (k=0; k < STBTE_MAX_PROPERTIES; ++k) {
+               if (tm->props[y+j][x+i][k] != stbte__ui.copyprops[p][k])
+                  stbte__undo_record_prop_float(tm, x+i, y+j, k, tm->props[y+j][x+i][k]);
+            }
+            stbte__copy_properties(tm->props[y+j][x+i], stbte__ui.copyprops[p]);
+         }
          ++p;
       }
    }
    stbte__end_undo(tm);
 }
 
-static void stbte__drag_update(stbte_tilemap *tm, int mapx, int mapy)
+static void stbte__drag_update(stbte_tilemap *tm, int mapx, int mapy, int copy_props)
 {
    int w = stbte__ui.drag_w, h = stbte__ui.drag_h;
-   int ox,oy,i;
+   int ox,oy,i,deleted=0,written=0;
    short temp[STBTE_MAX_LAYERS];
    short *data = NULL;
    if (!stbte__ui.shift) {
       ox = mapx - stbte__ui.drag_x;
       oy = mapy - stbte__ui.drag_y;
       if (ox >= 0 && ox < w && oy >= 0 && oy < h) {
+         deleted=1;
          for (i=0; i < tm->num_layers; ++i)
             temp[i] = tm->data[mapy][mapx][i];
          data = temp;
@@ -2494,13 +2778,26 @@ static void stbte__drag_update(stbte_tilemap *tm, int mapx, int mapy)
    }
    ox = mapx - stbte__ui.drag_dest_x;
    oy = mapy - stbte__ui.drag_dest_y;
+   // if this map square is in the target drag region
    if (ox >= 0 && ox < w && oy >= 0 && oy < h) {
-      if (data == NULL) {
-         for (i=0; i < tm->num_layers; ++i)
-            temp[i] = tm->data[mapy][mapx][i];
-         data = temp;
+      // and the src map square is on the map
+      if (stbte__in_rect(stbte__ui.drag_x+ox, stbte__ui.drag_y+oy, 0, 0, tm->max_x, tm->max_y)) {
+         written = 1;
+         if (data == NULL) {
+            for (i=0; i < tm->num_layers; ++i)
+               temp[i] = tm->data[mapy][mapx][i];
+            data = temp;
+         }
+         stbte__paste_stack(tm, data, data, tm->data[stbte__ui.drag_y+oy][stbte__ui.drag_x+ox], !stbte__ui.shift);
+         if (copy_props) {
+            for (i=0; i < STBTE_MAX_PROPERTIES; ++i) {
+               if (tm->props[mapy][mapx][i] != tm->props[stbte__ui.drag_y+oy][stbte__ui.drag_x+ox][i]) {
+                  stbte__undo_record_prop_float(tm, mapx, mapy, i, tm->props[mapy][mapx][i]);
+                  tm->props[mapy][mapx][i] = tm->props[stbte__ui.drag_y+oy][stbte__ui.drag_x+ox][i];
+               }
+            }
+         }
       }
-      stbte__paste_stack(tm, data, data, tm->data[stbte__ui.drag_y+oy][stbte__ui.drag_x+ox], !stbte__ui.shift);
    }
    if (data) {
       for (i=0; i < tm->num_layers; ++i) {
@@ -2510,11 +2807,54 @@ static void stbte__drag_update(stbte_tilemap *tm, int mapx, int mapy)
          }
       }
    }
+   #ifdef STBTE_ALLOW_LINK
+   if (copy_props) {
+      int overwritten=0, moved=0, copied=0;
+      // since this function is called on EVERY tile, we can fix up even tiles not
+      // involved in the move
+
+      stbte__link *k;
+      // first, determine what src link ends up here
+      k = &tm->link[mapy][mapx]; // by default, it's the one currently here
+      if (deleted)               // if dragged away, it's erased
+         k = NULL;
+      if (written)               // if dragged into, it gets that link
+         k = &tm->link[stbte__ui.drag_y+oy][stbte__ui.drag_x+ox];
+
+      // now check whether the *target* gets moved or overwritten
+      if (k && k->x >= 0) {
+         overwritten = stbte__in_rect(k->x, k->y, stbte__ui.drag_dest_x, stbte__ui.drag_dest_y, w, h);
+         if (!stbte__ui.shift)
+            moved    = stbte__in_rect(k->x, k->y, stbte__ui.drag_x     , stbte__ui.drag_y     , w, h);
+         else
+            copied   = stbte__in_rect(k->x, k->y, stbte__ui.drag_x     , stbte__ui.drag_y     , w, h);
+      }
+
+      if (deleted || written || overwritten || moved || copied) {
+         // choose the final link value based on the above
+         if (k == NULL || k->x < 0)
+            stbte__set_link(tm, mapx, mapy, -1, -1, STBTE__undo_record);
+         else if (moved || (copied && written)) {
+            // if we move the target, we update to point to the new target;
+            // or, if we copy the target and the source is part ofthe copy, then update to new target
+            int x = k->x + (stbte__ui.drag_dest_x - stbte__ui.drag_x);
+            int y = k->y + (stbte__ui.drag_dest_y - stbte__ui.drag_y);
+            if (!(x >= 0 && y >= 0 && x < tm->max_x && y < tm->max_y))
+               x = -1, y = -1;
+            stbte__set_link(tm, mapx, mapy, x, y, STBTE__undo_record);
+         } else if (overwritten) {
+            stbte__set_link(tm, mapx, mapy, -1, -1, STBTE__undo_record);
+         } else
+            stbte__set_link(tm, mapx, mapy, k->x, k->y, STBTE__undo_record);
+      }
+   }
+   #endif
 }
 
 static void stbte__drag_place(stbte_tilemap *tm, int mapx, int mapy)
 {
    int i,j;
+   int copy_props = stbte__should_copy_properties(tm);
    int move_x = (stbte__ui.drag_dest_x - stbte__ui.drag_x);
    int move_y = (stbte__ui.drag_dest_y - stbte__ui.drag_y);
    if (move_x == 0 && move_y == 0)
@@ -2527,19 +2867,19 @@ static void stbte__drag_place(stbte_tilemap *tm, int mapx, int mapy)
    if (move_y > 0 || (move_y == 0 && move_x > 0)) {
       for (j=tm->max_y-1; j >= 0; --j)
          for (i=tm->max_x-1; i >= 0; --i)
-            stbte__drag_update(tm,i,j);
+            stbte__drag_update(tm,i,j,copy_props);
    } else {
       for (j=0; j < tm->max_y; ++j)
          for (i=0; i < tm->max_x; ++i)
-            stbte__drag_update(tm,i,j);
+            stbte__drag_update(tm,i,j,copy_props);
    }
    stbte__end_undo(tm);
 
    stbte__ui.has_selection = 1;
    stbte__ui.select_x0 = stbte__ui.drag_dest_x;
    stbte__ui.select_y0 = stbte__ui.drag_dest_y;
-   stbte__ui.select_x1 = stbte__ui.select_x0 + stbte__ui.drag_w;
-   stbte__ui.select_y1 = stbte__ui.select_y0 + stbte__ui.drag_h;
+   stbte__ui.select_x1 = stbte__ui.select_x0 + stbte__ui.drag_w - 1;
+   stbte__ui.select_y1 = stbte__ui.select_y0 + stbte__ui.drag_h - 1;
 }
 
 static void stbte__tile_paint(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy, int layer)
@@ -2658,13 +2998,17 @@ static void stbte__tile(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy)
             int tx = tm->link[mapy][mapx].x;
             int ty = tm->link[mapy][mapx].y;
             int lx0,ly0,lx1,ly1;
-            lx0 =  x0 + (tm->spacing_x >> 1) - 1;
-            ly0 =  y0 + (tm->spacing_y >> 1) - 1;
-            lx1 = lx0 + (tx - mapx) * tm->spacing_x + 2;
-            ly1 = ly0 + (ty - mapy) * tm->spacing_y + 2;
-            stbte__draw_link(lx0,ly0,lx1,ly1,
-                STBTE_LINK_COLOR(tm->data[mapy][mapx], tm->props[mapy][mapx],
-                                 tm->data[ty  ][tx  ], tm->props[ty  ][tx]));
+            if (STBTE_ALLOW_LINK(tm->data[mapy][mapx], tm->props[mapy][mapx],
+                                 tm->data[ty  ][tx  ], tm->props[ty  ][tx  ]))
+            {
+               lx0 =  x0 + (tm->spacing_x >> 1) - 1;
+               ly0 =  y0 + (tm->spacing_y >> 1) - 1;
+               lx1 = lx0 + (tx - mapx) * tm->spacing_x + 2;
+               ly1 = ly0 + (ty - mapy) * tm->spacing_y + 2;
+               stbte__draw_link(lx0,ly0,lx1,ly1,
+                   STBTE_LINK_COLOR(tm->data[mapy][mapx], tm->props[mapy][mapx],
+                                    tm->data[ty  ][tx  ], tm->props[ty  ][tx]));
+            }
          }
 #endif
          break;
@@ -2775,9 +3119,9 @@ static void stbte__tile(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy)
                   if ((mapx != stbte__ui.sx || mapy != stbte__ui.sy) &&
                          STBTE_ALLOW_LINK(tm->data[stbte__ui.sy][stbte__ui.sx], tm->props[stbte__ui.sy][stbte__ui.sx],
                                           tm->data[mapy][mapx], tm->props[mapy][mapx]))
-                     stbte__set_link(tm, stbte__ui.sx, stbte__ui.sy, mapx, mapy);
+                     stbte__set_link(tm, stbte__ui.sx, stbte__ui.sy, mapx, mapy, STBTE__undo_block);
                   else
-                     stbte__set_link(tm, stbte__ui.sx, stbte__ui.sy, -1,-1);
+                     stbte__set_link(tm, stbte__ui.sx, stbte__ui.sy, -1,-1, STBTE__undo_block);
                   stbte__ui.linking = 0;
                   stbte__activate(0);
                }
@@ -3022,10 +3366,13 @@ static void stbte__info(stbte_tilemap *tm, int x0, int y0, int w, int h)
 
 static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
 {
-   int i, y;
+   int i, y, n;
    int x1 = x0+w;
    int y1 = y0+h;
    int xoff = tm->has_layer_names ? 50 : 20;
+   static char *propmodes[3] = {
+      "default", "always", "never"
+   };
    int num_rows;
    x0 += 2;
    y0 += 5;
@@ -3036,6 +3383,9 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
       y0 += 11;
    }
    num_rows = (y1-y0)/15;
+#ifndef STBTE_NO_PROPS
+   --num_rows;
+#endif
    y = y0;
    for (i=0; i < tm->num_layers; ++i) {
       char text[3], *str = (char *) tm->layerinfo[i].name;
@@ -3056,7 +3406,15 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
          y += 15;
       }
    }
-   stbte__scrollbar(x1-4, y0,y1-2, &tm->layer_scroll, 0, tm->num_layers, num_rows, STBTE__ID(STBTE__scrollbar_id, STBTE__layer));
+   stbte__scrollbar(x1-4, y0,y-2, &tm->layer_scroll, 0, tm->num_layers, num_rows, STBTE__ID(STBTE__scrollbar_id, STBTE__layer));
+#ifndef STBTE_NO_PROPS
+   n = stbte__text_width("prop:")+2;
+   stbte__draw_text(x0,y+2, "prop:", w, STBTE__TEXTCOLOR(STBTE__cpanel));
+   i = w - n - 4;
+   if (i > 45) i = 45;
+   if (stbte__button(STBTE__clayer_button, propmodes[tm->propmode], x0+n,y,0,i, STBTE__ID(STBTE__layer,256), 0,0))
+      tm->propmode = (tm->propmode+1)%3;
+#endif
 }
 
 static void stbte__categories(stbte_tilemap *tm, int x0, int y0, int w, int h)
@@ -3169,7 +3527,7 @@ static void stbte__props_panel(stbte_tilemap *tm, int x0, int y0, int w, int h)
    my = stbte__ui.select_y0;
    p = tm->props[my][mx];
    data = tm->data[my][mx];
-   for (i=0; i < STBTE_MAX_PROP; ++i) {
+   for (i=0; i < STBTE_MAX_PROPERTIES; ++i) {
       unsigned int n = STBTE_PROP_TYPE(i, data, p);
       if (n) {
          char *s = STBTE_PROP_NAME(i, data, p);
