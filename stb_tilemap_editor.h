@@ -63,6 +63,22 @@
 //      representation to the game representation, but there's
 //      no way to show this live in the editor.
 //
+//   Q: The editor appears to be put map location (0,0) at the top left?
+//      I want to use a different coordinate system in my game (e.g. y
+//      increasing upwards, or origin at the center).
+//
+//   A: You can do this when you convert from the editor's map
+//      representation to the game representation. (Don't forget to
+//      translate link coordinates as well!)
+//
+//   Q: The editor appears to put pixel (0,0) at the top left? I want
+//      to use a different coordinate system in my game.
+//
+//   A: The editor defines an "editor pixel coordinate system" with
+//      (0,0) at the top left and requires you to display things in
+//      that coordinate system. You can freely remap those coordinates
+//      to anything you want on screen.
+//
 //   Q: How do I scale the user interface?
 //
 //   A: Since you do all the rendering, you can scale up all the rendering
