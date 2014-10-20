@@ -5,15 +5,26 @@
 //
 //
 // REVISION HISTORY
-//   0.30  properties
-//            - 
-//   0.20  initial release 
+//   0.30  properties release
+//          - properties panel for editing user-defined "object" properties
+//          - can link each tile to one other tile
+//          - keyboard interface
+//          - fix eraser tool bug (worked in complex cases, failed in simple)
+//          - undo/redo tools have visible disabled state
+//          - tiles on higher layers draw on top of adjacent lower-layer tiles
+//   0.20  erasable
+//          - eraser tool
+//          - fix bug when pasting into protected layer
+//          - better color scheme
+//          - internal-use color picker
+//   0.10  initial release 
+//
 //
 // COMPILING
 //
 //   This header file contains both the header file and the
 //   implementation file in one. To create the implementation,
-//   in one source file, define a few symbols first and then
+//   in one source file define a few symbols first and then
 //   include this header:
 //
 //      #define STB_TILEMAP_EDITOR_IMPLEMENTATION
@@ -34,7 +45,7 @@
 //      #include "stb_tilemap_editor.h"
 //
 //   Optionally you can define the following functions before the include;
-//   note these must be macros (which can just call a single function) so
+//   note these must be macros (but they can just call a function) so
 //   this library can #ifdef to detect if you've defined them:
 //
 //      #define STBTE_PROP_TYPE(int n, short *tiledata, float *params) ...
@@ -47,6 +58,9 @@
 //      // And you can bitwise-OR in the following flags:
 //      //     STBTE_PROP_disabled
 //      // Note that all of these are stored as floats in the param array.
+//      // The integer slider is limited in precision based on the space
+//      // available on screen, so for wide-ranged integers you may want
+//      // to use floats instead.
 //      //
 //      // Since the tiledata is passed to you, you can choose which property
 //      // is bound to that slot based on that data.
@@ -65,6 +79,15 @@
 //      #define STBTE_PROP_MAX(int n, short *tiledata) ...your code here...
 //      // These return the allowable range for the property values for
 //      // the specified slot. It is never called for boolean types.
+//
+//      #define STBTE_PROP_FLOAT_SCALE(int n, short *tiledata, float *params)
+//      // This rescales the float control for a given property; by default
+//      // left mouse drags add integers, right mouse drags adds fractions,
+//      // but you can rescale this per-property.
+//
+//      #define STBTE_FLOAT_CONTROL_GRANULARITY       ... value ...
+//      // This returns the number of pixels of mouse motion necessary
+//      // to advance the object float control. Default is 4
 //
 //      #define STBTE_ALLOW_LINK(short *src, float *src_data,  \
 //                               short *dest, float *dest_data) ...your code...
@@ -217,6 +240,29 @@ extern void stbte_mouse_move(stbte_tilemap *tm, int x, int y, int shifted, int s
 extern void stbte_mouse_button(stbte_tilemap *tm, int x, int y, int right, int down, int shifted, int scrollkey);
 extern void stbte_mouse_wheel(stbte_tilemap *tm, int x, int y, int vscroll);
 
+// for keyboard, define your own mapping from keys to the following actions.
+// this is totally optional, as all features are accessible with the mouse
+enum stbte_action
+{
+   STBTE_tool_select,
+   STBTE_tool_brush,
+   STBTE_tool_erase,
+   STBTE_tool_rectangle,
+   STBTE_tool_eyedropper,
+   STBTE_tool_link,
+   STBTE_act_toggle_grid,
+   STBTE_act_toggle_links,
+   STBTE_act_undo,
+   STBTE_act_redo,
+   STBTE_act_cut,
+   STBTE_act_copy,
+   STBTE_act_paste,
+   STBTE_scroll_left,
+   STBTE_scroll_right,
+   STBTE_scroll_up,
+   STBTE_scroll_down,
+};
+extern void stbte_action(stbte_tilemap *tm, enum stbte_action act);
 
 ////////////////
 //
@@ -236,6 +282,10 @@ extern short* stbte_get_tile(stbte_tilemap *tm, int x, int y);
 // returns an array of shorts that is 'map_layers' in length. each short is
 // either one of the tile_id values from define_tile, or STBTE_EMPTY.
 
+extern float *stbte_get_properties(stbte_tilemap *tm, int x, int y);
+
+extern void stbte_get_link(stbte_tilemap *tm, int x, int y, int *dx, int *dy);
+
 extern void stbte_set_dimensions(stbte_tilemap *tm, int max_x, int max_y);
 // set the dimensions of the level, overrides previous stbte_create_map()
 // values or anything the user has changed
@@ -246,6 +296,7 @@ extern void stbte_clear_map(stbte_tilemap *tm);
 
 extern void stbte_set_tile(stbte_tilemap *tm, int x, int y, int layer, signed short tile);
 // tile is your tile_id from define_tile, or STBTE_EMPTY
+
 
 ////////
 //
@@ -321,6 +372,10 @@ extern void stbte_set_layername(stbte_tilemap *tm, int layer, const char *layern
 
 #ifndef STBTE_PROP_FLOAT_SCALE
 #define STBTE_PROP_FLOAT_SCALE(n,td,tp)  1   // default scale size
+#endif
+
+#ifndef STBTE_FLOAT_CONTROL_GRANULARITY
+#define STBTE_FLOAT_CONTROL_GRANULARITY 4
 #endif
 
 #define STBTE__UNDO_BUFFER_COUNT  (STBTE_UNDO_BUFFER_BYTES>>1)
@@ -611,7 +666,6 @@ typedef struct
 } stbte__colorrect;
 
 #define STBTE__MAX_DELAYRECT 256
-#define STBTE__MAX_DELAYLINK 4096
 
 typedef struct
 {
@@ -624,8 +678,7 @@ typedef struct
    int initted;
    int side_extended[2];
    stbte__colorrect delayrect[STBTE__MAX_DELAYRECT];
-   stbte__colorrect delaylink[STBTE__MAX_DELAYLINK];
-   int delaycount, delaylinkcount;
+   int delaycount;
    int show_grid, show_links;
    int brush_state; // used to decide which kind of erasing
    int eyedrop_x, eyedrop_y, eyedrop_last_layer;
@@ -862,13 +915,37 @@ void stbte_get_dimensions(stbte_tilemap *tm, int *max_x, int *max_y)
    *max_y = tm->max_y;
 }
 
-extern short* stbte_get_tile(stbte_tilemap *tm, int x, int y)
+short* stbte_get_tile(stbte_tilemap *tm, int x, int y)
 {
    STBTE_ASSERT(x >= 0 && x < tm->max_x && y >= 0 && y < tm->max_y);
    if (x < 0 || x >= STBTE_MAX_TILEMAP_X || y < 0 || y >= STBTE_MAX_TILEMAP_Y)
       return NULL;
    return tm->data[y][x];
 }
+
+float *stbte_get_properties(stbte_tilemap *tm, int x, int y)
+{
+   STBTE_ASSERT(x >= 0 && x < tm->max_x && y >= 0 && y < tm->max_y);
+   if (x < 0 || x >= STBTE_MAX_TILEMAP_X || y < 0 || y >= STBTE_MAX_TILEMAP_Y)
+      return NULL;
+   return tm->props[y][x];
+}
+
+void stbte_get_link(stbte_tilemap *tm, int x, int y, int *destx, int *desty)
+{
+   STBTE_ASSERT(x >= 0 && x < tm->max_x && y >= 0 && y < tm->max_y);
+#ifdef STBTE_ALLOW_LINK
+   if (x >= 0 && x < STBTE_MAX_TILEMAP_X && y >= 0 && y < STBTE_MAX_TILEMAP_Y) {
+      *destx = tm->link[y][x].x;
+      *desty = tm->link[y][x].y;
+      return;
+   }
+#endif
+   *destx = -1;
+   *desty = -1;
+}
+
+
 
 // returns an array of map_layers shorts. each short is either
 // one of the tile_id values from define_tile, or STBTE_EMPTY
@@ -1288,7 +1365,7 @@ static int stbte__redo_available(stbte_tilemap *tm)
 {
    if (!tm->undo_available_valid)
       stbte__recompute_undo_available(tm);
-   return tm->undo_available;
+   return tm->redo_available;
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1427,14 +1504,6 @@ static void stbte__draw_frame_delayed(int x0, int y0, int x1, int y1, int color)
    }
 }
 
-static void stbte__draw_link_delayed(int x0, int y0, int x1, int y1, int color)
-{
-   if (stbte__ui.delaycount < STBTE__MAX_DELAYRECT) {
-      stbte__colorrect r = { x0,y0,x1,y1,color };
-      stbte__ui.delaylink[stbte__ui.delaylinkcount++] = r;
-   }
-}
-
 static void stbte__flush_delay(void)
 {
    stbte__colorrect *r;
@@ -1442,11 +1511,7 @@ static void stbte__flush_delay(void)
    r = stbte__ui.delayrect;
    for (i=0; i < stbte__ui.delaycount; ++i,++r)
       stbte__draw_frame(r->x0,r->y0,r->x1,r->y1,r->color);
-   r = stbte__ui.delaylink;
-   for (i=0; i < stbte__ui.delaylinkcount; ++i,++r)
-      stbte__draw_link(r->x0,r->y0,r->x1,r->y1,r->color);
    stbte__ui.delaycount = 0;
-   stbte__ui.delaylinkcount = 0;
 }
 
 static void stbte__activate(int id)
@@ -1687,20 +1752,20 @@ static int stbte__float_control(int x0, int y0, int w, float minv, float maxv, f
       case STBTE__mousemove:
          if (STBTE__IS_ACTIVE(id)) {
             float v = *value, delta;
-            int ax = stbte__ui.accum_x/4;
-            int ay = stbte__ui.accum_y/4;
-            stbte__ui.accum_x -= ax*4;
-            stbte__ui.accum_y -= ay*4;
+            int ax = stbte__ui.accum_x/STBTE_FLOAT_CONTROL_GRANULARITY;
+            int ay = stbte__ui.accum_y/STBTE_FLOAT_CONTROL_GRANULARITY;
+            stbte__ui.accum_x -= ax*STBTE_FLOAT_CONTROL_GRANULARITY;
+            stbte__ui.accum_y -= ay*STBTE_FLOAT_CONTROL_GRANULARITY;
             if (stbte__ui.shift) {
                if (stbte__ui.active_event == STBTE__leftdown)
-                  delta = ax * 1 + ay / 16.0;
+                  delta = ax * 16 + ay;
                else
-                  delta = ax / 64.0 + ay / 1024.0;
+                  delta = ax / 16.0 + ay / 256.0;
             } else {
                if (stbte__ui.active_event == STBTE__leftdown)
-                  delta = ax + ay * 0.1;
+                  delta = ax*10 + ay;
                else
-                  delta = ax * 0.01 + ay * 0.001;
+                  delta = ax * 0.1 + ay * 0.01;
             }
             v += delta * scale;
             if (v < minv) v = minv;
@@ -2104,7 +2169,7 @@ static int stbte__erase_predict(stbte_tilemap *tm, short result[], int allow_any
       }
    }
 
-   if (allow_any != STBTE__erase_any)
+   if (allow_any != STBTE__erase_any && allow_any != STBTE__erase_all)
       return STBTE__erase_none;
 
    // apply layer filters, erase from top
@@ -2124,7 +2189,6 @@ static int stbte__erase_predict(stbte_tilemap *tm, short result[], int allow_any
       return allow_any;
    return STBTE__erase_none;
 }
-
 
 static int stbte__erase(stbte_tilemap *tm, int x, int y, int allow_any)
 {
@@ -2178,7 +2242,7 @@ static int stbte__erase(stbte_tilemap *tm, int x, int y, int allow_any)
       }
    }
 
-   if (allow_any != STBTE__erase_any)
+   if (allow_any != STBTE__erase_any && allow_any != STBTE__erase_all)
       return STBTE__erase_none;
 
    // apply layer filters, erase from top
@@ -2478,89 +2542,94 @@ static void stbte__drag_place(stbte_tilemap *tm, int mapx, int mapy)
    stbte__ui.select_y1 = stbte__ui.select_y0 + stbte__ui.drag_h;
 }
 
+static void stbte__tile_paint(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy, int layer)
+{
+   int i;
+   int id = STBTE__IDMAP(mapx,mapy);
+   int x0=sx, y0=sy;
+   int x1=sx+tm->spacing_x, y1=sy+tm->spacing_y;
+   int over = stbte__hittest(x0,y0,x1,y1, id);
+   short *data = tm->data[mapy][mapx];
+   short temp[STBTE_MAX_LAYERS];
+
+   if (STBTE__IS_MAP_HOT()) {
+      if (stbte__ui.pasting) {
+         int ox = mapx - stbte__ui.paste_x;
+         int oy = mapy - stbte__ui.paste_y;
+         if (ox >= 0 && ox < stbte__ui.copy_width && oy >= 0 && oy < stbte__ui.copy_height) {
+            stbte__paste_stack(tm, temp, tm->data[mapy][mapx], stbte__ui.copybuffer[oy*stbte__ui.copy_width+ox], 0);
+            data = temp;
+         }
+      } else if (stbte__ui.dragging) {
+         int ox,oy;
+         for (i=0; i < tm->num_layers; ++i)
+            temp[i] = tm->data[mapy][mapx][i];
+         data = temp;
+
+         // if it's in the source area, remove things unless shift-dragging
+         ox = mapx - stbte__ui.drag_x;
+         oy = mapy - stbte__ui.drag_y;
+         if (!stbte__ui.shift && ox >= 0 && ox < stbte__ui.drag_w && oy >= 0 && oy < stbte__ui.drag_h) {
+            stbte__clear_stack(tm, temp);
+         }
+
+         ox = mapx - stbte__ui.drag_dest_x;
+         oy = mapy - stbte__ui.drag_dest_y;
+         if (ox >= 0 && ox < stbte__ui.drag_w && oy >= 0 && oy < stbte__ui.drag_h) {
+            stbte__paste_stack(tm, temp, temp, tm->data[stbte__ui.drag_y+oy][stbte__ui.drag_x+ox], !stbte__ui.shift);
+         }
+      } else if (STBTE__IS_MAP_ACTIVE()) {
+         if (stbte__ui.tool == STBTE__tool_rect) {
+            if ((stbte__ui.ms_time & 511) < 380) {
+               int ex = ((stbte__ui.hot_id >> 19) & 4095);
+               int ey = ((stbte__ui.hot_id >>  7) & 4095);
+               int sx = stbte__ui.sx;
+               int sy = stbte__ui.sy;
+
+               if (   ((mapx >= sx && mapx < ex+1) || (mapx >= ex && mapx < sx+1))
+                   && ((mapy >= sy && mapy < ey+1) || (mapy >= ey && mapy < sy+1))) {
+                  int i;
+                  for (i=0; i < tm->num_layers; ++i)
+                     temp[i] = tm->data[mapy][mapx][i];
+                  data = temp;
+                  if (stbte__ui.active_event == STBTE__leftdown)
+                     stbte__brush_predict(tm, temp);
+                  else
+                     stbte__erase_predict(tm, temp, STBTE__erase_any);
+               }
+            }
+         }
+      }
+   }
+
+   if (STBTE__IS_HOT(id) && STBTE__INACTIVE() && !stbte__ui.pasting) {
+      if (stbte__ui.tool == STBTE__tool_brush) {
+         if ((stbte__ui.ms_time & 511) < 300) {
+            data = temp;
+            for (i=0; i < tm->num_layers; ++i)
+               temp[i] = tm->data[mapy][mapx][i];
+            stbte__brush_predict(tm, temp);
+         }
+      }
+   }
+
+   {
+      i = layer;
+      if (i == tm->solo_layer || (!tm->layerinfo[i].hidden && tm->solo_layer < 0))
+         if (data[i] >= 0)
+            STBTE_DRAW_TILE(x0,y0, (unsigned short) data[i], 0, tm->props[mapy][mapx]);
+   }
+}
+
 static void stbte__tile(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy)
 {
    int tool = stbte__ui.tool;
-   int i;
    int x0=sx, y0=sy;
    int x1=sx+tm->spacing_x, y1=sy+tm->spacing_y;
    int id = STBTE__IDMAP(mapx,mapy);
    int over = stbte__hittest(x0,y0,x1,y1, id);
    switch (stbte__ui.event) {
       case STBTE__paint: {
-         short *data = tm->data[mapy][mapx];
-         short temp[STBTE_MAX_LAYERS];
-
-         if (STBTE__IS_MAP_HOT()) {
-            if (stbte__ui.pasting) {
-               int ox = mapx - stbte__ui.paste_x;
-               int oy = mapy - stbte__ui.paste_y;
-               if (ox >= 0 && ox < stbte__ui.copy_width && oy >= 0 && oy < stbte__ui.copy_height) {
-                  stbte__paste_stack(tm, temp, tm->data[mapy][mapx], stbte__ui.copybuffer[oy*stbte__ui.copy_width+ox], 0);
-                  data = temp;
-               }
-            } else if (stbte__ui.dragging) {
-               int ox,oy;
-               for (i=0; i < tm->num_layers; ++i)
-                  temp[i] = tm->data[mapy][mapx][i];
-               data = temp;
-
-               // if it's in the source area, remove things unless shift-dragging
-               ox = mapx - stbte__ui.drag_x;
-               oy = mapy - stbte__ui.drag_y;
-               if (!stbte__ui.shift && ox >= 0 && ox < stbte__ui.drag_w && oy >= 0 && oy < stbte__ui.drag_h) {
-                  stbte__clear_stack(tm, temp);
-               }
-
-               ox = mapx - stbte__ui.drag_dest_x;
-               oy = mapy - stbte__ui.drag_dest_y;
-               if (ox >= 0 && ox < stbte__ui.drag_w && oy >= 0 && oy < stbte__ui.drag_h) {
-                  stbte__paste_stack(tm, temp, temp, tm->data[stbte__ui.drag_y+oy][stbte__ui.drag_x+ox], !stbte__ui.shift);
-               }
-            } else if (STBTE__IS_MAP_ACTIVE()) {
-               if (stbte__ui.tool == STBTE__tool_rect) {
-                  if ((stbte__ui.ms_time & 511) < 380) {
-                     int ex = ((stbte__ui.hot_id >> 19) & 4095);
-                     int ey = ((stbte__ui.hot_id >>  7) & 4095);
-                     int sx = stbte__ui.sx;
-                     int sy = stbte__ui.sy;
-
-                     if (   ((mapx >= sx && mapx < ex+1) || (mapx >= ex && mapx < sx+1))
-                         && ((mapy >= sy && mapy < ey+1) || (mapy >= ey && mapy < sy+1))) {
-                        int i;
-                        for (i=0; i < tm->num_layers; ++i)
-                           temp[i] = tm->data[mapy][mapx][i];
-                        data = temp;
-                        if (stbte__ui.active_event == STBTE__leftdown)
-                           stbte__brush_predict(tm, temp);
-                        else
-                           stbte__erase_predict(tm, temp, STBTE__erase_any);
-                     }
-                  }
-               }
-            }
-         }
-
-         if (STBTE__IS_HOT(id) && STBTE__INACTIVE() && !stbte__ui.pasting) {
-            if (stbte__ui.tool == STBTE__tool_brush) {
-               if ((stbte__ui.ms_time & 511) < 300) {
-                  data = temp;
-                  for (i=0; i < tm->num_layers; ++i)
-                     temp[i] = tm->data[mapy][mapx][i];
-                  stbte__brush_predict(tm, temp);
-               }
-            }
-         }
-
-         {
-            for (i=0; i < tm->num_layers; ++i) {
-               if (i == tm->solo_layer || (!tm->layerinfo[i].hidden && tm->solo_layer < 0))
-                  if (data[i] >= 0)
-                     STBTE_DRAW_TILE(x0,y0, (unsigned short) data[i], 0, tm->props[mapy][mapx]);
-               if (i == 0 && stbte__ui.show_grid==1)
-                  stbte__draw_halfframe(x0,y0,x0+tm->spacing_x, y0+tm->spacing_y, STBTE_COLOR_GRID);
-            }
-         }
          if (stbte__ui.pasting || stbte__ui.dragging || stbte__ui.scrolling)
             break;
          if (stbte__ui.scrollkey && !STBTE__IS_MAP_ACTIVE())
@@ -2578,11 +2647,11 @@ static void stbte__tile(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy)
             ry0 -= tm->spacing_y/2;
             rx1 += tm->spacing_x/2;
             ry1 += tm->spacing_y/2;
-            stbte__draw_frame_delayed(rx0-1,ry0-1,rx1+1,ry1+1, STBTE_COLOR_TILEMAP_HIGHLIGHT);
+            stbte__draw_frame(rx0-1,ry0-1,rx1+1,ry1+1, STBTE_COLOR_TILEMAP_HIGHLIGHT);
             break;
          }
          if (STBTE__IS_HOT(id) && STBTE__INACTIVE()) {
-            stbte__draw_frame_delayed(x0-1,y0-1,x1+1,y1+1, STBTE_COLOR_TILEMAP_HIGHLIGHT);
+            stbte__draw_frame(x0-1,y0-1,x1+1,y1+1, STBTE_COLOR_TILEMAP_HIGHLIGHT);
          }
 #ifdef STBTE_ALLOW_LINK
          if (stbte__ui.show_links && tm->link[mapy][mapx].x >= 0) {
@@ -2593,7 +2662,7 @@ static void stbte__tile(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy)
             ly0 =  y0 + (tm->spacing_y >> 1) - 1;
             lx1 = lx0 + (tx - mapx) * tm->spacing_x + 2;
             ly1 = ly0 + (ty - mapy) * tm->spacing_y + 2;
-            stbte__draw_link_delayed(lx0,ly0,lx1,ly1,
+            stbte__draw_link(lx0,ly0,lx1,ly1,
                 STBTE_LINK_COLOR(tm->data[mapy][mapx], tm->props[mapy][mapx],
                                  tm->data[ty  ][tx  ], tm->props[ty  ][tx]));
          }
@@ -2827,6 +2896,14 @@ static void stbte__tile(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy)
    }
 }
 
+static void stbte__start_paste(stbte_tilemap *tm)
+{
+   if (stbte__ui.has_copy) {
+      stbte__ui.pasting = 1;
+      stbte__activate(STBTE__ID(STBTE__toolbarB,3));
+   }
+}
+
 static void stbte__toolbar(stbte_tilemap *tm, int x0, int y0, int w, int h)
 {
    int i;
@@ -2880,22 +2957,14 @@ static void stbte__toolbar(stbte_tilemap *tm, int x0, int y0, int w, int h)
    }
 
    x += 8;
-   if (stbte__button(STBTE__ctoolbar_button, "cut"  , x, y,10, 40, STBTE__ID(STBTE__toolbarB,0), 0, !stbte__ui.has_selection)) {
-      if (stbte__ui.has_selection)
-         stbte__copy_cut(tm, 1);
-   }
+   if (stbte__button(STBTE__ctoolbar_button, "cut"  , x, y,10, 40, STBTE__ID(STBTE__toolbarB,0), 0, !stbte__ui.has_selection))
+      stbte__copy_cut(tm, 1);
    x += 42;
-   if (stbte__button(STBTE__ctoolbar_button, "copy" , x, y, 5, 40, STBTE__ID(STBTE__toolbarB,1), 0, !stbte__ui.has_selection)) {
-      if (stbte__ui.has_selection)
-         stbte__copy_cut(tm, 0);
-   }
+   if (stbte__button(STBTE__ctoolbar_button, "copy" , x, y, 5, 40, STBTE__ID(STBTE__toolbarB,1), 0, !stbte__ui.has_selection))
+      stbte__copy_cut(tm, 0);
    x += 42;
-   if (stbte__button(STBTE__ctoolbar_button, "paste", x, y, 0, 40, STBTE__ID(STBTE__toolbarB,2), stbte__ui.pasting, !stbte__ui.has_copy)) {
-      if (stbte__ui.has_copy) {
-         stbte__ui.pasting = 1;
-         stbte__activate(STBTE__ID(STBTE__toolbarB,3));
-      }
-   }
+   if (stbte__button(STBTE__ctoolbar_button, "paste", x, y, 0, 40, STBTE__ID(STBTE__toolbarB,2), stbte__ui.pasting, !stbte__ui.has_copy))
+      stbte__start_paste(tm);
 }
 
 #define STBTE__TEXTCOLOR(n)  stbte__color_table[n][STBTE__text][STBTE__idle]
@@ -3286,7 +3355,7 @@ static void stbte__colorpicker(int x0, int y0, int w, int h)
 
 static void stbte__editor_traverse(stbte_tilemap *tm)
 {
-   int i,j;
+   int i,j,i0,j0,i1,j1,n;
 
    if (tm == NULL)
       return;
@@ -3307,31 +3376,61 @@ static void stbte__editor_traverse(stbte_tilemap *tm)
    }
 
    // step 1: traverse all the tilemap data...
-   // @OPTIMIZE crop to only region visible between UI widgets -- also necessary to avoid painting under it, etc
-   // @OPTIMIZE crop to visible region by computing correct i,j range
-   for (j=0; j < tm->max_y; ++j) {
-      int y = stbte__ui.y0 + j * tm->spacing_y - tm->scroll_y;
-      if (y + tm->spacing_y < stbte__ui.y0 || y > stbte__ui.y1)
-         continue;
-      for (i=0; i < tm->max_x; ++i) {
-         int x = stbte__ui.x0 + i * tm->spacing_x - tm->scroll_x;
-         if (x + tm->spacing_x >= stbte__ui.x0 && x < stbte__ui.x1)
-            stbte__tile(tm, x, y, i, j);
+
+   i0 = (tm->scroll_x - tm->spacing_x) / tm->spacing_x;
+   j0 = (tm->scroll_y - tm->spacing_y) / tm->spacing_y;
+   i1 = (tm->scroll_x + stbte__ui.x1 - stbte__ui.x0) / tm->spacing_x + 1;
+   j1 = (tm->scroll_y + stbte__ui.y1 - stbte__ui.y0) / tm->spacing_y + 1;
+
+   if (i0 < 0) i0 = 0;
+   if (j0 < 0) j0 = 0;
+   if (i1 > tm->max_x) i1 = tm->max_x;
+   if (j1 > tm->max_y) j1 = tm->max_y;
+
+   if (stbte__ui.event == STBTE__paint) {
+      // draw all of layer 0, then all of layer 1, etc, instead of old
+      // way which drew entire stack of each tile at once
+      for (n=0; n < tm->num_layers; ++n) {
+         for (j=j0; j < j1; ++j) {
+            for (i=i0; i < i1; ++i) {
+               int x = stbte__ui.x0 + i * tm->spacing_x - tm->scroll_x;
+               int y = stbte__ui.y0 + j * tm->spacing_y - tm->scroll_y;
+               stbte__tile_paint(tm, x, y, i, j, n);
+            }
+         }
+         if (n == 0 && stbte__ui.show_grid == 1) {
+            int x = stbte__ui.x0 + i0 * tm->spacing_x - tm->scroll_x;
+            int y = stbte__ui.y0 + j0 * tm->spacing_y - tm->scroll_y;
+            for (i=0; x < stbte__ui.x1 && i <= i1; ++i, x += tm->spacing_x)
+               stbte__draw_rect(x, stbte__ui.y0, x+1, stbte__ui.y1, STBTE_COLOR_GRID);
+            for (j=0; y < stbte__ui.y1 && j <= j1; ++j, y += tm->spacing_y)
+               stbte__draw_rect(stbte__ui.x0, y, stbte__ui.x1, y+1, STBTE_COLOR_GRID);
+         }
       }
    }
 
-   // draw grid on top of everything
-   if (stbte__ui.show_grid == 2) {
-      int x = stbte__ui.x0 - tm->scroll_x;
-      int y = stbte__ui.y0 - tm->scroll_y;
-      for (j=0; j < tm->max_y; ++j, y += tm->spacing_y)
-         stbte__draw_rect(stbte__ui.x0, y, stbte__ui.x1, y+1, STBTE_COLOR_GRID);
-      for (i=0; i < tm->max_x; ++i, x += tm->spacing_x)
-         stbte__draw_rect(x, stbte__ui.y0, x+1, stbte__ui.y1, STBTE_COLOR_GRID);
+   if (stbte__ui.event == STBTE__paint) {
+      // draw grid on top of everything except UI
+      if (stbte__ui.show_grid == 2) {
+         int x = stbte__ui.x0 + i0 * tm->spacing_x - tm->scroll_x;
+         int y = stbte__ui.y0 + j0 * tm->spacing_y - tm->scroll_y;
+         for (i=0; x < stbte__ui.x1 && i <= i1; ++i, x += tm->spacing_x)
+            stbte__draw_rect(x, stbte__ui.y0, x+1, stbte__ui.y1, STBTE_COLOR_GRID);
+         for (j=0; y < stbte__ui.y1 && j <= j1; ++j, y += tm->spacing_y)
+            stbte__draw_rect(stbte__ui.x0, y, stbte__ui.x1, y+1, STBTE_COLOR_GRID);
+      }
    }
 
-   // draw the selection border
+   for (j=j0; j < j1; ++j) {
+      for (i=i0; i < i1; ++i) {
+         int x = stbte__ui.x0 + i * tm->spacing_x - tm->scroll_x;
+         int y = stbte__ui.y0 + j * tm->spacing_y - tm->scroll_y;
+         stbte__tile(tm, x, y, i, j);
+      }
+   }
+
    if (stbte__ui.event == STBTE__paint) {
+      // draw the selection border
       if (stbte__ui.has_selection) {
          int x0,y0,x1,y1;
          x0 = stbte__ui.x0 + (stbte__ui.select_x0    ) * tm->spacing_x - tm->scroll_x;
@@ -3458,6 +3557,11 @@ static void stbte__editor_traverse(stbte_tilemap *tm)
       stbte__draw_text (x-w/2,y-4, stbte__ui.alert_msg, w+1, 0xff8040);
    }
 
+#ifdef STBTE_SHOW_CURSOR
+   if (stbte__ui.event == STBTE__paint)
+      stbte__draw_bitmap(stbte__ui.mx, stbte__ui.my, stbte__get_char_width(26), stbte__get_char_bitmap(26), 0xe0e0e0);
+#endif
+
    if (stbte__ui.event == STBTE__tick && stbte__ui.alert_msg) {
       stbte__ui.alert_timer -= stbte__ui.dt;
       if (stbte__ui.alert_timer < 0) {
@@ -3551,7 +3655,30 @@ void stbte_mouse_button(stbte_tilemap *tm, int x, int y, int right, int down, in
 
 void stbte_mouse_wheel(stbte_tilemap *tm, int x, int y, int vscroll)
 {
+   // not implemented yet -- need different way of hittesting
+}
 
+void stbte_action(stbte_tilemap *tm, enum stbte_action act)
+{
+   switch (act) {
+      case STBTE_tool_select:      stbte__ui.tool = STBTE__tool_select;               break;
+      case STBTE_tool_brush:       stbte__ui.tool = STBTE__tool_brush;                break;
+      case STBTE_tool_erase:       stbte__ui.tool = STBTE__tool_erase;                break;
+      case STBTE_tool_rectangle:   stbte__ui.tool = STBTE__tool_rect;                 break;
+      case STBTE_tool_eyedropper:  stbte__ui.tool = STBTE__tool_eyedrop;              break;
+      case STBTE_tool_link:        stbte__ui.tool = STBTE__tool_link;                 break;
+      case STBTE_act_toggle_grid:  stbte__ui.show_grid = (stbte__ui.show_grid+1) % 3; break;
+      case STBTE_act_toggle_links: stbte__ui.show_links ^= 1;                         break;
+      case STBTE_act_undo:         stbte__undo(tm);                                   break;
+      case STBTE_act_redo:         stbte__redo(tm);                                   break;
+      case STBTE_act_cut:          stbte__copy_cut(tm, 1);                            break;
+      case STBTE_act_copy:         stbte__copy_cut(tm, 0);                            break;
+      case STBTE_act_paste:        stbte__start_paste(tm);                            break;
+      case STBTE_scroll_left:      tm->scroll_x -= tm->spacing_x;                     break;
+      case STBTE_scroll_right:     tm->scroll_x += tm->spacing_x;                     break;
+      case STBTE_scroll_up:        tm->scroll_y -= tm->spacing_y;                     break;
+      case STBTE_scroll_down:      tm->scroll_y += tm->spacing_y;                     break;
+   }
 }
 
 void stbte_tick(stbte_tilemap *tm, float dt)
