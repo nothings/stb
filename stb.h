@@ -11050,7 +11050,7 @@ stb_arith_symstate *stb_arith_state_create(int num_sym)
    return s;
 }
 
-static stb_arith_state_rescale(stb_arith_symstate *s)
+static void stb_arith_state_rescale(stb_arith_symstate *s)
 {
    if (s->pow2 < POW2_LIMIT) {
       int pcf, cf, cf_next, next, i;
