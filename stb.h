@@ -5808,7 +5808,6 @@ void stb_readdir_free(char **files)
 }
 
 STB_EXTERN int stb_wildmatchi(char *expr, char *candidate);
-static double stb_readdir_size;
 static char **readdir_raw(char *dir, int return_subdirs, char *mask)
 {
    char **results = NULL;
@@ -5878,10 +5877,6 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
                      if (buffer[0] == '.' && buffer[1] == '/')
                         p = buffer+2;
                      stb_arr_push(results, strdup(p));
-                     #ifdef _MSC_VER
-                     if (!is_subdir)
-                        stb_readdir_size += data.size;
-                     #endif
                   }
                }
             }
