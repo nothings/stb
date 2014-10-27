@@ -5348,6 +5348,7 @@ FILE *  stb_fopen(char *filename, char *mode)
    // save away the full path to the file so if the program
    // changes the cwd everything still works right! unix has
    // better ways to do this, but we have to work in windows
+   name_full[0] = '\0'; // stb_fullpath reads name_full[0]
    if (stb_fullpath(name_full, sizeof(name_full), filename)==0)
       return 0;
 
