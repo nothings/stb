@@ -2771,7 +2771,7 @@ static void * malloc_base(void *context, size_t size, stb__alloc_type t, int ali
          break;
       }
 
-      default: assert(0); /* NOTREACHED */
+      default: p = NULL; assert(0); /* NOTREACHED */
    }
 
    ++stb_alloc_count_alloc;
