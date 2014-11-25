@@ -12,7 +12,7 @@
 //
 // More docs to come.
 //
-// No memory allocations; uses qsort() and assert() from stblib.
+// No memory allocations; uses qsort() and assert() from stdlib.
 //
 // This library currently uses the Skyline Bottom-Left algorithm.
 //
