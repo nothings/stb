@@ -20,6 +20,12 @@
 // implement them to the same API, but with a different init
 // function.
 
+
+//////////////////////////////////////////////////////////////////////////////
+//
+//       INCLUDE SECTION
+//
+
 #ifndef STB_INCLUDE_STB_RECT_PACK_H
 #define STB_INCLUDE_STB_RECT_PACK_H
 
@@ -57,6 +63,13 @@ STBRP_DEF void stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int 
 // You should not try to access the 'rects' array from another thread
 // while this function is running, as the function temporarily reorders
 // the array while it executes.
+//
+// To pack into another rectangle, you need to call stbrp_init_target
+// again. To continue packing into the same rectangle, you can call
+// this function again. Calling this multiple times with multiple rect
+// arrays will probably produce worse packing results than calling it
+// a single time with the full rectangle array, but the option is
+// available.
 
 struct stbrp_rect
 {
@@ -73,10 +86,16 @@ struct stbrp_rect
 }; // 16 bytes, nominally
 
 
-STBRP_DEF void stbrp_init_packer (stbrp_context *context, int width, int height, stbrp_node *nodes, int num_nodes);
+STBRP_DEF void stbrp_init_target (stbrp_context *context, int width, int height, stbrp_node *nodes, int num_nodes);
 // Initialize a rectangle packer to:
 //    pack a rectangle that is 'width' by 'height' in dimensions
 //    using temporary storage provided by the array 'nodes', which is 'num_nodes' long
+//
+// You must call this function every time you start packing into a new target.
+//
+// There is no "shutdown" function. The 'nodes' memory must stay valid for
+// the following stbrp_pack_rects() call (or calls), but can be freed after
+// the call (or calls) finish.
 //
 // Note: to guarantee best results, either:
 //       1. make sure 'num_nodes' >= 'width'
@@ -91,11 +110,14 @@ STBRP_DEF void stbrp_init_packer (stbrp_context *context, int width, int height,
 STBRP_DEF void stbrp_setup_allow_out_of_mem (stbrp_context *context, int allow_out_of_mem);
 // Optionally call this function after init but before doing any packing to
 // change the handling of the out-of-temp-memory scenario, described above.
+// If you call init again, this will be reset.
 
 
 STBRP_DEF void stbrp_setup_heuristic (stbrp_context *context, int heuristic);
 // Optionally select which packing heuristic the library should use. Different
 // heuristics will produce better/worse results for different data sets.
+// If you call init again, this will be reset.
+
 enum
 {
    STBRP_HEURISTIC_Skyline_default=0,
@@ -104,8 +126,11 @@ enum
 };
 
 
+//////////////////////////////////////////////////////////////////////////////
+//
 // the details of the following structures don't matter to you, but they must
 // be visible so you can handle the memory allocations for them
+
 struct stbrp_node
 {
    stbrp_coord  x,y;
@@ -131,7 +156,10 @@ struct stbrp_context
 
 #endif
 
-
+//////////////////////////////////////////////////////////////////////////////
+//
+//     IMPLEMENTATION SECTION
+//
 
 #ifdef STB_RECT_PACK_IMPLEMENTATION
 #include <stdlib.h>
@@ -173,7 +201,7 @@ STBRP_DEF void stbrp_setup_allow_out_of_mem(stbrp_context *context, int allow_ou
    }
 }
 
-STBRP_DEF void stbrp_init_packer(stbrp_context *context, int width, int height, stbrp_node *nodes, int num_nodes)
+STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, stbrp_node *nodes, int num_nodes)
 {
    int i;
 #ifndef STBRP_LARGE_RECTS
