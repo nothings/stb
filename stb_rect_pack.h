@@ -1,17 +1,24 @@
 // stb_rect_pack.h - v0.01 - public domain - rectangle packing
+// Sean Barrett 2014
 //
 // Useful for e.g. packing rectangular textures into an atlas.
+// Does not do rotation.
 //
-// By Sean Barrett and Ryan Gordon
+// Not necessarily the awesomest packing method, but better than
+// the totally naive one in stb_truetype (which is primarily what
+// this is meant to replace).
+//
+// Has only had a few tests run, may have issues.
+//
+// More docs to come.
+//
+// No memory allocations; uses qsort() and assert() from stblib.
 //
 // This library currently uses the Skyline Bottom-Left algorithm.
 //
 // Please note: better rectangle packers are welcome! Please
 // implement them to the same API, but with a different init
-// function. Contact me for details of how to set up the
-// heuristic enums and suchlike (as the code currently isn't
-// designed to do that correctly internally).
-//
+// function.
 
 #ifndef STB_INCLUDE_STB_RECT_PACK_H
 #define STB_INCLUDE_STB_RECT_PACK_H
@@ -37,7 +44,7 @@ typedef unsigned short stbrp_coord;
 #endif
 
 STBRP_DEF void stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int num_rects);
-// Assign packing locations to rectangles. The rectangles are of type
+// Assign packed locations to rectangles. The rectangles are of type
 // 'stbrp_rect' defined below, stored in the array 'rects', and there
 // are 'num_rects' many of them.
 //
@@ -139,6 +146,7 @@ STBRP_DEF void stbrp_setup_heuristic(stbrp_context *context, int heuristic)
    switch (context->init_mode) {
       case STBRP__INIT_skyline:
          assert(heuristic == STBRP_HEURISTIC_Skyline_BL_sortHeight || heuristic == STBRP_HEURISTIC_Skyline_BF_sortHeight);
+         context->heuristic = heuristic;
          break;
       default:
          assert(0);
@@ -218,21 +226,26 @@ static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0
    min_y = 0;
    waste_area = 0;
    visited_width = 0;
-   while (node->x <= x1) {
+   while (node->x < x1) {
       if (node->y > min_y) {
          // raise min_y higher.
          // we've accounted for all waste up to min_y,
          // but we'll now add more waste for everything we've visted
          waste_area += visited_width * (node->y - min_y);
          min_y = node->y;
+         // the first time through, visited_width might be reduced
+         if (node->x < x0)
+            visited_width += node->next->x - x0;
+         else
+            visited_width += node->next->x - node->x;
       } else {
          // add waste area
          int under_width = node->next->x - node->x;
          if (under_width + visited_width > width)
             under_width = width - visited_width;
          waste_area += under_width * (min_y - node->y);
+         visited_width += under_width;
       }
-      visited_width += node->next->x - node->x; // adds too much the last time, but that's never used
       node = node->next;
    }
 
@@ -259,7 +272,7 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
 
    node = c->active_head;
    prev = &c->active_head;
-   while (node->x + width < c->width) {
+   while (node->x + width <= c->width) {
       int y,waste;
       y = stbrp__skyline_find_min_y(c, node, node->x, width, &waste);
       if (c->heuristic == STBRP_HEURISTIC_Skyline_BL_sortHeight) { // actually just want to test BL
@@ -309,13 +322,13 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
       // find first node that's admissible
       while (tail->x < width)
          tail = tail->next;
-      while (tail->x <= c->width) {
+      while (tail) {
          int xpos = tail->x - width;
          int y,waste;
          assert(xpos >= 0);
          // find the left position that matches this
          while (node->next->x <= xpos) {
-            prev = &node;
+            prev = &node->next;
             node = node->next;
          }
          assert(node->next->x > xpos && node->x <= xpos);
@@ -376,7 +389,7 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
 
    // from here, traverse cur and free the nodes, until we get to one
    // that shouldn't be freed
-   while (cur->next->x <= res.x + width) {
+   while (cur->next && cur->next->x <= res.x + width) {
       stbrp_node *next = cur->next;
       // move the current node to the free list
       cur->next = context->free_head;
