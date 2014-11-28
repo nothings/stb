@@ -1,4 +1,4 @@
-// stb_rect_pack.h - v0.01 - public domain - rectangle packing
+// stb_rect_pack.h - v0.02 - public domain - rectangle packing
 // Sean Barrett 2014
 //
 // Useful for e.g. packing rectangular textures into an atlas.
@@ -12,7 +12,7 @@
 //
 // More docs to come.
 //
-// No memory allocations; uses qsort() and assert() from stblib.
+// No memory allocations; uses qsort() and assert() from stdlib.
 //
 // This library currently uses the Skyline Bottom-Left algorithm.
 //
@@ -311,9 +311,9 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
          }
       } else {
          // best-fit
-         if (waste < best_waste) {
+         if (y + height <= c->height) {
             // can only use it if it first vertically
-            if (y + height <= c->height) {
+            if (y < best_y || (y == best_y && waste < best_waste)) {
                best_y = y;
                best_waste = waste;
                best = prev;
@@ -361,12 +361,15 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
          }
          assert(node->next->x > xpos && node->x <= xpos);
          y = stbrp__skyline_find_min_y(c, node, xpos, width, &waste);
-         if (waste <= best_waste && y + height < c->height) {
-            if (waste < best_waste || y < best_y || (y==best_y && xpos < best_x)) {
-               best_x = xpos;
-               best_y = y;
-               best_waste = waste;
-               best = prev;
+         if (y + height < c->height) {
+            if (y <= best_y) {
+               if (y < best_y || waste < best_waste || (waste==best_waste && xpos < best_x)) {
+                  best_x = xpos;
+                  assert(y <= best_y);
+                  best_y = y;
+                  best_waste = waste;
+                  best = prev;
+               }
             }
          }
          tail = tail->next;
@@ -470,6 +473,17 @@ static int rect_height_compare(const void *a, const void *b)
    if (p->h < q->h)
       return  1;
    return (p->w > q->w) ? -1 : (p->w < q->w);
+}
+
+static int rect_width_compare(const void *a, const void *b)
+{
+   stbrp_rect *p = (stbrp_rect *) a;
+   stbrp_rect *q = (stbrp_rect *) b;
+   if (p->w > q->w)
+      return -1;
+   if (p->w < q->w)
+      return  1;
+   return (p->h > q->h) ? -1 : (p->h < q->h);
 }
 
 static int rect_original_order(const void *a, const void *b)
