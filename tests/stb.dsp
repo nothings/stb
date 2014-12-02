@@ -126,7 +126,15 @@ SOURCE=..\stb_perlin.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_rect_pack.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_textedit.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_tilemap_editor.h
 # End Source File
 # Begin Source File
 

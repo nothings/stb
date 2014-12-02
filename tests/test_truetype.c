@@ -1,5 +1,7 @@
+#include "stb_rect_pack.h"
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
+#include "stb_image_write.h"
 
 #include <stdio.h>
 
@@ -17,15 +19,54 @@ void debug(void)
    stbtt_MakeGlyphBitmap(&font, output, 6, 9, 512, 5.172414E-03f, 5.172414E-03f, 54);
 }
 
+#define BITMAP_W  256
+#define BITMAP_H  400
+unsigned char temp_bitmap[BITMAP_H][BITMAP_W];
+stbtt_bakedchar cdata[256*2]; // ASCII 32..126 is 95 glyphs
 int main(int argc, char **argv)
 {
    stbtt_fontinfo font;
    unsigned char *bitmap;
    int w,h,i,j,c = (argc > 1 ? atoi(argv[1]) : 34807), s = (argc > 2 ? atoi(argv[2]) : 32);
 
-   debug();
+   //debug();
 
+   // @TODO: why is minglui.ttc failing? 
    fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/mingliu.ttc", "rb"));
+
+   stbtt_BakeFontBitmap(ttf_buffer,stbtt_GetFontOffsetForIndex(ttf_buffer,0), 40.0, temp_bitmap[0],BITMAP_W,BITMAP_H, 32,96, cdata); // no guarantee this fits!
+   stbi_write_png("fonttest1.png", BITMAP_W, BITMAP_H, 1, temp_bitmap, 0);
+
+   stbtt_BakeFontBitmap(ttf_buffer,stbtt_GetFontOffsetForIndex(ttf_buffer,0), 40.0, temp_bitmap[0],BITMAP_W,BITMAP_H, 32,96, cdata); // no guarantee this fits!
+
+   {
+      stbtt_pack_context pc;
+      stbtt_PackBegin(&pc, temp_bitmap[0], BITMAP_W, BITMAP_H, 0, NULL);
+      stbtt_PackFontRange(&pc, ttf_buffer, 0, 40.0, 32, 95, cdata);
+      stbtt_PackFontRange(&pc, ttf_buffer, 0, 40.0, 0xa0, 0x100-0xa0, cdata);
+      stbtt_PackEnd(&pc);
+      stbi_write_png("fonttest2.png", BITMAP_W, BITMAP_H, 1, temp_bitmap, 0);
+   }
+
+   {
+      stbtt_pack_context pc;
+      stbtt_pack_range pr[2];
+      stbtt_PackBegin(&pc, temp_bitmap[0], BITMAP_W, BITMAP_H, 0, NULL);
+
+      pr[0].chardata_for_range = cdata;
+      pr[0].first_unicode_char_in_range = 32;
+      pr[0].num_chars_in_range = 95;
+      pr[0].font_size = 40.0;
+      pr[1].chardata_for_range = cdata+256;
+      pr[1].first_unicode_char_in_range = 0xa0;
+      pr[1].num_chars_in_range = 0x100 - 0xa0;
+      pr[1].font_size = 40.0;
+
+      stbtt_PackFontRanges(&pc, ttf_buffer, 0, pr, 2);
+      stbtt_PackEnd(&pc);
+      stbi_write_png("fonttest3.png", BITMAP_W, BITMAP_H, 1, temp_bitmap, 0);
+   }
+   return 0;
 
    stbtt_InitFont(&font, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0));
    bitmap = stbtt_GetCodepointBitmap(&font, 0,stbtt_ScaleForPixelHeight(&font, (float)s), c, &w, &h, 0,0);
