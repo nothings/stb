@@ -35,6 +35,9 @@
 //       Hou Qiming
 //       Fabian "ryg" Giesen
 //
+//   Misc other:
+//       Ryan Gordon
+//
 // VERSION HISTORY
 //
 //   0.99 (2014-09-18) fix multiple bugs with subpixel rendering (ryg)
@@ -428,7 +431,7 @@ extern "C" {
 typedef struct
 {
    unsigned short x0,y0,x1,y1; // coordinates of bbox in bitmap
-   float xoff,yoff,xadvance;   
+   float xoff,yoff,xadvance;
 } stbtt_bakedchar;
 
 extern int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // font location (use offset=0 for plain .ttf)
@@ -471,23 +474,37 @@ extern void stbtt_GetBakedQuad(stbtt_bakedchar *chardata, int pw, int ph,  // sa
 // This provides options for packing multiple fonts into one atlas, not
 // perfectly but better than nothing.
 
+typedef struct
+{
+   unsigned short x0,y0,x1,y1; // coordinates of bbox in bitmap
+   float xoff,yoff,xadvance;
+   float xoff2,yoff2;
+} stbtt_packedchar;
+
 typedef struct stbtt_pack_context stbtt_pack_context;
 typedef struct
 {
    float font_size;                     // if positive, pixel height; if negative, points
    int first_unicode_char_in_range;
    int num_chars_in_range;
-   stbtt_bakedchar *chardata_for_range; // output
+   stbtt_packedchar *chardata_for_range; // output
 } stbtt_pack_range;
 
-extern int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int pw, int ph, int stride_in_bytes, void *alloc_context);
+extern int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int pw, int ph, int stride_in_bytes, int padding, void *alloc_context);
 // returns 0 if the allocations fail
 
+extern void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h_oversample, unsigned int v_oversample);
 extern void stbtt_PackEnd  (stbtt_pack_context *spc);
 extern int  stbtt_PackFontRange(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, float font_size,
-                                int first_unicode_char_in_range, int num_chars_in_range, stbtt_bakedchar *chardata_for_range);
+                                int first_unicode_char_in_range, int num_chars_in_range, stbtt_packedchar *chardata_for_range);
 extern int  stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges);
 
+
+extern void stbtt_GetPackedQuad(stbtt_packedchar *chardata, int pw, int ph,  // same data as above
+                               int char_index,             // character to display
+                               float *xpos, float *ypos,   // pointers to current position in screen pixel space
+                               stbtt_aligned_quad *q,      // output: quad to draw
+                               int align_to_integer);
 
 // this is an opaque structure that you shouldn't mess with which holds
 // all the context needed from PackBegin to PackEnd.
@@ -497,6 +514,8 @@ struct stbtt_pack_context {
    int   width;
    int   height;
    int   stride_in_bytes;
+   int   padding;
+   unsigned int   h_oversample, v_oversample;
    unsigned char *pixels;
    void  *nodes;
 };
@@ -807,6 +826,12 @@ enum { // languageID for STBTT_PLATFORM_ID_MAC
 ////
 
 #ifdef STB_TRUETYPE_IMPLEMENTATION
+
+#ifndef STBTT_MAX_OVERSAMPLE
+#define STBTT_MAX_OVERSAMPLE   8
+#endif
+
+typedef stbtt__test_oversample_pow2[(STBTT_MAX_OVERSAMPLE & (STBTT_MAX_OVERSAMPLE-1)) == 0 ? 1 : -1];
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -1947,9 +1972,9 @@ extern int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // font 
       chardata[i].xadvance = scale * advance;
       chardata[i].xoff     = (float) x0;
       chardata[i].yoff     = (float) y0;
-      x = x + gw + 2;
-      if (y+gh+2 > bottom_y)
-         bottom_y = y+gh+2;
+      x = x + gw + 1;
+      if (y+gh+1 > bottom_y)
+         bottom_y = y+gh+1;
    }
    return bottom_y;
 }
@@ -1977,31 +2002,87 @@ void stbtt_GetBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_inde
 
 //////////////////////////////////////////////////////////////////////////////
 //
+// rectangle packing replacement routines if you don't have stb_rect_pack.h
+//
+
+#ifndef STB_RECT_PACK_VERSION
+#ifdef _MSC_VER
+#define STBTT__NOTUSED(v)  (void)(v)
+#else
+#define STBTT__NOTUSED(v)  (void)sizeof(v)
+#endif
+
+////////////////////////////////////////////////////////////////////////////////////
+//                                                                                //
+//                                                                                //
+// COMPILER WARNING ?!?!?                                                         //
+//                                                                                //
+//                                                                                //
+// if you get a compile warning due to these symbols being defined more than      //
+// once, move #include "stb_rect_pack.h" before #include "stb_truetype.h"         //
+//                                                                                //
+////////////////////////////////////////////////////////////////////////////////////
+
+typedef struct
+{
+   int width,height;
+   int x,y,bottom_y;
+} stbrp_context;
+
+typedef struct
+{
+   unsigned char x;
+} stbrp_node;
+
+typedef struct
+{
+   int id,w,h,x,y,was_packed;
+} stbrp_rect;
+
+static void stbrp_init_target(stbrp_context *con, int pw, int ph, stbrp_node *nodes, int num_nodes)
+{
+   con->width  = pw;
+   con->height = ph;
+   con->x = 0;
+   con->y = 0;
+   con->bottom_y = 0;
+   STBTT__NOTUSED(nodes);
+   STBTT__NOTUSED(num_nodes);   
+}
+
+static void stbrp_pack_rects(stbrp_context *con, stbrp_rect *rects, int num_rects)
+{
+   int i;
+   for (i=0; i < num_rects; ++i) {
+      if (con->x + rects[i].w > con->width) {
+         con->x = 0;
+         con->y = con->bottom_y;
+      }
+      if (con->y + rects[i].h > con->height)
+         break;
+      rects[i].x = con->x;
+      rects[i].y = con->y;
+      rects[i].was_packed = 1;
+      con->x += rects[i].w;
+      if (con->y + rects[i].h > con->bottom_y)
+         con->bottom_y = con->y + rects[i].h;
+   }
+   for (   ; i < num_rects; ++i)
+      rects[i].was_packed = 0;
+}
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+//
 // bitmap baking
 //
 // This is SUPER-AWESOME (tm Ryan Gordon) packing using stb_rect_pack.h. If
 // stb_rect_pack.h isn't available, it uses the BakeFontBitmap strategy.
 
-#ifndef STB_RECT_PACK_VERSION
-// @TODO: simulate STB_RECT_PACK API with trivial logic from BakeFontBitmap,
-//        try to share code?!?
-#error  "no stb_rect_pack"
-#endif
-
-#if 0
-struct stbtt_pack_context {
-   void *user_allocator_context;
-   void *pack_info;
-   int   width;
-   int   height;
-   unsigned char *pixels;
-};
-#endif
-
-int stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int pw, int ph, int stride_in_bytes, void *alloc_context)
+int stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int pw, int ph, int stride_in_bytes, int padding, void *alloc_context)
 {
    stbrp_context *context = (stbrp_context *) STBTT_malloc(sizeof(*context)            ,alloc_context);
-   int            num_nodes = pw-1;
+   int            num_nodes = pw - padding;
    stbrp_node    *nodes   = (stbrp_node    *) STBTT_malloc(sizeof(*nodes  ) * num_nodes,alloc_context);
 
    if (context == NULL || nodes == NULL) {
@@ -2016,9 +2097,12 @@ int stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int pw, int 
    spc->pixels = pixels;
    spc->pack_info = context;
    spc->nodes = nodes;
+   spc->padding = padding;
    spc->stride_in_bytes = stride_in_bytes != 0 ? stride_in_bytes : pw;
+   spc->h_oversample = 1;
+   spc->v_oversample = 1;
 
-   stbrp_init_target(context, pw-1, ph-1, nodes, num_nodes);
+   stbrp_init_target(context, pw-padding, ph-padding, nodes, num_nodes);
 
    STBTT_memset(pixels, 0, pw*ph); // background of 0 around pixels
 
@@ -2031,9 +2115,135 @@ void stbtt_PackEnd  (stbtt_pack_context *spc)
    STBTT_free(spc->pack_info, spc->user_allocator_context);
 }
 
+void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h_oversample, unsigned int v_oversample)
+{
+   assert(h_oversample <= STBTT_MAX_OVERSAMPLE);
+   assert(v_oversample <= STBTT_MAX_OVERSAMPLE);
+   if (h_oversample <= STBTT_MAX_OVERSAMPLE)
+      spc->h_oversample = h_oversample;
+   if (v_oversample <= STBTT_MAX_OVERSAMPLE)
+      spc->v_oversample = v_oversample;
+}
+
+#define STBTT__OVER_MASK  (STBTT_MAX_OVERSAMPLE-1)
+
+static void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width)
+{
+   unsigned char buffer[STBTT_MAX_OVERSAMPLE];
+   int safe_w = w - kernel_width;
+   int j;
+   for (j=0; j < h; ++j) {
+      int i;
+      unsigned int total;
+      unsigned char *pixels_ahead = pixels + (kernel_width);
+      memset(buffer, 0, kernel_width);
+
+      total = 0;
+
+      // make kernel_width a constant in common cases so compiler can optimize out the divide
+      switch (kernel_width) {
+         case 2:
+            for (i=0; i <= safe_w; ++i) {
+               total += pixels[i] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
+               pixels[i] = total / 2;
+            }
+            break;
+         case 3:
+            for (i=0; i <= safe_w; ++i) {
+               total += pixels[i] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
+               pixels[i] = total / 3;
+            }
+            break;
+         case 4:
+            for (i=0; i <= safe_w; ++i) {
+               total += pixels[i] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
+               pixels[i] = total / 4;
+            }
+            break;
+         default:
+            for (i=0; i <= safe_w; ++i) {
+               total += pixels[i] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
+               pixels[i] = total / kernel_width;
+            }
+            break;
+      }
+
+      for (; i < w; ++i) {
+         assert(pixels[i] == 0);
+         total -= buffer[i & STBTT__OVER_MASK];
+         pixels[i] = total / kernel_width;
+      }
+
+      pixels += stride_in_bytes;
+   }
+}
+
+static void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width)
+{
+   unsigned char buffer[STBTT_MAX_OVERSAMPLE];
+   int safe_h = h - kernel_width;
+   int j;
+   for (j=0; j < w; ++j) {
+      int i;
+      unsigned int total;
+      unsigned char *pixels_ahead = pixels + (kernel_width)*stride_in_bytes;
+      memset(buffer, 0, kernel_width);
+
+      total = 0;
+
+      // make kernel_width a constant in common cases so compiler can optimize out the divide
+      switch (kernel_width) {
+         case 2:
+            for (i=0; i <= safe_h; ++i) {
+               total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
+               pixels[i*stride_in_bytes] = total / 2;
+            }
+            break;
+         case 3:
+            for (i=0; i <= safe_h; ++i) {
+               total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
+               pixels[i*stride_in_bytes] = total / 3;
+            }
+            break;
+         case 4:
+            for (i=0; i <= safe_h; ++i) {
+               total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
+               pixels[i*stride_in_bytes] = total / 4;
+            }
+            break;
+         default:
+            for (i=0; i <= safe_h; ++i) {
+               total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
+               pixels[i*stride_in_bytes] = total / kernel_width;
+            }
+            break;
+      }
+
+      for (; i < h; ++i) {
+         assert(pixels[i*stride_in_bytes] == 0);
+         total -= buffer[i & STBTT__OVER_MASK];
+         pixels[i*stride_in_bytes] = total / kernel_width;
+      }
+
+      pixels += 1;
+   }
+}
+
 int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges)
 {
    stbtt_fontinfo info;
+   float recip_h = 1.0f / spc->h_oversample;
+   float recip_v = 1.0f / spc->v_oversample;
+   float sub_x = spc->h_oversample ? recip_h : 0;
+   float sub_y = spc->v_oversample ? recip_v : 0;
    int i,j,k,n, return_value = 1;
    stbrp_context *context = (stbrp_context *) spc->pack_info;
    stbrp_rect    *rects;
@@ -2062,9 +2272,13 @@ int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int f
       float scale = stbtt_ScaleForPixelHeight(&info, fh);
       for (j=0; j < ranges[i].num_chars_in_range; ++j) {
          int x0,y0,x1,y1;
-         stbtt_GetCodepointBitmapBox(&info, ranges[i].first_unicode_char_in_range + j, scale,scale, &x0,&y0,&x1,&y1);
-         rects[k].w = x1-x0+1;
-         rects[k].h = y1-y0+1;
+         stbtt_GetCodepointBitmapBoxSubpixel(&info, ranges[i].first_unicode_char_in_range + j,
+                                              scale * spc->h_oversample,
+                                              scale * spc->v_oversample,
+                                              0,0,
+                                              &x0,&y0,&x1,&y1);
+         rects[k].w = x1-x0 + spc->padding + spc->h_oversample-1;
+         rects[k].h = y1-y0 + spc->padding + spc->v_oversample-1;
          ++k;
       }
    }
@@ -2079,26 +2293,49 @@ int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int f
       for (j=0; j < ranges[i].num_chars_in_range; ++j) {
          stbrp_rect *r = &rects[k];
          if (r->was_packed) {
-            stbtt_bakedchar *bc = &ranges[i].chardata_for_range[j];
+            stbtt_packedchar *bc = &ranges[i].chardata_for_range[j];
             int advance, lsb, x0,y0,x1,y1;
             int glyph = stbtt_FindGlyphIndex(&info, ranges[i].first_unicode_char_in_range + j);
 
+            // pad on left and top
+            r->x += spc->padding;
+            r->y += spc->padding;
+            r->w -= spc->padding;
+            r->h -= spc->padding;
             stbtt_GetGlyphHMetrics(&info, glyph, &advance, &lsb);
-            stbtt_GetGlyphBitmapBox(&info, glyph, scale,scale, &x0,&y0,&x1,&y1);
+            stbtt_GetGlyphBitmapBox(&info, glyph,
+                                    scale * spc->h_oversample,
+                                    scale * spc->v_oversample,
+                                    &x0,&y0,&x1,&y1);
             stbtt_MakeGlyphBitmapSubpixel(&info,
                                           spc->pixels + r->x + r->y*spc->stride_in_bytes,
-                                          r->w-1, r->h-1,
+                                          r->w - spc->h_oversample+1,
+                                          r->h - spc->v_oversample+1,
                                           spc->stride_in_bytes,
-                                          scale,scale,
-                                          0.0f, 0.0f,
+                                          scale * spc->h_oversample,
+                                          scale * spc->v_oversample,
+                                          0,0,
                                           glyph);
+
+            if (spc->h_oversample > 1)
+               stbtt__h_prefilter(spc->pixels + r->x + r->y*spc->stride_in_bytes,
+                                  r->w, r->h, spc->stride_in_bytes,
+                                  spc->h_oversample);
+
+            if (spc->v_oversample > 1)
+               stbtt__v_prefilter(spc->pixels + r->x + r->y*spc->stride_in_bytes,
+                                  r->w, r->h, spc->stride_in_bytes,
+                                  spc->v_oversample);
+
             bc->x0       = (stbtt_int16)  r->x;
             bc->y0       = (stbtt_int16)  r->y;
-            bc->x1       = (stbtt_int16) (r->x + r->w-1);
-            bc->y1       = (stbtt_int16) (r->y + r->h-1);
+            bc->x1       = (stbtt_int16) (r->x + r->w);
+            bc->y1       = (stbtt_int16) (r->y + r->h);
             bc->xadvance =                scale * advance;
-            bc->xoff     =       (float)  x0;
-            bc->yoff     =       (float)  y0;
+            bc->xoff     =       (float)  x0 * recip_h + sub_x;
+            bc->yoff     =       (float)  y0 * recip_v + sub_y;
+            bc->xoff2    =                (x0 + r->w) * recip_h + sub_x;
+            bc->yoff2    =                (y0 + r->h) * recip_v + sub_y;
          } else {
             return_value = 0; // if any fail, report failure
          }
@@ -2111,7 +2348,7 @@ int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int f
 }
 
 int stbtt_PackFontRange(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, float font_size,
-            int first_unicode_char_in_range, int num_chars_in_range, stbtt_bakedchar *chardata_for_range)
+            int first_unicode_char_in_range, int num_chars_in_range, stbtt_packedchar *chardata_for_range)
 {
    stbtt_pack_range range;
    range.first_unicode_char_in_range = first_unicode_char_in_range;
@@ -2120,6 +2357,34 @@ int stbtt_PackFontRange(stbtt_pack_context *spc, unsigned char *fontdata, int fo
    range.font_size                   = font_size;
    return stbtt_PackFontRanges(spc, fontdata, font_index, &range, 1);
 }
+
+void stbtt_GetPackedQuad(stbtt_packedchar *chardata, int pw, int ph, int char_index, float *xpos, float *ypos, stbtt_aligned_quad *q, int align_to_integer)
+{
+   float ipw = 1.0f / pw, iph = 1.0f / ph;
+   stbtt_packedchar *b = chardata + char_index;
+
+   if (align_to_integer) {
+      float x = (float) STBTT_ifloor((*xpos + b->xoff) + 0.5);
+      float y = (float) STBTT_ifloor((*ypos + b->yoff) + 0.5);
+      q->x0 = x;
+      q->y0 = y;
+      q->x1 = x + b->xoff2 - b->xoff;
+      q->y1 = y + b->yoff2 - b->yoff;
+   } else {
+      q->x0 = *xpos + b->xoff;
+      q->y0 = *ypos + b->yoff;
+      q->x1 = *xpos + b->xoff2;
+      q->y1 = *ypos + b->yoff2;
+   }
+
+   q->s0 = b->x0 * ipw;
+   q->t0 = b->y0 * iph;
+   q->s1 = b->x1 * ipw;
+   q->t1 = b->y1 * iph;
+
+   *xpos += b->xadvance;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 //
