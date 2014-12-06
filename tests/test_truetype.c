@@ -20,9 +20,10 @@ void debug(void)
 }
 
 #define BITMAP_W  256
-#define BITMAP_H  400
+#define BITMAP_H  512
 unsigned char temp_bitmap[BITMAP_H][BITMAP_W];
 stbtt_bakedchar cdata[256*2]; // ASCII 32..126 is 95 glyphs
+stbtt_packedchar pdata[256*2];
 int main(int argc, char **argv)
 {
    stbtt_fontinfo font;
@@ -37,13 +38,11 @@ int main(int argc, char **argv)
    stbtt_BakeFontBitmap(ttf_buffer,stbtt_GetFontOffsetForIndex(ttf_buffer,0), 40.0, temp_bitmap[0],BITMAP_W,BITMAP_H, 32,96, cdata); // no guarantee this fits!
    stbi_write_png("fonttest1.png", BITMAP_W, BITMAP_H, 1, temp_bitmap, 0);
 
-   stbtt_BakeFontBitmap(ttf_buffer,stbtt_GetFontOffsetForIndex(ttf_buffer,0), 40.0, temp_bitmap[0],BITMAP_W,BITMAP_H, 32,96, cdata); // no guarantee this fits!
-
    {
       stbtt_pack_context pc;
-      stbtt_PackBegin(&pc, temp_bitmap[0], BITMAP_W, BITMAP_H, 0, NULL);
-      stbtt_PackFontRange(&pc, ttf_buffer, 0, 40.0, 32, 95, cdata);
-      stbtt_PackFontRange(&pc, ttf_buffer, 0, 40.0, 0xa0, 0x100-0xa0, cdata);
+      stbtt_PackBegin(&pc, temp_bitmap[0], BITMAP_W, BITMAP_H, 0, 1, NULL);
+      stbtt_PackFontRange(&pc, ttf_buffer, 0, 20.0, 32, 95, pdata);
+      stbtt_PackFontRange(&pc, ttf_buffer, 0, 20.0, 0xa0, 0x100-0xa0, pdata);
       stbtt_PackEnd(&pc);
       stbi_write_png("fonttest2.png", BITMAP_W, BITMAP_H, 1, temp_bitmap, 0);
    }
@@ -51,17 +50,18 @@ int main(int argc, char **argv)
    {
       stbtt_pack_context pc;
       stbtt_pack_range pr[2];
-      stbtt_PackBegin(&pc, temp_bitmap[0], BITMAP_W, BITMAP_H, 0, NULL);
+      stbtt_PackBegin(&pc, temp_bitmap[0], BITMAP_W, BITMAP_H, 0, 1, NULL);
 
-      pr[0].chardata_for_range = cdata;
+      pr[0].chardata_for_range = pdata;
       pr[0].first_unicode_char_in_range = 32;
       pr[0].num_chars_in_range = 95;
-      pr[0].font_size = 40.0;
-      pr[1].chardata_for_range = cdata+256;
+      pr[0].font_size = 20.0f;
+      pr[1].chardata_for_range = pdata+256;
       pr[1].first_unicode_char_in_range = 0xa0;
       pr[1].num_chars_in_range = 0x100 - 0xa0;
-      pr[1].font_size = 40.0;
+      pr[1].font_size = 20.0f;
 
+      stbtt_PackSetOversampling(&pc, 2, 2);
       stbtt_PackFontRanges(&pc, ttf_buffer, 0, pr, 2);
       stbtt_PackEnd(&pc);
       stbi_write_png("fonttest3.png", BITMAP_W, BITMAP_H, 1, temp_bitmap, 0);
