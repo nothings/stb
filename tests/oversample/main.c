@@ -2,11 +2,8 @@
 #include <assert.h>
 #include <ctype.h>
 
-#define STB_DEFINE
 #define STB_WINMAIN
-#define STB_NO_REGISTRY
 #include "stb_wingraph.h"
-#include "stb.h"
 
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STB_RECT_PACK_IMPLEMENTATION
@@ -22,11 +19,12 @@
 #include <gl/gl.h>
 #include <gl/glu.h>
 
+#define GL_FRAMEBUFFER_SRGB_EXT           0x8DB9
 
 #define SIZE_X  1024
 #define SIZE_Y  768
 
-stbtt_packedchar chardata[3][128];
+stbtt_packedchar chardata[6][128];
 
 int sx=SIZE_X, sy=SIZE_Y;
 
@@ -36,19 +34,40 @@ unsigned char temp_bitmap[BITMAP_W][BITMAP_H];
 unsigned char ttf_buffer[1 << 25];
 GLuint font_tex;
 
+float scale[2] = { 24.0f, 14.0f };
+
+int sf[6] = { 0,1,2, 0,1,2 };
+
 void load_fonts(void)
 {
    stbtt_pack_context pc;
-   FILE *f = fopen("c:/windows/fonts/times.ttf", "rb");
-   if (!f) exit(0);
+   int i;
+   FILE *f;
+   char filename[256];
+   char *win = getenv("windir");
+   if (win == NULL) win = getenv("SystemRoot");
+
+   f = fopen(stb_wingraph_commandline, "rb");
+   if (!f) {
+      if (win == NULL)
+         sprintf(filename, "arial.ttf", win);
+      else
+         sprintf(filename, "%s/fonts/arial.ttf", win);
+      f = fopen(filename, "rb");
+      if (!f) exit(0);
+   }
+
    fread(ttf_buffer, 1, 1<<25, f);
 
    stbtt_PackBegin(&pc, temp_bitmap[0], BITMAP_W, BITMAP_H, 0, 1, NULL);
-   stbtt_PackFontRange(&pc, ttf_buffer, 0, 24.0, 32, 95, chardata[0]+32);
-   stbtt_PackSetOversampling(&pc, 2, 2);
-   stbtt_PackFontRange(&pc, ttf_buffer, 0, 24.0, 32, 95, chardata[1]+32);
-   stbtt_PackSetOversampling(&pc, 3, 1);
-   stbtt_PackFontRange(&pc, ttf_buffer, 0, 24.0, 32, 95, chardata[2]+32);
+   for (i=0; i < 2; ++i) {
+      stbtt_PackSetOversampling(&pc, 1, 1);
+      stbtt_PackFontRange(&pc, ttf_buffer, 0, scale[i], 32, 95, chardata[i*3+0]+32);
+      stbtt_PackSetOversampling(&pc, 2, 2);
+      stbtt_PackFontRange(&pc, ttf_buffer, 0, scale[i], 32, 95, chardata[i*3+1]+32);
+      stbtt_PackSetOversampling(&pc, 3, 1);
+      stbtt_PackFontRange(&pc, ttf_buffer, 0, scale[i], 32, 95, chardata[i*3+2]+32);
+   }
    stbtt_PackEnd(&pc);
 
    glGenTextures(1, &font_tex);
@@ -58,6 +77,8 @@ void load_fonts(void)
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
+int black_on_white;
+
 void draw_init(void)
 {
    glDisable(GL_CULL_FACE);
@@ -66,7 +87,10 @@ void draw_init(void)
    glDisable(GL_DEPTH_TEST);
 
    glViewport(0,0,sx,sy);
-   glClearColor(0,0,0,0);
+   if (black_on_white)
+      glClearColor(255,255,255,0);
+   else
+      glClearColor(0,0,0,0);
    glClear(GL_COLOR_BUFFER_BIT);
 
    glMatrixMode(GL_PROJECTION);
@@ -100,41 +124,64 @@ void print(float x, float y, int font, char *text)
    glEnd();
 }
 
-int font=0;
+int font=3;
 int translating;
 int rotating=0;
+int srgb=0;
 float rotate_t, translate_t;
 int show_tex;
 
 void draw_world(void)
 {
+   int sfont = sf[font];
    float x = 20;
    glEnable(GL_BLEND);
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-   glColor3f(1,1,1);
 
-   if (font==1)
-      print(100, 50, font, "2x2 oversampled text at 1:1");
-   else if (font == 2)
-      print(100, 50, font, "3x1 oversampled text at 1:1");
-   else if (integer_align)
-      print(100, 50, font, "1:1 text, one texel = one pixel, snapped to integer coordinates");
+   if (black_on_white)
+      glColor3f(0,0,0);
    else
-      print(100, 50, font, "1:1 text, one texel = one pixel");
+      glColor3f(1,1,1);
 
-   print(100, 80, font, "O: toggle oversampling");
-   print(100,105, font, "T: toggle translation");
-   print(100,130, font, "R: toggle rotation");
-   print(100,155, font, "P: toggle pixel-snap (only non-oversampled)");
-   print(100,180, font, "V: view font texture");
+
+   print(80, 30, sfont, "Controls:");
+   print(100, 60, sfont, "S: toggle font size");
+   print(100, 85, sfont, "O: toggle oversampling");
+   print(100,110, sfont, "T: toggle translation");
+   print(100,135, sfont, "R: toggle rotation");
+   print(100,160, sfont, "P: toggle pixel-snap (only non-oversampled)");
+   print(100,185, sfont, "G: toggle srgb gamma-correction");
+   if (black_on_white)
+      print(100,210, sfont, "B: toggle to white-on-black");
+   else
+      print(100,210, sfont, "B: toggle to black-on-white");
+   print(100,235, sfont, "V: view font texture");
+
+   print(80, 300, sfont, "Current font:");
+
+   if (!show_tex) {
+      if (font < 3)
+         print(100, 350, sfont, "Font height: 24 pixels");
+      else
+         print(100, 350, sfont, "Font height: 14 pixels");
+   }
+
+   if (font%3==1)
+      print(100, 325, sfont, "2x2 oversampled text at 1:1");
+   else if (font%3 == 2)
+      print(100, 325, sfont, "3x1 oversampled text at 1:1");
+   else if (integer_align)
+      print(100, 325, sfont, "1:1 text, one texel = one pixel, snapped to integer coordinates");
+   else
+      print(100, 325, sfont, "1:1 text, one texel = one pixel");
 
    if (show_tex) {
       glBegin(GL_QUADS);
-      drawBoxTC(200,200, 200+BITMAP_W,200+BITMAP_H, 0,0,1,1);
+      drawBoxTC(200,400, 200+BITMAP_W,300+BITMAP_H, 0,0,1,1);
       glEnd();
    } else {
       glMatrixMode(GL_MODELVIEW);
-      glTranslatef(200,250,0);
+      glTranslatef(200,350,0);
 
       if (translating)
          x += fmod(translate_t*8,30);
@@ -198,7 +245,10 @@ int winproc(void *data, stbwingraph_event *e)
                return STBWINGRAPH_winproc_exit;
                break;
             case 'o': case 'O':
-               font = (font+1) % 3;
+               font = (font+1) % 3 + (font/3)*3;
+               break;
+            case 's': case 'S':
+               font = (font+3) % 6;
                break;
             case 't': case 'T':
                translating = !translating;
@@ -211,8 +261,18 @@ int winproc(void *data, stbwingraph_event *e)
             case 'p': case 'P':
                integer_align = !integer_align;
                break;
+            case 'g': case 'G':
+               srgb = !srgb;
+               if (srgb)
+                  glEnable(GL_FRAMEBUFFER_SRGB_EXT);
+               else
+                  glDisable(GL_FRAMEBUFFER_SRGB_EXT);
+               break;
             case 'v': case 'V':
                show_tex = !show_tex;
+               break;
+            case 'b': case 'B':
+               black_on_white = !black_on_white;
                break;
          }
          break;

@@ -1,4 +1,4 @@
-// stb_truetype.h - v0.99 - public domain
+// stb_truetype.h - v1.00 - public domain
 // authored from 2009-2014 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -40,6 +40,7 @@
 //
 // VERSION HISTORY
 //
+//   1.00 (2014-12-06) add new PackBegin etc. API, w/ support for oversampling
 //   0.99 (2014-09-18) fix multiple bugs with subpixel rendering (ryg)
 //   0.9  (2014-08-07) support certain mac/iOS fonts without an MS platformID
 //   0.8b (2014-07-07) fix a warning
@@ -61,7 +62,7 @@
 //                    updated Hello World! sample to use kerning and subpixel
 //                    fixed some warnings
 //   0.3  (2009-06-24) cmap fmt=12, compound shapes (MM)
-//                    userdata, malloc-from-userdata, non-zero fill (STB)
+//                    userdata, malloc-from-userdata, non-zero fill (stb)
 //   0.2  (2009-03-11) Fix unsigned/signed char warnings
 //   0.1  (2009-03-09) First public release
 //
@@ -79,10 +80,17 @@
 //   before the #include of this file. This expands out the actual
 //   implementation into that C/C++ file.
 //
-//   Simple 3D API (don't ship this, but it's fine for tools and quick start,
-//                  and you can cut and paste from it to move to more advanced)
+//   Simple 3D API (don't ship this, but it's fine for tools and quick start)
 //           stbtt_BakeFontBitmap()               -- bake a font to a bitmap for use as texture
 //           stbtt_GetBakedQuad()                 -- compute quad to draw for a given char
+//
+//   Improved 3D API (more shippable):
+//           #include "stb_rect_pack.h"           -- optional, but you really want it
+//           stbtt_PackBegin()
+//           stbtt_PackSetOversample()            -- for improved quality on small fonts
+//           stbtt_PackFontRanges()
+//           stbtt_PackEnd()
+//           stbtt_GetPackedQuad()
 //
 //   "Load" a font file from a memory buffer (you have to keep the buffer loaded)
 //           stbtt_InitFont()
@@ -484,21 +492,51 @@ typedef struct
 typedef struct stbtt_pack_context stbtt_pack_context;
 typedef struct
 {
-   float font_size;                     // if positive, pixel height; if negative, points
+   float font_size;
    int first_unicode_char_in_range;
    int num_chars_in_range;
    stbtt_packedchar *chardata_for_range; // output
 } stbtt_pack_range;
 
-extern int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int pw, int ph, int stride_in_bytes, int padding, void *alloc_context);
-// returns 0 if the allocations fail
+extern int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int width, int height, int stride_in_bytes, int padding, void *alloc_context);
+// Initializes a packing context stored in the passed-in stbtt_pack_context.
+// Future calls using this context will pack characters into the bitmap passed
+// in here: a 1-channel bitmap that is weight x height. stride_in_bytes is
+// the distance from one row to the next (or 0 to mean they are packed tightly
+// together). "padding" is // the amount of padding to leave between each
+// character (normally you want '1' for bitmaps you'll use as textures with
+// bilinear filtering).
+//
+// Returns 0 on failure, 1 on success.
+
+extern void stbtt_PackEnd  (stbtt_pack_context *spc);
+// Cleans up the packing context and frees all memory.
+
+extern int  stbtt_PackFontRange(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, float pixel_height,
+                                int first_unicode_char_in_range, int num_chars_in_range, stbtt_packedchar *chardata_for_range);
+// Creates character bitmaps from the font_index'th font found in fontdata (use
+// font_index=0 if you don't know what that is). It creates num_chars_in_range
+// bitmaps for characters with unicode values starting at first_unicode_char_in_range
+// and increasing. Data for how to render them is stored in chardata_for_range;
+// pass these to stbtt_GetPackedQuad to get back renderable quads.
+
+extern int  stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges);
+// Creates character bitmaps from multiple ranges of characters stored in
+// ranges. This will usually create a better-packed bitmap than multiple
+// calls to stbtt_PackFontRange.
+
 
 extern void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h_oversample, unsigned int v_oversample);
-extern void stbtt_PackEnd  (stbtt_pack_context *spc);
-extern int  stbtt_PackFontRange(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, float font_size,
-                                int first_unicode_char_in_range, int num_chars_in_range, stbtt_packedchar *chardata_for_range);
-extern int  stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges);
-
+// Oversampling a font increases the quality by allowing higher-quality subpixel
+// positioning, and is especially valuable at smaller text sizes.
+//
+// This function sets the amount of oversampling for all following calls to
+// stbtt_PackFontRange(s). The default (no oversampling) is achieved by
+// h_oversample=1, v_oversample=1. The total number of pixels required is
+// h_oversample*v_oversample larger than the default; for example, 2x2
+// oversampling requires 4x the storage of 1x1. For best results, render
+// oversampled textures with bilinear filtering. Look at the readme in
+// stb/tests/oversample for information about oversampled fonts
 
 extern void stbtt_GetPackedQuad(stbtt_packedchar *chardata, int pw, int ph,  // same data as above
                                int char_index,             // character to display
