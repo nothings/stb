@@ -42,3 +42,10 @@ characters.
 So, setting oversampling of 2x2 in stb_truetype is equivalent to caching
 each character in 4 different variations, 1 for each subpixel position
 in a 2x2 set.
+
+The advantage of this formulation is that no changes are required to
+the rendering code; the exact same quad-rendering code works, it just
+uses different texture coordinates. (Note this does potentially increase
+texture bandwidth for text rendering since we end up minifying the texture
+without using mipmapping, but you probably are not going to be fill-bound
+by your text rendering.)
