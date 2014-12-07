@@ -791,6 +791,8 @@ void stbwingraph_SwapBuffers(void *win)
 #ifdef STB_WINMAIN    
 void stbwingraph_main(void);
 
+char *stb_wingraph_commandline;
+
 int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
    {
@@ -808,6 +810,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
       else if (strstr(buffer, " -full ") || strstr(buffer, " -fullscreen "))
          stbwingraph_request_fullscreen = TRUE;
    }
+   stb_wingraph_commandline = lpCmdLine;
 
    stbwingraph_DefineClass(hInstance, "appicon");
    stbwingraph_main();
