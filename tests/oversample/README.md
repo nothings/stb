@@ -11,7 +11,7 @@ Oversampling is a mechanism for improving subpixel rendering of characters.
 
 Improving subpixel has a few benefits:
 
-* Text can remain sharper while still being sub-pixel positioned for better kerning
+* With horizontally-oversampling, text can remain sharper while still being sub-pixel positioned for better kerning
 * Horizontally-oversampled text significantly reduces aliasing when text animates horizontally
 * Vertically-oversampled text significantly reduces aliasing when text animates vertically
 * Text oversampled in both directions significantly reduces aliasing when text rotates
