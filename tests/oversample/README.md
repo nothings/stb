@@ -76,7 +76,8 @@ text worse, and making the font thinner will make black text worse.
 
 Multiple people who have experimented with this independently (me,
 Fabian Giesen,and Maxim Shemanarev of Anti-Grain Geometry) have all
-oncluded that font rendering just generally looks better without
+concluded that correct gamma-correction does not produce the best
+results for fonts. font rendering just generally looks better without
 gamma correction (or probably with some arbitrary power stuck in
 there, but it's not really correcting for gamma at that point). Maybe
 this is in part a product of how we're used to fonts being on screens
