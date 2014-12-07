@@ -73,6 +73,8 @@ black-on-white fonts become too thin (i.e. they are too dark). There is
 no way to adjust the font's inherent thickness (i.e. by switching to
 bold) to fix this for both; making the font thicker will make white
 text worse, and making the font thinner will make black text worse.
+Obviously you could use different fonts for light and dark cases, but
+this doesn't like a very good way for fonts to work.
 
 Multiple people who have experimented with this independently (me,
 Fabian Giesen,and Maxim Shemanarev of Anti-Grain Geometry) have all
