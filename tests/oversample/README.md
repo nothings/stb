@@ -79,13 +79,16 @@ this doesn't like a very good way for fonts to work.
 Multiple people who have experimented with this independently (me,
 Fabian Giesen,and Maxim Shemanarev of Anti-Grain Geometry) have all
 concluded that correct gamma-correction does not produce the best
-results for fonts. font rendering just generally looks better without
-gamma correction (or probably with some arbitrary power stuck in
+results for fonts. Font rendering just generally looks better without
+gamma correction (or possibly with some arbitrary power stuck in
 there, but it's not really correcting for gamma at that point). Maybe
 this is in part a product of how we're used to fonts being on screens
 which has changed how we expect them to look (e.g. perhaps hinting
 oversharpens them and prevents the real-world thinning you'd see in
 a black-on-white text).
+
+(AGG link on text rendering, including mention of gamma:
+  http://www.antigrain.com/research/font_rasterization/ )
 
 Nevertheless, even if you turn on gamma-correction, you will find that
 oversampling still helps in many cases for small fonts.
