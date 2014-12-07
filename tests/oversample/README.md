@@ -5,7 +5,16 @@ benefits of oversampling. It will try to use arial.ttf from the
 Windows font directory unless you type the name of a .ttf file as
 a command-line argument.
 
-## About oversampling
+## Benefits of oversampling
+
+Improving subpixel has a few benefits:
+
+* Text can remain sharper while still being sub-pixel positioned for better kerning
+* Horizontally-oversampled text significantly reduces aliasing when text animates horizontally
+* Vertically-oversampled text significantly reduces aliasing when text animates vertically
+* Text oversampled in both directions significantly reduces aliasing when text rotates
+
+## What text oversampling is
 
 A common strategy for rendering text is to cache character bitmaps
 and reuse them. For hinted characters, every instance of a given
@@ -43,9 +52,10 @@ So, setting oversampling of 2x2 in stb_truetype is equivalent to caching
 each character in 4 different variations, 1 for each subpixel position
 in a 2x2 set.
 
-The advantage of this formulation is that no changes are required to
+An advantage of this formulation is that no changes are required to
 the rendering code; the exact same quad-rendering code works, it just
 uses different texture coordinates. (Note this does potentially increase
 texture bandwidth for text rendering since we end up minifying the texture
 without using mipmapping, but you probably are not going to be fill-bound
 by your text rendering.)
+
