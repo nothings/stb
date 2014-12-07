@@ -1,9 +1,9 @@
 # Font character oversampling for rendering from atlas textures
 
 TL,DR: Run oversample.exe on a windows machine to see the
-benefits of oversampling. Type the name of a .ttf file on
-the command-line, or it will look for Arial in the Windows
-font directory.
+benefits of oversampling. It will try to use arial.ttf from the
+Windows font directory unless you type the name of a .ttf file as
+a command-line argument.
 
 ## About oversampling
 
