@@ -7,6 +7,8 @@ a command-line argument.
 
 ## Benefits of oversampling
 
+Oversampling is a mechanism for improving subpixel rendering of characters.
+
 Improving subpixel has a few benefits:
 
 * Text can remain sharper while still being sub-pixel positioned for better kerning
