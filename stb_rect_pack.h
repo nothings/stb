@@ -22,6 +22,7 @@
 //
 // Version history:
 //
+//     0.05:  added STBRP_ASSERT to allow replacing assert
 //     0.04:  fixed minor bug in STBRP_LARGE_RECTS support
 //     0.01:  initial release
 
@@ -169,7 +170,11 @@ struct stbrp_context
 
 #ifdef STB_RECT_PACK_IMPLEMENTATION
 #include <stdlib.h>
+
+#ifndef STBRP_ASSERT
 #include <assert.h>
+#define STBRP_ASSERT assert
+#endif
 
 enum
 {
@@ -180,11 +185,11 @@ STBRP_DEF void stbrp_setup_heuristic(stbrp_context *context, int heuristic)
 {
    switch (context->init_mode) {
       case STBRP__INIT_skyline:
-         assert(heuristic == STBRP_HEURISTIC_Skyline_BL_sortHeight || heuristic == STBRP_HEURISTIC_Skyline_BF_sortHeight);
+         STBRP_ASSERT(heuristic == STBRP_HEURISTIC_Skyline_BL_sortHeight || heuristic == STBRP_HEURISTIC_Skyline_BF_sortHeight);
          context->heuristic = heuristic;
          break;
       default:
-         assert(0);
+         STBRP_ASSERT(0);
    }
 }
 
@@ -212,7 +217,7 @@ STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, 
 {
    int i;
 #ifndef STBRP_LARGE_RECTS
-   assert(width <= 0xffff && height <= 0xffff);
+   STBRP_ASSERT(width <= 0xffff && height <= 0xffff);
 #endif
 
    for (i=0; i < num_nodes-1; ++i)
@@ -246,17 +251,17 @@ static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0
    stbrp_node *node = first;
    int x1 = x0 + width;
    int min_y, visited_width, waste_area;
-   assert(first->x <= x0);
+   STBRP_ASSERT(first->x <= x0);
 
    #if 0
    // skip in case we're past the node
    while (node->next->x <= x0)
       ++node;
    #else
-   assert(node->next->x > x0); // we ended up handling this in the caller for efficiency
+   STBRP_ASSERT(node->next->x > x0); // we ended up handling this in the caller for efficiency
    #endif
 
-   assert(node->x <= x0);
+   STBRP_ASSERT(node->x <= x0);
 
    min_y = 0;
    waste_area = 0;
@@ -303,7 +308,7 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
    // align to multiple of c->align
    width = (width + c->align - 1);
    width -= width % c->align;
-   assert(width % c->align == 0);
+   STBRP_ASSERT(width % c->align == 0);
 
    node = c->active_head;
    prev = &c->active_head;
@@ -360,19 +365,19 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
       while (tail) {
          int xpos = tail->x - width;
          int y,waste;
-         assert(xpos >= 0);
+         STBRP_ASSERT(xpos >= 0);
          // find the left position that matches this
          while (node->next->x <= xpos) {
             prev = &node->next;
             node = node->next;
          }
-         assert(node->next->x > xpos && node->x <= xpos);
+         STBRP_ASSERT(node->next->x > xpos && node->x <= xpos);
          y = stbrp__skyline_find_min_y(c, node, xpos, width, &waste);
          if (y + height < c->height) {
             if (y <= best_y) {
                if (y < best_y || waste < best_waste || (waste==best_waste && xpos < best_x)) {
                   best_x = xpos;
-                  assert(y <= best_y);
+                  STBRP_ASSERT(y <= best_y);
                   best_y = y;
                   best_waste = waste;
                   best = prev;
@@ -444,10 +449,10 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
 #ifdef _DEBUG
    cur = context->active_head;
    while (cur->x < context->width) {
-      assert(cur->x < cur->next->x);
+      STBRP_ASSERT(cur->x < cur->next->x);
       cur = cur->next;
    }
-   assert(cur->next == NULL);
+   STBRP_ASSERT(cur->next == NULL);
 
    {
       stbrp_node *L1 = NULL, *L2 = NULL;
@@ -464,7 +469,7 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
          cur = cur->next;
          ++count;
       }
-      assert(count == context->num_nodes+2);
+      STBRP_ASSERT(count == context->num_nodes+2);
    }
 #endif
 
@@ -514,7 +519,7 @@ STBRP_DEF void stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int n
    for (i=0; i < num_rects; ++i) {
       rects[i].was_packed = i;
       #ifndef STBRP_LARGE_RECTS
-      assert(rects[i].w <= 0xffff && rects[i].h <= 0xffff);
+      STBRP_ASSERT(rects[i].w <= 0xffff && rects[i].h <= 0xffff);
       #endif
    }
 

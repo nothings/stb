@@ -40,6 +40,8 @@
 //
 // VERSION HISTORY
 //
+//   1.01 (2014-12-08) fix subpixel position when oversampling to exactly match
+//                        non-oversampled; STBTT_POINT_SIZE for packed case only
 //   1.00 (2014-12-06) add new PackBegin etc. API, w/ support for oversampling
 //   0.99 (2014-09-18) fix multiple bugs with subpixel rendering (ryg)
 //   0.9  (2014-08-07) support certain mac/iOS fonts without an MS platformID
@@ -490,13 +492,6 @@ typedef struct
 } stbtt_packedchar;
 
 typedef struct stbtt_pack_context stbtt_pack_context;
-typedef struct
-{
-   float font_size;
-   int first_unicode_char_in_range;
-   int num_chars_in_range;
-   stbtt_packedchar *chardata_for_range; // output
-} stbtt_pack_range;
 
 extern int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int width, int height, int stride_in_bytes, int padding, void *alloc_context);
 // Initializes a packing context stored in the passed-in stbtt_pack_context.
@@ -512,13 +507,30 @@ extern int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int 
 extern void stbtt_PackEnd  (stbtt_pack_context *spc);
 // Cleans up the packing context and frees all memory.
 
-extern int  stbtt_PackFontRange(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, float pixel_height,
+#define STBTT_POINT_SIZE(x)   (-(x))
+
+extern int  stbtt_PackFontRange(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, float font_size,
                                 int first_unicode_char_in_range, int num_chars_in_range, stbtt_packedchar *chardata_for_range);
 // Creates character bitmaps from the font_index'th font found in fontdata (use
 // font_index=0 if you don't know what that is). It creates num_chars_in_range
 // bitmaps for characters with unicode values starting at first_unicode_char_in_range
 // and increasing. Data for how to render them is stored in chardata_for_range;
 // pass these to stbtt_GetPackedQuad to get back renderable quads.
+//
+// font_size is the full height of the character from ascender to descender,
+// as computed by stbtt_ScaleForPixelHeight. To use a point size as computed
+// by stbtt_ScaleForMappingEmToPixels, wrap the point size in STBTT_POINT_SIZE()
+// and pass that result as 'font_size':
+//       ...,                  20 , ... // font max minus min y is 20 pixels tall
+//       ..., STBTT_POINT_SIZE(20), ... // 'M' is 20 pixels tall
+
+typedef struct
+{
+   float font_size;
+   int first_unicode_char_in_range;
+   int num_chars_in_range;
+   stbtt_packedchar *chardata_for_range; // output
+} stbtt_pack_range;
 
 extern int  stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges);
 // Creates character bitmaps from multiple ranges of characters stored in
