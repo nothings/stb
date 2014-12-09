@@ -869,7 +869,7 @@ enum { // languageID for STBTT_PLATFORM_ID_MAC
 #define STBTT_MAX_OVERSAMPLE   8
 #endif
 
-typedef stbtt__test_oversample_pow2[(STBTT_MAX_OVERSAMPLE & (STBTT_MAX_OVERSAMPLE-1)) == 0 ? 1 : -1];
+typedef int stbtt__test_oversample_pow2[(STBTT_MAX_OVERSAMPLE & (STBTT_MAX_OVERSAMPLE-1)) == 0 ? 1 : -1];
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -2173,7 +2173,6 @@ static void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_i
    for (j=0; j < h; ++j) {
       int i;
       unsigned int total;
-      unsigned char *pixels_ahead = pixels + (kernel_width);
       memset(buffer, 0, kernel_width);
 
       total = 0;
@@ -2184,28 +2183,28 @@ static void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_i
             for (i=0; i <= safe_w; ++i) {
                total += pixels[i] - buffer[i & STBTT__OVER_MASK];
                buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
-               pixels[i] = total / 2;
+               pixels[i] = (unsigned char) (total / 2);
             }
             break;
          case 3:
             for (i=0; i <= safe_w; ++i) {
                total += pixels[i] - buffer[i & STBTT__OVER_MASK];
                buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
-               pixels[i] = total / 3;
+               pixels[i] = (unsigned char) (total / 3);
             }
             break;
          case 4:
             for (i=0; i <= safe_w; ++i) {
                total += pixels[i] - buffer[i & STBTT__OVER_MASK];
                buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
-               pixels[i] = total / 4;
+               pixels[i] = (unsigned char) (total / 4);
             }
             break;
          default:
             for (i=0; i <= safe_w; ++i) {
                total += pixels[i] - buffer[i & STBTT__OVER_MASK];
                buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
-               pixels[i] = total / kernel_width;
+               pixels[i] = (unsigned char) (total / kernel_width);
             }
             break;
       }
@@ -2213,7 +2212,7 @@ static void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_i
       for (; i < w; ++i) {
          assert(pixels[i] == 0);
          total -= buffer[i & STBTT__OVER_MASK];
-         pixels[i] = total / kernel_width;
+         pixels[i] = (unsigned char) (total / kernel_width);
       }
 
       pixels += stride_in_bytes;
@@ -2228,7 +2227,6 @@ static void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_i
    for (j=0; j < w; ++j) {
       int i;
       unsigned int total;
-      unsigned char *pixels_ahead = pixels + (kernel_width)*stride_in_bytes;
       memset(buffer, 0, kernel_width);
 
       total = 0;
@@ -2239,28 +2237,28 @@ static void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_i
             for (i=0; i <= safe_h; ++i) {
                total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
                buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
-               pixels[i*stride_in_bytes] = total / 2;
+               pixels[i*stride_in_bytes] = (unsigned char) (total / 2);
             }
             break;
          case 3:
             for (i=0; i <= safe_h; ++i) {
                total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
                buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
-               pixels[i*stride_in_bytes] = total / 3;
+               pixels[i*stride_in_bytes] = (unsigned char) (total / 3);
             }
             break;
          case 4:
             for (i=0; i <= safe_h; ++i) {
                total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
                buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
-               pixels[i*stride_in_bytes] = total / 4;
+               pixels[i*stride_in_bytes] = (unsigned char) (total / 4);
             }
             break;
          default:
             for (i=0; i <= safe_h; ++i) {
                total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
                buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
-               pixels[i*stride_in_bytes] = total / kernel_width;
+               pixels[i*stride_in_bytes] = (unsigned char) (total / kernel_width);
             }
             break;
       }
@@ -2268,7 +2266,7 @@ static void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_i
       for (; i < h; ++i) {
          assert(pixels[i*stride_in_bytes] == 0);
          total -= buffer[i & STBTT__OVER_MASK];
-         pixels[i*stride_in_bytes] = total / kernel_width;
+         pixels[i*stride_in_bytes] = (unsigned char) (total / kernel_width);
       }
 
       pixels += 1;
@@ -2326,8 +2324,8 @@ int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int f
                                               scale * spc->v_oversample,
                                               0,0,
                                               &x0,&y0,&x1,&y1);
-         rects[k].w = x1-x0 + spc->padding + spc->h_oversample-1;
-         rects[k].h = y1-y0 + spc->padding + spc->v_oversample-1;
+         rects[k].w = (stbrp_coord) (x1-x0 + spc->padding + spc->h_oversample-1);
+         rects[k].h = (stbrp_coord) (y1-y0 + spc->padding + spc->v_oversample-1);
          ++k;
       }
    }
@@ -2344,12 +2342,13 @@ int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int f
             stbtt_packedchar *bc = &ranges[i].chardata_for_range[j];
             int advance, lsb, x0,y0,x1,y1;
             int glyph = stbtt_FindGlyphIndex(&info, ranges[i].first_unicode_char_in_range + j);
+            stbrp_coord pad = (stbrp_coord) spc->padding;
 
             // pad on left and top
-            r->x += spc->padding;
-            r->y += spc->padding;
-            r->w -= spc->padding;
-            r->h -= spc->padding;
+            r->x += pad;
+            r->y += pad;
+            r->w -= pad;
+            r->h -= pad;
             stbtt_GetGlyphHMetrics(&info, glyph, &advance, &lsb);
             stbtt_GetGlyphBitmapBox(&info, glyph,
                                     scale * spc->h_oversample,
