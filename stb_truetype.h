@@ -2318,8 +2318,7 @@ int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int f
    k=0;
    for (i=0; i < num_ranges; ++i) {
       float fh = ranges[i].font_size;
-      //float scale = fh > 0 ? stbtt_ScaleForPixelHeight(&info, fh) : stbtt_ScaleForPointSize(&info, fh);
-      float scale = stbtt_ScaleForPixelHeight(&info, fh);
+      float scale = fh > 0 ? stbtt_ScaleForPixelHeight(&info, fh) : stbtt_ScaleForMappingEmToPixels(&info, -fh);
       for (j=0; j < ranges[i].num_chars_in_range; ++j) {
          int x0,y0,x1,y1;
          stbtt_GetCodepointBitmapBoxSubpixel(&info, ranges[i].first_unicode_char_in_range + j,
@@ -2338,8 +2337,7 @@ int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int f
    k = 0;
    for (i=0; i < num_ranges; ++i) {
       float fh = ranges[i].font_size;
-      //float scale = fh > 0 ? stbtt_ScaleForPixelHeight(&info, fh) : stbtt_ScaleForPointSize(&info, fh);
-      float scale = stbtt_ScaleForPixelHeight(&info, fh);
+      float scale = fh > 0 ? stbtt_ScaleForPixelHeight(&info, fh) : stbtt_ScaleForMappingEmToPixels(&info, -fh);
       for (j=0; j < ranges[i].num_chars_in_range; ++j) {
          stbrp_rect *r = &rects[k];
          if (r->was_packed) {
