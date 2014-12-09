@@ -2275,13 +2275,25 @@ static void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_i
    }
 }
 
+static float stbtt__oversample_shift(int oversample)
+{
+   if (!oversample)
+      return 0.0f;
+
+   // The prefilter is a box filter of width "oversample",
+   // which shifts phase by (oversample - 1)/2 pixels in
+   // oversampled space. We want to shift in the opposite
+   // direction to counter this.
+   return (float)-(oversample - 1) / (2.0f * (float)oversample);
+}
+
 int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges)
 {
    stbtt_fontinfo info;
    float recip_h = 1.0f / spc->h_oversample;
    float recip_v = 1.0f / spc->v_oversample;
-   float sub_x = spc->h_oversample ? recip_h : 0;
-   float sub_y = spc->v_oversample ? recip_v : 0;
+   float sub_x = stbtt__oversample_shift(spc->h_oversample);
+   float sub_y = stbtt__oversample_shift(spc->v_oversample);
    int i,j,k,n, return_value = 1;
    stbrp_context *context = (stbrp_context *) spc->pack_info;
    stbrp_rect    *rects;
