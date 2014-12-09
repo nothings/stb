@@ -7,9 +7,10 @@ library    | lastest version | category | description
 --------------------- | ---- | -------- | --------------------------------
 **stb_vorbis.c** | 1.04 | audio | decode ogg vorbis files from file/memory to float/16-bit signed output
 **stb_image.h** | 1.46 | graphics | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**stb_truetype.h** | 1.00 | graphics | parse, decode, and rasterize characters from truetype fonts
+**stb_truetype.h** | 1.01 | graphics | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | 0.95 | graphics | image writing to disk: PNG, TGA, BMP
 **stb_image_resize.h** | 0.90 | graphics | resize images larger/smaller with good quality
+**stb_rect_pack.h** | 0.05 | graphics | simple 2D rectangle packer with decent quality
 **stretchy_buffer.h** | 1.01 | utility | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **stb_textedit.h** | 1.5 | UI | guts of a text editor for games etc implementing them from scratch
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | Fabian "ryg" Giesen's real-time DXT compressor
