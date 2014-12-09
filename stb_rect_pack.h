@@ -231,7 +231,7 @@ STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, 
    context->extra[0].x = 0;
    context->extra[0].y = 0;
    context->extra[0].next = &context->extra[1];
-   context->extra[1].x = width;
+   context->extra[1].x = (stbrp_coord) width;
 #ifdef STBRP_LARGE_RECTS
    context->extra[1].y = (1<<30);
 #else
@@ -406,8 +406,8 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
 
    // on success, create new node
    node = context->free_head;
-   node->x = res.x;
-   node->y = res.y + height;
+   node->x = (stbrp_coord) res.x;
+   node->y = (stbrp_coord) (res.y + height);
 
    context->free_head = node->next;
 
@@ -439,7 +439,7 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
    node->next = cur;
 
    if (cur->x < res.x + width)
-      cur->x = res.x+width;
+      cur->x = (stbrp_coord) (res.x + width);
 
 #ifdef _DEBUG
    cur = context->active_head;
