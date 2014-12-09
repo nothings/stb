@@ -169,6 +169,7 @@ struct stbrp_context
 
 #ifdef STB_RECT_PACK_IMPLEMENTATION
 #include <stdlib.h>
+#include <assert.h>
 
 enum
 {
