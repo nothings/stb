@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.01 - public domain
+// stb_truetype.h - v1.02 - public domain
 // authored from 2009-2014 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -40,6 +40,7 @@
 //
 // VERSION HISTORY
 //
+//   1.02 (2014-12-10) fix various warnings & compile issues w/ stb_rect_pack, C++
 //   1.01 (2014-12-08) fix subpixel position when oversampling to exactly match
 //                        non-oversampled; STBTT_POINT_SIZE for packed case only
 //   1.00 (2014-12-06) add new PackBegin etc. API, w/ support for oversampling
