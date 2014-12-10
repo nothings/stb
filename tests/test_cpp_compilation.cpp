@@ -1,4 +1,4 @@
-#define STB_TRUETYPE_IMPLEMENTATIOn
+#define STB_TRUETYPE_IMPLEMENTATION
 #define STB_PERLIN_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_DXT_IMPLEMENATION
@@ -8,6 +8,7 @@
 #define STB_HERRINGBONE_WANG_TILE_IMPLEMENTATION
 #define STB_RECT_PACK_IMPLEMENTATION
 
+#include "stb_rect_pack.h"
 #include "stb_truetype.h"
 #include "stb_image_write.h"
 #include "stb_perlin.h"
@@ -16,7 +17,6 @@
 #include "stb_divide.h"
 #include "stb_image.h"
 #include "stb_herringbone_wang_tile.h"
-#include "stb_rect_pack.h"
 
 #define STBTE_DRAW_RECT(x0,y0,x1,y1,color)      do ; while(0)
 #define STBTE_DRAW_TILE(x,y,id,highlight,data)  do ; while(0)
