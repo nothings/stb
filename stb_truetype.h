@@ -2062,6 +2062,8 @@ void stbtt_GetBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_inde
 #define STBTT__NOTUSED(v)  (void)sizeof(v)
 #endif
 
+typedef int stbrp_coord;
+
 ////////////////////////////////////////////////////////////////////////////////////
 //                                                                                //
 //                                                                                //
@@ -2086,7 +2088,8 @@ typedef struct
 
 typedef struct
 {
-   int id,w,h,x,y,was_packed;
+   stbrp_coord x,y;
+   int id,w,h,was_packed;
 } stbrp_rect;
 
 static void stbrp_init_target(stbrp_context *con, int pw, int ph, stbrp_node *nodes, int num_nodes)
@@ -2167,8 +2170,8 @@ void stbtt_PackEnd  (stbtt_pack_context *spc)
 
 void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h_oversample, unsigned int v_oversample)
 {
-   assert(h_oversample <= STBTT_MAX_OVERSAMPLE);
-   assert(v_oversample <= STBTT_MAX_OVERSAMPLE);
+   STBTT_assert(h_oversample <= STBTT_MAX_OVERSAMPLE);
+   STBTT_assert(v_oversample <= STBTT_MAX_OVERSAMPLE);
    if (h_oversample <= STBTT_MAX_OVERSAMPLE)
       spc->h_oversample = h_oversample;
    if (v_oversample <= STBTT_MAX_OVERSAMPLE)
@@ -2222,7 +2225,7 @@ static void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_i
       }
 
       for (; i < w; ++i) {
-         assert(pixels[i] == 0);
+         STBTT_assert(pixels[i] == 0);
          total -= buffer[i & STBTT__OVER_MASK];
          pixels[i] = (unsigned char) (total / kernel_width);
       }
@@ -2276,7 +2279,7 @@ static void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_i
       }
 
       for (; i < h; ++i) {
-         assert(pixels[i*stride_in_bytes] == 0);
+         STBTT_assert(pixels[i*stride_in_bytes] == 0);
          total -= buffer[i & STBTT__OVER_MASK];
          pixels[i*stride_in_bytes] = (unsigned char) (total / kernel_width);
       }
@@ -2320,7 +2323,7 @@ int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int f
    for (i=0; i < num_ranges; ++i)
       n += ranges[i].num_chars_in_range;
          
-   rects = STBTT_malloc(sizeof(*rects) * n, spc->user_allocator_context);
+   rects = (stbrp_rect *) STBTT_malloc(sizeof(*rects) * n, spc->user_allocator_context);
    if (rects == NULL)
       return 0;
 
