@@ -584,7 +584,7 @@ static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp
 
 #ifndef STBI_NO_STDIO
 
-FILE *stbi__fopen(char const *filename, char const *mode)
+static FILE *stbi__fopen(char const *filename, char const *mode)
 {
    FILE *f;
 #if defined(_MSC_VER) && _MSC_VER >= 1400
@@ -628,7 +628,7 @@ STBIDEF unsigned char *stbi_load_from_memory(stbi_uc const *buffer, int len, int
    return stbi_load_main(&s,x,y,comp,req_comp);
 }
 
-unsigned char *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
+STBIDEF unsigned char *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
@@ -637,7 +637,7 @@ unsigned char *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *use
 
 #ifndef STBI_NO_HDR
 
-float *stbi_loadf_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
+static float *stbi_loadf_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    unsigned char *data;
    #ifndef STBI_NO_HDR
@@ -650,14 +650,14 @@ float *stbi_loadf_main(stbi__context *s, int *x, int *y, int *comp, int req_comp
    return stbi__errpf("unknown image type", "Image not of any known type, or corrupt");
 }
 
-float *stbi_loadf_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp)
+STBIDEF float *stbi_loadf_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_mem(&s,buffer,len);
    return stbi_loadf_main(&s,x,y,comp,req_comp);
 }
 
-float *stbi_loadf_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
+STBIDEF float *stbi_loadf_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
@@ -665,7 +665,7 @@ float *stbi_loadf_from_callbacks(stbi_io_callbacks const *clbk, void *user, int 
 }
 
 #ifndef STBI_NO_STDIO
-float *stbi_loadf(char const *filename, int *x, int *y, int *comp, int req_comp)
+STBIDEF float *stbi_loadf(char const *filename, int *x, int *y, int *comp, int req_comp)
 {
    float *result;
    FILE *f = stbi__fopen(filename, "rb");
@@ -675,7 +675,7 @@ float *stbi_loadf(char const *filename, int *x, int *y, int *comp, int req_comp)
    return result;
 }
 
-float *stbi_loadf_from_file(FILE *f, int *x, int *y, int *comp, int req_comp)
+STBIDEF float *stbi_loadf_from_file(FILE *f, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_file(&s,f);
