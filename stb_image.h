@@ -2210,8 +2210,12 @@ static int stbi__parse_huffman_block(stbi__zbuf *a)
             zout = a->zout;
          }
          p = (stbi_uc *) (zout - dist);
-         while (len--)
-            *zout++ = *p++;
+         if (dist == 1) { // run of one byte; common in images.
+            stbi_uc v = *p;
+            do *zout++ = v; while (--len);
+         } else {
+            do *zout++ = *p++; while (--len);
+         }
       }
    }
 }
