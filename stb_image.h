@@ -2036,7 +2036,7 @@ static int stbi__zbuild_huffman(stbi__zhuffman *z, stbi_uc *sizelist, int num)
 
    // DEFLATE spec for generating codes
    memset(sizes, 0, sizeof(sizes));
-   memset(z->fast, 255, sizeof(z->fast));
+   memset(z->fast, 0, sizeof(z->fast));
    for (i=0; i < num; ++i) 
       ++sizes[sizelist[i]];
    sizes[0] = 0;
@@ -2059,12 +2059,13 @@ static int stbi__zbuild_huffman(stbi__zhuffman *z, stbi_uc *sizelist, int num)
       int s = sizelist[i];
       if (s) {
          int c = next_code[s] - z->firstcode[s] + z->firstsymbol[s];
+         stbi__uint16 fastv = (stbi__uint16) ((s << 9) | i);
          z->size [c] = (stbi_uc     ) s;
          z->value[c] = (stbi__uint16) i;
          if (s <= STBI__ZFAST_BITS) {
             int k = stbi__bit_reverse(next_code[s],s);
             while (k < (1 << STBI__ZFAST_BITS)) {
-               z->fast[k] = (stbi__uint16) c;
+               z->fast[k] = fastv;
                k += (1 << s);
             }
          }
@@ -2142,11 +2143,11 @@ stbi_inline static int stbi__zhuffman_decode(stbi__zbuf *a, stbi__zhuffman *z)
    int b,s;
    if (a->num_bits < 16) stbi__fill_bits(a);
    b = z->fast[a->code_buffer & STBI__ZFAST_MASK];
-   if (b < 0xffff) {
-      s = z->size[b];
+   if (b) {
+      s = b >> 9;
       a->code_buffer >>= s;
       a->num_bits -= s;
-      return z->value[b];
+      return b & 511;
    }
    return stbi__zhuffman_decode_slowpath(a, z);
 }
