@@ -1014,6 +1014,7 @@ typedef struct
    stbi__huffman huff_dc[4];
    stbi__huffman huff_ac[4];
    stbi_uc dequant[4][64];
+   stbi__int16 fast_ac[4][1 << FAST_BITS];
 
 // sizes for components, interleaved MCUs
    int img_h_max, img_v_max;
@@ -1083,6 +1084,33 @@ static int stbi__build_huffman(stbi__huffman *h, int *count)
       }
    }
    return 1;
+}
+
+// build a table that decodes both magnitude and value of small ACs in
+// one go.
+static void stbi__build_fast_ac(stbi__int16 *fast_ac, stbi__huffman *h)
+{
+   int i;
+   for (i=0; i < (1 << FAST_BITS); ++i) {
+      stbi_uc fast = h->fast[i];
+      fast_ac[i] = 0;
+      if (fast < 255) {
+         int rs = h->values[fast];
+         int run = (rs >> 4) & 15;
+         int magbits = rs & 15;
+         int len = h->size[fast];
+
+         if (magbits && len + magbits <= FAST_BITS) {
+            // magnitude code followed by receive_extend code
+            int k = ((i << len) & ((1 << FAST_BITS) - 1)) >> (FAST_BITS - magbits);
+            int m = 1 << (magbits - 1);
+            if (k < m) k += (-1 << magbits) + 1;
+            // if the result is small enough, we can fit it in fast_ac table
+            if (k >= -128 && k <= 127)
+               fast_ac[i] = (stbi__int16) ((k << 8) + (run << 4) + (len + magbits));
+         }
+      }
+   }
 }
 
 static void stbi__grow_buffer_unsafe(stbi__jpeg *j)
@@ -1192,10 +1220,13 @@ static stbi_uc stbi__jpeg_dezigzag[64+15] =
 };
 
 // decode one 64-entry block--
-static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman *hdc, stbi__huffman *hac, int b)
+static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman *hdc, stbi__huffman *hac, stbi__int16 *fac, int b)
 {
    int diff,dc,k;
-   int t = stbi__jpeg_huff_decode(j, hdc);
+   int t;
+
+   if (j->code_bits < 16) stbi__grow_buffer_unsafe(j);
+   t = stbi__jpeg_huff_decode(j, hdc);
    if (t < 0) return stbi__err("bad huffman code","Corrupt JPEG");
 
    // 0 all the ac values now so we can do it 32-bits at a time
@@ -1209,18 +1240,30 @@ static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman 
    // decode AC components, see JPEG spec
    k = 1;
    do {
-      int r,s;
-      int rs = stbi__jpeg_huff_decode(j, hac);
-      if (rs < 0) return stbi__err("bad huffman code","Corrupt JPEG");
-      s = rs & 15;
-      r = rs >> 4;
-      if (s == 0) {
-         if (rs != 0xf0) break; // end block
-         k += 16;
-      } else {
-         k += r;
+      int c,r,s;
+      if (j->code_bits < 16) stbi__grow_buffer_unsafe(j);
+      c = (j->code_buffer >> (32 - FAST_BITS)) & ((1 << FAST_BITS)-1);
+      r = fac[c];
+      if (r) { // fast-AC path
+         k += (r >> 4) & 15; // run
+         s = r & 15; // combined length
+         j->code_buffer <<= s;
+         j->code_bits -= s;
          // decode into unzigzag'd location
-         data[stbi__jpeg_dezigzag[k++]] = (short) stbi__extend_receive(j,s);
+         data[stbi__jpeg_dezigzag[k++]] = (short) (r >> 8);
+      } else {
+         int rs = stbi__jpeg_huff_decode(j, hac);
+         if (rs < 0) return stbi__err("bad huffman code","Corrupt JPEG");
+         s = rs & 15;
+         r = rs >> 4;
+         if (s == 0) {
+            if (rs != 0xf0) break; // end block
+            k += 16;
+         } else {
+            k += r;
+            // decode into unzigzag'd location
+            data[stbi__jpeg_dezigzag[k++]] = (short) stbi__extend_receive(j,s);
+         }
       }
    } while (k < 64);
    return 1;
@@ -1406,7 +1449,8 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
       int h = (z->img_comp[n].y+7) >> 3;
       for (j=0; j < h; ++j) {
          for (i=0; i < w; ++i) {
-            if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+z->img_comp[n].ha, n)) return 0;
+            int ha = z->img_comp[n].ha;
+            if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n)) return 0;
             #ifdef STBI_SIMD
             stbi__idct_installed(z->img_comp[n].data+z->img_comp[n].w2*j*8+i*8, z->img_comp[n].w2, data, z->dequant2[z->img_comp[n].tq]);
             #else
@@ -1436,7 +1480,8 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                   for (x=0; x < z->img_comp[n].h; ++x) {
                      int x2 = (i*z->img_comp[n].h + x)*8;
                      int y2 = (j*z->img_comp[n].v + y)*8;
-                     if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+z->img_comp[n].ha, n)) return 0;
+                     int ha = z->img_comp[n].ha;
+                     if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n)) return 0;
                      #ifdef STBI_SIMD
                      stbi__idct_installed(z->img_comp[n].data+z->img_comp[n].w2*y2+x2, z->img_comp[n].w2, data, z->dequant2[z->img_comp[n].tq]);
                      #else
@@ -1516,6 +1561,8 @@ static int stbi__process_marker(stbi__jpeg *z, int m)
             }
             for (i=0; i < n; ++i)
                v[i] = stbi__get8(z->s);
+            if (tc != 0)
+               stbi__build_fast_ac(z->fast_ac[th], z->huff_ac + th);
             L -= n;
          }
          return L==0;
