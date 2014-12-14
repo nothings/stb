@@ -1007,9 +1007,6 @@ typedef struct
 
 typedef struct
 {
-   #ifdef STBI_SIMD
-   unsigned short dequant2[4][64];
-   #endif
    stbi__context *s;
    stbi__huffman huff_dc[4];
    stbi__huffman huff_ac[4];
@@ -1220,7 +1217,7 @@ static stbi_uc stbi__jpeg_dezigzag[64+15] =
 };
 
 // decode one 64-entry block--
-static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman *hdc, stbi__huffman *hac, stbi__int16 *fac, int b)
+static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman *hdc, stbi__huffman *hac, stbi__int16 *fac, int b, stbi_uc *dequant)
 {
    int diff,dc,k;
    int t;
@@ -1235,11 +1232,12 @@ static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman 
    diff = t ? stbi__extend_receive(j, t) : 0;
    dc = j->img_comp[b].dc_pred + diff;
    j->img_comp[b].dc_pred = dc;
-   data[0] = (short) dc;
+   data[0] = (short) (dc * dequant[0]);
 
    // decode AC components, see JPEG spec
    k = 1;
    do {
+      unsigned int zig;
       int c,r,s;
       if (j->code_bits < 16) stbi__grow_buffer_unsafe(j);
       c = (j->code_buffer >> (32 - FAST_BITS)) & ((1 << FAST_BITS)-1);
@@ -1250,7 +1248,8 @@ static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman 
          j->code_buffer <<= s;
          j->code_bits -= s;
          // decode into unzigzag'd location
-         data[stbi__jpeg_dezigzag[k++]] = (short) (r >> 8);
+         zig = stbi__jpeg_dezigzag[k++];
+         data[zig] = (short) ((r >> 8) * dequant[zig]);
       } else {
          int rs = stbi__jpeg_huff_decode(j, hac);
          if (rs < 0) return stbi__err("bad huffman code","Corrupt JPEG");
@@ -1262,7 +1261,8 @@ static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman 
          } else {
             k += r;
             // decode into unzigzag'd location
-            data[stbi__jpeg_dezigzag[k++]] = (short) stbi__extend_receive(j,s);
+            zig = stbi__jpeg_dezigzag[k++];
+            data[zig] = (short) (stbi__extend_receive(j,s) * dequant[zig]);
          }
       }
    } while (k < 64);
@@ -1322,21 +1322,23 @@ stbi_inline static stbi_uc stbi__clamp(int x)
    t0 += p1+p3;
 
 #ifdef STBI_SIMD
-typedef unsigned short stbi_dequantize_t;
-#else
-typedef stbi_uc stbi_dequantize_t;
+static unsigned short stbi__dq_ones[64] = {
+   1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
+   1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
+   1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
+   1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
+};
 #endif
 
 // .344 seconds on 3*anemones.jpg
-static void stbi__idct_block(stbi_uc *out, int out_stride, short data[64], stbi_dequantize_t *dequantize)
+static void stbi__idct_block(stbi_uc *out, int out_stride, short data[64])
 {
    int i,val[64],*v=val;
-   stbi_dequantize_t *dq = dequantize;
    stbi_uc *o;
    short *d = data;
 
    // columns
-   for (i=0; i < 8; ++i,++d,++dq, ++v) {
+   for (i=0; i < 8; ++i,++d, ++v) {
       // if all zeroes, shortcut -- this avoids dequantizing 0s and IDCTing
       if (d[ 8]==0 && d[16]==0 && d[24]==0 && d[32]==0
            && d[40]==0 && d[48]==0 && d[56]==0) {
@@ -1344,11 +1346,10 @@ static void stbi__idct_block(stbi_uc *out, int out_stride, short data[64], stbi_
          //    (1|2|3|4|5|6|7)==0          0     seconds
          //    all separate               -0.047 seconds
          //    1 && 2|3 && 4|5 && 6|7:    -0.047 seconds
-         int dcterm = d[0] * dq[0] << 2;
+         int dcterm = d[0] << 2;
          v[0] = v[8] = v[16] = v[24] = v[32] = v[40] = v[48] = v[56] = dcterm;
       } else {
-         STBI__IDCT_1D(d[ 0]*dq[ 0],d[ 8]*dq[ 8],d[16]*dq[16],d[24]*dq[24],
-                 d[32]*dq[32],d[40]*dq[40],d[48]*dq[48],d[56]*dq[56])
+         STBI__IDCT_1D(d[ 0],d[ 8],d[16],d[24],d[32],d[40],d[48],d[56])
          // constants scaled things up by 1<<12; let's bring them back
          // down, but keep 2 extra bits of precision
          x0 += 512; x1 += 512; x2 += 512; x3 += 512;
@@ -1390,7 +1391,12 @@ static void stbi__idct_block(stbi_uc *out, int out_stride, short data[64], stbi_
 }
 
 #ifdef STBI_SIMD
-static stbi_idct_8x8 stbi__idct_installed = stbi__idct_block;
+static void stbi__idct_block_wrapper(stbi_uc *out, int out_stride, short data[64], unsigned short dequant[64])
+{
+   stbi__idct_block(out, out_stride, data);
+}
+
+static stbi_idct_8x8 stbi__idct_installed = stbi__idct_block_wrapper;
 
 STBIDEF void stbi_install_idct(stbi_idct_8x8 func)
 {
@@ -1450,11 +1456,11 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
       for (j=0; j < h; ++j) {
          for (i=0; i < w; ++i) {
             int ha = z->img_comp[n].ha;
-            if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n)) return 0;
+            if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n, z->dequant[z->img_comp[n].tq])) return 0;
             #ifdef STBI_SIMD
-            stbi__idct_installed(z->img_comp[n].data+z->img_comp[n].w2*j*8+i*8, z->img_comp[n].w2, data, z->dequant2[z->img_comp[n].tq]);
+            stbi__idct_installed(z->img_comp[n].data+z->img_comp[n].w2*j*8+i*8, z->img_comp[n].w2, data, stbi__dq_ones);
             #else
-            stbi__idct_block(z->img_comp[n].data+z->img_comp[n].w2*j*8+i*8, z->img_comp[n].w2, data, z->dequant[z->img_comp[n].tq]);
+            stbi__idct_block(z->img_comp[n].data+z->img_comp[n].w2*j*8+i*8, z->img_comp[n].w2, data);
             #endif
             // every data block is an MCU, so countdown the restart interval
             if (--z->todo <= 0) {
@@ -1481,11 +1487,11 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                      int x2 = (i*z->img_comp[n].h + x)*8;
                      int y2 = (j*z->img_comp[n].v + y)*8;
                      int ha = z->img_comp[n].ha;
-                     if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n)) return 0;
+                     if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n, z->dequant[z->img_comp[n].tq])) return 0;
                      #ifdef STBI_SIMD
-                     stbi__idct_installed(z->img_comp[n].data+z->img_comp[n].w2*y2+x2, z->img_comp[n].w2, data, z->dequant2[z->img_comp[n].tq]);
+                     stbi__idct_installed(z->img_comp[n].data+z->img_comp[n].w2*y2+x2, z->img_comp[n].w2, data, stbi__dq_ones);
                      #else
-                     stbi__idct_block(z->img_comp[n].data+z->img_comp[n].w2*y2+x2, z->img_comp[n].w2, data, z->dequant[z->img_comp[n].tq]);
+                     stbi__idct_block(z->img_comp[n].data+z->img_comp[n].w2*y2+x2, z->img_comp[n].w2, data);
                      #endif
                   }
                }
@@ -1530,10 +1536,6 @@ static int stbi__process_marker(stbi__jpeg *z, int m)
             if (t > 3) return stbi__err("bad DQT table","Corrupt JPEG");
             for (i=0; i < 64; ++i)
                z->dequant[t][stbi__jpeg_dezigzag[i]] = stbi__get8(z->s);
-            #ifdef STBI_SIMD
-            for (i=0; i < 64; ++i)
-               z->dequant2[t][i] = z->dequant[t][i];
-            #endif
             L -= 65;
          }
          return L==0;
