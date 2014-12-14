@@ -1155,31 +1155,23 @@ stbi_inline static int stbi__jpeg_huff_decode(stbi__jpeg *j, stbi__huffman *h)
    return h->values[c];
 }
 
+// bias[n] = (-1<<n) + 1
+static int const stbi__jbias[16] = {0,-1,-3,-7,-15,-31,-63,-127,-255,-511,-1023,-2047,-4095,-8191,-16383,-32767};
+
 // combined JPEG 'receive' and JPEG 'extend', since baseline
 // always extends everything it receives.
 stbi_inline static int stbi__extend_receive(stbi__jpeg *j, int n)
 {
-   unsigned int m = 1 << (n-1);
    unsigned int k;
+   int sgn;
    if (j->code_bits < n) stbi__grow_buffer_unsafe(j);
 
-   #if 1
+   sgn = (stbi__int32)j->code_buffer >> 31; // sign bit is always in MSB
    k = stbi_lrot(j->code_buffer, n);
    j->code_buffer = k & ~stbi__bmask[n];
    k &= stbi__bmask[n];
    j->code_bits -= n;
-   #else
-   k = (j->code_buffer >> (32 - n)) & stbi__bmask[n];
-   j->code_bits -= n;
-   j->code_buffer <<= n;
-   #endif
-   // the following test is probably a random branch that won't
-   // predict well. I tried to table accelerate it but failed.
-   // maybe it's compiling as a conditional move?
-   if (k < m)
-      return (-1 << n) + k + 1;
-   else
-      return k;
+   return k + (stbi__jbias[n] & ~sgn);
 }
 
 // given a value that's at position X in the zigzag stream,
