@@ -2146,10 +2146,11 @@ stbi_inline static int stbi__zhuffman_decode(stbi__zbuf *a, stbi__zhuffman *z)
    return z->value[b];
 }
 
-static int stbi__zexpand(stbi__zbuf *z, int n)  // need to make room for n bytes
+static int stbi__zexpand(stbi__zbuf *z, char *zout, int n)  // need to make room for n bytes
 {
    char *q;
    int cur, limit;
+   z->zout = zout;
    if (!z->z_expandable) return stbi__err("output buffer limit","Corrupt PNG");
    cur   = (int) (z->zout     - z->zout_start);
    limit = (int) (z->zout_end - z->zout_start);
@@ -2179,16 +2180,23 @@ static int stbi__zdist_extra[32] =
 
 static int stbi__parse_huffman_block(stbi__zbuf *a)
 {
+   char *zout = a->zout;
    for(;;) {
       int z = stbi__zhuffman_decode(a, &a->z_length);
       if (z < 256) {
          if (z < 0) return stbi__err("bad huffman code","Corrupt PNG"); // error in huffman codes
-         if (a->zout >= a->zout_end) if (!stbi__zexpand(a, 1)) return 0;
-         *a->zout++ = (char) z;
+         if (zout >= a->zout_end) {
+            if (!stbi__zexpand(a, zout, 1)) return 0;
+            zout = a->zout;
+         }
+         *zout++ = (char) z;
       } else {
          stbi_uc *p;
          int len,dist;
-         if (z == 256) return 1;
+         if (z == 256) {
+            a->zout = zout;
+            return 1;
+         }
          z -= 257;
          len = stbi__zlength_base[z];
          if (stbi__zlength_extra[z]) len += stbi__zreceive(a, stbi__zlength_extra[z]);
@@ -2196,11 +2204,14 @@ static int stbi__parse_huffman_block(stbi__zbuf *a)
          if (z < 0) return stbi__err("bad huffman code","Corrupt PNG");
          dist = stbi__zdist_base[z];
          if (stbi__zdist_extra[z]) dist += stbi__zreceive(a, stbi__zdist_extra[z]);
-         if (a->zout - a->zout_start < dist) return stbi__err("bad dist","Corrupt PNG");
-         if (a->zout + len > a->zout_end) if (!stbi__zexpand(a, len)) return 0;
-         p = (stbi_uc *) (a->zout - dist);
+         if (zout - a->zout_start < dist) return stbi__err("bad dist","Corrupt PNG");
+         if (zout + len > a->zout_end) {
+            if (!stbi__zexpand(a, zout, len)) return 0;
+            zout = a->zout;
+         }
+         p = (stbi_uc *) (zout - dist);
          while (len--)
-            *a->zout++ = *p++;
+            *zout++ = *p++;
       }
    }
 }
@@ -2273,7 +2284,7 @@ static int stbi__parse_uncomperssed_block(stbi__zbuf *a)
    if (nlen != (len ^ 0xffff)) return stbi__err("zlib corrupt","Corrupt PNG");
    if (a->zbuffer + len > a->zbuffer_end) return stbi__err("read past buffer","Corrupt PNG");
    if (a->zout + len > a->zout_end)
-      if (!stbi__zexpand(a, len)) return 0;
+      if (!stbi__zexpand(a, a->zout, len)) return 0;
    memcpy(a->zout, a->zbuffer, len);
    a->zbuffer += len;
    a->zout += len;
