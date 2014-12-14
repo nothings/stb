@@ -7,6 +7,8 @@
 #define STB_DEFINE
 #include "stb.h"
 
+#define PART1
+
 int main(int argc, char **argv)
 {
    int w,h;
@@ -31,8 +33,12 @@ int main(int argc, char **argv)
             printf("FAILED 4\n");
       }
    } else {
-      int i;
+      int i, nope=0;
+      #ifdef PART1
       char **files = stb_readdir_files("pngsuite/part1");
+      #else
+      char **files = stb_readdir_files("images");
+      #endif
       for (i=0; i < stb_arr_len(files); ++i) {
          int n;
          char **failed = NULL;
@@ -45,8 +51,24 @@ int main(int argc, char **argv)
          data = stbi_load(files[i], &w, &h,  0, 4); if (data)           ; else stb_arr_push(failed, "4");
          if (data) {
             char fname[512];
+
+            #ifdef PART1
+            int w2,h2;
+            unsigned char *data2;
+            stb_splitpath(fname, files[i], STB_FILE_EXT);
+            data2 = stbi_load(stb_sprintf("pngsuite/part1_check/%s", fname), &w2, &h2, 0, 4);
+            if (!data2)
+               printf("FAILED: couldn't load 'pngsuite/part1_check/%s\n", fname);
+            else {
+               if (w != w2 || h != w2 || 0 != memcmp(data, data2, w*h*4)) {
+                  printf("FAILED: %s loaded but didn't match part1_check 32-bit version\n", files[i]);
+               }
+               free(data2);
+            }
+            #else
             stb_splitpath(fname, files[i], STB_FILE);
             stbi_write_png(stb_sprintf("output/%s.png", fname), w, h, 4, data, w*4);
+            #endif
             free(data);
          }
          if (failed) {
@@ -57,7 +79,7 @@ int main(int argc, char **argv)
             printf(" -- %s\n", files[i]);
          }
       }
-      printf("Tested %d files\n", i);
+      printf("Tested %d files.\n", i);
    }
    return 0;
 }
