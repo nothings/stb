@@ -2526,12 +2526,13 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
       prior += out_n;
       // this is a little gross, so that we don't switch per-pixel or per-component
       if (img_n == out_n) {
+         int nk = (x - 1)*img_n;
          #define CASE(f) \
              case f:     \
-                for (i=x-1; i >= 1; --i, raw+=img_n,cur+=img_n,prior+=img_n) \
-                   for (k=0; k < img_n; ++k)
+                for (k=0; k < nk; ++k)
          switch (filter) {
-            CASE(STBI__F_none)         cur[k] = raw[k]; break;
+            // "none" filter turns into a memcpy here; make that explicit.
+            case STBI__F_none:         memcpy(cur, raw, nk); break;
             CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(raw[k] + cur[k-img_n]); break;
             CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
             CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(raw[k] + ((prior[k] + cur[k-img_n])>>1)); break;
@@ -2540,6 +2541,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
             CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-img_n],0,0)); break;
          }
          #undef CASE
+         raw += nk;
       } else {
          STBI_ASSERT(img_n+1 == out_n);
          #define CASE(f) \
