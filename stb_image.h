@@ -2119,18 +2119,9 @@ stbi_inline static unsigned int stbi__zreceive(stbi__zbuf *z, int n)
    return k;   
 }
 
-stbi_inline static int stbi__zhuffman_decode(stbi__zbuf *a, stbi__zhuffman *z)
+static int stbi__zhuffman_decode_slowpath(stbi__zbuf *a, stbi__zhuffman *z)
 {
    int b,s,k;
-   if (a->num_bits < 16) stbi__fill_bits(a);
-   b = z->fast[a->code_buffer & STBI__ZFAST_MASK];
-   if (b < 0xffff) {
-      s = z->size[b];
-      a->code_buffer >>= s;
-      a->num_bits -= s;
-      return z->value[b];
-   }
-
    // not resolved by fast table, so compute it the slow way
    // use jpeg approach, which requires MSbits at top
    k = stbi__bit_reverse(a->code_buffer, 16);
@@ -2144,6 +2135,20 @@ stbi_inline static int stbi__zhuffman_decode(stbi__zbuf *a, stbi__zhuffman *z)
    a->code_buffer >>= s;
    a->num_bits -= s;
    return z->value[b];
+}
+
+stbi_inline static int stbi__zhuffman_decode(stbi__zbuf *a, stbi__zhuffman *z)
+{
+   int b,s;
+   if (a->num_bits < 16) stbi__fill_bits(a);
+   b = z->fast[a->code_buffer & STBI__ZFAST_MASK];
+   if (b < 0xffff) {
+      s = z->size[b];
+      a->code_buffer >>= s;
+      a->num_bits -= s;
+      return z->value[b];
+   }
+   return stbi__zhuffman_decode_slowpath(a, z);
 }
 
 static int stbi__zexpand(stbi__zbuf *z, char *zout, int n)  // need to make room for n bytes
