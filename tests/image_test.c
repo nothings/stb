@@ -43,7 +43,8 @@ int main(int argc, char **argv)
          int n;
          char **failed = NULL;
          unsigned char *data;
-         printf("%s\n", files[i]);
+         printf(".");
+         //printf("%s\n", files[i]);
          data = stbi_load(files[i], &w, &h, &n, 0); if (data) free(data); else stb_arr_push(failed, "&n");
          data = stbi_load(files[i], &w, &h,  0, 1); if (data) free(data); else stb_arr_push(failed, "1");
          data = stbi_load(files[i], &w, &h,  0, 2); if (data) free(data); else stb_arr_push(failed, "2");

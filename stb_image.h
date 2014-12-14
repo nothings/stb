@@ -585,7 +585,7 @@ static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp
 
 #ifndef STBI_NO_STDIO
 
-FILE *stbi__fopen(char const *filename, char const *mode)
+static FILE *stbi__fopen(char const *filename, char const *mode)
 {
    FILE *f;
 #if defined(_MSC_VER) && _MSC_VER >= 1400
@@ -629,7 +629,7 @@ STBIDEF unsigned char *stbi_load_from_memory(stbi_uc const *buffer, int len, int
    return stbi_load_main(&s,x,y,comp,req_comp);
 }
 
-unsigned char *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
+STBIDEF unsigned char *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
@@ -638,7 +638,7 @@ unsigned char *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *use
 
 #ifndef STBI_NO_HDR
 
-float *stbi_loadf_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
+static float *stbi_loadf_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    unsigned char *data;
    #ifndef STBI_NO_HDR
@@ -651,14 +651,14 @@ float *stbi_loadf_main(stbi__context *s, int *x, int *y, int *comp, int req_comp
    return stbi__errpf("unknown image type", "Image not of any known type, or corrupt");
 }
 
-float *stbi_loadf_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp)
+STBIDEF float *stbi_loadf_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_mem(&s,buffer,len);
    return stbi_loadf_main(&s,x,y,comp,req_comp);
 }
 
-float *stbi_loadf_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
+STBIDEF float *stbi_loadf_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
@@ -666,7 +666,7 @@ float *stbi_loadf_from_callbacks(stbi_io_callbacks const *clbk, void *user, int 
 }
 
 #ifndef STBI_NO_STDIO
-float *stbi_loadf(char const *filename, int *x, int *y, int *comp, int req_comp)
+STBIDEF float *stbi_loadf(char const *filename, int *x, int *y, int *comp, int req_comp)
 {
    float *result;
    FILE *f = stbi__fopen(filename, "rb");
@@ -676,7 +676,7 @@ float *stbi_loadf(char const *filename, int *x, int *y, int *comp, int req_comp)
    return result;
 }
 
-float *stbi_loadf_from_file(FILE *f, int *x, int *y, int *comp, int req_comp)
+STBIDEF float *stbi_loadf_from_file(FILE *f, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_file(&s,f);
@@ -2037,7 +2037,7 @@ static int stbi__zbuild_huffman(stbi__zhuffman *z, stbi_uc *sizelist, int num)
 
    // DEFLATE spec for generating codes
    memset(sizes, 0, sizeof(sizes));
-   memset(z->fast, 255, sizeof(z->fast));
+   memset(z->fast, 0, sizeof(z->fast));
    for (i=0; i < num; ++i) 
       ++sizes[sizelist[i]];
    sizes[0] = 0;
@@ -2060,12 +2060,13 @@ static int stbi__zbuild_huffman(stbi__zhuffman *z, stbi_uc *sizelist, int num)
       int s = sizelist[i];
       if (s) {
          int c = next_code[s] - z->firstcode[s] + z->firstsymbol[s];
+         stbi__uint16 fastv = (stbi__uint16) ((s << 9) | i);
          z->size [c] = (stbi_uc     ) s;
          z->value[c] = (stbi__uint16) i;
          if (s <= STBI__ZFAST_BITS) {
             int k = stbi__bit_reverse(next_code[s],s);
             while (k < (1 << STBI__ZFAST_BITS)) {
-               z->fast[k] = (stbi__uint16) c;
+               z->fast[k] = fastv;
                k += (1 << s);
             }
          }
@@ -2120,18 +2121,9 @@ stbi_inline static unsigned int stbi__zreceive(stbi__zbuf *z, int n)
    return k;   
 }
 
-stbi_inline static int stbi__zhuffman_decode(stbi__zbuf *a, stbi__zhuffman *z)
+static int stbi__zhuffman_decode_slowpath(stbi__zbuf *a, stbi__zhuffman *z)
 {
    int b,s,k;
-   if (a->num_bits < 16) stbi__fill_bits(a);
-   b = z->fast[a->code_buffer & STBI__ZFAST_MASK];
-   if (b < 0xffff) {
-      s = z->size[b];
-      a->code_buffer >>= s;
-      a->num_bits -= s;
-      return z->value[b];
-   }
-
    // not resolved by fast table, so compute it the slow way
    // use jpeg approach, which requires MSbits at top
    k = stbi__bit_reverse(a->code_buffer, 16);
@@ -2147,10 +2139,25 @@ stbi_inline static int stbi__zhuffman_decode(stbi__zbuf *a, stbi__zhuffman *z)
    return z->value[b];
 }
 
-static int stbi__zexpand(stbi__zbuf *z, int n)  // need to make room for n bytes
+stbi_inline static int stbi__zhuffman_decode(stbi__zbuf *a, stbi__zhuffman *z)
+{
+   int b,s;
+   if (a->num_bits < 16) stbi__fill_bits(a);
+   b = z->fast[a->code_buffer & STBI__ZFAST_MASK];
+   if (b) {
+      s = b >> 9;
+      a->code_buffer >>= s;
+      a->num_bits -= s;
+      return b & 511;
+   }
+   return stbi__zhuffman_decode_slowpath(a, z);
+}
+
+static int stbi__zexpand(stbi__zbuf *z, char *zout, int n)  // need to make room for n bytes
 {
    char *q;
    int cur, limit;
+   z->zout = zout;
    if (!z->z_expandable) return stbi__err("output buffer limit","Corrupt PNG");
    cur   = (int) (z->zout     - z->zout_start);
    limit = (int) (z->zout_end - z->zout_start);
@@ -2180,16 +2187,23 @@ static int stbi__zdist_extra[32] =
 
 static int stbi__parse_huffman_block(stbi__zbuf *a)
 {
+   char *zout = a->zout;
    for(;;) {
       int z = stbi__zhuffman_decode(a, &a->z_length);
       if (z < 256) {
          if (z < 0) return stbi__err("bad huffman code","Corrupt PNG"); // error in huffman codes
-         if (a->zout >= a->zout_end) if (!stbi__zexpand(a, 1)) return 0;
-         *a->zout++ = (char) z;
+         if (zout >= a->zout_end) {
+            if (!stbi__zexpand(a, zout, 1)) return 0;
+            zout = a->zout;
+         }
+         *zout++ = (char) z;
       } else {
          stbi_uc *p;
          int len,dist;
-         if (z == 256) return 1;
+         if (z == 256) {
+            a->zout = zout;
+            return 1;
+         }
          z -= 257;
          len = stbi__zlength_base[z];
          if (stbi__zlength_extra[z]) len += stbi__zreceive(a, stbi__zlength_extra[z]);
@@ -2197,11 +2211,18 @@ static int stbi__parse_huffman_block(stbi__zbuf *a)
          if (z < 0) return stbi__err("bad huffman code","Corrupt PNG");
          dist = stbi__zdist_base[z];
          if (stbi__zdist_extra[z]) dist += stbi__zreceive(a, stbi__zdist_extra[z]);
-         if (a->zout - a->zout_start < dist) return stbi__err("bad dist","Corrupt PNG");
-         if (a->zout + len > a->zout_end) if (!stbi__zexpand(a, len)) return 0;
-         p = (stbi_uc *) (a->zout - dist);
-         while (len--)
-            *a->zout++ = *p++;
+         if (zout - a->zout_start < dist) return stbi__err("bad dist","Corrupt PNG");
+         if (zout + len > a->zout_end) {
+            if (!stbi__zexpand(a, zout, len)) return 0;
+            zout = a->zout;
+         }
+         p = (stbi_uc *) (zout - dist);
+         if (dist == 1) { // run of one byte; common in images.
+            stbi_uc v = *p;
+            do *zout++ = v; while (--len);
+         } else {
+            do *zout++ = *p++; while (--len);
+         }
       }
    }
 }
@@ -2274,7 +2295,7 @@ static int stbi__parse_uncomperssed_block(stbi__zbuf *a)
    if (nlen != (len ^ 0xffff)) return stbi__err("zlib corrupt","Corrupt PNG");
    if (a->zbuffer + len > a->zbuffer_end) return stbi__err("read past buffer","Corrupt PNG");
    if (a->zout + len > a->zout_end)
-      if (!stbi__zexpand(a, len)) return 0;
+      if (!stbi__zexpand(a, a->zout, len)) return 0;
    memcpy(a->zout, a->zbuffer, len);
    a->zbuffer += len;
    a->zout += len;
@@ -2554,16 +2575,15 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
          prior += 1;
       }
 
-      // @TODO: special case filter_bytes = 1, or just rewrite whole thing to not use a nested loop
-
       // this is a little gross, so that we don't switch per-pixel or per-component
       if (depth < 8 || img_n == out_n) {
+         int nk = (width - 1)*img_n;
          #define CASE(f) \
              case f:     \
-                for (i=width-1; i >= 1; --i, raw+=filter_bytes,cur+=filter_bytes,prior+=filter_bytes) \
-                   for (k=0; k < filter_bytes; ++k)
+                for (k=0; k < nk; ++k)
          switch (filter) {
-            CASE(STBI__F_none)         cur[k] = raw[k]; break;
+            // "none" filter turns into a memcpy here; make that explicit.
+            case STBI__F_none:         memcpy(cur, raw, nk); break;
             CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(raw[k] + cur[k-filter_bytes]); break;
             CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
             CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(raw[k] + ((prior[k] + cur[k-filter_bytes])>>1)); break;
@@ -2572,6 +2592,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
             CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-filter_bytes],0,0)); break;
          }
          #undef CASE
+         raw += nk;
       } else {
          STBI_ASSERT(img_n+1 == out_n);
          #define CASE(f) \
@@ -2934,7 +2955,9 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
             if (scan != SCAN_load) return 1;
             if (z->idata == NULL) return stbi__err("no IDAT","Corrupt PNG");
-            z->expanded = (stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag((char *) z->idata, ioff, 16384, (int *) &raw_len, !is_iphone);
+            // initial guess for decoded data size to avoid unnecessary reallocs
+            raw_len = s->img_x * s->img_y * s->img_n /* pixels */ + s->img_y /* filter mode per row */;
+            z->expanded = (stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag((char *) z->idata, ioff, raw_len, (int *) &raw_len, !is_iphone);
             if (z->expanded == NULL) return 0; // zlib should set error
             free(z->idata); z->idata = NULL;
             if ((req_comp == s->img_n+1 && req_comp != 3 && !pal_img_n) || has_trans)
