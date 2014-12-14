@@ -1,4 +1,4 @@
-/* stb_image - v1.46 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.47 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -28,19 +28,15 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
-      1.xx (2014-09-26) 1/2/4-bit PNG support (both grayscale and paletted)
+      1.47 (2014-12-14) 1/2/4-bit PNG support (both grayscale and paletted)
+                        optimize PNG
+                        fix bug in interlaced PNG with user-specified channel count
       1.46 (2014-08-26) fix broken tRNS chunk in non-paletted PNG
       1.45 (2014-08-16) workaround MSVC-ARM internal compiler error by wrapping malloc
       1.44 (2014-08-07) warnings
       1.43 (2014-07-15) fix MSVC-only bug in 1.42
       1.42 (2014-07-09) no _CRT_SECURE_NO_WARNINGS; error-path fixes; STBI_ASSERT
       1.41 (2014-06-25) fix search&replace that messed up comments/error messages
-      1.40 (2014-06-22) gcc warning
-      1.39 (2014-06-15) TGA optimization bugfix, multiple BMP fixes
-      1.38 (2014-06-06) suppress MSVC run-time warnings, fix accidental rename of 'skip'
-      1.37 (2014-06-04) remove duplicate typedef
-      1.36 (2014-06-03) converted to header file, allow reading incorrect iphoned-images without iphone flag
-      1.35 (2014-05-27) warnings, bugfixes, TGA optimization, etc
 
    See end of file for full revision history.
 
@@ -2459,8 +2455,6 @@ typedef struct
    stbi__uint32 type;
 } stbi__pngchunk;
 
-#define PNG_TYPE(a,b,c,d)  (((a) << 24) + ((b) << 16) + ((c) << 8) + (d))
-
 static stbi__pngchunk stbi__get_chunk_header(stbi__context *s)
 {
    stbi__pngchunk c;
@@ -2486,13 +2480,23 @@ typedef struct
 
 
 enum {
-   STBI__F_none=0, STBI__F_sub=1, STBI__F_up=2, STBI__F_avg=3, STBI__F_paeth=4,
-   STBI__F_avg_first, STBI__F_paeth_first
+   STBI__F_none=0,
+   STBI__F_sub=1,
+   STBI__F_up=2,
+   STBI__F_avg=3,
+   STBI__F_paeth=4,
+   // synthetic filters used for first scanline to avoid needing a dummy row of 0s
+   STBI__F_avg_first,
+   STBI__F_paeth_first
 };
 
 static stbi_uc first_row_filter[5] =
 {
-   STBI__F_none, STBI__F_sub, STBI__F_none, STBI__F_avg_first, STBI__F_paeth_first
+   STBI__F_none,
+   STBI__F_sub,
+   STBI__F_none,
+   STBI__F_avg_first,
+   STBI__F_paeth_first
 };
 
 static int stbi__paeth(int a, int b, int c)
@@ -2848,6 +2852,8 @@ static void stbi__de_iphone(stbi__png *z)
    }
 }
 
+#define STBI__PNG_TYPE(a,b,c,d)  (((a) << 24) + ((b) << 16) + ((c) << 8) + (d))
+
 static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
 {
    stbi_uc palette[1024], pal_img_n=0;
@@ -2867,11 +2873,11 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
    for (;;) {
       stbi__pngchunk c = stbi__get_chunk_header(s);
       switch (c.type) {
-         case PNG_TYPE('C','g','B','I'):
+         case STBI__PNG_TYPE('C','g','B','I'):
             is_iphone = 1;
             stbi__skip(s, c.length);
             break;
-         case PNG_TYPE('I','H','D','R'): {
+         case STBI__PNG_TYPE('I','H','D','R'): {
             int comp,filter;
             if (!first) return stbi__err("multiple IHDR","Corrupt PNG");
             first = 0;
@@ -2899,7 +2905,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             break;
          }
 
-         case PNG_TYPE('P','L','T','E'):  {
+         case STBI__PNG_TYPE('P','L','T','E'):  {
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
             if (c.length > 256*3) return stbi__err("invalid PLTE","Corrupt PNG");
             pal_len = c.length / 3;
@@ -2913,7 +2919,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             break;
          }
 
-         case PNG_TYPE('t','R','N','S'): {
+         case STBI__PNG_TYPE('t','R','N','S'): {
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
             if (z->idata) return stbi__err("tRNS after IDAT","Corrupt PNG");
             if (pal_img_n) {
@@ -2933,7 +2939,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             break;
          }
 
-         case PNG_TYPE('I','D','A','T'): {
+         case STBI__PNG_TYPE('I','D','A','T'): {
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
             if (pal_img_n && !pal_len) return stbi__err("no PLTE","Corrupt PNG");
             if (scan == SCAN_header) { s->img_n = pal_img_n; return 1; }
@@ -2950,7 +2956,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             break;
          }
 
-         case PNG_TYPE('I','E','N','D'): {
+         case STBI__PNG_TYPE('I','E','N','D'): {
             stbi__uint32 raw_len;
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
             if (scan != SCAN_load) return 1;
@@ -4700,6 +4706,9 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      1.47 (2014-12-14) 1/2/4-bit PNG support, both direct and paletted (Omar Cornut & stb)
+                        optimize PNG (ryg)
+                        fix bug in interlaced PNG with user-specified channel count (stb)
       1.46 (2014-08-26)
              fix broken tRNS chunk (colorkey-style transparency) in non-paletted PNG
       1.45 (2014-08-16)
