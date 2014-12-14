@@ -2530,9 +2530,9 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
       else {
          // unpack 1/2/4-bit into a 8-bit buffer. allows us to keep the common 8-bit path optimal at minimal cost for 1/2/4-bit
          // png guarante byte alignment, if width is not multiple of 8/4/2 we'll decode dummy trailing data that will be skipped in the later loop
-         in = line8;
-         stbi_uc* decode_out = line8;
+         stbi_uc * decode_out = line8;
          stbi_uc scale = (color == 0) ? 0xFF/((1<<depth)-1) : 1; // scale grayscale values to 0..255 range
+         in = line8;
          if (depth == 4) {
             for (k=x*img_n; k >= 1; k-=2, raw++) {
                *decode_out++ = scale * ((*raw >> 4)       );
@@ -2617,12 +2617,12 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
    return 1;
 }
 
-static int stbi__create_png_image(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_len, int out_n, int depth, int color, int interlaced)
+static int stbi__create_png_image(stbi__png *a, stbi_uc *image_data, stbi__uint32 image_data_len, int out_n, int depth, int color, int interlaced)
 {
    stbi_uc *final;
    int p;
    if (!interlaced)
-      return stbi__create_png_image_raw(a, raw, raw_len, out_n, a->s->img_x, a->s->img_y, depth, color);
+      return stbi__create_png_image_raw(a, image_data, image_data_len, out_n, a->s->img_x, a->s->img_y, depth, color);
 
    // de-interlacing
    final = (stbi_uc *) stbi__malloc(a->s->img_x * a->s->img_y * out_n);
@@ -2636,18 +2636,22 @@ static int stbi__create_png_image(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_l
       x = (a->s->img_x - xorig[p] + xspc[p]-1) / xspc[p];
       y = (a->s->img_y - yorig[p] + yspc[p]-1) / yspc[p];
       if (x && y) {
-         stbi__uint32 img_len = ((((out_n * x * depth) + 7) >> 3) + 1) * y;
-         if (!stbi__create_png_image_raw(a, raw, raw_len, out_n, x, y, depth, color)) {
+         stbi__uint32 img_len = ((((a->s->img_n * x * depth) + 7) >> 3) + 1) * y;
+         if (!stbi__create_png_image_raw(a, image_data, image_data_len, out_n, x, y, depth, color)) {
             free(final);
             return 0;
          }
-         for (j=0; j < y; ++j)
-            for (i=0; i < x; ++i)
-               memcpy(final + (j*yspc[p]+yorig[p])*a->s->img_x*out_n + (i*xspc[p]+xorig[p])*out_n,
+         for (j=0; j < y; ++j) {
+            for (i=0; i < x; ++i) {
+               int out_y = j*yspc[p]+yorig[p];
+               int out_x = i*xspc[p]+xorig[p];
+               memcpy(final + out_y*a->s->img_x*out_n + out_x*out_n,
                       a->out + (j*x+i)*out_n, out_n);
+            }
+         }
          free(a->out);
-         raw += img_len;
-         raw_len -= img_len;
+         image_data += img_len;
+         image_data_len -= img_len;
       }
    }
    a->out = final;
