@@ -2487,133 +2487,184 @@ static int stbi__paeth(int a, int b, int c)
 
 #define STBI__BYTECAST(x)  ((stbi_uc) ((x) & 255))  // truncate int to byte without warnings
 
+static stbi_uc stbi__depth_scale_table[9] = { 0, 0xff, 0x55, 0, 0x11, 0,0,0, 0x01 };
+
 // create the png data from post-deflated data
 static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 raw_len, int out_n, stbi__uint32 x, stbi__uint32 y, int depth, int color)
 {
    stbi__context *s = a->s;
    stbi__uint32 i,j,stride = x*out_n;
-   stbi__uint32 img_len;
+   stbi__uint32 img_len, img_width_bytes;
    int k;
    int img_n = s->img_n; // copy it into a local for later
-   stbi_uc* line8 = NULL; // point into raw when depth==8 else temporary local buffer
 
    STBI_ASSERT(out_n == s->img_n || out_n == s->img_n+1);
-   a->out = (stbi_uc *) stbi__malloc(x * y * out_n);
+   a->out = (stbi_uc *) stbi__malloc(x * y * out_n); // extra bytes to write off the end into
    if (!a->out) return stbi__err("outofmem", "Out of memory");
 
-   img_len = ((((img_n * x * depth) + 7) >> 3) + 1) * y;
+   img_width_bytes = (((img_n * x * depth) + 7) >> 3);
+   img_len = (img_width_bytes + 1) * y;
    if (s->img_x == x && s->img_y == y) {
       if (raw_len != img_len) return stbi__err("not enough pixels","Corrupt PNG");
    } else { // interlaced:
       if (raw_len < img_len) return stbi__err("not enough pixels","Corrupt PNG");
    }
 
-   if (depth != 8) {
-      line8 = (stbi_uc *) stbi__malloc((x+7) * out_n); // allocate buffer for one scanline
-      if (!line8) return stbi__err("outofmem", "Out of memory");
-   }
-
    for (j=0; j < y; ++j) {
-      stbi_uc *in;
       stbi_uc *cur = a->out + stride*j;
       stbi_uc *prior = cur - stride;
       int filter = *raw++;
-      if (filter > 4) {
-         if (depth != 8) free(line8);
+      int filter_bytes = img_n;
+      int width = x;
+      if (filter > 4)
          return stbi__err("invalid filter","Corrupt PNG");
-      }
 
-      if (depth == 8) {
-         in = raw;
-         raw += x*img_n;
-      }
-      else {
-         // unpack 1/2/4-bit into a 8-bit buffer. allows us to keep the common 8-bit path optimal at minimal cost for 1/2/4-bit
-         // png guarante byte alignment, if width is not multiple of 8/4/2 we'll decode dummy trailing data that will be skipped in the later loop
-         stbi_uc * decode_out = line8;
-         stbi_uc scale = (color == 0) ? 0xFF/((1<<depth)-1) : 1; // scale grayscale values to 0..255 range
-         in = line8;
-         if (depth == 4) {
-            for (k=x*img_n; k >= 1; k-=2, raw++) {
-               *decode_out++ = scale * ((*raw >> 4)       );
-               *decode_out++ = scale * ((*raw     ) & 0x0f);
-            }
-         } else if (depth == 2) {
-            for (k=x*img_n; k >= 1; k-=4, raw++) {
-               *decode_out++ = scale * ((*raw >> 6)       );
-               *decode_out++ = scale * ((*raw >> 4) & 0x03);
-               *decode_out++ = scale * ((*raw >> 2) & 0x03);
-               *decode_out++ = scale * ((*raw     ) & 0x03);
-            }
-         } else if (depth == 1) {
-            for (k=x*img_n; k >= 1; k-=8, raw++) {
-               *decode_out++ = scale * ((*raw >> 7)       );
-               *decode_out++ = scale * ((*raw >> 6) & 0x01);
-               *decode_out++ = scale * ((*raw >> 5) & 0x01);
-               *decode_out++ = scale * ((*raw >> 4) & 0x01);
-               *decode_out++ = scale * ((*raw >> 3) & 0x01);
-               *decode_out++ = scale * ((*raw >> 2) & 0x01);
-               *decode_out++ = scale * ((*raw >> 1) & 0x01);
-               *decode_out++ = scale * ((*raw     ) & 0x01);
-            }
-         }
+      if (depth < 8) {
+         assert(img_width_bytes <= x);
+         cur += x*out_n - img_width_bytes; // store output to the rightmost img_len bytes, so we can decode in place
+         filter_bytes = 1;
+         width = img_width_bytes;
       }
 
       // if first row, use special filter that doesn't sample previous row
       if (j == 0) filter = first_row_filter[filter];
 
-      // handle first pixel explicitly
-      for (k=0; k < img_n; ++k) {
+      // handle first byte explicitly
+      for (k=0; k < filter_bytes; ++k) {
          switch (filter) {
-            case STBI__F_none       : cur[k] = in[k]; break;
-            case STBI__F_sub        : cur[k] = in[k]; break;
-            case STBI__F_up         : cur[k] = STBI__BYTECAST(in[k] + prior[k]); break;
-            case STBI__F_avg        : cur[k] = STBI__BYTECAST(in[k] + (prior[k]>>1)); break;
-            case STBI__F_paeth      : cur[k] = STBI__BYTECAST(in[k] + stbi__paeth(0,prior[k],0)); break;
-            case STBI__F_avg_first  : cur[k] = in[k]; break;
-            case STBI__F_paeth_first: cur[k] = in[k]; break;
+            case STBI__F_none       : cur[k] = raw[k]; break;
+            case STBI__F_sub        : cur[k] = raw[k]; break;
+            case STBI__F_up         : cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
+            case STBI__F_avg        : cur[k] = STBI__BYTECAST(raw[k] + (prior[k]>>1)); break;
+            case STBI__F_paeth      : cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(0,prior[k],0)); break;
+            case STBI__F_avg_first  : cur[k] = raw[k]; break;
+            case STBI__F_paeth_first: cur[k] = raw[k]; break;
          }
       }
-      if (img_n != out_n) cur[img_n] = 255;
-      in += img_n;
-      cur += out_n;
-      prior += out_n;
+
+      if (depth == 8) {
+         if (img_n != out_n)
+            cur[img_n] = 255; // first pixel
+         raw += img_n;
+         cur += out_n;
+         prior += out_n;
+      } else {
+         raw += 1;
+         cur += 1;
+         prior += 1;
+      }
+
+      // @TODO: special case filter_bytes = 1, or just rewrite whole thing to not use a nested loop
+
       // this is a little gross, so that we don't switch per-pixel or per-component
-      if (img_n == out_n) {
+      if (depth < 8 || img_n == out_n) {
          #define CASE(f) \
              case f:     \
-                for (i=x-1; i >= 1; --i, in+=img_n,cur+=img_n,prior+=img_n) \
-                   for (k=0; k < img_n; ++k)
+                for (i=width-1; i >= 1; --i, raw+=filter_bytes,cur+=filter_bytes,prior+=filter_bytes) \
+                   for (k=0; k < filter_bytes; ++k)
          switch (filter) {
-            CASE(STBI__F_none)         cur[k] = in[k]; break;
-            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(in[k] + cur[k-img_n]); break;
-            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(in[k] + prior[k]); break;
-            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(in[k] + ((prior[k] + cur[k-img_n])>>1)); break;
-            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(in[k] + stbi__paeth(cur[k-img_n],prior[k],prior[k-img_n])); break;
-            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(in[k] + (cur[k-img_n] >> 1)); break;
-            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(in[k] + stbi__paeth(cur[k-img_n],0,0)); break;
+            CASE(STBI__F_none)         cur[k] = raw[k]; break;
+            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(raw[k] + cur[k-filter_bytes]); break;
+            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
+            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(raw[k] + ((prior[k] + cur[k-filter_bytes])>>1)); break;
+            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-filter_bytes],prior[k],prior[k-filter_bytes])); break;
+            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(raw[k] + (cur[k-filter_bytes] >> 1)); break;
+            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-filter_bytes],0,0)); break;
          }
          #undef CASE
       } else {
          STBI_ASSERT(img_n+1 == out_n);
          #define CASE(f) \
              case f:     \
-                for (i=x-1; i >= 1; --i, cur[img_n]=255,in+=img_n,cur+=out_n,prior+=out_n) \
+                for (i=x-1; i >= 1; --i, cur[img_n]=255,raw+=img_n,cur+=out_n,prior+=out_n) \
                    for (k=0; k < img_n; ++k)
          switch (filter) {
-            CASE(STBI__F_none)         cur[k] = in[k]; break;
-            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(in[k] + cur[k-out_n]); break;
-            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(in[k] + prior[k]); break;
-            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(in[k] + ((prior[k] + cur[k-out_n])>>1)); break;
-            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(in[k] + stbi__paeth(cur[k-out_n],prior[k],prior[k-out_n])); break;
-            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(in[k] + (cur[k-out_n] >> 1)); break;
-            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(in[k] + stbi__paeth(cur[k-out_n],0,0)); break;
+            CASE(STBI__F_none)         cur[k] = raw[k]; break;
+            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(raw[k] + cur[k-out_n]); break;
+            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
+            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(raw[k] + ((prior[k] + cur[k-out_n])>>1)); break;
+            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-out_n],prior[k],prior[k-out_n])); break;
+            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(raw[k] + (cur[k-out_n] >> 1)); break;
+            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-out_n],0,0)); break;
          }
          #undef CASE
       }
    }
 
-   if (depth != 8) free(line8);
+   // we make a separate pass to expand bits to pixels; for performance,
+   // this could run two scanlines behind the above code, so it won't
+   // intefere with filtering but will still be in the cache.
+   if (depth < 8) {
+      for (j=0; j < y; ++j) {
+         stbi_uc *cur = a->out + stride*j;
+         stbi_uc *in  = a->out + stride*j + x*out_n - img_width_bytes;
+         // unpack 1/2/4-bit into a 8-bit buffer. allows us to keep the common 8-bit path optimal at minimal cost for 1/2/4-bit
+         // png guarante byte alignment, if width is not multiple of 8/4/2 we'll decode dummy trailing data that will be skipped in the later loop
+         stbi_uc scale = (color == 0) ? stbi__depth_scale_table[depth] : 1; // scale grayscale values to 0..255 range
+
+         // note that the final byte might overshoot and write more data than desired.
+         // we can allocate enough data that this never writes out of memory, but it
+         // could also overwrite the next scanline. can it overwrite non-empty data
+         // on the next scanline? yes, consider 1-pixel-wide scanlines with 1-bit-per-pixel.
+         // so we need to explicitly clamp the final ones
+
+         if (depth == 4) {
+            for (k=x*img_n; k >= 2; k-=2, ++in) {
+               *cur++ = scale * ((*in >> 4)       );
+               *cur++ = scale * ((*in     ) & 0x0f);
+            }
+            if (k > 0) *cur++ = scale * ((*in >> 4)       );
+         } else if (depth == 2) {
+            for (k=x*img_n; k >= 4; k-=4, ++in) {
+               *cur++ = scale * ((*in >> 6)       );
+               *cur++ = scale * ((*in >> 4) & 0x03);
+               *cur++ = scale * ((*in >> 2) & 0x03);
+               *cur++ = scale * ((*in     ) & 0x03);
+            }
+            if (k > 0) *cur++ = scale * ((*in >> 6)       );
+            if (k > 1) *cur++ = scale * ((*in >> 4) & 0x03);
+            if (k > 2) *cur++ = scale * ((*in >> 2) & 0x03);
+         } else if (depth == 1) {
+            for (k=x*img_n; k >= 8; k-=8, ++in) {
+               *cur++ = scale * ((*in >> 7)       );
+               *cur++ = scale * ((*in >> 6) & 0x01);
+               *cur++ = scale * ((*in >> 5) & 0x01);
+               *cur++ = scale * ((*in >> 4) & 0x01);
+               *cur++ = scale * ((*in >> 3) & 0x01);
+               *cur++ = scale * ((*in >> 2) & 0x01);
+               *cur++ = scale * ((*in >> 1) & 0x01);
+               *cur++ = scale * ((*in     ) & 0x01);
+            }
+            if (k > 0) *cur++ = scale * ((*in >> 7)       );
+            if (k > 1) *cur++ = scale * ((*in >> 6) & 0x01);
+            if (k > 2) *cur++ = scale * ((*in >> 5) & 0x01);
+            if (k > 3) *cur++ = scale * ((*in >> 4) & 0x01);
+            if (k > 4) *cur++ = scale * ((*in >> 3) & 0x01);
+            if (k > 5) *cur++ = scale * ((*in >> 2) & 0x01);
+            if (k > 6) *cur++ = scale * ((*in >> 1) & 0x01);
+         }
+         if (img_n != out_n) {
+            // insert alpha = 255
+            stbi_uc *cur = a->out + stride*j;
+            int i;
+            if (img_n == 1) {
+               for (i=x-1; i >= 0; --i) {
+                  cur[i*2+1] = 255;
+                  cur[i*2+0] = cur[i];
+               }
+            } else {
+               assert(img_n == 3);
+               for (i=x-1; i >= 0; --i) {
+                  cur[i*4+3] = 255;
+                  cur[i*4+2] = cur[i*3+2];
+                  cur[i*4+1] = cur[i*3+1];
+                  cur[i*4+0] = cur[i*3+0];
+               }
+            }
+         }
+      }
+   }
+
    return 1;
 }
 
@@ -2856,7 +2907,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                if (c.length != (stbi__uint32) s->img_n*2) return stbi__err("bad tRNS len","Corrupt PNG");
                has_trans = 1;
                for (k=0; k < s->img_n; ++k)
-                  tc[k] = (stbi_uc) (stbi__get16be(s) & 255); // non 8-bit images will be larger
+                  tc[k] = (stbi_uc) (stbi__get16be(s) & 255) * stbi__depth_scale_table[depth]; // non 8-bit images will be larger
             }
             break;
          }

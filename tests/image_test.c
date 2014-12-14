@@ -7,7 +7,7 @@
 #define STB_DEFINE
 #include "stb.h"
 
-#define PART1
+#define PNGSUITE_PRIMARY
 
 int main(int argc, char **argv)
 {
@@ -34,8 +34,8 @@ int main(int argc, char **argv)
       }
    } else {
       int i, nope=0;
-      #ifdef PART1
-      char **files = stb_readdir_files("pngsuite/part1");
+      #ifdef PNGSUITE_PRIMARY
+      char **files = stb_readdir_files("pngsuite/primary");
       #else
       char **files = stb_readdir_files("images");
       #endif
@@ -43,7 +43,7 @@ int main(int argc, char **argv)
          int n;
          char **failed = NULL;
          unsigned char *data;
-         //printf("%s\n", files[i]);
+         printf("%s\n", files[i]);
          data = stbi_load(files[i], &w, &h, &n, 0); if (data) free(data); else stb_arr_push(failed, "&n");
          data = stbi_load(files[i], &w, &h,  0, 1); if (data) free(data); else stb_arr_push(failed, "1");
          data = stbi_load(files[i], &w, &h,  0, 2); if (data) free(data); else stb_arr_push(failed, "2");
@@ -52,16 +52,22 @@ int main(int argc, char **argv)
          if (data) {
             char fname[512];
 
-            #ifdef PART1
+            #ifdef PNGSUITE_PRIMARY
             int w2,h2;
             unsigned char *data2;
             stb_splitpath(fname, files[i], STB_FILE_EXT);
-            data2 = stbi_load(stb_sprintf("pngsuite/part1_check/%s", fname), &w2, &h2, 0, 4);
+            data2 = stbi_load(stb_sprintf("pngsuite/primary_check/%s", fname), &w2, &h2, 0, 4);
             if (!data2)
-               printf("FAILED: couldn't load 'pngsuite/part1_check/%s\n", fname);
+               printf("FAILED: couldn't load 'pngsuite/primary_check/%s\n", fname);
             else {
                if (w != w2 || h != w2 || 0 != memcmp(data, data2, w*h*4)) {
-                  printf("FAILED: %s loaded but didn't match part1_check 32-bit version\n", files[i]);
+                  int x,y,c;
+                  if (w == w2 && h == h2)
+                     for (y=0; y < h; ++y)
+                        for (x=0; x < w; ++x)
+                           for (c=0; c < 4; ++c)
+                              assert(data[y*w*4+x*4+c] == data2[y*w*4+x*4+c]);
+                  printf("FAILED: %s loaded but didn't match PRIMARY_check 32-bit version\n", files[i]);
                }
                free(data2);
             }
