@@ -1,3 +1,7 @@
+// check that stb_truetype compiles with no stb_rect_pack.h
+#define STB_TRUETYPE_IMPLEMENTATION
+#include "stb_truetype.h"
+
 #include "stretchy_buffer.h"
 #include <assert.h>
 
