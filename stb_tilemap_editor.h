@@ -1971,14 +1971,14 @@ static int stbte__float_control(int x0, int y0, int w, float minv, float maxv, f
             stbte__ui.accum_y -= ay*STBTE_FLOAT_CONTROL_GRANULARITY;
             if (stbte__ui.shift) {
                if (stbte__ui.active_event == STBTE__leftdown)
-                  delta = ax * 16 + ay;
+                  delta = ax * 16.0f + ay;
                else
-                  delta = ax / 16.0 + ay / 256.0;
+                  delta = ax / 16.0f + ay / 256.0f;
             } else {
                if (stbte__ui.active_event == STBTE__leftdown)
-                  delta = ax*10 + ay;
+                  delta = ax*10.0f + ay;
                else
-                  delta = ax * 0.1 + ay * 0.01;
+                  delta = ax * 0.1f + ay * 0.01f;
             }
             v += delta * scale;
             if (v < minv) v = minv;
@@ -3553,8 +3553,8 @@ static void stbte__props_panel(stbte_tilemap *tm, int x0, int y0, int w, int h)
                int flag = (int) p[i];
                if (stbte__layerbutton(x,y, flag ? 'x' : ' ', STBTE__ID(STBTE__prop_flag,i), flag, 0, 2)) {
                   stbte__begin_undo(tm);
-                  stbte__undo_record_prop_float(tm,mx,my,i,flag);
-                  p[i] = !flag;
+                  stbte__undo_record_prop_float(tm,mx,my,i,(float) flag);
+                  p[i] = (float) !flag;
                   stbte__end_undo(tm);
                }
                stbte__draw_text(x+13,y+1,s,x1-(x+13)-2,STBTE__TEXTCOLOR(STBTE__cpanel));
@@ -3568,7 +3568,7 @@ static void stbte__props_panel(stbte_tilemap *tm, int x0, int y0, int w, int h)
                if (a+v != p[i] || v < 0 || v > b-a) {
                   if (v < 0) v = 0;
                   if (v > b-a) v = b-a;
-                  p[i] = a+v; // @TODO undo
+                  p[i] = (float) (a+v); // @TODO undo
                }
                switch (stbte__slider(x, slider_width, y+7, b-a, &v, STBTE__ID(STBTE__prop_int,i)))
                {
@@ -3576,7 +3576,7 @@ static void stbte__props_panel(stbte_tilemap *tm, int x0, int y0, int w, int h)
                      stbte__saved = p[i];
                      // fallthrough
                   case STBTE__change:
-                     p[i] = a+v; // @TODO undo
+                     p[i] = (float) (a+v); // @TODO undo
                      break;
                   case STBTE__end:
                      if (p[i] != stbte__saved) {
