@@ -1,4 +1,4 @@
-/* stb_image - v1.47 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.48 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -28,6 +28,7 @@
       - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
 
    Latest revisions:
+      1.48 (2014-12-14) fix incorrectly-named assert()
       1.47 (2014-12-14) 1/2/4-bit PNG support (both grayscale and paletted)
                         optimize PNG
                         fix bug in interlaced PNG with user-specified channel count
@@ -2545,7 +2546,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
          return stbi__err("invalid filter","Corrupt PNG");
 
       if (depth < 8) {
-         assert(img_width_bytes <= x);
+         STBI_ASSERT(img_width_bytes <= x);
          cur += x*out_n - img_width_bytes; // store output to the rightmost img_len bytes, so we can decode in place
          filter_bytes = 1;
          width = img_width_bytes;
@@ -4706,6 +4707,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      1.48 (2014-12-14) fix incorrectly-named assert()
       1.47 (2014-12-14) 1/2/4-bit PNG support, both direct and paletted (Omar Cornut & stb)
                         optimize PNG (ryg)
                         fix bug in interlaced PNG with user-specified channel count (stb)

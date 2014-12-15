@@ -6,7 +6,7 @@ single-file public domain libraries for C/C++
 library    | lastest version | category | description
 --------------------- | ---- | -------- | --------------------------------
 **stb_vorbis.c** | 1.04 | audio | decode ogg vorbis files from file/memory to float/16-bit signed output
-**stb_image.h** | 1.47 | graphics | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**stb_image.h** | 1.48 | graphics | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **stb_truetype.h** | 1.02 | graphics | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | 0.95 | graphics | image writing to disk: PNG, TGA, BMP
 **stb_image_resize.h** | 0.90 | graphics | resize images larger/smaller with good quality
