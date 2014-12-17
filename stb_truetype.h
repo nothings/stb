@@ -1,4 +1,4 @@
-// stb_truetype.h - v0.99 - public domain
+// stb_truetype.h - v1.02 - public domain
 // authored from 2009-2014 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -35,8 +35,15 @@
 //       Hou Qiming
 //       Fabian "ryg" Giesen
 //
+//   Misc other:
+//       Ryan Gordon
+//
 // VERSION HISTORY
 //
+//   1.02 (2014-12-10) fix various warnings & compile issues w/ stb_rect_pack, C++
+//   1.01 (2014-12-08) fix subpixel position when oversampling to exactly match
+//                        non-oversampled; STBTT_POINT_SIZE for packed case only
+//   1.00 (2014-12-06) add new PackBegin etc. API, w/ support for oversampling
 //   0.99 (2014-09-18) fix multiple bugs with subpixel rendering (ryg)
 //   0.9  (2014-08-07) support certain mac/iOS fonts without an MS platformID
 //   0.8b (2014-07-07) fix a warning
@@ -58,7 +65,7 @@
 //                    updated Hello World! sample to use kerning and subpixel
 //                    fixed some warnings
 //   0.3  (2009-06-24) cmap fmt=12, compound shapes (MM)
-//                    userdata, malloc-from-userdata, non-zero fill (STB)
+//                    userdata, malloc-from-userdata, non-zero fill (stb)
 //   0.2  (2009-03-11) Fix unsigned/signed char warnings
 //   0.1  (2009-03-09) First public release
 //
@@ -76,10 +83,17 @@
 //   before the #include of this file. This expands out the actual
 //   implementation into that C/C++ file.
 //
-//   Simple 3D API (don't ship this, but it's fine for tools and quick start,
-//                  and you can cut and paste from it to move to more advanced)
+//   Simple 3D API (don't ship this, but it's fine for tools and quick start)
 //           stbtt_BakeFontBitmap()               -- bake a font to a bitmap for use as texture
 //           stbtt_GetBakedQuad()                 -- compute quad to draw for a given char
+//
+//   Improved 3D API (more shippable):
+//           #include "stb_rect_pack.h"           -- optional, but you really want it
+//           stbtt_PackBegin()
+//           stbtt_PackSetOversample()            -- for improved quality on small fonts
+//           stbtt_PackFontRanges()
+//           stbtt_PackEnd()
+//           stbtt_GetPackedQuad()
 //
 //   "Load" a font file from a memory buffer (you have to keep the buffer loaded)
 //           stbtt_InitFont()
@@ -428,7 +442,7 @@ extern "C" {
 typedef struct
 {
    unsigned short x0,y0,x1,y1; // coordinates of bbox in bitmap
-   float xoff,yoff,xadvance;   
+   float xoff,yoff,xadvance;
 } stbtt_bakedchar;
 
 extern int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // font location (use offset=0 for plain .ttf)
@@ -462,6 +476,100 @@ extern void stbtt_GetBakedQuad(stbtt_bakedchar *chardata, int pw, int ph,  // sa
 //
 // It's inefficient; you might want to c&p it and optimize it.
 
+
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// NEW TEXTURE BAKING API
+//
+// This provides options for packing multiple fonts into one atlas, not
+// perfectly but better than nothing.
+
+typedef struct
+{
+   unsigned short x0,y0,x1,y1; // coordinates of bbox in bitmap
+   float xoff,yoff,xadvance;
+   float xoff2,yoff2;
+} stbtt_packedchar;
+
+typedef struct stbtt_pack_context stbtt_pack_context;
+
+extern int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int width, int height, int stride_in_bytes, int padding, void *alloc_context);
+// Initializes a packing context stored in the passed-in stbtt_pack_context.
+// Future calls using this context will pack characters into the bitmap passed
+// in here: a 1-channel bitmap that is weight x height. stride_in_bytes is
+// the distance from one row to the next (or 0 to mean they are packed tightly
+// together). "padding" is // the amount of padding to leave between each
+// character (normally you want '1' for bitmaps you'll use as textures with
+// bilinear filtering).
+//
+// Returns 0 on failure, 1 on success.
+
+extern void stbtt_PackEnd  (stbtt_pack_context *spc);
+// Cleans up the packing context and frees all memory.
+
+#define STBTT_POINT_SIZE(x)   (-(x))
+
+extern int  stbtt_PackFontRange(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, float font_size,
+                                int first_unicode_char_in_range, int num_chars_in_range, stbtt_packedchar *chardata_for_range);
+// Creates character bitmaps from the font_index'th font found in fontdata (use
+// font_index=0 if you don't know what that is). It creates num_chars_in_range
+// bitmaps for characters with unicode values starting at first_unicode_char_in_range
+// and increasing. Data for how to render them is stored in chardata_for_range;
+// pass these to stbtt_GetPackedQuad to get back renderable quads.
+//
+// font_size is the full height of the character from ascender to descender,
+// as computed by stbtt_ScaleForPixelHeight. To use a point size as computed
+// by stbtt_ScaleForMappingEmToPixels, wrap the point size in STBTT_POINT_SIZE()
+// and pass that result as 'font_size':
+//       ...,                  20 , ... // font max minus min y is 20 pixels tall
+//       ..., STBTT_POINT_SIZE(20), ... // 'M' is 20 pixels tall
+
+typedef struct
+{
+   float font_size;
+   int first_unicode_char_in_range;
+   int num_chars_in_range;
+   stbtt_packedchar *chardata_for_range; // output
+} stbtt_pack_range;
+
+extern int  stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges);
+// Creates character bitmaps from multiple ranges of characters stored in
+// ranges. This will usually create a better-packed bitmap than multiple
+// calls to stbtt_PackFontRange.
+
+
+extern void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h_oversample, unsigned int v_oversample);
+// Oversampling a font increases the quality by allowing higher-quality subpixel
+// positioning, and is especially valuable at smaller text sizes.
+//
+// This function sets the amount of oversampling for all following calls to
+// stbtt_PackFontRange(s). The default (no oversampling) is achieved by
+// h_oversample=1, v_oversample=1. The total number of pixels required is
+// h_oversample*v_oversample larger than the default; for example, 2x2
+// oversampling requires 4x the storage of 1x1. For best results, render
+// oversampled textures with bilinear filtering. Look at the readme in
+// stb/tests/oversample for information about oversampled fonts
+
+extern void stbtt_GetPackedQuad(stbtt_packedchar *chardata, int pw, int ph,  // same data as above
+                               int char_index,             // character to display
+                               float *xpos, float *ypos,   // pointers to current position in screen pixel space
+                               stbtt_aligned_quad *q,      // output: quad to draw
+                               int align_to_integer);
+
+// this is an opaque structure that you shouldn't mess with which holds
+// all the context needed from PackBegin to PackEnd.
+struct stbtt_pack_context {
+   void *user_allocator_context;
+   void *pack_info;
+   int   width;
+   int   height;
+   int   stride_in_bytes;
+   int   padding;
+   unsigned int   h_oversample, v_oversample;
+   unsigned char *pixels;
+   void  *nodes;
+};
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -769,6 +877,12 @@ enum { // languageID for STBTT_PLATFORM_ID_MAC
 ////
 
 #ifdef STB_TRUETYPE_IMPLEMENTATION
+
+#ifndef STBTT_MAX_OVERSAMPLE
+#define STBTT_MAX_OVERSAMPLE   8
+#endif
+
+typedef int stbtt__test_oversample_pow2[(STBTT_MAX_OVERSAMPLE & (STBTT_MAX_OVERSAMPLE-1)) == 0 ? 1 : -1];
 
 //////////////////////////////////////////////////////////////////////////
 //
@@ -1880,7 +1994,8 @@ extern int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // font 
    float scale;
    int x,y,bottom_y, i;
    stbtt_fontinfo f;
-   stbtt_InitFont(&f, data, offset);
+   if (!stbtt_InitFont(&f, data, offset))
+      return -1;
    STBTT_memset(pixels, 0, pw*ph); // background of 0 around pixels
    x=y=1;
    bottom_y = 1;
@@ -1908,9 +2023,9 @@ extern int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // font 
       chardata[i].xadvance = scale * advance;
       chardata[i].xoff     = (float) x0;
       chardata[i].yoff     = (float) y0;
-      x = x + gw + 2;
-      if (y+gh+2 > bottom_y)
-         bottom_y = y+gh+2;
+      x = x + gw + 1;
+      if (y+gh+1 > bottom_y)
+         bottom_y = y+gh+1;
    }
    return bottom_y;
 }
@@ -1935,6 +2050,404 @@ void stbtt_GetBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_inde
 
    *xpos += b->xadvance;
 }
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// rectangle packing replacement routines if you don't have stb_rect_pack.h
+//
+
+#ifndef STB_RECT_PACK_VERSION
+#ifdef _MSC_VER
+#define STBTT__NOTUSED(v)  (void)(v)
+#else
+#define STBTT__NOTUSED(v)  (void)sizeof(v)
+#endif
+
+typedef int stbrp_coord;
+
+////////////////////////////////////////////////////////////////////////////////////
+//                                                                                //
+//                                                                                //
+// COMPILER WARNING ?!?!?                                                         //
+//                                                                                //
+//                                                                                //
+// if you get a compile warning due to these symbols being defined more than      //
+// once, move #include "stb_rect_pack.h" before #include "stb_truetype.h"         //
+//                                                                                //
+////////////////////////////////////////////////////////////////////////////////////
+
+typedef struct
+{
+   int width,height;
+   int x,y,bottom_y;
+} stbrp_context;
+
+typedef struct
+{
+   unsigned char x;
+} stbrp_node;
+
+typedef struct
+{
+   stbrp_coord x,y;
+   int id,w,h,was_packed;
+} stbrp_rect;
+
+static void stbrp_init_target(stbrp_context *con, int pw, int ph, stbrp_node *nodes, int num_nodes)
+{
+   con->width  = pw;
+   con->height = ph;
+   con->x = 0;
+   con->y = 0;
+   con->bottom_y = 0;
+   STBTT__NOTUSED(nodes);
+   STBTT__NOTUSED(num_nodes);   
+}
+
+static void stbrp_pack_rects(stbrp_context *con, stbrp_rect *rects, int num_rects)
+{
+   int i;
+   for (i=0; i < num_rects; ++i) {
+      if (con->x + rects[i].w > con->width) {
+         con->x = 0;
+         con->y = con->bottom_y;
+      }
+      if (con->y + rects[i].h > con->height)
+         break;
+      rects[i].x = con->x;
+      rects[i].y = con->y;
+      rects[i].was_packed = 1;
+      con->x += rects[i].w;
+      if (con->y + rects[i].h > con->bottom_y)
+         con->bottom_y = con->y + rects[i].h;
+   }
+   for (   ; i < num_rects; ++i)
+      rects[i].was_packed = 0;
+}
+#endif
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// bitmap baking
+//
+// This is SUPER-AWESOME (tm Ryan Gordon) packing using stb_rect_pack.h. If
+// stb_rect_pack.h isn't available, it uses the BakeFontBitmap strategy.
+
+int stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int pw, int ph, int stride_in_bytes, int padding, void *alloc_context)
+{
+   stbrp_context *context = (stbrp_context *) STBTT_malloc(sizeof(*context)            ,alloc_context);
+   int            num_nodes = pw - padding;
+   stbrp_node    *nodes   = (stbrp_node    *) STBTT_malloc(sizeof(*nodes  ) * num_nodes,alloc_context);
+
+   if (context == NULL || nodes == NULL) {
+      if (context != NULL) STBTT_free(context, alloc_context);
+      if (nodes   != NULL) STBTT_free(nodes  , alloc_context);
+      return 0;
+   }
+
+   spc->user_allocator_context = alloc_context;
+   spc->width = pw;
+   spc->height = ph;
+   spc->pixels = pixels;
+   spc->pack_info = context;
+   spc->nodes = nodes;
+   spc->padding = padding;
+   spc->stride_in_bytes = stride_in_bytes != 0 ? stride_in_bytes : pw;
+   spc->h_oversample = 1;
+   spc->v_oversample = 1;
+
+   stbrp_init_target(context, pw-padding, ph-padding, nodes, num_nodes);
+
+   STBTT_memset(pixels, 0, pw*ph); // background of 0 around pixels
+
+   return 1;
+}
+
+void stbtt_PackEnd  (stbtt_pack_context *spc)
+{
+   STBTT_free(spc->nodes    , spc->user_allocator_context);
+   STBTT_free(spc->pack_info, spc->user_allocator_context);
+}
+
+void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h_oversample, unsigned int v_oversample)
+{
+   STBTT_assert(h_oversample <= STBTT_MAX_OVERSAMPLE);
+   STBTT_assert(v_oversample <= STBTT_MAX_OVERSAMPLE);
+   if (h_oversample <= STBTT_MAX_OVERSAMPLE)
+      spc->h_oversample = h_oversample;
+   if (v_oversample <= STBTT_MAX_OVERSAMPLE)
+      spc->v_oversample = v_oversample;
+}
+
+#define STBTT__OVER_MASK  (STBTT_MAX_OVERSAMPLE-1)
+
+static void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width)
+{
+   unsigned char buffer[STBTT_MAX_OVERSAMPLE];
+   int safe_w = w - kernel_width;
+   int j;
+   for (j=0; j < h; ++j) {
+      int i;
+      unsigned int total;
+      memset(buffer, 0, kernel_width);
+
+      total = 0;
+
+      // make kernel_width a constant in common cases so compiler can optimize out the divide
+      switch (kernel_width) {
+         case 2:
+            for (i=0; i <= safe_w; ++i) {
+               total += pixels[i] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
+               pixels[i] = (unsigned char) (total / 2);
+            }
+            break;
+         case 3:
+            for (i=0; i <= safe_w; ++i) {
+               total += pixels[i] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
+               pixels[i] = (unsigned char) (total / 3);
+            }
+            break;
+         case 4:
+            for (i=0; i <= safe_w; ++i) {
+               total += pixels[i] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
+               pixels[i] = (unsigned char) (total / 4);
+            }
+            break;
+         default:
+            for (i=0; i <= safe_w; ++i) {
+               total += pixels[i] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i];
+               pixels[i] = (unsigned char) (total / kernel_width);
+            }
+            break;
+      }
+
+      for (; i < w; ++i) {
+         STBTT_assert(pixels[i] == 0);
+         total -= buffer[i & STBTT__OVER_MASK];
+         pixels[i] = (unsigned char) (total / kernel_width);
+      }
+
+      pixels += stride_in_bytes;
+   }
+}
+
+static void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width)
+{
+   unsigned char buffer[STBTT_MAX_OVERSAMPLE];
+   int safe_h = h - kernel_width;
+   int j;
+   for (j=0; j < w; ++j) {
+      int i;
+      unsigned int total;
+      memset(buffer, 0, kernel_width);
+
+      total = 0;
+
+      // make kernel_width a constant in common cases so compiler can optimize out the divide
+      switch (kernel_width) {
+         case 2:
+            for (i=0; i <= safe_h; ++i) {
+               total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
+               pixels[i*stride_in_bytes] = (unsigned char) (total / 2);
+            }
+            break;
+         case 3:
+            for (i=0; i <= safe_h; ++i) {
+               total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
+               pixels[i*stride_in_bytes] = (unsigned char) (total / 3);
+            }
+            break;
+         case 4:
+            for (i=0; i <= safe_h; ++i) {
+               total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
+               pixels[i*stride_in_bytes] = (unsigned char) (total / 4);
+            }
+            break;
+         default:
+            for (i=0; i <= safe_h; ++i) {
+               total += pixels[i*stride_in_bytes] - buffer[i & STBTT__OVER_MASK];
+               buffer[(i+kernel_width) & STBTT__OVER_MASK] = pixels[i*stride_in_bytes];
+               pixels[i*stride_in_bytes] = (unsigned char) (total / kernel_width);
+            }
+            break;
+      }
+
+      for (; i < h; ++i) {
+         STBTT_assert(pixels[i*stride_in_bytes] == 0);
+         total -= buffer[i & STBTT__OVER_MASK];
+         pixels[i*stride_in_bytes] = (unsigned char) (total / kernel_width);
+      }
+
+      pixels += 1;
+   }
+}
+
+static float stbtt__oversample_shift(int oversample)
+{
+   if (!oversample)
+      return 0.0f;
+
+   // The prefilter is a box filter of width "oversample",
+   // which shifts phase by (oversample - 1)/2 pixels in
+   // oversampled space. We want to shift in the opposite
+   // direction to counter this.
+   return (float)-(oversample - 1) / (2.0f * (float)oversample);
+}
+
+int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges)
+{
+   stbtt_fontinfo info;
+   float recip_h = 1.0f / spc->h_oversample;
+   float recip_v = 1.0f / spc->v_oversample;
+   float sub_x = stbtt__oversample_shift(spc->h_oversample);
+   float sub_y = stbtt__oversample_shift(spc->v_oversample);
+   int i,j,k,n, return_value = 1;
+   stbrp_context *context = (stbrp_context *) spc->pack_info;
+   stbrp_rect    *rects;
+
+   // flag all characters as NOT packed
+   for (i=0; i < num_ranges; ++i)
+      for (j=0; j < ranges[i].num_chars_in_range; ++j)
+         ranges[i].chardata_for_range[j].x0 =
+         ranges[i].chardata_for_range[j].y0 =
+         ranges[i].chardata_for_range[j].x1 =
+         ranges[i].chardata_for_range[j].y1 = 0;
+
+   n = 0;
+   for (i=0; i < num_ranges; ++i)
+      n += ranges[i].num_chars_in_range;
+         
+   rects = (stbrp_rect *) STBTT_malloc(sizeof(*rects) * n, spc->user_allocator_context);
+   if (rects == NULL)
+      return 0;
+
+   stbtt_InitFont(&info, fontdata, stbtt_GetFontOffsetForIndex(fontdata,font_index));
+   k=0;
+   for (i=0; i < num_ranges; ++i) {
+      float fh = ranges[i].font_size;
+      float scale = fh > 0 ? stbtt_ScaleForPixelHeight(&info, fh) : stbtt_ScaleForMappingEmToPixels(&info, -fh);
+      for (j=0; j < ranges[i].num_chars_in_range; ++j) {
+         int x0,y0,x1,y1;
+         stbtt_GetCodepointBitmapBoxSubpixel(&info, ranges[i].first_unicode_char_in_range + j,
+                                              scale * spc->h_oversample,
+                                              scale * spc->v_oversample,
+                                              0,0,
+                                              &x0,&y0,&x1,&y1);
+         rects[k].w = (stbrp_coord) (x1-x0 + spc->padding + spc->h_oversample-1);
+         rects[k].h = (stbrp_coord) (y1-y0 + spc->padding + spc->v_oversample-1);
+         ++k;
+      }
+   }
+
+   stbrp_pack_rects(context, rects, k);
+
+   k = 0;
+   for (i=0; i < num_ranges; ++i) {
+      float fh = ranges[i].font_size;
+      float scale = fh > 0 ? stbtt_ScaleForPixelHeight(&info, fh) : stbtt_ScaleForMappingEmToPixels(&info, -fh);
+      for (j=0; j < ranges[i].num_chars_in_range; ++j) {
+         stbrp_rect *r = &rects[k];
+         if (r->was_packed) {
+            stbtt_packedchar *bc = &ranges[i].chardata_for_range[j];
+            int advance, lsb, x0,y0,x1,y1;
+            int glyph = stbtt_FindGlyphIndex(&info, ranges[i].first_unicode_char_in_range + j);
+            stbrp_coord pad = (stbrp_coord) spc->padding;
+
+            // pad on left and top
+            r->x += pad;
+            r->y += pad;
+            r->w -= pad;
+            r->h -= pad;
+            stbtt_GetGlyphHMetrics(&info, glyph, &advance, &lsb);
+            stbtt_GetGlyphBitmapBox(&info, glyph,
+                                    scale * spc->h_oversample,
+                                    scale * spc->v_oversample,
+                                    &x0,&y0,&x1,&y1);
+            stbtt_MakeGlyphBitmapSubpixel(&info,
+                                          spc->pixels + r->x + r->y*spc->stride_in_bytes,
+                                          r->w - spc->h_oversample+1,
+                                          r->h - spc->v_oversample+1,
+                                          spc->stride_in_bytes,
+                                          scale * spc->h_oversample,
+                                          scale * spc->v_oversample,
+                                          0,0,
+                                          glyph);
+
+            if (spc->h_oversample > 1)
+               stbtt__h_prefilter(spc->pixels + r->x + r->y*spc->stride_in_bytes,
+                                  r->w, r->h, spc->stride_in_bytes,
+                                  spc->h_oversample);
+
+            if (spc->v_oversample > 1)
+               stbtt__v_prefilter(spc->pixels + r->x + r->y*spc->stride_in_bytes,
+                                  r->w, r->h, spc->stride_in_bytes,
+                                  spc->v_oversample);
+
+            bc->x0       = (stbtt_int16)  r->x;
+            bc->y0       = (stbtt_int16)  r->y;
+            bc->x1       = (stbtt_int16) (r->x + r->w);
+            bc->y1       = (stbtt_int16) (r->y + r->h);
+            bc->xadvance =                scale * advance;
+            bc->xoff     =       (float)  x0 * recip_h + sub_x;
+            bc->yoff     =       (float)  y0 * recip_v + sub_y;
+            bc->xoff2    =                (x0 + r->w) * recip_h + sub_x;
+            bc->yoff2    =                (y0 + r->h) * recip_v + sub_y;
+         } else {
+            return_value = 0; // if any fail, report failure
+         }
+
+         ++k;
+      }
+   }
+
+   return return_value;
+}
+
+int stbtt_PackFontRange(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, float font_size,
+            int first_unicode_char_in_range, int num_chars_in_range, stbtt_packedchar *chardata_for_range)
+{
+   stbtt_pack_range range;
+   range.first_unicode_char_in_range = first_unicode_char_in_range;
+   range.num_chars_in_range          = num_chars_in_range;
+   range.chardata_for_range          = chardata_for_range;
+   range.font_size                   = font_size;
+   return stbtt_PackFontRanges(spc, fontdata, font_index, &range, 1);
+}
+
+void stbtt_GetPackedQuad(stbtt_packedchar *chardata, int pw, int ph, int char_index, float *xpos, float *ypos, stbtt_aligned_quad *q, int align_to_integer)
+{
+   float ipw = 1.0f / pw, iph = 1.0f / ph;
+   stbtt_packedchar *b = chardata + char_index;
+
+   if (align_to_integer) {
+      float x = (float) STBTT_ifloor((*xpos + b->xoff) + 0.5);
+      float y = (float) STBTT_ifloor((*ypos + b->yoff) + 0.5);
+      q->x0 = x;
+      q->y0 = y;
+      q->x1 = x + b->xoff2 - b->xoff;
+      q->y1 = y + b->yoff2 - b->yoff;
+   } else {
+      q->x0 = *xpos + b->xoff;
+      q->y0 = *ypos + b->yoff;
+      q->x1 = *xpos + b->xoff2;
+      q->y1 = *ypos + b->yoff2;
+   }
+
+   q->s0 = b->x0 * ipw;
+   q->t0 = b->y0 * iph;
+   q->s1 = b->x1 * ipw;
+   q->t1 = b->y1 * iph;
+
+   *xpos += b->xadvance;
+}
+
 
 //////////////////////////////////////////////////////////////////////////////
 //
