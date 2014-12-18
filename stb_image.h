@@ -414,11 +414,6 @@ static int stbi__sse2_available()
 
 #else // assume GCC-style if not VC++
 #define STBI_SIMD_ALIGN(type, name) type name __attribute__((aligned(16)))
-#endif
-#endif
-
-#ifndef STBI_SIMD_ALIGN
-#define STBI_SIMD_ALIGN(type, name) type name
 
 static int stbi__sse2_available()
 {
@@ -431,6 +426,11 @@ static int stbi__sse2_available()
    return 0;
 #endif
 }
+#endif
+#endif
+
+#ifndef STBI_SIMD_ALIGN
+#define STBI_SIMD_ALIGN(type, name) type name
 #endif
 
 ///////////////////////////////////////////////
