@@ -1040,6 +1040,9 @@ typedef struct
 
    int scan_n, order[4];
    int restart_interval, todo;
+
+// kernels
+   void (*idct_block_kernel)(stbi_uc *out, int out_stride, short data[64]);
 } stbi__jpeg;
 
 static int stbi__build_huffman(stbi__huffman *h, int *count)
@@ -1457,11 +1460,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
          for (i=0; i < w; ++i) {
             int ha = z->img_comp[n].ha;
             if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n, z->dequant[z->img_comp[n].tq])) return 0;
-            #ifdef STBI_SIMD
-            stbi__idct_installed(z->img_comp[n].data+z->img_comp[n].w2*j*8+i*8, z->img_comp[n].w2, data, stbi__dq_ones);
-            #else
-            stbi__idct_block(z->img_comp[n].data+z->img_comp[n].w2*j*8+i*8, z->img_comp[n].w2, data);
-            #endif
+            z->idct_block_kernel(z->img_comp[n].data+z->img_comp[n].w2*j*8+i*8, z->img_comp[n].w2, data);
             // every data block is an MCU, so countdown the restart interval
             if (--z->todo <= 0) {
                if (z->code_bits < 24) stbi__grow_buffer_unsafe(z);
@@ -1488,11 +1487,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                      int y2 = (j*z->img_comp[n].v + y)*8;
                      int ha = z->img_comp[n].ha;
                      if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n, z->dequant[z->img_comp[n].tq])) return 0;
-                     #ifdef STBI_SIMD
-                     stbi__idct_installed(z->img_comp[n].data+z->img_comp[n].w2*y2+x2, z->img_comp[n].w2, data, stbi__dq_ones);
-                     #else
-                     stbi__idct_block(z->img_comp[n].data+z->img_comp[n].w2*y2+x2, z->img_comp[n].w2, data);
-                     #endif
+                     z->idct_block_kernel(z->img_comp[n].data+z->img_comp[n].w2*y2+x2, z->img_comp[n].w2, data);
                   }
                }
             }
@@ -1863,6 +1858,11 @@ STBIDEF void stbi_install_YCbCr_to_RGB(stbi_YCbCr_to_RGB_run func)
 }
 #endif
 
+// set up the kernels
+static void stbi__setup_jpeg(stbi__jpeg *j)
+{
+   j->idct_block_kernel = stbi__idct_block;
+}
 
 // clean up the temporary component buffers
 static void stbi__cleanup_jpeg(stbi__jpeg *j)
@@ -1996,6 +1996,7 @@ static unsigned char *stbi__jpeg_load(stbi__context *s, int *x, int *y, int *com
 {
    stbi__jpeg j;
    j.s = s;
+   stbi__setup_jpeg(&j);
    return load_jpeg_image(&j, x,y,comp,req_comp);
 }
 
@@ -2004,6 +2005,7 @@ static int stbi__jpeg_test(stbi__context *s)
    int r;
    stbi__jpeg j;
    j.s = s;
+   stbi__setup_jpeg(&j);
    r = decode_jpeg_header(&j, SCAN_type);
    stbi__rewind(s);
    return r;
