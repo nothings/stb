@@ -328,11 +328,6 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 
 // define faster low-level operations (typically SIMD support)
 #ifdef STBI_SIMD
-typedef void (*stbi_idct_8x8)(stbi_uc *out, int out_stride, short data[64], unsigned short *dequantize);
-// compute an integer IDCT on "input"
-//     input[x] = data[x] * dequantize[x]
-//     write results to 'out': 64 samples, each run of 8 spaced by 'out_stride'
-//                             CLAMP results to 0..255
 typedef void (*stbi_YCbCr_to_RGB_run)(stbi_uc *output, stbi_uc const  *y, stbi_uc const *cb, stbi_uc const *cr, int count, int step);
 // compute a conversion from YCbCr to RGB
 //     'count' pixels
@@ -341,7 +336,6 @@ typedef void (*stbi_YCbCr_to_RGB_run)(stbi_uc *output, stbi_uc const  *y, stbi_u
 //     cb: Cb input channel; scale/biased to be 0..255
 //     cr: Cr input channel; scale/biased to be 0..255
 
-STBIDEF void stbi_install_idct(stbi_idct_8x8 func);
 STBIDEF void stbi_install_YCbCr_to_RGB(stbi_YCbCr_to_RGB_run func);
 #endif // STBI_SIMD
 
@@ -1611,12 +1605,6 @@ static void stbi__idct_sse2(stbi_uc *out, int out_stride, short data[64])
 }
 
 #endif // STBI_SSE2
-
-#ifdef STBI_SIMD
-STBIDEF void stbi_install_idct(stbi_idct_8x8 func)
-{
-}
-#endif
 
 #define STBI__MARKER_none  0xff
 // if there's a pending marker from the entropy stream, return that
