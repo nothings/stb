@@ -191,6 +191,19 @@
 //
 // The three functions you must define are "read" (reads some bytes of data),
 // "skip" (skips some bytes of data), "eof" (reports if the stream is at the end).
+//
+// ===========================================================================
+//
+// SIMD support
+//
+// The JPEG decoder will automatically use SIMD kernels where supported,
+// replacing the STBI_SIMD-do-it-yourself interface from previous versions.
+// The code will automatically detect if the required SIMD instructions are
+// available, and fall back to the generic C version where they're not.
+//
+// The supplied kernels are designed to produce results that are bit-identical
+// to the C versions. Nevertheless, if you want to disable this functionality,
+// define STBI_NO_SIMD.
 
 
 #ifndef STBI_NO_STDIO
@@ -402,6 +415,21 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
    #define stbi_lrot(x,y)  _lrotl(x,y)
 #else
    #define stbi_lrot(x,y)  (((x) << (y)) | ((x) >> (32 - (y))))
+#endif
+
+#if !defined(STBI_NO_SIMD) && (defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86))
+#define STBI_SSE2
+#include <emmintrin.h>
+
+#ifdef _MSC_VER
+#define STBI_SIMD_ALIGN(type, name) __declspec(align(16)) type name
+#else // assume GCC-style if not VC++
+#define STBI_SIMD_ALIGN(type, name) type name __attribute__((aligned(16)))
+#endif
+#endif
+
+#ifndef STBI_SIMD_ALIGN
+#define STBI_SIMD_ALIGN(type, name) type name
 #endif
 
 ///////////////////////////////////////////////
@@ -1445,10 +1473,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
    stbi__jpeg_reset(z);
    if (z->scan_n == 1) {
       int i,j;
-      #ifdef STBI_SIMD
-      __declspec(align(16))
-      #endif
-      short data[64];
+      STBI_SIMD_ALIGN(short, data[64]);
       int n = z->order[0];
       // non-interleaved data, we just need to process one block at a time,
       // in trivial scanline order
@@ -1473,7 +1498,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
       }
    } else { // interleaved!
       int i,j,k,x,y;
-      short data[64];
+      STBI_SIMD_ALIGN(short, data[64]);
       for (j=0; j < z->img_mcu_y; ++j) {
          for (i=0; i < z->img_mcu_x; ++i) {
             // scan an interleaved mcu... process scan_n components in order
