@@ -25,7 +25,7 @@
 
       - decode from memory or through FILE (define STBI_NO_STDIO to remove code)
       - decode from arbitrary I/O callbacks
-      - overridable dequantizing-IDCT, YCbCr-to-RGB conversion (define STBI_SIMD)
+      - SIMD acceleration on x86/x64
 
    Latest revisions:
       1.48 (2014-12-14) fix incorrectly-named assert()
@@ -324,20 +324,6 @@ STBIDEF int   stbi_zlib_decode_buffer(char *obuffer, int olen, const char *ibuff
 
 STBIDEF char *stbi_zlib_decode_noheader_malloc(const char *buffer, int len, int *outlen);
 STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const char *ibuffer, int ilen);
-
-
-// define faster low-level operations (typically SIMD support)
-#ifdef STBI_SIMD
-typedef void (*stbi_YCbCr_to_RGB_run)(stbi_uc *output, stbi_uc const  *y, stbi_uc const *cb, stbi_uc const *cr, int count, int step);
-// compute a conversion from YCbCr to RGB
-//     'count' pixels
-//     write pixels to 'output'; each pixel is 'step' bytes (either 3 or 4; if 4, write '255' as 4th), order R,G,B
-//     y: Y input channel
-//     cb: Cb input channel; scale/biased to be 0..255
-//     cr: Cr input channel; scale/biased to be 0..255
-
-STBIDEF void stbi_install_YCbCr_to_RGB(stbi_YCbCr_to_RGB_run func);
-#endif // STBI_SIMD
 
 
 #ifdef __cplusplus
@@ -1074,6 +1060,7 @@ typedef struct
 
 // kernels
    void (*idct_block_kernel)(stbi_uc *out, int out_stride, short data[64]);
+   void (*YCbCr_to_RGB_kernel)(stbi_uc *out, const stbi_uc *y, const stbi_uc *pcb, const stbi_uc *pcr, int count, int step);
 } stbi__jpeg;
 
 static int stbi__build_huffman(stbi__huffman *h, int *count)
@@ -1354,15 +1341,6 @@ stbi_inline static stbi_uc stbi__clamp(int x)
    t2 += p2+p3;                                \
    t1 += p2+p4;                                \
    t0 += p1+p3;
-
-#ifdef STBI_SIMD
-static unsigned short stbi__dq_ones[64] = {
-   1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
-   1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
-   1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
-   1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,
-};
-#endif
 
 // .344 seconds on 3*anemones.jpg
 static void stbi__idct_block(stbi_uc *out, int out_stride, short data[64])
@@ -2045,12 +2023,94 @@ static void stbi__YCbCr_to_RGB_row(stbi_uc *out, const stbi_uc *y, const stbi_uc
    }
 }
 
-#ifdef STBI_SIMD
-static stbi_YCbCr_to_RGB_run stbi__YCbCr_installed = stbi__YCbCr_to_RGB_row;
-
-STBIDEF void stbi_install_YCbCr_to_RGB(stbi_YCbCr_to_RGB_run func)
+#ifdef STBI_SSE2
+static void stbi__YCbCr_to_RGB_sse2(stbi_uc *out, stbi_uc const *y, stbi_uc const *pcb, stbi_uc const *pcr, int count, int step)
 {
-   stbi__YCbCr_installed = func;
+   int i = 0;
+
+   // step == 3 is pretty ugly on the final interleave, and i'm not convinced
+   // it's useful in practice (you wouldn't use it for textures, for example).
+   // so just accelerate step == 4 case.
+   //
+   // note: unlike the IDCT, this isn't bit-identical to the integer version.
+   if (step == 4) {
+      // this is a fairly straightforward implementation and not super-optimized.
+      __m128i signflip = _mm_set1_epi8(-0x80);
+      __m128i cr_const0 = _mm_set1_epi16((short) ( 1.40200f*4096.0f));
+      __m128i cr_const1 = _mm_set1_epi16((short) (-0.71414f*4096.0f));
+      __m128i cb_const0 = _mm_set1_epi16((short) (-0.34414f*4096.0f));
+      __m128i cb_const1 = _mm_set1_epi16((short) ( 1.77200f*4096.0f));
+      __m128i y_bias = _mm_set1_epi16(8);
+      __m128i xw = _mm_set1_epi16(255);
+
+      for (; i+7 < count; i += 8) {
+         // load
+         __m128i zero = _mm_setzero_si128();
+         __m128i y_bytes = _mm_loadl_epi64((__m128i *) (y+i));
+         __m128i cr_bytes = _mm_loadl_epi64((__m128i *) (pcr+i));
+         __m128i cb_bytes = _mm_loadl_epi64((__m128i *) (pcb+i));
+         __m128i cr_bias = _mm_xor_si128(cr_bytes, signflip); // -128
+         __m128i cb_bias = _mm_xor_si128(cb_bytes, signflip); // -128
+
+         // unpack to short (and left-shift cr, cb by 8)
+         __m128i yw  = _mm_unpacklo_epi8(y_bytes, zero);
+         __m128i crw = _mm_unpacklo_epi8(_mm_setzero_si128(), cr_bias);
+         __m128i cbw = _mm_unpacklo_epi8(_mm_setzero_si128(), cb_bias);
+
+         // color transform
+         __m128i yws = _mm_slli_epi16(yw, 4);
+         __m128i cr0 = _mm_mulhi_epi16(cr_const0, crw);
+         __m128i cb0 = _mm_mulhi_epi16(cb_const0, cbw);
+         __m128i ywb = _mm_add_epi16(yws, y_bias);
+         __m128i cb1 = _mm_mulhi_epi16(cbw, cb_const1);
+         __m128i cr1 = _mm_mulhi_epi16(crw, cr_const1);
+         __m128i rws = _mm_add_epi16(cr0, ywb);
+         __m128i gwt = _mm_add_epi16(cb0, ywb);
+         __m128i bws = _mm_add_epi16(ywb, cb1);
+         __m128i gws = _mm_add_epi16(gwt, cr1);
+
+         // descale
+         __m128i rw = _mm_srai_epi16(rws, 4);
+         __m128i bw = _mm_srai_epi16(bws, 4);
+         __m128i gw = _mm_srai_epi16(gws, 4);
+
+         // back to byte, set up for transpose
+         __m128i brb = _mm_packus_epi16(rw, bw);
+         __m128i gxb = _mm_packus_epi16(gw, xw);
+
+         // transpose to interleave channels
+         __m128i t0 = _mm_unpacklo_epi8(brb, gxb);
+         __m128i t1 = _mm_unpackhi_epi8(brb, gxb);
+         __m128i o0 = _mm_unpacklo_epi16(t0, t1);
+         __m128i o1 = _mm_unpackhi_epi16(t0, t1);
+
+         // store
+         _mm_storeu_si128((__m128i *) (out + 0), o0);
+         _mm_storeu_si128((__m128i *) (out + 16), o1);
+         out += 32;
+      }
+   }
+
+   for (; i < count; ++i) {
+      int y_fixed = (y[i] << 16) + 32768; // rounding
+      int r,g,b;
+      int cr = pcr[i] - 128;
+      int cb = pcb[i] - 128;
+      r = y_fixed + cr*float2fixed(1.40200f);
+      g = y_fixed - cr*float2fixed(0.71414f) - cb*float2fixed(0.34414f);
+      b = y_fixed                            + cb*float2fixed(1.77200f);
+      r >>= 16;
+      g >>= 16;
+      b >>= 16;
+      if ((unsigned) r > 255) { if (r < 0) r = 0; else r = 255; }
+      if ((unsigned) g > 255) { if (g < 0) g = 0; else g = 255; }
+      if ((unsigned) b > 255) { if (b < 0) b = 0; else b = 255; }
+      out[0] = (stbi_uc)r;
+      out[1] = (stbi_uc)g;
+      out[2] = (stbi_uc)b;
+      out[3] = 255;
+      out += step;
+   }
 }
 #endif
 
@@ -2058,10 +2118,12 @@ STBIDEF void stbi_install_YCbCr_to_RGB(stbi_YCbCr_to_RGB_run func)
 static void stbi__setup_jpeg(stbi__jpeg *j)
 {
    j->idct_block_kernel = stbi__idct_block;
+   j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_row;
 
 #ifdef STBI_SSE2
    if (stbi__sse2_available()) {
       j->idct_block_kernel = stbi__idct_sse2;
+      j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_sse2;
    }
 #endif
 }
@@ -2167,11 +2229,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
          if (n >= 3) {
             stbi_uc *y = coutput[0];
             if (z->s->img_n == 3) {
-               #ifdef STBI_SIMD
-               stbi__YCbCr_installed(out, y, coutput[1], coutput[2], z->s->img_x, n);
-               #else
-               stbi__YCbCr_to_RGB_row(out, y, coutput[1], coutput[2], z->s->img_x, n);
-               #endif
+               z->YCbCr_to_RGB_kernel(out, y, coutput[1], coutput[2], z->s->img_x, n);
             } else
                for (i=0; i < z->s->img_x; ++i) {
                   out[0] = out[1] = out[2] = y[i];
