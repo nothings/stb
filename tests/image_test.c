@@ -9,9 +9,48 @@
 
 #define PNGSUITE_PRIMARY
 
+#if 1
+void test_ycbcr(void)
+{
+   STBI_SIMD_ALIGN(unsigned char, y[256]);
+   STBI_SIMD_ALIGN(unsigned char, cb[256]);
+   STBI_SIMD_ALIGN(unsigned char, cr[256]);
+   STBI_SIMD_ALIGN(unsigned char, out1[256][4]);
+   STBI_SIMD_ALIGN(unsigned char, out2[256][4]);
+
+   int i,j,k;
+   int count = 0, bigcount=0;
+
+   for (i=0; i < 256; ++i) {
+      for (j=0; j < 256; ++j) {
+         for (k=0; k < 256; ++k) {
+            y[k] = k;
+            cb[k] = j;
+            cr[k] = i;
+         }
+         stbi__YCbCr_to_RGB_sse2(out1[0], y, cb, cr, 256, 4);
+         stbi__YCbCr_to_RGB_backport(out2[0], y, cb, cr, 256, 4);
+         for (k=0; k < 256; ++k) {
+            if (out1[k][0] != out2[k][0] || out1[k][1] != out2[k][1] || out1[k][2] != out2[k][2]) {
+               int dist1 = abs(out1[k][0] - out2[k][0]);
+               int dist2 = abs(out1[k][1] - out2[k][1]);
+               int dist3 = abs(out1[k][2] - out2[k][2]);
+               ++count;
+               if (dist2)
+                  ++bigcount;
+            }
+         }
+      }
+      printf("So far: %d (%d big)\n", count, bigcount);
+   }
+   printf("Final: %d (%d big)\n", count, bigcount);
+}
+#endif
+
 int main(int argc, char **argv)
 {
    int w,h;
+   test_ycbcr();
    if (argc > 1) {
       int i;
       for (i=1; i < argc; ++i) {
