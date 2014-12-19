@@ -81,7 +81,8 @@
 
 // Limitations:
 //    - no jpeg progressive support
-//    - non-HDR formats support 8-bit samples only (jpeg, png)
+//    - no 16-bit-per-channel PNG
+//    - no 12-bit-per-channel jpeg
 //    - no delayed line count (jpeg) -- IJG doesn't support either
 //    - no 1-bit BMP
 //    - GIF always returns *comp=4
@@ -196,8 +197,12 @@
 //
 // SIMD support
 //
-// The JPEG decoder will automatically use SIMD kernels where supported,
-// replacing the STBI_SIMD-do-it-yourself interface from previous versions.
+// The JPEG decoder will automatically use SIMD kernels on x86 platforms
+// where supported.
+//
+// (The old do-it-yourself SIMD API is no longer supported in the current
+// code.)
+//
 // The code will automatically detect if the required SIMD instructions are
 // available, and fall back to the generic C version where they're not.
 //
@@ -402,16 +407,35 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #include <emmintrin.h>
 
 #ifdef _MSC_VER
+
+#if _MSC_VER >= 1400  // not VC6
 #include <intrin.h> // __cpuid
+static int stbi__cpuid3(void)
+{
+   int info[4];
+   __cpuid(info,1);
+   return info[3];
+}
+#else
+static int stbi__cpuid3(void)
+{
+   int res;
+   __asm {
+      mov  eax,1
+      cpuid
+      mov  res,edx
+   }
+   return res;
+}
+#endif
+
 #define STBI_SIMD_ALIGN(type, name) __declspec(align(16)) type name
 
 static int stbi__sse2_available()
 {
-   int info[4];
-   __cpuid(info, 1);
-   return ((info[3] >> 26) & 1) != 0;
+   int info3 = stbi__cpuid3();
+   return ((info3 >> 26) & 1) != 0;
 }
-
 #else // assume GCC-style if not VC++
 #define STBI_SIMD_ALIGN(type, name) type name __attribute__((aligned(16)))
 
@@ -2117,6 +2141,35 @@ static void stbi__YCbCr_to_RGB_row(stbi_uc *out, const stbi_uc *y, const stbi_uc
    }
 }
 
+#define float2fixed2(x)  (((int) ((x) * 4096.0f + 0.5f)) << 8)
+
+static void stbi__YCbCr_to_RGB_backport(stbi_uc *out, const stbi_uc *y, const stbi_uc *pcb, const stbi_uc *pcr, int count, int step)
+{
+   int i;
+   for (i=0; i < count; ++i) {
+      int y_fixed = (y[i] << 20) + (1<<19); // rounding
+      int r,g,b;
+      int cr = pcr[i] - 128;
+      int cb = pcb[i] - 128;
+      r = y_fixed + cr*float2fixed2(1.40200f);
+      g = y_fixed;
+      g += (cr*-float2fixed2(0.71414f)) & 0xffff0000;
+      g += (cb*-float2fixed2(0.34414f)) & 0xffff0000;
+      b = y_fixed + cb*float2fixed2(1.77200f);
+      r >>= 20;
+      g >>= 20;
+      b >>= 20;
+      if ((unsigned) r > 255) { if (r < 0) r = 0; else r = 255; }
+      if ((unsigned) g > 255) { if (g < 0) g = 0; else g = 255; }
+      if ((unsigned) b > 255) { if (b < 0) b = 0; else b = 255; }
+      out[0] = (stbi_uc)r;
+      out[1] = (stbi_uc)g;
+      out[2] = (stbi_uc)b;
+      out[3] = 255;
+      out += step;
+   }
+}
+
 #ifdef STBI_SSE2
 static void stbi__YCbCr_to_RGB_sse2(stbi_uc *out, stbi_uc const *y, stbi_uc const *pcb, stbi_uc const *pcr, int count, int step)
 {
@@ -2130,37 +2183,35 @@ static void stbi__YCbCr_to_RGB_sse2(stbi_uc *out, stbi_uc const *y, stbi_uc cons
    if (step == 4) {
       // this is a fairly straightforward implementation and not super-optimized.
       __m128i signflip = _mm_set1_epi8(-0x80);
-      __m128i cr_const0 = _mm_set1_epi16((short) ( 1.40200f*4096.0f));
-      __m128i cr_const1 = _mm_set1_epi16((short) (-0.71414f*4096.0f));
-      __m128i cb_const0 = _mm_set1_epi16((short) (-0.34414f*4096.0f));
-      __m128i cb_const1 = _mm_set1_epi16((short) ( 1.77200f*4096.0f));
-      __m128i y_bias = _mm_set1_epi16(8);
-      __m128i xw = _mm_set1_epi16(255);
+      __m128i cr_const0 = _mm_set1_epi16(   (short) ( 1.40200f*4096.0f+0.5f));
+      __m128i cr_const1 = _mm_set1_epi16( - (short) ( 0.71414f*4096.0f+0.5f));
+      __m128i cb_const0 = _mm_set1_epi16( - (short) ( 0.34414f*4096.0f+0.5f));
+      __m128i cb_const1 = _mm_set1_epi16(   (short) ( 1.77200f*4096.0f+0.5f));
+      __m128i y_bias = _mm_set1_epi8((char) 128);
+      __m128i xw = _mm_set1_epi16(255); // alpha channel
 
       for (; i+7 < count; i += 8) {
          // load
-         __m128i zero = _mm_setzero_si128();
          __m128i y_bytes = _mm_loadl_epi64((__m128i *) (y+i));
          __m128i cr_bytes = _mm_loadl_epi64((__m128i *) (pcr+i));
          __m128i cb_bytes = _mm_loadl_epi64((__m128i *) (pcb+i));
-         __m128i cr_bias = _mm_xor_si128(cr_bytes, signflip); // -128
-         __m128i cb_bias = _mm_xor_si128(cb_bytes, signflip); // -128
+         __m128i cr_biased = _mm_xor_si128(cr_bytes, signflip); // -128
+         __m128i cb_biased = _mm_xor_si128(cb_bytes, signflip); // -128
 
          // unpack to short (and left-shift cr, cb by 8)
-         __m128i yw  = _mm_unpacklo_epi8(y_bytes, zero);
-         __m128i crw = _mm_unpacklo_epi8(_mm_setzero_si128(), cr_bias);
-         __m128i cbw = _mm_unpacklo_epi8(_mm_setzero_si128(), cb_bias);
+         __m128i yw  = _mm_unpacklo_epi8(y_bias, y_bytes);
+         __m128i crw = _mm_unpacklo_epi8(_mm_setzero_si128(), cr_biased);
+         __m128i cbw = _mm_unpacklo_epi8(_mm_setzero_si128(), cb_biased);
 
          // color transform
-         __m128i yws = _mm_slli_epi16(yw, 4);
+         __m128i yws = _mm_srli_epi16(yw, 4);
          __m128i cr0 = _mm_mulhi_epi16(cr_const0, crw);
          __m128i cb0 = _mm_mulhi_epi16(cb_const0, cbw);
-         __m128i ywb = _mm_add_epi16(yws, y_bias);
          __m128i cb1 = _mm_mulhi_epi16(cbw, cb_const1);
          __m128i cr1 = _mm_mulhi_epi16(crw, cr_const1);
-         __m128i rws = _mm_add_epi16(cr0, ywb);
-         __m128i gwt = _mm_add_epi16(cb0, ywb);
-         __m128i bws = _mm_add_epi16(ywb, cb1);
+         __m128i rws = _mm_add_epi16(cr0, yws);
+         __m128i gwt = _mm_add_epi16(cb0, yws);
+         __m128i bws = _mm_add_epi16(yws, cb1);
          __m128i gws = _mm_add_epi16(gwt, cr1);
 
          // descale
