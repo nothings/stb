@@ -7,6 +7,8 @@
    before you include this file in *one* C or C++ file to create the implementation.
 
    #define STBI_ASSERT(x) to avoid using assert.h.
+   #define STBI_MALLOC, STBI_REALLOC, and STBI_FREE to avoid using malloc,realloc,free
+
 
    QUICK NOTES:
       Primarily of interest to game developers and other people who can
@@ -27,7 +29,56 @@
       - decode from arbitrary I/O callbacks
       - SIMD acceleration on x86/x64
 
-   Latest revisions:
+   Full documentation under "DOCUMENTATION" below.
+
+
+   Revision 1.49 release notes:
+
+      - The old STBI_SIMD system which allowed installing a user-defined
+        IDCT etc. has been removed. If you need this, don't upgrade. My
+        assumption is that almost nobody was doing this, and those who
+        were will find the next bullet item more satisfactory anyway.
+
+      - x86 platforms now make use of SSE2 SIMD instructions if available.
+        This release is 2x faster on our test JPEGs, mostly due to SIMD.
+        This work was done by Fabian "ryg" Giesen.
+
+      - Compilation of SIMD code can be suppressed with
+            #define STBI_NO_SIMD
+        It should not be necessary to disable it unless you have issues
+        compiling (e.g. using an x86 compiler which doesn't support SSE
+        intrinsics or that doesn't support the method used to detect
+        SSE2 support at run-time), and even those can be reported as
+        bugs so I can refine the built-in compile-time checking to be
+        smarter.        
+
+      - RGB values computed for JPEG images are slightly different from
+        previous versions of stb_image. (This is due to using less
+        integer precision in SIMD.) The C code has been adjusted so
+        that the same RGB values will be computed regardless of whether
+        SIMD support is available, so your app should always produce
+        consistent results. But these results are slightly different from
+        previous versions. (Specifically, about 3% of available YCbCr values
+        will compute different RGB results from pre-1.49 versions by +-1;
+        most of the deviating values are one smaller in the G channel.)
+
+      - If you must produce consistent results with previous versions of
+        stb_image, #define STBI_JPEG_OLD and you will get the same results
+        you used to; however, you will not get the SIMD speedups for
+        the YCbCr-to-RGB conversion step (although you should still see
+        significant JPEG speedup from the other changes).
+
+        Please note that STBI_JPEG_OLD is a temporary feature; it will be
+        removed in future versions of the library. It is only intended for
+        back-compatibility use.
+
+
+   Latest revision history:
+      1.49 (2014-12-25) optimize JPG, incl. x86 SIMD
+                        PGM/PPM support
+                        allocation macros
+                        stbi_load_into() -- load into pre-defined memory
+                        STBI_MALLOC,STBI_REALLOC,STBI_FREE
       1.48 (2014-12-14) fix incorrectly-named assert()
       1.47 (2014-12-14) 1/2/4-bit PNG support (both grayscale and paletted)
                         optimize PNG
@@ -40,9 +91,6 @@
       1.41 (2014-06-25) fix search&replace that messed up comments/error messages
 
    See end of file for full revision history.
-
-   TODO:
-      stbi_info support for BMP,PSD,HDR,PIC
 
 
  ============================    Contributors    =========================
@@ -79,6 +127,8 @@
 #ifndef STBI_INCLUDE_STB_IMAGE_H
 #define STBI_INCLUDE_STB_IMAGE_H
 
+// DOCUMENTATION
+//
 // Limitations:
 //    - no jpeg progressive support
 //    - no 16-bit-per-channel PNG
@@ -248,14 +298,6 @@ extern "C" {
 // load image by filename, open file, or memory buffer
 //
 
-STBIDEF stbi_uc *stbi_load_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp);
-
-#ifndef STBI_NO_STDIO
-STBIDEF stbi_uc *stbi_load            (char const *filename,     int *x, int *y, int *comp, int req_comp);
-STBIDEF stbi_uc *stbi_load_from_file  (FILE *f,                  int *x, int *y, int *comp, int req_comp);
-// for stbi_load_from_file, file pointer is left pointing immediately after image
-#endif
-
 typedef struct
 {
    int      (*read)  (void *user,char *data,int size);   // fill 'data' with 'size' bytes.  return number of bytes actually read 
@@ -263,18 +305,26 @@ typedef struct
    int      (*eof)   (void *user);                       // returns nonzero if we are at end of file/data
 } stbi_io_callbacks;
 
-STBIDEF stbi_uc *stbi_load_from_callbacks  (stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp);
+STBIDEF stbi_uc *stbi_load               (char              const *filename,           int *x, int *y, int *comp, int req_comp);
+STBIDEF stbi_uc *stbi_load_from_memory   (stbi_uc           const *buffer, int len   , int *x, int *y, int *comp, int req_comp);
+STBIDEF stbi_uc *stbi_load_from_callbacks(stbi_io_callbacks const *clbk  , void *user, int *x, int *y, int *comp, int req_comp);
+
+#ifndef STBI_NO_STDIO
+STBIDEF stbi_uc *stbi_load_from_file  (FILE *f,                  int *x, int *y, int *comp, int req_comp);
+// for stbi_load_from_file, file pointer is left pointing immediately after image
+#endif
 
 #ifndef STBI_NO_HDR
-   STBIDEF float *stbi_loadf_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp);
-
-   #ifndef STBI_NO_STDIO
-   STBIDEF float *stbi_loadf            (char const *filename,   int *x, int *y, int *comp, int req_comp);
-   STBIDEF float *stbi_loadf_from_file  (FILE *f,                int *x, int *y, int *comp, int req_comp);
-   #endif
-   
+   STBIDEF float *stbi_loadf                 (char const *filename,           int *x, int *y, int *comp, int req_comp);
+   STBIDEF float *stbi_loadf_from_memory     (stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp);
    STBIDEF float *stbi_loadf_from_callbacks  (stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp);
 
+   #ifndef STBI_NO_STDIO
+   STBIDEF float *stbi_loadf_from_file  (FILE *f,                int *x, int *y, int *comp, int req_comp);
+   #endif
+#endif
+
+#ifndef STBI_NO_HDR
    STBIDEF void   stbi_hdr_to_ldr_gamma(float gamma);
    STBIDEF void   stbi_hdr_to_ldr_scale(float scale);
 
@@ -282,7 +332,7 @@ STBIDEF stbi_uc *stbi_load_from_callbacks  (stbi_io_callbacks const *clbk, void 
    STBIDEF void   stbi_ldr_to_hdr_scale(float scale);
 #endif // STBI_NO_HDR
 
-// stbi_is_hdr is always defined
+// stbi_is_hdr is always defined, but always returns false if STBI_NO_HDR
 STBIDEF int    stbi_is_hdr_from_callbacks(stbi_io_callbacks const *clbk, void *user);
 STBIDEF int    stbi_is_hdr_from_memory(stbi_uc const *buffer, int len);
 #ifndef STBI_NO_STDIO
@@ -648,7 +698,7 @@ static FILE *stbi__fopen(char const *filename, char const *mode)
 }
 
 
-STBIDEF unsigned char *stbi_load(char const *filename, int *x, int *y, int *comp, int req_comp)
+STBIDEF stbi_uc *stbi_load(char const *filename, int *x, int *y, int *comp, int req_comp)
 {
    FILE *f = stbi__fopen(filename, "rb");
    unsigned char *result;
@@ -658,7 +708,7 @@ STBIDEF unsigned char *stbi_load(char const *filename, int *x, int *y, int *comp
    return result;
 }
 
-STBIDEF unsigned char *stbi_load_from_file(FILE *f, int *x, int *y, int *comp, int req_comp)
+STBIDEF stbi_uc *stbi_load_from_file(FILE *f, int *x, int *y, int *comp, int req_comp)
 {
    unsigned char *result;
    stbi__context s;
@@ -672,14 +722,14 @@ STBIDEF unsigned char *stbi_load_from_file(FILE *f, int *x, int *y, int *comp, i
 }
 #endif //!STBI_NO_STDIO
 
-STBIDEF unsigned char *stbi_load_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp)
+STBIDEF stbi_uc *stbi_load_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_mem(&s,buffer,len);
    return stbi_load_main(&s,x,y,comp,req_comp);
 }
 
-STBIDEF unsigned char *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
+STBIDEF stbi_uc *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
@@ -740,7 +790,7 @@ STBIDEF float *stbi_loadf_from_file(FILE *f, int *x, int *y, int *comp, int req_
 // defined, for API simplicity; if STBI_NO_HDR is defined, it always
 // reports false!
 
-int stbi_is_hdr_from_memory(stbi_uc const *buffer, int len)
+STBIDEF int stbi_is_hdr_from_memory(stbi_uc const *buffer, int len)
 {
    #ifndef STBI_NO_HDR
    stbi__context s;
@@ -792,11 +842,11 @@ STBIDEF int      stbi_is_hdr_from_callbacks(stbi_io_callbacks const *clbk, void 
 static float stbi__h2l_gamma_i=1.0f/2.2f, stbi__h2l_scale_i=1.0f;
 static float stbi__l2h_gamma=2.2f, stbi__l2h_scale=1.0f;
 
-void   stbi_hdr_to_ldr_gamma(float gamma) { stbi__h2l_gamma_i = 1/gamma; }
-void   stbi_hdr_to_ldr_scale(float scale) { stbi__h2l_scale_i = 1/scale; }
+STBIDEF void   stbi_hdr_to_ldr_gamma(float gamma) { stbi__h2l_gamma_i = 1/gamma; }
+STBIDEF void   stbi_hdr_to_ldr_scale(float scale) { stbi__h2l_scale_i = 1/scale; }
 
-void   stbi_ldr_to_hdr_gamma(float gamma) { stbi__l2h_gamma = gamma; }
-void   stbi_ldr_to_hdr_scale(float scale) { stbi__l2h_scale = scale; }
+STBIDEF void   stbi_ldr_to_hdr_gamma(float gamma) { stbi__l2h_gamma = gamma; }
+STBIDEF void   stbi_ldr_to_hdr_scale(float scale) { stbi__l2h_scale = scale; }
 #endif
 
 
@@ -2112,10 +2162,10 @@ static stbi_uc *stbi__resample_row_generic(stbi_uc *out, stbi_uc *in_near, stbi_
    return out;
 }
 
+#ifdef STBI_JPEG_OLD
+// this is the same YCbCr-to-RGB calculation that stb_image has used
+// historically before the algorithm changes in 1.49
 #define float2fixed(x)  ((int) ((x) * 65536 + 0.5))
-
-// 0.38 seconds on 3*anemones.jpg   (0.25 with processor = Pro)
-// VC6 without processor=Pro is generating multiple LEAs per multiply!
 static void stbi__YCbCr_to_RGB_row(stbi_uc *out, const stbi_uc *y, const stbi_uc *pcb, const stbi_uc *pcr, int count, int step)
 {
    int i;
@@ -2140,10 +2190,11 @@ static void stbi__YCbCr_to_RGB_row(stbi_uc *out, const stbi_uc *y, const stbi_uc
       out += step;
    }
 }
-
-#define float2fixed2(x)  (((int) ((x) * 4096.0f + 0.5f)) << 8)
-
-static void stbi__YCbCr_to_RGB_backport(stbi_uc *out, const stbi_uc *y, const stbi_uc *pcb, const stbi_uc *pcr, int count, int step)
+#else
+// this is a reduced-precision calculation of YCbCr-to-RGB introduced
+// to make sure the code produces the same results in both SIMD and scalar
+#define float2fixed(x)  (((int) ((x) * 4096.0f + 0.5f)) << 8)
+static void stbi__YCbCr_to_RGB_row(stbi_uc *out, const stbi_uc *y, const stbi_uc *pcb, const stbi_uc *pcr, int count, int step)
 {
    int i;
    for (i=0; i < count; ++i) {
@@ -2151,11 +2202,9 @@ static void stbi__YCbCr_to_RGB_backport(stbi_uc *out, const stbi_uc *y, const st
       int r,g,b;
       int cr = pcr[i] - 128;
       int cb = pcb[i] - 128;
-      r = y_fixed + cr*float2fixed2(1.40200f);
-      g = y_fixed;
-      g += (cr*-float2fixed2(0.71414f)) & 0xffff0000;
-      g += (cb*-float2fixed2(0.34414f)) & 0xffff0000;
-      b = y_fixed + cb*float2fixed2(1.77200f);
+      r = y_fixed +  cr* float2fixed(1.40200f);
+      g = y_fixed + (cr*-float2fixed(0.71414f)) + ((cb*-float2fixed(0.34414f)) & 0xffff0000);
+      b = y_fixed                               +   cb* float2fixed(1.77200f);
       r >>= 20;
       g >>= 20;
       b >>= 20;
@@ -2169,6 +2218,7 @@ static void stbi__YCbCr_to_RGB_backport(stbi_uc *out, const stbi_uc *y, const st
       out += step;
    }
 }
+#endif
 
 #ifdef STBI_SSE2
 static void stbi__YCbCr_to_RGB_sse2(stbi_uc *out, stbi_uc const *y, stbi_uc const *pcb, stbi_uc const *pcr, int count, int step)
@@ -2182,7 +2232,7 @@ static void stbi__YCbCr_to_RGB_sse2(stbi_uc *out, stbi_uc const *y, stbi_uc cons
    // note: unlike the IDCT, this isn't bit-identical to the integer version.
    if (step == 4) {
       // this is a fairly straightforward implementation and not super-optimized.
-      __m128i signflip = _mm_set1_epi8(-0x80);
+      __m128i signflip  = _mm_set1_epi8(-0x80);
       __m128i cr_const0 = _mm_set1_epi16(   (short) ( 1.40200f*4096.0f+0.5f));
       __m128i cr_const1 = _mm_set1_epi16( - (short) ( 0.71414f*4096.0f+0.5f));
       __m128i cb_const0 = _mm_set1_epi16( - (short) ( 0.34414f*4096.0f+0.5f));
@@ -2237,16 +2287,16 @@ static void stbi__YCbCr_to_RGB_sse2(stbi_uc *out, stbi_uc const *y, stbi_uc cons
    }
 
    for (; i < count; ++i) {
-      int y_fixed = (y[i] << 16) + 32768; // rounding
+      int y_fixed = (y[i] << 20) + (1<<19); // rounding
       int r,g,b;
       int cr = pcr[i] - 128;
       int cb = pcb[i] - 128;
-      r = y_fixed + cr*float2fixed(1.40200f);
-      g = y_fixed - cr*float2fixed(0.71414f) - cb*float2fixed(0.34414f);
-      b = y_fixed                            + cb*float2fixed(1.77200f);
-      r >>= 16;
-      g >>= 16;
-      b >>= 16;
+      r = y_fixed + cr* float2fixed(1.40200f);
+      g = y_fixed + cr*-float2fixed(0.71414f) + ((cb*-float2fixed(0.34414f)) & 0xffff0000);
+      b = y_fixed                             +   cb* float2fixed(1.77200f);
+      r >>= 20;
+      g >>= 20;
+      b >>= 20;
       if ((unsigned) r > 255) { if (r < 0) r = 0; else r = 255; }
       if ((unsigned) g > 255) { if (g < 0) g = 0; else g = 255; }
       if ((unsigned) b > 255) { if (b < 0) b = 0; else b = 255; }
@@ -2269,7 +2319,9 @@ static void stbi__setup_jpeg(stbi__jpeg *j)
 #ifdef STBI_SSE2
    if (stbi__sse2_available()) {
       j->idct_block_kernel = stbi__idct_sse2;
+      #ifndef STBI_JPEG_OLD
       j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_sse2;
+      #endif
       j->resample_row_hv_2_kernel = stbi__resample_row_hv_2_sse2;
    }
 #endif
