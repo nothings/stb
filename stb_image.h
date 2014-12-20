@@ -1,4 +1,4 @@
-/* stb_image - v1.48 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v1.49 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
    when you control the images you're loading
                                      no warranty implied; use at your own risk
 
@@ -24,6 +24,7 @@
       GIF (*comp always reports as 4-channel)
       HDR (radiance rgbE format)
       PIC (Softimage PIC)
+      PNM (PPM and PGM binary only)
 
       - decode from memory or through FILE (define STBI_NO_STDIO to remove code)
       - decode from arbitrary I/O callbacks
@@ -1972,7 +1973,7 @@ static int decode_jpeg_header(stbi__jpeg *z, int scan)
    int m;
    z->marker = STBI__MARKER_none; // initialize cached marker to empty
    m = stbi__get_marker(z);
-   if (!stbi__SOI(m)) return stbi__err("no stbi__SOI","Corrupt JPEG");
+   if (!stbi__SOI(m)) return stbi__err("no SOI","Corrupt JPEG");
    if (scan == SCAN_type) return 1;
    m = stbi__get_marker(z);
    while (!stbi__SOF(m)) {
@@ -1980,7 +1981,7 @@ static int decode_jpeg_header(stbi__jpeg *z, int scan)
       m = stbi__get_marker(z);
       while (m == STBI__MARKER_none) {
          // some files have extra padding after their blocks, so ok, we'll scan
-         if (stbi__at_eof(z->s)) return stbi__err("no stbi__SOF", "Corrupt JPEG");
+         if (stbi__at_eof(z->s)) return stbi__err("no SOF", "Corrupt JPEG");
          m = stbi__get_marker(z);
       }
    }
@@ -4565,7 +4566,7 @@ static int stbi__gif_header(stbi__context *s, stbi__gif *g, int *comp, int is_in
 
    version = stbi__get8(s);
    if (version != '7' && version != '9')    return stbi__err("not GIF", "Corrupt GIF");
-   if (stbi__get8(s) != 'a')                      return stbi__err("not GIF", "Corrupt GIF");
+   if (stbi__get8(s) != 'a')                return stbi__err("not GIF", "Corrupt GIF");
  
    stbi__g_failure_reason = "";
    g->w = stbi__get16le(s);
@@ -5183,6 +5184,7 @@ static int stbi__pic_info(stbi__context *s, int *x, int *y, int *comp)
 // Known limitations:
 //    Does not support comments in the header section
 //    Does not support ASCII image data (formats P2 and P3)
+//    Does not support 16-bit-per-channel
 
 static int      stbi__pnm_test(stbi__context *s)
 {
@@ -5199,14 +5201,13 @@ static int      stbi__pnm_test(stbi__context *s)
 static stbi_uc *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    stbi_uc *out;
-   if (!stbi__pnm_info(s, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n)) {
-       return 0;
-   }
+   if (!stbi__pnm_info(s, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n))
+      return 0;
    *x = s->img_x;
    *y = s->img_y;
    *comp = s->img_n;
 
-   out = stbi__malloc(s->img_n * s->img_x * s->img_y);
+   out = (stbi_uc *) stbi__malloc(s->img_n * s->img_x * s->img_y);
    if (!out) return stbi__errpuc("outofmem", "Out of memory");
    stbi__getn(s, out, s->img_n * s->img_x * s->img_y);
 
@@ -5222,11 +5223,10 @@ static int      stbi__pnm_isspace(char c)
    return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
 }
 
-static void     stbi__pnm_skipspace(stbi__context *s, char *c)
+static void     stbi__pnm_skip_whitespace(stbi__context *s, char *c)
 {
-   while (!stbi__at_eof(s) && stbi__pnm_isspace(*c)) {
+   while (!stbi__at_eof(s) && stbi__pnm_isspace(*c))
       *c = (char) stbi__get8(s);
-   }
 }
 
 static int      stbi__pnm_isdigit(char c)
@@ -5239,8 +5239,7 @@ static int      stbi__pnm_getinteger(stbi__context *s, char *c)
    int value = 0;
 
    while (!stbi__at_eof(s) && stbi__pnm_isdigit(*c)) {
-      value *= 10;
-      value += *c - '0';
+      value = value*10 + (*c - '0');
       *c = (char) stbi__get8(s);
    }
 
@@ -5249,6 +5248,7 @@ static int      stbi__pnm_getinteger(stbi__context *s, char *c)
 
 static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
 {
+   int maxv;
    char c, p, t;
 
    stbi__rewind( s );
@@ -5261,30 +5261,23 @@ static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
        return 0;
    }
 
-   // '5' is 1-component .pgm; '6' is 3-component .ppm
-   *comp = (t == '6') ? 3 : 1;
+   *comp = (t == '6') ? 3 : 1;  // '5' is 1-component .pgm; '6' is 3-component .ppm
 
-   c = (char) stbi__get8(s);
+   c = (char) stbi__get8(s); 
+   stbi__pnm_skip_whitespace(s, &c);
 
-   // skip whitespace
-   stbi__pnm_skipspace(s, &c);
+   *x = stbi__pnm_getinteger(s, &c); // read width
+   stbi__pnm_skip_whitespace(s, &c);
 
-   // read width
-   *x = stbi__pnm_getinteger(s, &c);
+   *y = stbi__pnm_getinteger(s, &c); // read height
+   stbi__pnm_skip_whitespace(s, &c);
 
-   // skip whitespace
-   stbi__pnm_skipspace(s, &c);
+   maxv = stbi__pnm_getinteger(s, &c);  // read max value
 
-   // read height
-   *y = stbi__pnm_getinteger(s, &c);
-
-   // skip whitespace
-   stbi__pnm_skipspace(s, &c);
-
-   // read max value
-   stbi__pnm_getinteger(s, &c);
-
-   return 1;
+   if (maxv > 255)
+      return stbi__err("max value > 255", "PPM image not 8-bit");
+   else
+      return 1;
 }
 
 static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
