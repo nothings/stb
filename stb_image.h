@@ -25,7 +25,7 @@
 
       - decode from memory or through FILE (define STBI_NO_STDIO to remove code)
       - decode from arbitrary I/O callbacks
-      - SIMD acceleration on x86/x64
+      - SIMD acceleration on x86/x64 (SSE2) and ARM (NEON)
 
    Latest revisions:
       1.48 (2014-12-14) fix incorrectly-named assert()
@@ -198,16 +198,16 @@
 // SIMD support
 //
 // The JPEG decoder will automatically use SIMD kernels on x86 platforms
-// where supported.
+// where supported. (The old do-it-yourself SIMD API is no longer supported
+// in the current code.)
 //
-// (The old do-it-yourself SIMD API is no longer supported in the current
-// code.)
-//
-// The code will automatically detect if the required SIMD instructions are
-// available, and fall back to the generic C version where they're not.
+// On x86, SSE2 will automatically be used when available; if not, the
+// generic C versions are used as a fall-back. On ARM targets, the typical
+// path is to have separate builds for NEON and non-NEON devices. Therefore,
+// you have to defined STBI_NEON to get NEON loops.
 //
 // The supplied kernels are designed to produce results that are bit-identical
-// to the C versions. Nevertheless, if you want to disable this functionality,
+// to the C versions. Nevertheless, if you want to disable SIMD functionality,
 // define STBI_NO_SIMD.
 
 
@@ -451,6 +451,16 @@ static int stbi__sse2_available()
 #endif
 }
 #endif
+#endif
+
+// ARM NEON
+#if defined(STBI_NO_SIMD) && defined(STBI_NEON)
+#undef STBI_NEON
+#endif
+
+#ifdef STBI_NEON
+#include <arm_neon.h>
+#define STBI_SIMD_ALIGN(type, name) type name __attribute__((aligned(16)))
 #endif
 
 #ifndef STBI_SIMD_ALIGN
@@ -2020,12 +2030,11 @@ static stbi_uc *stbi__resample_row_hv_2(stbi_uc *out, stbi_uc *in_near, stbi_uc 
    return out;
 }
 
-#ifdef STBI_SSE2
-static stbi_uc *stbi__resample_row_hv_2_sse2(stbi_uc *out, stbi_uc *in_near, stbi_uc *in_far, int w, int hs)
+#if defined(STBI_SSE2) || defined(STBI_NEON)
+static stbi_uc *stbi__resample_row_hv_2_simd(stbi_uc *out, stbi_uc *in_near, stbi_uc *in_far, int w, int hs)
 {
    // need to generate 2x2 samples for every one in input
    int i=0,t0,t1;
-   __m128i bias = _mm_set1_epi16(8);
 
    if (w == 1) {
       out[0] = out[1] = stbi__div4(3*in_near[0] + in_far[0] + 2);
@@ -2037,6 +2046,7 @@ static stbi_uc *stbi__resample_row_hv_2_sse2(stbi_uc *out, stbi_uc *in_near, stb
    // note we can't handle the last pixel in a row in this loop
    // because we need to handle the filter boundary conditions.
    for (; i < ((w-1) & ~7); i += 8) {
+#if defined(STBI_SSE2)
       // load and perform the vertical filtering pass
       // this uses 3*x + y = 4*x + (y - x)
       __m128i zero  = _mm_setzero_si128();
@@ -2048,7 +2058,7 @@ static stbi_uc *stbi__resample_row_hv_2_sse2(stbi_uc *out, stbi_uc *in_near, stb
       __m128i nears = _mm_slli_epi16(nearw, 2);
       __m128i curr  = _mm_add_epi16(nears, diff); // current row
 
-      // horizontal filter works the same based on shifted of current
+      // horizontal filter works the same based on shifted vers of current
       // row. "prev" is current row shifted right by 1 pixel; we need to
       // insert the previous pixel value (from t1).
       // "next" is current row shifted left by 1 pixel, with first pixel
@@ -2062,6 +2072,7 @@ static stbi_uc *stbi__resample_row_hv_2_sse2(stbi_uc *out, stbi_uc *in_near, stb
       // even pixels = 3*cur + prev = cur*4 + (prev - cur)
       // odd  pixels = 3*cur + next = cur*4 + (next - cur)
       // note the shared term.
+      __m128i bias  = _mm_set1_epi16(8);
       __m128i curs = _mm_slli_epi16(curr, 2);
       __m128i prvd = _mm_sub_epi16(prev, curr);
       __m128i nxtd = _mm_sub_epi16(next, curr);
@@ -2078,6 +2089,41 @@ static stbi_uc *stbi__resample_row_hv_2_sse2(stbi_uc *out, stbi_uc *in_near, stb
       // pack and write output
       __m128i outv = _mm_packus_epi16(de0, de1);
       _mm_storeu_si128((__m128i *) (out + i*2), outv);
+#elif defined(STBI_NEON)
+      // load and perform the vertical filtering pass
+      // this uses 3*x + y = 4*x + (y - x)
+      uint8x8_t farb  = vld1_u8(in_far + i);
+      uint8x8_t nearb = vld1_u8(in_near + i);
+      int16x8_t diff  = vreinterpretq_s16_u16(vsubl_u8(farb, nearb));
+      int16x8_t nears = vreinterpretq_s16_u16(vshll_n_u8(nearb, 2));
+      int16x8_t curr  = vaddq_s16(nears, diff); // current row
+
+      // horizontal filter works the same based on shifted vers of current
+      // row. "prev" is current row shifted right by 1 pixel; we need to
+      // insert the previous pixel value (from t1).
+      // "next" is current row shifted left by 1 pixel, with first pixel
+      // of next block of 8 pixels added in.
+      int16x8_t prv0 = vextq_s16(curr, curr, 7);
+      int16x8_t nxt0 = vextq_s16(curr, curr, 1);
+      int16x8_t prev = vsetq_lane_s16(t1, prv0, 0);
+      int16x8_t next = vsetq_lane_s16(3*in_near[i+8] + in_far[i+8], nxt0, 7);
+
+      // horizontal filter, polyphase implementation since it's convenient:
+      // even pixels = 3*cur + prev = cur*4 + (prev - cur)
+      // odd  pixels = 3*cur + next = cur*4 + (next - cur)
+      // note the shared term.
+      int16x8_t curs = vshlq_n_s16(curr, 2);
+      int16x8_t prvd = vsubq_s16(prev, curr);
+      int16x8_t nxtd = vsubq_s16(next, curr);
+      int16x8_t even = vaddq_s16(curs, prvd);
+      int16x8_t odd  = vaddq_s16(curs, nxtd);
+
+      // undo scaling and round, then store with even/odd phases interleaved
+      uint8x8x2_t o;
+      o.val[0] = vqrshrun_n_s16(even, 4);
+      o.val[1] = vqrshrun_n_s16(odd,  4);
+      vst2_u8(out + i*2, o);
+#endif
 
       // "previous" value for next iter
       t1 = 3*in_near[i+7] + in_far[i+7];
@@ -2270,8 +2316,12 @@ static void stbi__setup_jpeg(stbi__jpeg *j)
    if (stbi__sse2_available()) {
       j->idct_block_kernel = stbi__idct_sse2;
       j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_sse2;
-      j->resample_row_hv_2_kernel = stbi__resample_row_hv_2_sse2;
+      j->resample_row_hv_2_kernel = stbi__resample_row_hv_2_simd;
    }
+#endif
+
+#ifdef STBI_NEON
+   j->resample_row_hv_2_kernel = stbi__resample_row_hv_2_simd;
 #endif
 }
 
