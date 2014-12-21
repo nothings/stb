@@ -7,7 +7,7 @@
 #define STB_DEFINE
 #include "stb.h"
 
-#define PNGSUITE_PRIMARY
+//#define PNGSUITE_PRIMARY
 
 #if 0
 void test_ycbcr(void)
@@ -52,10 +52,10 @@ int main(int argc, char **argv)
    int w,h;
    //test_ycbcr();
    if (argc > 1) {
-      int i;
+      int i, n;
+
       for (i=1; i < argc; ++i) {
          unsigned char *data;
-         int n;
          printf("%s\n", argv[i]);
          data = stbi_load(argv[i], &w, &h, &n, 4); if (data) free(data); else printf("Failed &n\n");
          data = stbi_load(argv[i], &w, &h,  0, 1); if (data) free(data); else printf("Failed 1\n");
