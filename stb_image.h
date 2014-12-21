@@ -652,7 +652,6 @@ STBIDEF const char *stbi_failure_reason(void)
 
 static int stbi__err(const char *str)
 {
-   fclose(stdout);
    stbi__g_failure_reason = str;
    return 0;
 }
@@ -1960,7 +1959,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                         int y2 = (j*z->img_comp[n].v + y)*8;
                         int ha = z->img_comp[n].ha;
                         if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n, z->dequant[z->img_comp[n].tq])) return 0;
-                        //z->idct_block_kernel(z->img_comp[n].data+z->img_comp[n].w2*y2+x2, z->img_comp[n].w2, data);
+                        z->idct_block_kernel(z->img_comp[n].data+z->img_comp[n].w2*y2+x2, z->img_comp[n].w2, data);
                      }
                   }
                }
@@ -4861,7 +4860,7 @@ static void stbi__gif_parse_colortable(stbi__context *s, stbi_uc pal[256][4], in
       pal[i][2] = stbi__get8(s);
       pal[i][1] = stbi__get8(s);
       pal[i][0] = stbi__get8(s);
-      pal[i][3] = transp ? 0 : 255;
+      pal[i][3] = transp == i ? 0 : 255;
    }   
 }
 
