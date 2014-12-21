@@ -33,16 +33,17 @@
    Full documentation under "DOCUMENTATION" below.
 
 
-   Revision 1.49 release notes:
+   Revision 2.00 release notes:
 
-      - The old STBI_SIMD system which allowed installing a user-defined
-        IDCT etc. has been removed. If you need this, don't upgrade. My
-        assumption is that almost nobody was doing this, and those who
-        were will find the next bullet item more satisfactory anyway.
+      - Progressive JPEG is now supported.
+
+      - PPM and PGM binary formats are now supported.
 
       - x86 platforms now make use of SSE2 SIMD instructions if available.
         This release is 2x faster on our test JPEGs, mostly due to SIMD.
         This work was done by Fabian "ryg" Giesen.
+
+      - ARM platforms now make use of NEON SIMD instructions if available.
 
       - Compilation of SIMD code can be suppressed with
             #define STBI_NO_SIMD
@@ -52,6 +53,11 @@
         SSE2 support at run-time), and even those can be reported as
         bugs so I can refine the built-in compile-time checking to be
         smarter.
+
+      - The old STBI_SIMD system which allowed installing a user-defined
+        IDCT etc. has been removed. If you need this, don't upgrade. My
+        assumption is that almost nobody was doing this, and those who
+        were will find the next bullet item more satisfactory anyway.
 
       - RGB values computed for JPEG images are slightly different from
         previous versions of stb_image. (This is due to using less
@@ -73,8 +79,6 @@
         removed in future versions of the library. It is only intended for
         back-compatibility use.
 
-      - Added support for PNM images.
-
       - Added STBI_MALLOC, STBI_REALLOC, and STBI_FREE macros for replacing
         the memory allocator. Unlike other STBI libraries, these macros don't
         support a context parameter, so if you need to pass a context in to
@@ -83,9 +87,11 @@
 
 
    Latest revision history:
-      1.49 (2014-12-25) optimize JPG, incl. x86 SIMD
+      2.00 (2014-12-25) optimize JPG, incl. x86 & NEON SIMD
+                        progressive JPEG
                         PGM/PPM support
                         STBI_MALLOC,STBI_REALLOC,STBI_FREE
+                        GIF bugfix
       1.48 (2014-12-14) fix incorrectly-named assert()
       1.47 (2014-12-14) 1/2/4-bit PNG support (both grayscale and paletted)
                         optimize PNG
@@ -2280,7 +2286,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
 
 #define stbi__SOF_progressive(x)   ((x) == 0xc2)
 
-static int decode_jpeg_header(stbi__jpeg *z, int scan)
+static int stbi__decode_jpeg_header(stbi__jpeg *z, int scan)
 {
    int m;
    z->marker = STBI__MARKER_none; // initialize cached marker to empty
@@ -2303,11 +2309,11 @@ static int decode_jpeg_header(stbi__jpeg *z, int scan)
 }
 
 // decode image to YCbCr format
-static int decode_jpeg_image(stbi__jpeg *j)
+static int stbi__decode_jpeg_image(stbi__jpeg *j)
 {
    int m;
    j->restart_interval = 0;
-   if (!decode_jpeg_header(j, SCAN_load)) return 0;
+   if (!stbi__decode_jpeg_header(j, SCAN_load)) return 0;
    m = stbi__get_marker(j);
    while (!stbi__EOI(m)) {
       if (stbi__SOS(m)) {
@@ -2714,7 +2720,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
    if (req_comp < 0 || req_comp > 4) return stbi__errpuc("bad req_comp", "Internal error");
 
    // load a jpeg image from whichever source, but leave in YCbCr format
-   if (!decode_jpeg_image(z)) { stbi__cleanup_jpeg(z); return NULL; }
+   if (!stbi__decode_jpeg_image(z)) { stbi__cleanup_jpeg(z); return NULL; }
 
    // determine actual number of components to generate
    n = req_comp ? req_comp : z->s->img_n;
@@ -2816,14 +2822,14 @@ static int stbi__jpeg_test(stbi__context *s)
    stbi__jpeg j;
    j.s = s;
    stbi__setup_jpeg(&j);
-   r = decode_jpeg_header(&j, SCAN_type);
+   r = stbi__decode_jpeg_header(&j, SCAN_type);
    stbi__rewind(s);
    return r;
 }
 
 static int stbi__jpeg_info_raw(stbi__jpeg *j, int *x, int *y, int *comp)
 {
-   if (!decode_jpeg_header(j, SCAN_header)) {
+   if (!stbi__decode_jpeg_header(j, SCAN_header)) {
       stbi__rewind( j->s );
       return 0;
    }
@@ -5668,10 +5674,11 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
-      1.49 (2014-12-25) optimize JPG, incl. x86 SIMD (ryg)
+      2.00 (2014-12-25) optimize JPG, incl. x86 & NEON SIMD (ryg)
+                        progressive JPEG (stb)
                         PGM/PPM support (Ken Miller)
                         STBI_MALLOC,STBI_REALLOC,STBI_FREE
-                        stbi_load_into() -- load into pre-defined memory
+                        GIF bugfix -- seemingly never worked
       1.48 (2014-12-14) fix incorrectly-named assert()
       1.47 (2014-12-14) 1/2/4-bit PNG support, both direct and paletted (Omar Cornut & stb)
                         optimize PNG (ryg)
