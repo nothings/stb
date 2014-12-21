@@ -7,7 +7,7 @@
 #define STB_DEFINE
 #include "stb.h"
 
-//#define PNGSUITE_PRIMARY
+#define PNGSUITE_PRIMARY
 
 #if 0
 void test_ycbcr(void)
