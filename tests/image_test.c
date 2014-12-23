@@ -19,18 +19,22 @@ void test_ycbcr(void)
    STBI_SIMD_ALIGN(unsigned char, out2[256][4]);
 
    int i,j,k;
-   int count = 0, bigcount=0;
+   int count = 0, bigcount=0, total=0;
 
    for (i=0; i < 256; ++i) {
       for (j=0; j < 256; ++j) {
          for (k=0; k < 256; ++k) {
-            y[k] = k;
+            y [k] = k;
             cb[k] = j;
             cr[k] = i;
          }
          stbi__YCbCr_to_RGB_row(out1[0], y, cb, cr, 256, 4);
          stbi__YCbCr_to_RGB_sse2(out2[0], y, cb, cr, 256, 4);
          for (k=0; k < 256; ++k) {
+            // inaccurate proxy for values outside of RGB cube
+            if (out1[k][0] == 0 || out1[k][1] == 0 || out1[k][2] == 0 || out1[k][0] == 255 || out1[k][1] == 255 || out1[k][2] == 255)
+               continue;
+            ++total;
             if (out1[k][0] != out2[k][0] || out1[k][1] != out2[k][1] || out1[k][2] != out2[k][2]) {
                int dist1 = abs(out1[k][0] - out2[k][0]);
                int dist2 = abs(out1[k][1] - out2[k][1]);
@@ -41,9 +45,9 @@ void test_ycbcr(void)
             }
          }
       }
-      printf("So far: %d (%d big)\n", count, bigcount);
+      printf("So far: %d (%d big) of %d\n", count, bigcount, total);
    }
-   printf("Final: %d (%d big)\n", count, bigcount);
+   printf("Final: %d (%d big) of %d\n", count, bigcount, total);
 }
 #endif
 
