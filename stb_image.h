@@ -1,5 +1,4 @@
 /* stb_image - v1.49 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
-   when you control the images you're loading
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -14,7 +13,7 @@
       Primarily of interest to game developers and other people who can
           avoid problematic images and only need the trivial interface
 
-      JPEG baseline (no JPEG progressive)
+      JPEG baseline & progressive (no arithmetic)
       PNG 1/2/4/8-bit-per-channel (16 bpc not supported)
 
       TGA (not sure what subset, if a subset)
@@ -37,13 +36,13 @@
 
       - Progressive JPEG is now supported.
 
-      - PPM and PGM binary formats are now supported.
+      - PPM and PGM binary formats are now supported, thanks to Ken Miller.
 
-      - x86 platforms now make use of SSE2 SIMD instructions if available.
-        This release is 2x faster on our test JPEGs, mostly due to SIMD.
+      - x86 platforms now make use of SSE2 SIMD instructions for
+        JPEG decoding, and ARM platforms use NEON SIMD. This release is
+        2x faster on our test JPEGs on x86 (except progressive JPEGs,
+        which see much less speedup), mostly due to the addition of SIMD.
         This work was done by Fabian "ryg" Giesen.
-
-      - ARM platforms now make use of NEON SIMD instructions if available.
 
       - Compilation of SIMD code can be suppressed with
             #define STBI_NO_SIMD
@@ -57,7 +56,7 @@
       - The old STBI_SIMD system which allowed installing a user-defined
         IDCT etc. has been removed. If you need this, don't upgrade. My
         assumption is that almost nobody was doing this, and those who
-        were will find the next bullet item more satisfactory anyway.
+        were will find the built-in SIMD more satisfactory anyway.
 
       - RGB values computed for JPEG images are slightly different from
         previous versions of stb_image. (This is due to using less
@@ -87,7 +86,7 @@
 
 
    Latest revision history:
-      2.00 (2014-12-25) optimize JPG, incl. x86 & NEON SIMD
+      2.00 (2014-12-25) optimize JPEG, incl. x86 & NEON SIMD
                         progressive JPEG
                         PGM/PPM support
                         STBI_MALLOC,STBI_REALLOC,STBI_FREE
@@ -903,9 +902,9 @@ STBIDEF void   stbi_ldr_to_hdr_scale(float scale) { stbi__l2h_scale = scale; }
 
 enum
 {
-   SCAN_load=0,
-   SCAN_type,
-   SCAN_header
+   STBI__SCAN_load=0,
+   STBI__SCAN_type,
+   STBI__SCAN_header
 };
 
 static void stbi__refill_buffer(stbi__context *s)
@@ -1454,7 +1453,7 @@ static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman 
    return 1;
 }
 
-static int stbi__jpeg_decode_block_prog_dc(stbi__jpeg *j, short data[64], stbi__huffman *hdc, stbi__huffman *hac, stbi__int16 *fac, int b, stbi_uc *dequant)
+static int stbi__jpeg_decode_block_prog_dc(stbi__jpeg *j, short data[64], stbi__huffman *hdc, int b)
 {
    int diff,dc;
    int t;
@@ -1470,18 +1469,18 @@ static int stbi__jpeg_decode_block_prog_dc(stbi__jpeg *j, short data[64], stbi__
 
       dc = j->img_comp[b].dc_pred + diff;
       j->img_comp[b].dc_pred = dc;
-      data[0] = (short) ((dc << j->succ_low));
+      data[0] = (short) (dc << j->succ_low);
    } else {
       // refinement scan for DC coefficient
       if (stbi__jpeg_get_bit(j))
-         data[0] += 1 << j->succ_low;
+         data[0] += (short) (1 << j->succ_low);
    }
    return 1;
 }
 
 // @OPTIMIZE: store non-zigzagged during the decode passes,
 // and only de-zigzag when dequantizing
-static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__huffman *hdc, stbi__huffman *hac, stbi__int16 *fac, int b, stbi_uc *dequant)
+static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__huffman *hac, stbi__int16 *fac)
 {
    int k;
    if (j->spec_start == 0) return stbi__err("can't merge dc and ac", "Corrupt JPEG");
@@ -1501,7 +1500,7 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
          if (j->code_bits < 16) stbi__grow_buffer_unsafe(j);
          c = (j->code_buffer >> (32 - FAST_BITS)) & ((1 << FAST_BITS)-1);
          r = fac[c];
-         if (0 && r) { // fast-AC path
+         if (r) { // fast-AC path
             k += (r >> 4) & 15; // run
             s = r & 15; // combined length
             j->code_buffer <<= s;
@@ -1532,24 +1531,36 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
    } else {
       // refinement scan for these AC coefficients
 
-      int bit = 1 << j->succ_low;
-      k = j->spec_start;
+      short bit = (short) (1 << j->succ_low);
 
-      if (j->eob_run == 0) {
+      if (j->eob_run) {
+         --j->eob_run;
+         for (k = j->spec_start; k <= j->spec_end; ++k) {
+            short *p = &data[stbi__jpeg_dezigzag[k]];
+            if (*p != 0)
+               if (stbi__jpeg_get_bit(j))
+                  if ((*p & bit)==0)
+                     if (*p > 0)
+                        *p += bit;
+                     else
+                        *p -= bit;
+         }
+      } else {
+         k = j->spec_start;
          do {
             int r,s;
-            int rs = stbi__jpeg_huff_decode(j, hac);
+            int rs = stbi__jpeg_huff_decode(j, hac); // @OPTIMIZE see if we can use the fast path here, advance-by-r is so slow, eh
             if (rs < 0) return stbi__err("bad huffman code","Corrupt JPEG");
             s = rs & 15;
             r = rs >> 4;
             if (s == 0) {
                if (r < 15) {
-                  j->eob_run = (1 << r);
+                  j->eob_run = (1 << r) - 1;
                   if (r)
                      j->eob_run += stbi__jpeg_get_bits(j, r);
-                  break; // fall through to j->eob_run != 0 case below, which continues k
-               }
-               r = 16; // r=15 is the code for 16 0s
+                  r = 64; // force end of block
+               } else
+                  r = 16; // r=15 is the code for 16 0s
             } else {
                if (s != 1) return stbi__err("bad huffman code", "Corrupt JPEG");
                // sign bit
@@ -1563,47 +1574,26 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
             while (k <= j->spec_end) {
                short *p = &data[stbi__jpeg_dezigzag[k]];
                if (*p != 0) {
-                  if (stbi__jpeg_get_bit(j)) {
-                     if ((*p & bit) == 0)
+                  if (stbi__jpeg_get_bit(j))
+                     if ((*p & bit)==0)
                         if (*p > 0)
                            *p += bit;
                         else
                            *p -= bit;
-                  }
                   ++k;
                } else {
-                  if (r == 0)
+                  if (r == 0) {
+                     if (s)
+                        data[stbi__jpeg_dezigzag[k++]] = s;
                      break;
+                  }
                   --r;
                   ++k;
                }
             }
-
-            if (s && k <= j->spec_end) {
-               data[stbi__jpeg_dezigzag[k++]] = s;
-            }
          } while (k <= j->spec_end);
       }
-
-      // catch case where a previous block had an eob run OR this block
-      // has an eob_run (in the previous if)
-      if (j->eob_run) {
-         --j->eob_run;
-         for (; k <= j->spec_end; ++k) {
-            short *p = &data[stbi__jpeg_dezigzag[k]];
-            if (*p != 0)
-               // if we already have a history for this, get a bit of it
-               if (stbi__jpeg_get_bit(j)) {
-                  if ((*p & bit) == 0) // not sure about this, it's in Rich's code, it would mean some bits get sent more than once
-                     if (*p > 0)
-                        *p += bit;
-                     else
-                        *p -= bit;
-               }
-         }
-      }
    }
-   
    return 1;
 }
 
@@ -1964,7 +1954,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
             }
          }
          return 1;
-      } else { // interleaved!
+      } else { // interleaved
          int i,j,k,x,y;
          STBI_SIMD_ALIGN(short, data[64]);
          for (j=0; j < z->img_mcu_y; ++j) {
@@ -1988,8 +1978,6 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                // so now count down the restart interval
                if (--z->todo <= 0) {
                   if (z->code_bits < 24) stbi__grow_buffer_unsafe(z);
-                  // if it's NOT a restart, then just bail, so we get corrupt data
-                  // rather than no data
                   if (!STBI__RESTART(z->marker)) return 1;
                   stbi__jpeg_reset(z);
                }
@@ -2009,27 +1997,25 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
          int h = (z->img_comp[n].y+7) >> 3;
          for (j=0; j < h; ++j) {
             for (i=0; i < w; ++i) {
-               int ha = z->img_comp[n].ha;
                short *data = z->img_comp[n].coeff + 64 * (i + j * z->img_comp[n].coeff_w);
                if (z->spec_start == 0) {
-                  if (!stbi__jpeg_decode_block_prog_dc(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n, z->dequant[z->img_comp[n].tq]))
+                  if (!stbi__jpeg_decode_block_prog_dc(z, data, &z->huff_dc[z->img_comp[n].hd], n))
                      return 0;
                } else {
-                  if (!stbi__jpeg_decode_block_prog_ac(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n, z->dequant[z->img_comp[n].tq]))
+                  int ha = z->img_comp[n].ha;
+                  if (!stbi__jpeg_decode_block_prog_ac(z, data, &z->huff_ac[ha], z->fast_ac[ha]))
                      return 0;
                }
                // every data block is an MCU, so countdown the restart interval
                if (--z->todo <= 0) {
                   if (z->code_bits < 24) stbi__grow_buffer_unsafe(z);
-                  // if it's NOT a restart, then just bail, so we get corrupt data
-                  // rather than no data
                   if (!STBI__RESTART(z->marker)) return 1;
                   stbi__jpeg_reset(z);
                }
             }
          }
          return 1;
-      } else { // interleaved!
+      } else { // interleaved
          int i,j,k,x,y;
          for (j=0; j < z->img_mcu_y; ++j) {
             for (i=0; i < z->img_mcu_x; ++i) {
@@ -2044,7 +2030,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                         int y2 = (j*z->img_comp[n].v + y);
                         int ha = z->img_comp[n].ha;
                         short *data = z->img_comp[n].coeff + 64 * (x2 + y2 * z->img_comp[n].coeff_w);
-                        if (!stbi__jpeg_decode_block_prog_dc(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n, z->dequant[z->img_comp[n].tq]))
+                        if (!stbi__jpeg_decode_block_prog_dc(z, data, &z->huff_dc[z->img_comp[n].hd], n))
                            return 0;
                      }
                   }
@@ -2053,8 +2039,6 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                // so now count down the restart interval
                if (--z->todo <= 0) {
                   if (z->code_bits < 24) stbi__grow_buffer_unsafe(z);
-                  // if it's NOT a restart, then just bail, so we get corrupt data
-                  // rather than no data
                   if (!STBI__RESTART(z->marker)) return 1;
                   stbi__jpeg_reset(z);
                }
@@ -2090,7 +2074,6 @@ static void stbi__jpeg_finish(stbi__jpeg *z)
       }
    }
 }
-
 
 static int stbi__process_marker(stbi__jpeg *z, int m)
 {
@@ -2224,7 +2207,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
       z->img_comp[i].tq = stbi__get8(s);  if (z->img_comp[i].tq > 3) return stbi__err("bad TQ","Corrupt JPEG");
    }
 
-   if (scan != SCAN_load) return 1;
+   if (scan != STBI__SCAN_load) return 1;
 
    if ((1 << 30) / s->img_x / s->img_n < s->img_y) return stbi__err("too large", "Image too large to decode");
 
@@ -2292,7 +2275,7 @@ static int stbi__decode_jpeg_header(stbi__jpeg *z, int scan)
    z->marker = STBI__MARKER_none; // initialize cached marker to empty
    m = stbi__get_marker(z);
    if (!stbi__SOI(m)) return stbi__err("no SOI","Corrupt JPEG");
-   if (scan == SCAN_type) return 1;
+   if (scan == STBI__SCAN_type) return 1;
    m = stbi__get_marker(z);
    while (!stbi__SOF(m)) {
       if (!stbi__process_marker(z,m)) return 0;
@@ -2313,7 +2296,7 @@ static int stbi__decode_jpeg_image(stbi__jpeg *j)
 {
    int m;
    j->restart_interval = 0;
-   if (!stbi__decode_jpeg_header(j, SCAN_load)) return 0;
+   if (!stbi__decode_jpeg_header(j, STBI__SCAN_load)) return 0;
    m = stbi__get_marker(j);
    while (!stbi__EOI(m)) {
       if (stbi__SOS(m)) {
@@ -2822,14 +2805,14 @@ static int stbi__jpeg_test(stbi__context *s)
    stbi__jpeg j;
    j.s = s;
    stbi__setup_jpeg(&j);
-   r = stbi__decode_jpeg_header(&j, SCAN_type);
+   r = stbi__decode_jpeg_header(&j, STBI__SCAN_type);
    stbi__rewind(s);
    return r;
 }
 
 static int stbi__jpeg_info_raw(stbi__jpeg *j, int *x, int *y, int *comp)
 {
-   if (!stbi__decode_jpeg_header(j, SCAN_header)) {
+   if (!stbi__decode_jpeg_header(j, STBI__SCAN_header)) {
       stbi__rewind( j->s );
       return 0;
    }
@@ -3728,7 +3711,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
 
    if (!stbi__check_png_header(s)) return 0;
 
-   if (scan == SCAN_type) return 1;
+   if (scan == STBI__SCAN_type) return 1;
 
    for (;;) {
       stbi__pngchunk c = stbi__get_chunk_header(s);
@@ -3754,7 +3737,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             if (!pal_img_n) {
                s->img_n = (color & 2 ? 3 : 1) + (color & 4 ? 1 : 0);
                if ((1 << 30) / s->img_x / s->img_n < s->img_y) return stbi__err("too large", "Image too large to decode");
-               if (scan == SCAN_header) return 1;
+               if (scan == STBI__SCAN_header) return 1;
             } else {
                // if paletted, then pal_n is our final components, and
                // img_n is # components to decompress/filter.
@@ -3783,7 +3766,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
             if (z->idata) return stbi__err("tRNS after IDAT","Corrupt PNG");
             if (pal_img_n) {
-               if (scan == SCAN_header) { s->img_n = 4; return 1; }
+               if (scan == STBI__SCAN_header) { s->img_n = 4; return 1; }
                if (pal_len == 0) return stbi__err("tRNS before PLTE","Corrupt PNG");
                if (c.length > pal_len) return stbi__err("bad tRNS len","Corrupt PNG");
                pal_img_n = 4;
@@ -3802,7 +3785,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
          case STBI__PNG_TYPE('I','D','A','T'): {
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
             if (pal_img_n && !pal_len) return stbi__err("no PLTE","Corrupt PNG");
-            if (scan == SCAN_header) { s->img_n = pal_img_n; return 1; }
+            if (scan == STBI__SCAN_header) { s->img_n = pal_img_n; return 1; }
             if (ioff + c.length > idata_limit) {
                stbi_uc *p;
                if (idata_limit == 0) idata_limit = c.length > 4096 ? c.length : 4096;
@@ -3819,7 +3802,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
          case STBI__PNG_TYPE('I','E','N','D'): {
             stbi__uint32 raw_len;
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
-            if (scan != SCAN_load) return 1;
+            if (scan != STBI__SCAN_load) return 1;
             if (z->idata == NULL) return stbi__err("no IDAT","Corrupt PNG");
             // initial guess for decoded data size to avoid unnecessary reallocs
             raw_len = s->img_x * s->img_y * s->img_n /* pixels */ + s->img_y /* filter mode per row */;
@@ -3873,7 +3856,7 @@ static unsigned char *stbi__do_png(stbi__png *p, int *x, int *y, int *n, int req
 {
    unsigned char *result=NULL;
    if (req_comp < 0 || req_comp > 4) return stbi__errpuc("bad req_comp", "Internal error");
-   if (stbi__parse_png_file(p, SCAN_load, req_comp)) {
+   if (stbi__parse_png_file(p, STBI__SCAN_load, req_comp)) {
       result = p->out;
       p->out = NULL;
       if (req_comp && req_comp != p->s->img_out_n) {
@@ -3909,7 +3892,7 @@ static int stbi__png_test(stbi__context *s)
 
 static int stbi__png_info_raw(stbi__png *p, int *x, int *y, int *comp)
 {
-   if (!stbi__parse_png_file(p, SCAN_header, 0)) {
+   if (!stbi__parse_png_file(p, STBI__SCAN_header, 0)) {
       stbi__rewind( p->s );
       return 0;
    }
