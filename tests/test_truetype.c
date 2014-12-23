@@ -35,6 +35,7 @@ int main(int argc, char **argv)
    // @TODO: why is minglui.ttc failing? 
    fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/mingliu.ttc", "rb"));
 
+#if 0
    stbtt_BakeFontBitmap(ttf_buffer,stbtt_GetFontOffsetForIndex(ttf_buffer,0), 40.0, temp_bitmap[0],BITMAP_W,BITMAP_H, 32,96, cdata); // no guarantee this fits!
    stbi_write_png("fonttest1.png", BITMAP_W, BITMAP_H, 1, temp_bitmap, 0);
 
@@ -67,6 +68,7 @@ int main(int argc, char **argv)
       stbi_write_png("fonttest3.png", BITMAP_W, BITMAP_H, 1, temp_bitmap, 0);
    }
    return 0;
+#endif
 
    stbtt_InitFont(&font, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0));
    bitmap = stbtt_GetCodepointBitmap(&font, 0,stbtt_ScaleForPixelHeight(&font, (float)s), c, &w, &h, 0,0);

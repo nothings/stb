@@ -9,7 +9,7 @@
 
 #define PNGSUITE_PRIMARY
 
-#if 1
+#if 0
 void test_ycbcr(void)
 {
    STBI_SIMD_ALIGN(unsigned char, y[256]);
@@ -28,15 +28,15 @@ void test_ycbcr(void)
             cb[k] = j;
             cr[k] = i;
          }
-         stbi__YCbCr_to_RGB_sse2(out1[0], y, cb, cr, 256, 4);
-         stbi__YCbCr_to_RGB_backport(out2[0], y, cb, cr, 256, 4);
+         stbi__YCbCr_to_RGB_row(out1[0], y, cb, cr, 256, 4);
+         stbi__YCbCr_to_RGB_sse2(out2[0], y, cb, cr, 256, 4);
          for (k=0; k < 256; ++k) {
             if (out1[k][0] != out2[k][0] || out1[k][1] != out2[k][1] || out1[k][2] != out2[k][2]) {
                int dist1 = abs(out1[k][0] - out2[k][0]);
                int dist2 = abs(out1[k][1] - out2[k][1]);
                int dist3 = abs(out1[k][2] - out2[k][2]);
                ++count;
-               if (dist2)
+               if (out1[k][1] > out2[k][1])
                   ++bigcount;
             }
          }
@@ -50,12 +50,12 @@ void test_ycbcr(void)
 int main(int argc, char **argv)
 {
    int w,h;
-   test_ycbcr();
+   //test_ycbcr();
    if (argc > 1) {
-      int i;
+      int i, n;
+
       for (i=1; i < argc; ++i) {
          unsigned char *data;
-         int n;
          printf("%s\n", argv[i]);
          data = stbi_load(argv[i], &w, &h, &n, 4); if (data) free(data); else printf("Failed &n\n");
          data = stbi_load(argv[i], &w, &h,  0, 1); if (data) free(data); else printf("Failed 1\n");
