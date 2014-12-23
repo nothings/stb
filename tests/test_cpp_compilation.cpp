@@ -8,6 +8,14 @@
 #define STB_HERRINGBONE_WANG_TILE_IMPLEMENTATION
 #define STB_RECT_PACK_IMPLEMENTATION
 
+#define STBI_MALLOC     my_malloc
+#define STBI_FREE       my_free
+#define STBI_REALLOC    my_realloc
+
+void *my_malloc(size_t) { return 0; }
+void *my_realloc(void *, size_t) { return 0; }
+void my_free(void *) { }
+
 #include "stb_image.h"
 #include "stb_rect_pack.h"
 #include "stb_truetype.h"
