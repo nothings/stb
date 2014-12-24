@@ -2829,16 +2829,15 @@ static void stbi__YCbCr_to_RGB_row(stbi_uc *out, const stbi_uc *y, const stbi_uc
 }
 #endif
 
-#ifdef STBI_SSE2
-static void stbi__YCbCr_to_RGB_sse2(stbi_uc *out, stbi_uc const *y, stbi_uc const *pcb, stbi_uc const *pcr, int count, int step)
+#if defined(STBI_SSE2) || defined(STBI_NEON)
+static void stbi__YCbCr_to_RGB_simd(stbi_uc *out, stbi_uc const *y, stbi_uc const *pcb, stbi_uc const *pcr, int count, int step)
 {
    int i = 0;
 
+#ifdef STBI_SSE2
    // step == 3 is pretty ugly on the final interleave, and i'm not convinced
    // it's useful in practice (you wouldn't use it for textures, for example).
    // so just accelerate step == 4 case.
-   //
-   // note: unlike the IDCT, this isn't bit-identical to the integer version.
    if (step == 4) {
       // this is a fairly straightforward implementation and not super-optimized.
       __m128i signflip  = _mm_set1_epi8(-0x80);
@@ -2894,6 +2893,53 @@ static void stbi__YCbCr_to_RGB_sse2(stbi_uc *out, stbi_uc const *y, stbi_uc cons
          out += 32;
       }
    }
+#endif
+
+#ifdef STBI_NEON
+   // in this version, step=3 support would be easy to add. but is there demand?
+   if (step == 4) {
+      // this is a fairly straightforward implementation and not super-optimized.
+      uint8x8_t signflip = vdup_n_u8(0x80);
+      int16x8_t cr_const0 = vdupq_n_s16(   (short) ( 1.40200f*4096.0f+0.5f));
+      int16x8_t cr_const1 = vdupq_n_s16( - (short) ( 0.71414f*4096.0f+0.5f));
+      int16x8_t cb_const0 = vdupq_n_s16( - (short) ( 0.34414f*4096.0f+0.5f));
+      int16x8_t cb_const1 = vdupq_n_s16(   (short) ( 1.77200f*4096.0f+0.5f));
+
+      for (; i+7 < count; i += 8) {
+         // load
+         uint8x8_t y_bytes  = vld1_u8(y + i);
+         uint8x8_t cr_bytes = vld1_u8(pcr + i);
+         uint8x8_t cb_bytes = vld1_u8(pcb + i);
+         int8x8_t cr_biased = vreinterpret_s8_u8(vsub_u8(cr_bytes, signflip));
+         int8x8_t cb_biased = vreinterpret_s8_u8(vsub_u8(cb_bytes, signflip));
+
+         // expand to s16
+         int16x8_t yws = vreinterpretq_s16_u16(vshll_n_u8(y_bytes, 4));
+         int16x8_t crw = vshll_n_s8(cr_biased, 7);
+         int16x8_t cbw = vshll_n_s8(cb_biased, 7);
+
+         // color transform
+         int16x8_t cr0 = vqdmulhq_s16(crw, cr_const0);
+         int16x8_t cb0 = vqdmulhq_s16(cbw, cb_const0);
+         int16x8_t cr1 = vqdmulhq_s16(crw, cr_const1);
+         int16x8_t cb1 = vqdmulhq_s16(cbw, cb_const1);
+         int16x8_t rws = vaddq_s16(yws, cr0);
+         int16x8_t gws = vaddq_s16(vaddq_s16(yws, cb0), cr1);
+         int16x8_t bws = vaddq_s16(yws, cb1);
+
+         // undo scaling, round, convert to byte
+         uint8x8x4_t o;
+         o.val[0] = vqrshrun_n_s16(rws, 4);
+         o.val[1] = vqrshrun_n_s16(gws, 4);
+         o.val[2] = vqrshrun_n_s16(bws, 4);
+         o.val[3] = vdup_n_u8(255);
+
+         // store, interleaving r/g/b/a
+         vst4_u8(out, o);
+         out += 8*4;
+      }
+   }
+#endif
 
    for (; i < count; ++i) {
       int y_fixed = (y[i] << 20) + (1<<19); // rounding
@@ -2929,7 +2975,7 @@ static void stbi__setup_jpeg(stbi__jpeg *j)
    if (stbi__sse2_available()) {
       j->idct_block_kernel = stbi__idct_sse2;
       #ifndef STBI_JPEG_OLD
-      j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_sse2;
+      j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_simd;
       #endif
       j->resample_row_hv_2_kernel = stbi__resample_row_hv_2_simd;
    }
@@ -2937,6 +2983,7 @@ static void stbi__setup_jpeg(stbi__jpeg *j)
 
 #ifdef STBI_NEON
    j->idct_block_kernel = stbi__idct_neon;
+   j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_simd;
    j->resample_row_hv_2_kernel = stbi__resample_row_hv_2_simd;
 #endif
 }
