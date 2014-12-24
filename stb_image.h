@@ -39,12 +39,21 @@
       - PPM and PGM binary formats are now supported, thanks to Ken Miller.
 
       - x86 platforms now make use of SSE2 SIMD instructions for
-        JPEG decoding, and ARM platforms use NEON SIMD. This release is
-        2x faster on our test JPEGs on x86 (except progressive JPEGs,
-        which see much less speedup), mostly due to the addition of SIMD.
-        This work was done by Fabian "ryg" Giesen.
+        JPEG decoding, and ARM platforms can use NEON SIMD if requested.
+        This work was done by Fabian "ryg" Giesen. SSE2 is used by
+        default, but NEON must be enabled explicitly; see docs.
 
-      - Compilation of SIMD code can be suppressed with
+        With other JPEG optimizations included in this version, we see
+        2x speedup on a JPEGs on an x86 machine, and a 1.5x speedup
+        on a JPEG on an ARM machine, relative to previous versions of this
+        library. The same results will not obtain for all JPGs and for all
+        X86/ARM machines. (Note that progressive JPEGs are significantly
+        slower to decode than regular JPEGs.) This doesn't mean that this
+        is the fastest JPEG decoder in the land; rather, it brings it
+        closer to parity with standard libraries. If you want the fastest
+        decode, look elsewhere. (See "Philosophy" section of docs below.)
+
+      - Compilation of all SIMD code can be suppressed with
             #define STBI_NO_SIMD
         It should not be necessary to disable it unless you have issues
         compiling (e.g. using an x86 compiler which doesn't support SSE
@@ -76,7 +85,7 @@
 
         Please note that STBI_JPEG_OLD is a temporary feature; it will be
         removed in future versions of the library. It is only intended for
-        back-compatibility use.
+        near-term back-compatibility use.
 
       - Added STBI_MALLOC, STBI_REALLOC, and STBI_FREE macros for replacing
         the memory allocator. Unlike other STBI libraries, these macros don't
@@ -86,7 +95,7 @@
 
 
    Latest revision history:
-      2.00 (2014-12-25) optimize JPEG, incl. x86 & NEON SIMD
+      2.00 (2014-12-25) optimize JPEG, including x86 SSE2 & ARM NEON SIMD
                         progressive JPEG
                         PGM/PPM support
                         STBI_MALLOC,STBI_REALLOC,STBI_FREE
@@ -136,7 +145,7 @@
 License:
    This software is in the public domain. Where that dedication is not
    recognized, you are granted a perpetual, irrevocable license to copy
-   and modify this file as you see fit.
+   and modify this file however you want.
 
 */
 
@@ -199,6 +208,29 @@ License:
 //
 // ===========================================================================
 //
+// Philosophy
+//
+// stb libraries are designed with the following priorities:
+//
+//    1. easy to use
+//    2. easy to maintain
+//    3. good performance
+//
+// Sometimes I let "good performance" creep up in priority over "easy to maintain",
+// and for best performance I may provide less-easy-to-use APIs that give higher
+// performance, in addition to the easy to use ones. Nevertheless, it's important
+// to keep in mind that from the standpoint of you, a client of this library,
+// all you care about is #1 and #3, and stb libraries do not emphasize #3 above all.
+//
+// Some secondary priorities arise directly from the first two, some of which
+// make more explicit reasons why performance can't be emphasized.
+//
+//    - Portable ("ease of use")
+//    - Small footprint ("easy to maintain")
+//    - No dependencies ("ease of use")
+//
+// ===========================================================================
+//
 // I/O callbacks
 //
 // I/O callbacks allow you to read from arbitrary sources, like packaged
@@ -213,16 +245,17 @@ License:
 //
 // SIMD support
 //
-// The JPEG decoder will try to automatically use SIMD kernels on when
-// supported by the compiler.
+// The JPEG decoder will try to automatically use SIMD kernels on x86 when
+// supported by the compiler. For ARM Neon support, you must explicitly
+// request it.
 //
 // (The old do-it-yourself SIMD API is no longer supported in the current
 // code.)
 //
-// On x86, SSE2 will automatically be used when available; if not, the
-// generic C versions are used as a fall-back. On ARM targets, the typical
-// path is to have separate builds for NEON and non-NEON devices (at least
-// this is true for iOS and Android). Therefore, the NEON support is
+// On x86, SSE2 will automatically be used when available based on a run-time
+// test; if not, the generic C versions are used as a fall-back. On ARM targets,
+// the typical path is to have separate builds for NEON and non-NEON devices
+// (at least this is true for iOS and Android). Therefore, the NEON support is
 // toggled by a build flag: define STBI_NEON to get NEON loops.
 //
 // The output of the JPEG decoder is slightly different from versions where
@@ -1722,7 +1755,6 @@ static void stbi__idct_block(stbi_uc *out, int out_stride, short data[64])
 }
 
 #ifdef STBI_SSE2
-
 // sse2 integer IDCT. not the fastest possible implementation but it
 // produces bit-identical results to the generic C version so it's
 // fully "transparent".
@@ -2966,7 +2998,9 @@ static void stbi__setup_jpeg(stbi__jpeg *j)
 
 #ifdef STBI_NEON
    j->idct_block_kernel = stbi__idct_neon;
+   #ifndef STBI_JPEG_OLD
    j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_simd;
+   #endif
    j->resample_row_hv_2_kernel = stbi__resample_row_hv_2_simd;
 #endif
 }
