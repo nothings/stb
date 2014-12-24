@@ -27,7 +27,7 @@
 
       - decode from memory or through FILE (define STBI_NO_STDIO to remove code)
       - decode from arbitrary I/O callbacks
-      - SIMD acceleration on x86/x64
+      - SIMD acceleration on x86/x64 (SSE2) and ARM (NEON)
 
    Full documentation under "DOCUMENTATION" below.
 
@@ -213,14 +213,17 @@ License:
 //
 // SIMD support
 //
-// The JPEG decoder will automatically use SIMD kernels on x86 platforms
-// where supported.
+// The JPEG decoder will try to automatically use SIMD kernels on when
+// supported by the compiler.
 //
 // (The old do-it-yourself SIMD API is no longer supported in the current
 // code.)
 //
-// The code will automatically detect if the required SIMD instructions are
-// available, and fall back to the generic C version where they're not.
+// On x86, SSE2 will automatically be used when available; if not, the
+// generic C versions are used as a fall-back. On ARM targets, the typical
+// path is to have separate builds for NEON and non-NEON devices (at least
+// this is true for iOS and Android). Therefore, the NEON support is
+// toggled by a build flag: define STBI_NEON to get NEON loops.
 //
 // The output of the JPEG decoder is slightly different from versions where
 // SIMD support was introduced (that is, for versions before 1.49). The
@@ -542,6 +545,16 @@ static int stbi__sse2_available()
 #endif
 }
 #endif
+#endif
+
+// ARM NEON
+#if defined(STBI_NO_SIMD) && defined(STBI_NEON)
+#undef STBI_NEON
+#endif
+
+#ifdef STBI_NEON
+#include <arm_neon.h>
+#define STBI_SIMD_ALIGN(type, name) type name __attribute__((aligned(16)))
 #endif
 
 #ifndef STBI_SIMD_ALIGN
@@ -1890,6 +1903,214 @@ static void stbi__idct_sse2(stbi_uc *out, int out_stride, short data[64])
 
 #endif // STBI_SSE2
 
+#ifdef STBI_NEON
+
+// NEON integer IDCT. should produce bit-identical
+// results to the generic C version.
+static void stbi__idct_neon(stbi_uc *out, int out_stride, short data[64])
+{
+   int16x8_t row0, row1, row2, row3, row4, row5, row6, row7;
+
+   int16x4_t rot0_0 = vdup_n_s16(stbi__f2f(0.5411961f));
+   int16x4_t rot0_1 = vdup_n_s16(stbi__f2f(-1.847759065f));
+   int16x4_t rot0_2 = vdup_n_s16(stbi__f2f( 0.765366865f));
+   int16x4_t rot1_0 = vdup_n_s16(stbi__f2f( 1.175875602f));
+   int16x4_t rot1_1 = vdup_n_s16(stbi__f2f(-0.899976223f));
+   int16x4_t rot1_2 = vdup_n_s16(stbi__f2f(-2.562915447f));
+   int16x4_t rot2_0 = vdup_n_s16(stbi__f2f(-1.961570560f));
+   int16x4_t rot2_1 = vdup_n_s16(stbi__f2f(-0.390180644f));
+   int16x4_t rot3_0 = vdup_n_s16(stbi__f2f( 0.298631336f));
+   int16x4_t rot3_1 = vdup_n_s16(stbi__f2f( 2.053119869f));
+   int16x4_t rot3_2 = vdup_n_s16(stbi__f2f( 3.072711026f));
+   int16x4_t rot3_3 = vdup_n_s16(stbi__f2f( 1.501321110f));
+
+#define dct_long_mul(out, inq, coeff) \
+   int32x4_t out##_l = vmull_s16(vget_low_s16(inq), coeff); \
+   int32x4_t out##_h = vmull_s16(vget_high_s16(inq), coeff)
+
+#define dct_long_mac(out, acc, inq, coeff) \
+   int32x4_t out##_l = vmlal_s16(acc##_l, vget_low_s16(inq), coeff); \
+   int32x4_t out##_h = vmlal_s16(acc##_h, vget_high_s16(inq), coeff)
+
+#define dct_widen(out, inq) \
+   int32x4_t out##_l = vshll_n_s16(vget_low_s16(inq), 12); \
+   int32x4_t out##_h = vshll_n_s16(vget_high_s16(inq), 12)
+
+// wide add
+#define dct_wadd(out, a, b) \
+   int32x4_t out##_l = vaddq_s32(a##_l, b##_l); \
+   int32x4_t out##_h = vaddq_s32(a##_h, b##_h)
+
+// wide sub
+#define dct_wsub(out, a, b) \
+   int32x4_t out##_l = vsubq_s32(a##_l, b##_l); \
+   int32x4_t out##_h = vsubq_s32(a##_h, b##_h)
+
+// butterfly a/b, then shift using "shiftop" by "s" and pack
+#define dct_bfly32o(out0,out1, a,b,shiftop,s) \
+   { \
+      dct_wadd(sum, a, b); \
+      dct_wsub(dif, a, b); \
+      out0 = vcombine_s16(shiftop(sum_l, s), shiftop(sum_h, s)); \
+      out1 = vcombine_s16(shiftop(dif_l, s), shiftop(dif_h, s)); \
+   }
+
+#define dct_pass(shiftop, shift) \
+   { \
+      /* even part */ \
+      int16x8_t sum26 = vaddq_s16(row2, row6); \
+      dct_long_mul(p1e, sum26, rot0_0); \
+      dct_long_mac(t2e, p1e, row6, rot0_1); \
+      dct_long_mac(t3e, p1e, row2, rot0_2); \
+      int16x8_t sum04 = vaddq_s16(row0, row4); \
+      int16x8_t dif04 = vsubq_s16(row0, row4); \
+      dct_widen(t0e, sum04); \
+      dct_widen(t1e, dif04); \
+      dct_wadd(x0, t0e, t3e); \
+      dct_wsub(x3, t0e, t3e); \
+      dct_wadd(x1, t1e, t2e); \
+      dct_wsub(x2, t1e, t2e); \
+      /* odd part */ \
+      int16x8_t sum15 = vaddq_s16(row1, row5); \
+      int16x8_t sum17 = vaddq_s16(row1, row7); \
+      int16x8_t sum35 = vaddq_s16(row3, row5); \
+      int16x8_t sum37 = vaddq_s16(row3, row7); \
+      int16x8_t sumodd = vaddq_s16(sum17, sum35); \
+      dct_long_mul(p5o, sumodd, rot1_0); \
+      dct_long_mac(p1o, p5o, sum17, rot1_1); \
+      dct_long_mac(p2o, p5o, sum35, rot1_2); \
+      dct_long_mul(p3o, sum37, rot2_0); \
+      dct_long_mul(p4o, sum15, rot2_1); \
+      dct_wadd(sump13o, p1o, p3o); \
+      dct_wadd(sump24o, p2o, p4o); \
+      dct_wadd(sump23o, p2o, p3o); \
+      dct_wadd(sump14o, p1o, p4o); \
+      dct_long_mac(x4, sump13o, row7, rot3_0); \
+      dct_long_mac(x5, sump24o, row5, rot3_1); \
+      dct_long_mac(x6, sump23o, row3, rot3_2); \
+      dct_long_mac(x7, sump14o, row1, rot3_3); \
+      dct_bfly32o(row0,row7, x0,x7,shiftop,shift); \
+      dct_bfly32o(row1,row6, x1,x6,shiftop,shift); \
+      dct_bfly32o(row2,row5, x2,x5,shiftop,shift); \
+      dct_bfly32o(row3,row4, x3,x4,shiftop,shift); \
+   }
+
+   // load
+   row0 = vld1q_s16(data + 0*8);
+   row1 = vld1q_s16(data + 1*8);
+   row2 = vld1q_s16(data + 2*8);
+   row3 = vld1q_s16(data + 3*8);
+   row4 = vld1q_s16(data + 4*8);
+   row5 = vld1q_s16(data + 5*8);
+   row6 = vld1q_s16(data + 6*8);
+   row7 = vld1q_s16(data + 7*8);
+
+   // add DC bias
+   row0 = vaddq_s16(row0, vsetq_lane_s16(1024, vdupq_n_s16(0), 0));
+
+   // column pass
+   dct_pass(vrshrn_n_s32, 10);
+
+   // 16bit 8x8 transpose
+   {
+// these three map to a single VTRN.16, VTRN.32, and VSWP, respectively.
+// whether compilers actually get this is another story, sadly.
+#define dct_trn16(x, y) { int16x8x2_t t = vtrnq_s16(x, y); x = t.val[0]; y = t.val[1]; }
+#define dct_trn32(x, y) { int32x4x2_t t = vtrnq_s32(vreinterpretq_s32_s16(x), vreinterpretq_s32_s16(y)); x = vreinterpretq_s16_s32(t.val[0]); y = vreinterpretq_s16_s32(t.val[1]); }
+#define dct_trn64(x, y) { int16x8_t x0 = x; int16x8_t y0 = y; x = vcombine_s16(vget_low_s16(x0), vget_low_s16(y0)); y = vcombine_s16(vget_high_s16(x0), vget_high_s16(y0)); }
+
+      // pass 1
+      dct_trn16(row0, row1); // a0b0a2b2a4b4a6b6
+      dct_trn16(row2, row3);
+      dct_trn16(row4, row5); 
+      dct_trn16(row6, row7);
+
+      // pass 2
+      dct_trn32(row0, row2); // a0b0c0d0a4b4c4d4
+      dct_trn32(row1, row3);
+      dct_trn32(row4, row6);
+      dct_trn32(row5, row7);
+
+      // pass 3
+      dct_trn64(row0, row4); // a0b0c0d0e0f0g0h0
+      dct_trn64(row1, row5);
+      dct_trn64(row2, row6);
+      dct_trn64(row3, row7);
+
+#undef dct_trn16
+#undef dct_trn32
+#undef dct_trn64
+   }
+
+   // row pass
+   // vrshrn_n_s32 only supports shifts up to 16, we need
+   // 17. so do a non-rounding shift of 16 first then follow
+   // up with a rounding shift by 1.
+   dct_pass(vshrn_n_s32, 16);
+
+   {
+      // pack and round
+      uint8x8_t p0 = vqrshrun_n_s16(row0, 1);
+      uint8x8_t p1 = vqrshrun_n_s16(row1, 1);
+      uint8x8_t p2 = vqrshrun_n_s16(row2, 1);
+      uint8x8_t p3 = vqrshrun_n_s16(row3, 1);
+      uint8x8_t p4 = vqrshrun_n_s16(row4, 1);
+      uint8x8_t p5 = vqrshrun_n_s16(row5, 1);
+      uint8x8_t p6 = vqrshrun_n_s16(row6, 1);
+      uint8x8_t p7 = vqrshrun_n_s16(row7, 1);
+
+      // again, these can translate into one instruction, but often don't.
+#define dct_trn8_8(x, y) { uint8x8x2_t t = vtrn_u8(x, y); x = t.val[0]; y = t.val[1]; }
+#define dct_trn8_16(x, y) { uint16x4x2_t t = vtrn_u16(vreinterpret_u16_u8(x), vreinterpret_u16_u8(y)); x = vreinterpret_u8_u16(t.val[0]); y = vreinterpret_u8_u16(t.val[1]); }
+#define dct_trn8_32(x, y) { uint32x2x2_t t = vtrn_u32(vreinterpret_u32_u8(x), vreinterpret_u32_u8(y)); x = vreinterpret_u8_u32(t.val[0]); y = vreinterpret_u8_u32(t.val[1]); }
+
+      // sadly can't use interleaved stores here since we only write
+      // 8 bytes to each scan line!
+
+      // 8x8 8-bit transpose pass 1
+      dct_trn8_8(p0, p1);
+      dct_trn8_8(p2, p3);
+      dct_trn8_8(p4, p5);
+      dct_trn8_8(p6, p7);
+
+      // pass 2
+      dct_trn8_16(p0, p2);
+      dct_trn8_16(p1, p3);
+      dct_trn8_16(p4, p6);
+      dct_trn8_16(p5, p7);
+
+      // pass 3
+      dct_trn8_32(p0, p4);
+      dct_trn8_32(p1, p5);
+      dct_trn8_32(p2, p6);
+      dct_trn8_32(p3, p7);
+
+      // store
+      vst1_u8(out, p0); out += out_stride;
+      vst1_u8(out, p1); out += out_stride;
+      vst1_u8(out, p2); out += out_stride;
+      vst1_u8(out, p3); out += out_stride;
+      vst1_u8(out, p4); out += out_stride;
+      vst1_u8(out, p5); out += out_stride;
+      vst1_u8(out, p6); out += out_stride;
+      vst1_u8(out, p7);
+
+#undef dct_trn8_8
+#undef dct_trn8_16
+#undef dct_trn8_32
+   }
+
+#undef dct_long_mul
+#undef dct_long_mac
+#undef dct_widen
+#undef dct_wadd
+#undef dct_wsub
+#undef dct_bfly32o
+#undef dct_pass
+}
+
+#endif // STBI_NEON
+
 #define STBI__MARKER_none  0xff
 // if there's a pending marker from the entropy stream, return that
 // otherwise, fetch from the stream and get a marker. if there's no
@@ -2405,12 +2626,11 @@ static stbi_uc *stbi__resample_row_hv_2(stbi_uc *out, stbi_uc *in_near, stbi_uc 
    return out;
 }
 
-#ifdef STBI_SSE2
-static stbi_uc *stbi__resample_row_hv_2_sse2(stbi_uc *out, stbi_uc *in_near, stbi_uc *in_far, int w, int hs)
+#if defined(STBI_SSE2) || defined(STBI_NEON)
+static stbi_uc *stbi__resample_row_hv_2_simd(stbi_uc *out, stbi_uc *in_near, stbi_uc *in_far, int w, int hs)
 {
    // need to generate 2x2 samples for every one in input
    int i=0,t0,t1;
-   __m128i bias = _mm_set1_epi16(8);
 
    if (w == 1) {
       out[0] = out[1] = stbi__div4(3*in_near[0] + in_far[0] + 2);
@@ -2422,6 +2642,7 @@ static stbi_uc *stbi__resample_row_hv_2_sse2(stbi_uc *out, stbi_uc *in_near, stb
    // note we can't handle the last pixel in a row in this loop
    // because we need to handle the filter boundary conditions.
    for (; i < ((w-1) & ~7); i += 8) {
+#if defined(STBI_SSE2)
       // load and perform the vertical filtering pass
       // this uses 3*x + y = 4*x + (y - x)
       __m128i zero  = _mm_setzero_si128();
@@ -2433,7 +2654,7 @@ static stbi_uc *stbi__resample_row_hv_2_sse2(stbi_uc *out, stbi_uc *in_near, stb
       __m128i nears = _mm_slli_epi16(nearw, 2);
       __m128i curr  = _mm_add_epi16(nears, diff); // current row
 
-      // horizontal filter works the same based on shifted of current
+      // horizontal filter works the same based on shifted vers of current
       // row. "prev" is current row shifted right by 1 pixel; we need to
       // insert the previous pixel value (from t1).
       // "next" is current row shifted left by 1 pixel, with first pixel
@@ -2447,6 +2668,7 @@ static stbi_uc *stbi__resample_row_hv_2_sse2(stbi_uc *out, stbi_uc *in_near, stb
       // even pixels = 3*cur + prev = cur*4 + (prev - cur)
       // odd  pixels = 3*cur + next = cur*4 + (next - cur)
       // note the shared term.
+      __m128i bias  = _mm_set1_epi16(8);
       __m128i curs = _mm_slli_epi16(curr, 2);
       __m128i prvd = _mm_sub_epi16(prev, curr);
       __m128i nxtd = _mm_sub_epi16(next, curr);
@@ -2463,6 +2685,41 @@ static stbi_uc *stbi__resample_row_hv_2_sse2(stbi_uc *out, stbi_uc *in_near, stb
       // pack and write output
       __m128i outv = _mm_packus_epi16(de0, de1);
       _mm_storeu_si128((__m128i *) (out + i*2), outv);
+#elif defined(STBI_NEON)
+      // load and perform the vertical filtering pass
+      // this uses 3*x + y = 4*x + (y - x)
+      uint8x8_t farb  = vld1_u8(in_far + i);
+      uint8x8_t nearb = vld1_u8(in_near + i);
+      int16x8_t diff  = vreinterpretq_s16_u16(vsubl_u8(farb, nearb));
+      int16x8_t nears = vreinterpretq_s16_u16(vshll_n_u8(nearb, 2));
+      int16x8_t curr  = vaddq_s16(nears, diff); // current row
+
+      // horizontal filter works the same based on shifted vers of current
+      // row. "prev" is current row shifted right by 1 pixel; we need to
+      // insert the previous pixel value (from t1).
+      // "next" is current row shifted left by 1 pixel, with first pixel
+      // of next block of 8 pixels added in.
+      int16x8_t prv0 = vextq_s16(curr, curr, 7);
+      int16x8_t nxt0 = vextq_s16(curr, curr, 1);
+      int16x8_t prev = vsetq_lane_s16(t1, prv0, 0);
+      int16x8_t next = vsetq_lane_s16(3*in_near[i+8] + in_far[i+8], nxt0, 7);
+
+      // horizontal filter, polyphase implementation since it's convenient:
+      // even pixels = 3*cur + prev = cur*4 + (prev - cur)
+      // odd  pixels = 3*cur + next = cur*4 + (next - cur)
+      // note the shared term.
+      int16x8_t curs = vshlq_n_s16(curr, 2);
+      int16x8_t prvd = vsubq_s16(prev, curr);
+      int16x8_t nxtd = vsubq_s16(next, curr);
+      int16x8_t even = vaddq_s16(curs, prvd);
+      int16x8_t odd  = vaddq_s16(curs, nxtd);
+
+      // undo scaling and round, then store with even/odd phases interleaved
+      uint8x8x2_t o;
+      o.val[0] = vqrshrun_n_s16(even, 4);
+      o.val[1] = vqrshrun_n_s16(odd,  4);
+      vst2_u8(out + i*2, o);
+#endif
 
       // "previous" value for next iter
       t1 = 3*in_near[i+7] + in_far[i+7];
@@ -2555,16 +2812,15 @@ static void stbi__YCbCr_to_RGB_row(stbi_uc *out, const stbi_uc *y, const stbi_uc
 }
 #endif
 
-#ifdef STBI_SSE2
-static void stbi__YCbCr_to_RGB_sse2(stbi_uc *out, stbi_uc const *y, stbi_uc const *pcb, stbi_uc const *pcr, int count, int step)
+#if defined(STBI_SSE2) || defined(STBI_NEON)
+static void stbi__YCbCr_to_RGB_simd(stbi_uc *out, stbi_uc const *y, stbi_uc const *pcb, stbi_uc const *pcr, int count, int step)
 {
    int i = 0;
 
+#ifdef STBI_SSE2
    // step == 3 is pretty ugly on the final interleave, and i'm not convinced
    // it's useful in practice (you wouldn't use it for textures, for example).
    // so just accelerate step == 4 case.
-   //
-   // note: unlike the IDCT, this isn't bit-identical to the integer version.
    if (step == 4) {
       // this is a fairly straightforward implementation and not super-optimized.
       __m128i signflip  = _mm_set1_epi8(-0x80);
@@ -2620,6 +2876,53 @@ static void stbi__YCbCr_to_RGB_sse2(stbi_uc *out, stbi_uc const *y, stbi_uc cons
          out += 32;
       }
    }
+#endif
+
+#ifdef STBI_NEON
+   // in this version, step=3 support would be easy to add. but is there demand?
+   if (step == 4) {
+      // this is a fairly straightforward implementation and not super-optimized.
+      uint8x8_t signflip = vdup_n_u8(0x80);
+      int16x8_t cr_const0 = vdupq_n_s16(   (short) ( 1.40200f*4096.0f+0.5f));
+      int16x8_t cr_const1 = vdupq_n_s16( - (short) ( 0.71414f*4096.0f+0.5f));
+      int16x8_t cb_const0 = vdupq_n_s16( - (short) ( 0.34414f*4096.0f+0.5f));
+      int16x8_t cb_const1 = vdupq_n_s16(   (short) ( 1.77200f*4096.0f+0.5f));
+
+      for (; i+7 < count; i += 8) {
+         // load
+         uint8x8_t y_bytes  = vld1_u8(y + i);
+         uint8x8_t cr_bytes = vld1_u8(pcr + i);
+         uint8x8_t cb_bytes = vld1_u8(pcb + i);
+         int8x8_t cr_biased = vreinterpret_s8_u8(vsub_u8(cr_bytes, signflip));
+         int8x8_t cb_biased = vreinterpret_s8_u8(vsub_u8(cb_bytes, signflip));
+
+         // expand to s16
+         int16x8_t yws = vreinterpretq_s16_u16(vshll_n_u8(y_bytes, 4));
+         int16x8_t crw = vshll_n_s8(cr_biased, 7);
+         int16x8_t cbw = vshll_n_s8(cb_biased, 7);
+
+         // color transform
+         int16x8_t cr0 = vqdmulhq_s16(crw, cr_const0);
+         int16x8_t cb0 = vqdmulhq_s16(cbw, cb_const0);
+         int16x8_t cr1 = vqdmulhq_s16(crw, cr_const1);
+         int16x8_t cb1 = vqdmulhq_s16(cbw, cb_const1);
+         int16x8_t rws = vaddq_s16(yws, cr0);
+         int16x8_t gws = vaddq_s16(vaddq_s16(yws, cb0), cr1);
+         int16x8_t bws = vaddq_s16(yws, cb1);
+
+         // undo scaling, round, convert to byte
+         uint8x8x4_t o;
+         o.val[0] = vqrshrun_n_s16(rws, 4);
+         o.val[1] = vqrshrun_n_s16(gws, 4);
+         o.val[2] = vqrshrun_n_s16(bws, 4);
+         o.val[3] = vdup_n_u8(255);
+
+         // store, interleaving r/g/b/a
+         vst4_u8(out, o);
+         out += 8*4;
+      }
+   }
+#endif
 
    for (; i < count; ++i) {
       int y_fixed = (y[i] << 20) + (1<<19); // rounding
@@ -2655,10 +2958,16 @@ static void stbi__setup_jpeg(stbi__jpeg *j)
    if (stbi__sse2_available()) {
       j->idct_block_kernel = stbi__idct_sse2;
       #ifndef STBI_JPEG_OLD
-      j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_sse2;
+      j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_simd;
       #endif
-      j->resample_row_hv_2_kernel = stbi__resample_row_hv_2_sse2;
+      j->resample_row_hv_2_kernel = stbi__resample_row_hv_2_simd;
    }
+#endif
+
+#ifdef STBI_NEON
+   j->idct_block_kernel = stbi__idct_neon;
+   j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_simd;
+   j->resample_row_hv_2_kernel = stbi__resample_row_hv_2_simd;
 #endif
 }
 
