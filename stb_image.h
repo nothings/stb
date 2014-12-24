@@ -13,7 +13,7 @@
       Primarily of interest to game developers and other people who can
           avoid problematic images and only need the trivial interface
 
-      JPEG baseline & progressive (no arithmetic)
+      JPEG baseline & progressive (12 bpc/arithmetic not supported, same as stock IJG lib)
       PNG 1/2/4/8-bit-per-channel (16 bpc not supported)
 
       TGA (not sure what subset, if a subset)
@@ -197,9 +197,9 @@ License:
 // DOCUMENTATION
 //
 // Limitations:
-//    - no jpeg progressive support
 //    - no 16-bit-per-channel PNG
 //    - no 12-bit-per-channel JPEG
+//    - no JPEGs with arithmetic coding
 //    - no 1-bit BMP
 //    - GIF always returns *comp=4
 //
@@ -669,6 +669,7 @@ static int stbi__sse2_available()
 
 #ifdef STBI_NEON
 #include <arm_neon.h>
+// assume GCC or Clang on ARM targets
 #define STBI_SIMD_ALIGN(type, name) type name __attribute__((aligned(16)))
 #endif
 
@@ -1293,10 +1294,9 @@ static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp)
 
 //////////////////////////////////////////////////////////////////////////////
 //
-//  "baseline" JPEG/JFIF decoder (not actually fully baseline implementation)
+//  "baseline" JPEG/JFIF decoder
 //
 //    simple implementation
-//      - channel subsampling of at most 2 in each dimension
 //      - doesn't support delayed output of y-dimension
 //      - simple interface (only one output format: 8-bit interleaved RGB)
 //      - doesn't try to recover corrupt jpegs
@@ -1310,13 +1310,8 @@ static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp)
 //      - quality integer IDCT derived from IJG's 'slow'
 //    performance
 //      - fast huffman; reasonable integer IDCT
+//      - some SIMD kernels for common paths on targets with SSE2/NEON
 //      - uses a lot of intermediate memory, could cache poorly
-//      - load http://nothings.org/remote/anemones.jpg 3 times on 2.8Ghz P4
-//          stb_jpeg:   1.34 seconds (MSVC6, default release build)
-//          stb_jpeg:   1.06 seconds (MSVC6, processor = Pentium Pro)
-//          IJL11.dll:  1.08 seconds (compiled by intel)
-//          IJG 1998:   0.98 seconds (MSVC6, makefile provided by IJG)
-//          IJG 1998:   0.95 seconds (MSVC6, makefile + proc=PPro)
 
 #ifndef STBI_NO_JPEG
 
