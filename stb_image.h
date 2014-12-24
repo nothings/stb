@@ -44,18 +44,65 @@
         default, but NEON must be enabled explicitly; see docs.
 
         With other JPEG optimizations included in this version, we see
-        2x speedup on a JPEGs on an x86 machine, and a 1.5x speedup
+        2x speedup on a JPEG on an x86 machine, and a 1.5x speedup
         on a JPEG on an ARM machine, relative to previous versions of this
         library. The same results will not obtain for all JPGs and for all
-        X86/ARM machines. (Note that progressive JPEGs are significantly
+        x86/ARM machines. (Note that progressive JPEGs are significantly
         slower to decode than regular JPEGs.) This doesn't mean that this
         is the fastest JPEG decoder in the land; rather, it brings it
         closer to parity with standard libraries. If you want the fastest
         decode, look elsewhere. (See "Philosophy" section of docs below.)
 
+        See final bullet items below for more info on SIMD.
+
+      - Added STBI_MALLOC, STBI_REALLOC, and STBI_FREE macros for replacing
+        the memory allocator. Unlike other STBI libraries, these macros don't
+        support a context parameter, so if you need to pass a context in to
+        the allocator, you'll have to store it in a global or a thread-local
+        variable.
+
+      - Split existing STBI_NO_HDR flag into two flags, STBI_NO_HDR and
+        STBI_NO_LINEAR.
+            STBI_NO_HDR:     suppress implementation of .hdr reader format
+            STBI_NO_LINEAR:  suppress high-dynamic-range light-linear float API
+
+      - You can suppress implementation of any of the decoders to reduce
+        your code footprint by #defining one or more of the following
+        symbols before creating the implementation.
+
+            STBI_NO_JPEG
+            STBI_NO_PNG
+            STBI_NO_BMP
+            STBI_NO_PSD
+            STBI_NO_TGA
+            STBI_NO_GIF
+            STBI_NO_HDR
+            STBI_NO_PIC
+            STBI_NO_PNM   (.ppm and .pgm)
+
+      - You can request *only* certain decoders and suppress all other ones
+        (this will be more forward-compatible, as addition of new decoders
+        doesn't require you to disable them explicitly):
+
+            STBI_ONLY_JPEG
+            STBI_ONLY_PNG
+            STBI_ONLY_BMP
+            STBI_ONLY_PSD
+            STBI_ONLY_TGA
+            STBI_ONLY_GIF
+            STBI_ONLY_HDR
+            STBI_ONLY_PIC
+            STBI_ONLY_PNM   (.ppm and .pgm)
+
+         Note that you can define multiples of these, and you will get all
+         of them ("only x" and "only y" is interpreted to mean "only x&y").
+
+       - If you use STBI_NO_PNG (or _ONLY_ without PNG), and you still
+         want the zlib decoder to be available, #define STBI_SUPPORT_ZLIB
+
       - Compilation of all SIMD code can be suppressed with
             #define STBI_NO_SIMD
-        It should not be necessary to disable it unless you have issues
+        It should not be necessary to disable SIMD unless you have issues
         compiling (e.g. using an x86 compiler which doesn't support SSE
         intrinsics or that doesn't support the method used to detect
         SSE2 support at run-time), and even those can be reported as
@@ -87,18 +134,13 @@
         removed in future versions of the library. It is only intended for
         near-term back-compatibility use.
 
-      - Added STBI_MALLOC, STBI_REALLOC, and STBI_FREE macros for replacing
-        the memory allocator. Unlike other STBI libraries, these macros don't
-        support a context parameter, so if you need to pass a context in to
-        the allocator, you'll have to store it in a global or a thread-local
-        variable.
-
 
    Latest revision history:
       2.00 (2014-12-25) optimize JPEG, including x86 SSE2 & ARM NEON SIMD
                         progressive JPEG
                         PGM/PPM support
                         STBI_MALLOC,STBI_REALLOC,STBI_FREE
+                        STBI_NO_*, STBI_ONLY_*
                         GIF bugfix
       1.48 (2014-12-14) fix incorrectly-named assert()
       1.47 (2014-12-14) 1/2/4-bit PNG support (both grayscale and paletted)
@@ -375,7 +417,7 @@ STBIDEF stbi_uc *stbi_load_from_file  (FILE *f,                  int *x, int *y,
 // for stbi_load_from_file, file pointer is left pointing immediately after image
 #endif
 
-#ifndef STBI_NO_HDR
+#ifndef STBI_NO_LINEAR
    STBIDEF float *stbi_loadf                 (char const *filename,           int *x, int *y, int *comp, int req_comp);
    STBIDEF float *stbi_loadf_from_memory     (stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp);
    STBIDEF float *stbi_loadf_from_callbacks  (stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp);
@@ -388,7 +430,9 @@ STBIDEF stbi_uc *stbi_load_from_file  (FILE *f,                  int *x, int *y,
 #ifndef STBI_NO_HDR
    STBIDEF void   stbi_hdr_to_ldr_gamma(float gamma);
    STBIDEF void   stbi_hdr_to_ldr_scale(float scale);
+#endif
 
+#ifndef STBI_NO_LINEAR
    STBIDEF void   stbi_ldr_to_hdr_gamma(float gamma);
    STBIDEF void   stbi_ldr_to_hdr_scale(float scale);
 #endif // STBI_NO_HDR
@@ -453,12 +497,50 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 
 #ifdef STB_IMAGE_IMPLEMENTATION
 
+#if defined(STBI_ONLY_JPEG) || defined(STBI_ONLY_PNG) || defined(STBI_ONLY_BMP) \
+  || defined(STBI_ONLY_TGA) || defined(STBI_ONLY_GIF) || defined(STBI_ONLY_PSD) \
+  || defined(STBI_ONLY_HDR) || defined(STBI_ONLY_PIC) || defined(STBI_ONLY_PNM) \
+  || defined(STBI_ONLY_ZLIB)
+   #ifndef STBI_ONLY_JPEG
+   #define STBI_NO_JPEG
+   #endif
+   #ifndef STBI_ONLY_PNG
+   #define STBI_NO_PNG
+   #endif
+   #ifndef STBI_ONLY_BMP
+   #define STBI_NO_BMP
+   #endif
+   #ifndef STBI_ONLY_PSD
+   #define STBI_NO_PSD
+   #endif
+   #ifndef STBI_ONLY_TGA
+   #define STBI_NO_TGA
+   #endif
+   #ifndef STBI_ONLY_GIF
+   #define STBI_NO_GIF
+   #endif
+   #ifndef STBI_ONLY_HDR
+   #define STBI_NO_HDR
+   #endif
+   #ifndef STBI_ONLY_PIC
+   #define STBI_NO_PIC
+   #endif
+   #ifndef STBI_ONLY_PNM
+   #define STBI_NO_PNM
+   #endif
+#endif
+
+#if defined(STBI_NO_PNG) && !defined(STBI_SUPPORT_ZLIB) && !defined(STBI_NO_ZLIB)
+#define STBI_NO_ZLIB
+#endif
+
+
 #include <stdarg.h>
 #include <stddef.h> // ptrdiff_t on osx
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef STBI_NO_HDR
+#if !defined(STBI_NO_LINEAR) || !defined(STBI_NO_HDR)
 #include <math.h>  // ldexp
 #endif
 
@@ -680,32 +762,59 @@ static void stbi__rewind(stbi__context *s)
    s->img_buffer = s->img_buffer_original;
 }
 
+#ifndef STBI_NO_JPEG
 static int      stbi__jpeg_test(stbi__context *s);
 static stbi_uc *stbi__jpeg_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
 static int      stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp);
+#endif
+
+#ifndef STBI_NO_PNG
 static int      stbi__png_test(stbi__context *s);
 static stbi_uc *stbi__png_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
 static int      stbi__png_info(stbi__context *s, int *x, int *y, int *comp);
+#endif
+
+#ifndef STBI_NO_BMP
 static int      stbi__bmp_test(stbi__context *s);
 static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
+static int      stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp);
+#endif
+
+#ifndef STBI_NO_TGA
 static int      stbi__tga_test(stbi__context *s);
 static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
 static int      stbi__tga_info(stbi__context *s, int *x, int *y, int *comp);
+#endif
+
+#ifndef STBI_NO_PSD
 static int      stbi__psd_test(stbi__context *s);
 static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
+static int      stbi__psd_info(stbi__context *s, int *x, int *y, int *comp);
+#endif
+
 #ifndef STBI_NO_HDR
 static int      stbi__hdr_test(stbi__context *s);
 static float   *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
+static int      stbi__hdr_info(stbi__context *s, int *x, int *y, int *comp);
 #endif
+
+#ifndef STBI_NO_PIC
 static int      stbi__pic_test(stbi__context *s);
 static stbi_uc *stbi__pic_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
+static int      stbi__pic_info(stbi__context *s, int *x, int *y, int *comp);
+#endif
+
+#ifndef STBI_NO_GIF
 static int      stbi__gif_test(stbi__context *s);
 static stbi_uc *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
 static int      stbi__gif_info(stbi__context *s, int *x, int *y, int *comp);
+#endif
+
+#ifndef STBI_NO_PNM
 static int      stbi__pnm_test(stbi__context *s);
 static stbi_uc *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
 static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp);
-
+#endif
 
 // this is not threadsafe
 static const char *stbi__g_failure_reason;
@@ -746,20 +855,37 @@ STBIDEF void stbi_image_free(void *retval_from_stbi_load)
    STBI_FREE(retval_from_stbi_load);
 }
 
-#ifndef STBI_NO_HDR
+#ifndef STBI_NO_LINEAR
 static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp);
+#endif
+
+#ifndef STBI_NO_HDR
 static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp);
 #endif
 
 static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
+   #ifndef STBI_NO_JPEG
    if (stbi__jpeg_test(s)) return stbi__jpeg_load(s,x,y,comp,req_comp);
+   #endif
+   #ifndef STBI_NO_PNG
    if (stbi__png_test(s))  return stbi__png_load(s,x,y,comp,req_comp);
+   #endif
+   #ifndef STBI_NO_BMP
    if (stbi__bmp_test(s))  return stbi__bmp_load(s,x,y,comp,req_comp);
+   #endif
+   #ifndef STBI_NO_GIF
    if (stbi__gif_test(s))  return stbi__gif_load(s,x,y,comp,req_comp);
+   #endif
+   #ifndef STBI_NO_PSD
    if (stbi__psd_test(s))  return stbi__psd_load(s,x,y,comp,req_comp);
+   #endif
+   #ifndef STBI_NO_PIC
    if (stbi__pic_test(s))  return stbi__pic_load(s,x,y,comp,req_comp);
+   #endif
+   #ifndef STBI_NO_PNM
    if (stbi__pnm_test(s))  return stbi__pnm_load(s,x,y,comp,req_comp);
+   #endif
 
    #ifndef STBI_NO_HDR
    if (stbi__hdr_test(s)) {
@@ -768,9 +894,12 @@ static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp
    }
    #endif
 
+   #ifndef STBI_NO_TGA
    // test tga last because it's a crappy test!
    if (stbi__tga_test(s))
       return stbi__tga_load(s,x,y,comp,req_comp);
+   #endif
+
    return stbi__errpuc("unknown image type", "Image not of any known type, or corrupt");
 }
 
@@ -827,8 +956,7 @@ STBIDEF stbi_uc *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *u
    return stbi_load_main(&s,x,y,comp,req_comp);
 }
 
-#ifndef STBI_NO_HDR
-
+#ifndef STBI_NO_LINEAR
 static float *stbi_loadf_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    unsigned char *data;
@@ -875,10 +1003,10 @@ STBIDEF float *stbi_loadf_from_file(FILE *f, int *x, int *y, int *comp, int req_
 }
 #endif // !STBI_NO_STDIO
 
-#endif // !STBI_NO_HDR
+#endif // !STBI_NO_LINEAR
 
-// these is-hdr-or-not is defined independent of whether STBI_NO_HDR is
-// defined, for API simplicity; if STBI_NO_HDR is defined, it always
+// these is-hdr-or-not is defined independent of whether STBI_NO_LINEAR is
+// defined, for API simplicity; if STBI_NO_LINEAR is defined, it always
 // reports false!
 
 STBIDEF int stbi_is_hdr_from_memory(stbi_uc const *buffer, int len)
@@ -929,16 +1057,16 @@ STBIDEF int      stbi_is_hdr_from_callbacks(stbi_io_callbacks const *clbk, void 
    #endif
 }
 
-#ifndef STBI_NO_HDR
 static float stbi__h2l_gamma_i=1.0f/2.2f, stbi__h2l_scale_i=1.0f;
 static float stbi__l2h_gamma=2.2f, stbi__l2h_scale=1.0f;
 
-STBIDEF void   stbi_hdr_to_ldr_gamma(float gamma) { stbi__h2l_gamma_i = 1/gamma; }
-STBIDEF void   stbi_hdr_to_ldr_scale(float scale) { stbi__h2l_scale_i = 1/scale; }
-
+#ifndef STBI_NO_LINEAR
 STBIDEF void   stbi_ldr_to_hdr_gamma(float gamma) { stbi__l2h_gamma = gamma; }
 STBIDEF void   stbi_ldr_to_hdr_scale(float scale) { stbi__l2h_scale = scale; }
 #endif
+
+STBIDEF void   stbi_hdr_to_ldr_gamma(float gamma) { stbi__h2l_gamma_i = 1/gamma; }
+STBIDEF void   stbi_hdr_to_ldr_scale(float scale) { stbi__h2l_scale_i = 1/scale; }
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1053,6 +1181,9 @@ static stbi__uint32 stbi__get32le(stbi__context *s)
    return z + (stbi__get16le(s) << 16);
 }
 
+#define STBI__BYTECAST(x)  ((stbi_uc) ((x) & 255))  // truncate int to byte without warnings
+
+
 //////////////////////////////////////////////////////////////////////////////
 //
 //  generic converter from built-in img_n to req_comp
@@ -1113,7 +1244,7 @@ static unsigned char *stbi__convert_format(unsigned char *data, int img_n, int r
    return good;
 }
 
-#ifndef STBI_NO_HDR
+#ifndef STBI_NO_LINEAR
 static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp)
 {
    int i,k,n;
@@ -1130,7 +1261,9 @@ static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp)
    STBI_FREE(data);
    return output;
 }
+#endif
 
+#ifndef STBI_NO_HDR
 #define stbi__float2int(x)   ((int) (x))
 static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp)
 {
@@ -1184,6 +1317,8 @@ static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp)
 //          IJL11.dll:  1.08 seconds (compiled by intel)
 //          IJG 1998:   0.98 seconds (MSVC6, makefile provided by IJG)
 //          IJG 1998:   0.95 seconds (MSVC6, makefile + proc=PPro)
+
+#ifndef STBI_NO_JPEG
 
 // huffman decoding acceleration
 #define FAST_BITS   9  // larger handles more cases; smaller stomps less cache
@@ -3171,6 +3306,7 @@ static int stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp)
    j.s = s;
    return stbi__jpeg_info_raw(&j, x, y, comp);
 }
+#endif
 
 // public domain zlib decode    v0.2  Sean Barrett 2006-11-18
 //    simple implementation
@@ -3178,6 +3314,8 @@ static int stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp)
 //      - all output is written to a single output buffer (can malloc/realloc)
 //    performance
 //      - fast huffman
+
+#ifndef STBI_NO_ZLIB
 
 // fast-way is faster to check than jpeg huffman, but slow way is slower
 #define STBI__ZFAST_BITS  9 // accelerate all cases in default tables
@@ -3623,6 +3761,7 @@ STBIDEF int stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const char
    else
       return -1;
 }
+#endif
 
 // public domain "baseline" PNG decoder   v0.10  Sean Barrett 2006-11-18
 //    simple implementation
@@ -3634,7 +3773,7 @@ STBIDEF int stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const char
 //    performance
 //      - uses stb_zlib, a PD zlib implementation with fast huffman decoding
 
-
+#ifndef STBI_NO_PNG
 typedef struct
 {
    stbi__uint32 length;
@@ -3695,8 +3834,6 @@ static int stbi__paeth(int a, int b, int c)
    if (pb <= pc) return b;
    return c;
 }
-
-#define STBI__BYTECAST(x)  ((stbi_uc) ((x) & 255))  // truncate int to byte without warnings
 
 static stbi_uc stbi__depth_scale_table[9] = { 0, 0xff, 0x55, 0, 0x11, 0,0,0, 0x01 };
 
@@ -4251,8 +4388,11 @@ static int stbi__png_info(stbi__context *s, int *x, int *y, int *comp)
    p.s = s;
    return stbi__png_info_raw(&p, x, y, comp);
 }
+#endif
 
 // Microsoft/Windows BMP image
+
+#ifndef STBI_NO_BMP
 static int stbi__bmp_test_raw(stbi__context *s)
 {
    int r;
@@ -4517,10 +4657,11 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
    if (comp) *comp = s->img_n;
    return out;
 }
+#endif
 
 // Targa Truevision - TGA
 // by Jonathan Dummer
-
+#ifndef STBI_NO_TGA
 static int stbi__tga_info(stbi__context *s, int *x, int *y, int *comp)
 {
     int tga_w, tga_h, tga_comp;
@@ -4776,10 +4917,12 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
    //   OK, done
    return tga_data;
 }
+#endif
 
 // *************************************************************************************************
 // Photoshop PSD loader -- PD by Thatcher Ulrich, integration by Nicolas Schulz, tweaked by STB
 
+#ifndef STBI_NO_PSD
 static int stbi__psd_test(stbi__context *s)
 {
    int r = (stbi__get32be(s) == 0x38425053);
@@ -4944,6 +5087,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
 
    return out;
 }
+#endif
 
 // *************************************************************************************************
 // Softimage PIC loader
@@ -4952,6 +5096,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
 // See http://softimage.wiki.softimage.com/index.php/INFO:_PIC_file_format
 // See http://ozviz.wasp.uwa.edu.au/~pbourke/dataformats/softimagepic/
 
+#ifndef STBI_NO_PIC
 static int stbi__pic_is4(stbi__context *s,const char *str)
 {
    int i;
@@ -5156,9 +5301,12 @@ static int stbi__pic_test(stbi__context *s)
    stbi__rewind(s);
    return r;
 }
+#endif
 
 // *************************************************************************************************
 // GIF loader -- public domain by Jean-Marc Lienher -- simplified/shrunk by stb
+
+#ifndef STBI_NO_GIF
 typedef struct
 {
    stbi__int16 prefix;
@@ -5499,7 +5647,7 @@ static int stbi__gif_info(stbi__context *s, int *x, int *y, int *comp)
 {
    return stbi__gif_info_raw(s,x,y,comp);
 }
-
+#endif
 
 // *************************************************************************************************
 // Radiance RGBE HDR loader
@@ -5723,6 +5871,7 @@ static int stbi__hdr_info(stbi__context *s, int *x, int *y, int *comp)
 }
 #endif // STBI_NO_HDR
 
+#ifndef STBI_NO_BMP
 static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
 {
    int hsz;
@@ -5750,7 +5899,9 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
    *comp = stbi__get16le(s) / 8;
    return 1;
 }
+#endif
 
+#ifndef STBI_NO_PSD
 static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
 {
    int channelCount;
@@ -5781,7 +5932,9 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
    *comp = 4;
    return 1;
 }
+#endif
 
+#ifndef STBI_NO_PIC
 static int stbi__pic_info(stbi__context *s, int *x, int *y, int *comp)
 {
    int act_comp=0,num_packets=0,chained;
@@ -5826,6 +5979,7 @@ static int stbi__pic_info(stbi__context *s, int *x, int *y, int *comp)
 
    return 1;
 }
+#endif
 
 // *************************************************************************************************
 // Portable Gray Map and Portable Pixel Map loader
@@ -5838,6 +5992,8 @@ static int stbi__pic_info(stbi__context *s, int *x, int *y, int *comp)
 //    Does not support comments in the header section
 //    Does not support ASCII image data (formats P2 and P3)
 //    Does not support 16-bit-per-channel
+
+#ifndef STBI_NO_PNM
 
 static int      stbi__pnm_test(stbi__context *s)
 {
@@ -5932,30 +6088,47 @@ static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
    else
       return 1;
 }
+#endif
 
 static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 {
-   if (stbi__jpeg_info(s, x, y, comp))
-       return 1;
-   if (stbi__png_info(s, x, y, comp))
-       return 1;
-   if (stbi__gif_info(s, x, y, comp))
-       return 1;
-   if (stbi__bmp_info(s, x, y, comp))
-       return 1;
-   if (stbi__psd_info(s, x, y, comp))
-       return 1;
-   if (stbi__pic_info(s, x, y, comp))
-       return 1;
-   if (stbi__pnm_info(s, x, y, comp))
-       return 1;
-   #ifndef STBI_NO_HDR
-   if (stbi__hdr_info(s, x, y, comp))
-       return 1;
+   #ifndef STBI_NO_JPEG
+   if (stbi__jpeg_info(s, x, y, comp)) return 1;
    #endif
+
+   #ifndef STBI_NO_PNG
+   if (stbi__png_info(s, x, y, comp))  return 1;
+   #endif
+
+   #ifndef STBI_NO_GIF
+   if (stbi__gif_info(s, x, y, comp))  return 1;
+   #endif
+
+   #ifndef STBI_NO_BMP
+   if (stbi__bmp_info(s, x, y, comp))  return 1;
+   #endif
+
+   #ifndef STBI_NO_PSD
+   if (stbi__psd_info(s, x, y, comp))  return 1;
+   #endif
+   
+   #ifndef STBI_NO_PIC
+   if (stbi__pic_info(s, x, y, comp))  return 1;
+   #endif
+
+   #ifndef STBI_NO_PNM
+   if (stbi__pnm_info(s, x, y, comp))  return 1;
+   #endif
+
+   #ifndef STBI_NO_HDR
+   if (stbi__hdr_info(s, x, y, comp))  return 1;
+   #endif
+
    // test tga last because it's a crappy test!
+   #ifndef STBI_NO_TGA
    if (stbi__tga_info(s, x, y, comp))
        return 1;
+   #endif
    return stbi__err("unknown image type", "Image not of any known type, or corrupt");
 }
 
@@ -6000,11 +6173,12 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
-      2.00 (2014-12-25) optimize JPG, incl. x86 & NEON SIMD (ryg)
+      2.00 (2014-12-25) optimize JPG, including x86 SSE2 & NEON SIMD (ryg)
                         progressive JPEG (stb)
                         PGM/PPM support (Ken Miller)
                         STBI_MALLOC,STBI_REALLOC,STBI_FREE
                         GIF bugfix -- seemingly never worked
+                        STBI_NO_*, STBI_ONLY_*
       1.48 (2014-12-14) fix incorrectly-named assert()
       1.47 (2014-12-14) 1/2/4-bit PNG support, both direct and paletted (Omar Cornut & stb)
                         optimize PNG (ryg)
