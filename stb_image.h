@@ -1888,7 +1888,7 @@ static void stbi__idct_block(stbi_uc *out, int out_stride, short data[64])
 // sse2 integer IDCT. not the fastest possible implementation but it
 // produces bit-identical results to the generic C version so it's
 // fully "transparent".
-static void stbi__idct_sse2(stbi_uc *out, int out_stride, short data[64])
+static void stbi__idct_simd(stbi_uc *out, int out_stride, short data[64])
 {
    // This is constructed to match our regular (generic) integer IDCT exactly.
    __m128i row0, row1, row2, row3, row4, row5, row6, row7;
@@ -2069,7 +2069,7 @@ static void stbi__idct_sse2(stbi_uc *out, int out_stride, short data[64])
 
 // NEON integer IDCT. should produce bit-identical
 // results to the generic C version.
-static void stbi__idct_neon(stbi_uc *out, int out_stride, short data[64])
+static void stbi__idct_simd(stbi_uc *out, int out_stride, short data[64])
 {
    int16x8_t row0, row1, row2, row3, row4, row5, row6, row7;
 
@@ -3118,7 +3118,7 @@ static void stbi__setup_jpeg(stbi__jpeg *j)
 
 #ifdef STBI_SSE2
    if (stbi__sse2_available()) {
-      j->idct_block_kernel = stbi__idct_sse2;
+      j->idct_block_kernel = stbi__idct_simd;
       #ifndef STBI_JPEG_OLD
       j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_simd;
       #endif
@@ -3127,7 +3127,7 @@ static void stbi__setup_jpeg(stbi__jpeg *j)
 #endif
 
 #ifdef STBI_NEON
-   j->idct_block_kernel = stbi__idct_neon;
+   j->idct_block_kernel = stbi__idct_simd;
    #ifndef STBI_JPEG_OLD
    j->YCbCr_to_RGB_kernel = stbi__YCbCr_to_RGB_simd;
    #endif
