@@ -1,12 +1,19 @@
-/* stb_image - v1.49 - public domain JPEG/PNG reader - http://nothings.org/stb_image.c
+/* stb_image - v2.00 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
       #define STB_IMAGE_IMPLEMENTATION
    before you include this file in *one* C or C++ file to create the implementation.
 
-   #define STBI_ASSERT(x) to avoid using assert.h.
-   #define STBI_MALLOC, STBI_REALLOC, and STBI_FREE to avoid using malloc,realloc,free
+   // i.e. it should look like this:
+   #include ...
+   #include ...
+   #include ...
+   #define STB_IMAGE_IMPLEMENTATION
+   #include "stb_image.h"
+
+   You can #define STBI_ASSERT(x) before the #include to avoid using assert.h.
+   And #define STBI_MALLOC, STBI_REALLOC, and STBI_FREE to avoid using malloc,realloc,free
 
 
    QUICK NOTES:
