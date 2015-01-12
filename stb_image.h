@@ -1723,11 +1723,12 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
             short *p = &data[stbi__jpeg_dezigzag[k]];
             if (*p != 0)
                if (stbi__jpeg_get_bit(j))
-                  if ((*p & bit)==0)
+                  if ((*p & bit)==0) {
                      if (*p > 0)
                         *p += bit;
                      else
                         *p -= bit;
+                  }
          }
       } else {
          k = j->spec_start;
@@ -1759,11 +1760,12 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
                short *p = &data[stbi__jpeg_dezigzag[k]];
                if (*p != 0) {
                   if (stbi__jpeg_get_bit(j))
-                     if ((*p & bit)==0)
+                     if ((*p & bit)==0) {
                         if (*p > 0)
                            *p += bit;
                         else
                            *p -= bit;
+                     }
                   ++k;
                } else {
                   if (r == 0) {
