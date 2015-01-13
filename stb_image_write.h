@@ -19,16 +19,23 @@ ABOUT:
 
    The PNG output is not optimal; it is 20-50% larger than the file
    written by a decent optimizing implementation. This library is designed
-   for source code compactness and simplicitly, not optimal image file size
+   for source code compactness and simplicity, not optimal image file size
    or run-time performance.
 
 USAGE:
 
-   There are three functions, one for each image file format:
+   There are functions for each image file format and output method:
 
-     int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-     int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
-     int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
+      int stbi_write_png_to_file(char const *filename, int x, int y, int comp, const void *data, int stride_bytes);
+      int stbi_write_bmp_to_file(char const *filename, int x, int y, int comp, const void *data);
+      int stbi_write_tga_to_file(char const *filename, int x, int y, int comp, const void *data);
+
+      int stbi_write_png_to_callbacks(stbi_io_write_callbacks const *clbk, void *user, int x, int y, int comp, const void *data, int stride_bytes);
+      int stbi_write_bmp_to_callbacks(stbi_io_write_callbacks const *clbk, void *user, int x, int y, int comp, const void *data);
+      int stbi_write_tga_to_callbacks(stbi_io_write_callbacks const *clbk, void *user, int x, int y, int comp, const void *data);
+
+   You can define STBI_WRITE_NO_STDIO to disable the file variant of these
+   functions.
 
    Each function returns 0 on failure and non-0 on success.
    
@@ -51,6 +58,16 @@ USAGE:
    formats do not. (Thus you cannot write a native-format BMP through the BMP
    writer, both because it is in BGR order and because it may have padding
    at the end of the line.)
+
+   ===========================================================================
+   
+   I/O callbacks
+   
+   I/O callbacks allow you to write to arbitrary sources, like packaged
+   files or some other source.
+   
+   The function you must define is "write" (writes some bytes of data).
+
 */
 
 #ifndef INCLUDE_STB_IMAGE_WRITE_H
@@ -60,9 +77,22 @@ USAGE:
 extern "C" {
 #endif
 
-extern int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-extern int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
-extern int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
+typedef struct
+{
+   int      (*write)  (void *user,void *data,int size);  // write 'size' bytes from 'data'.  return number of bytes actually written
+} stbi_io_write_callbacks;
+
+extern int stbi_write_png_to_callbacks(stbi_io_write_callbacks const *clbk, void *user, int x, int y, int comp, const void *data, int stride_bytes);
+extern int stbi_write_bmp_to_callbacks(stbi_io_write_callbacks const *clbk, void *user, int x, int y, int comp, const void *data);
+extern int stbi_write_tga_to_callbacks(stbi_io_write_callbacks const *clbk, void *user, int x, int y, int comp, const void *data);
+
+#ifndef STBI_WRITE_NO_STDIO
+
+extern int stbi_write_png_to_file(char const *filename, int x, int y, int comp, const void *data, int stride_bytes);
+extern int stbi_write_bmp_to_file(char const *filename, int x, int y, int comp, const void *data);
+extern int stbi_write_tga_to_file(char const *filename, int x, int y, int comp, const void *data);
+
+#endif // !STBI_WRITE_NO_STDIO
 
 #ifdef __cplusplus
 }
@@ -72,28 +102,68 @@ extern int stbi_write_tga(char const *filename, int w, int h, int comp, const vo
 
 #ifdef STB_IMAGE_WRITE_IMPLEMENTATION
 
+#ifndef STBI_WRITE_NO_STDIO
+#include <stdio.h>
+#endif // STBI_WRITE_NO_STDIO
 #include <stdarg.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
 #include <assert.h>
+
+typedef struct
+{
+   stbi_io_write_callbacks io;
+   void *io_user_data;
+} stbi__write_context;
+
+// initialize a callback-based context
+static void stbi__start_write_callbacks(stbi__write_context *s, stbi_io_write_callbacks const *c, void *user)
+{
+   s->io = *c;
+   s->io_user_data = user;
+}
+
+#ifndef STBI_WRITE_NO_STDIO
+
+static int stbi__stdio_write(void *user, void *data, int size)
+{
+   return (int) fwrite(data,1,size,(FILE*) user);
+}
+
+static stbi_io_write_callbacks stbi__stdio_write_callbacks =
+{
+   stbi__stdio_write
+};
+
+static void stbi__start_write_file(stbi__write_context *s, const char *filename)
+{
+   FILE *f = fopen(filename, "wb");
+   stbi__start_write_callbacks(s, &stbi__stdio_write_callbacks, (void *) f);
+}
+
+static void stbi__end_write_file(stbi__write_context *s)
+{
+   fclose((FILE *)s->io_user_data);
+}
+
+#endif // !STBI_WRITE_NO_STDIO
 
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
 
-static void writefv(FILE *f, const char *fmt, va_list v)
+static void writefv(stbi__write_context const *s, const char *fmt, va_list v)
 {
    while (*fmt) {
       switch (*fmt++) {
          case ' ': break;
-         case '1': { unsigned char x = (unsigned char) va_arg(v, int); fputc(x,f); break; }
+         case '1': { unsigned char x = (unsigned char) va_arg(v, int); s->io.write(s->io_user_data,&x,1); break; }
          case '2': { int x = va_arg(v,int); unsigned char b[2];
                      b[0] = (unsigned char) x; b[1] = (unsigned char) (x>>8);
-                     fwrite(b,2,1,f); break; }
+                     s->io.write(s->io_user_data,b,2); break; }
          case '4': { stbiw_uint32 x = va_arg(v,int); unsigned char b[4];
                      b[0]=(unsigned char)x; b[1]=(unsigned char)(x>>8);
                      b[2]=(unsigned char)(x>>16); b[3]=(unsigned char)(x>>24);
-                     fwrite(b,4,1,f); break; }
+                     s->io.write(s->io_user_data,b,4); break; }
          default:
             assert(0);
             return;
@@ -101,14 +171,14 @@ static void writefv(FILE *f, const char *fmt, va_list v)
    }
 }
 
-static void write3(FILE *f, unsigned char a, unsigned char b, unsigned char c)
+static void write3(stbi__write_context const *s, unsigned char a, unsigned char b, unsigned char c)
 {
    unsigned char arr[3];
    arr[0] = a, arr[1] = b, arr[2] = c;
-   fwrite(arr, 3, 1, f);
+   s->io.write(s->io_user_data, arr, 3);
 }
 
-static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad)
+static void write_pixels(stbi__write_context const *s, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad)
 {
    unsigned char bg[3] = { 255, 0, 255}, px[3];
    stbiw_uint32 zero = 0;
@@ -126,64 +196,99 @@ static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp,
       for (i=0; i < x; ++i) {
          unsigned char *d = (unsigned char *) data + (j*x+i)*comp;
          if (write_alpha < 0)
-            fwrite(&d[comp-1], 1, 1, f);
+            s->io.write(s->io_user_data, &d[comp-1], 1);
          switch (comp) {
             case 1: 
-            case 2: fwrite(d, 1, 1, f);
+            case 2: s->io.write(s->io_user_data, d, 1);
                     break;
             case 4:
                if (!write_alpha) {
                   // composite against pink background
                   for (k=0; k < 3; ++k)
                      px[k] = bg[k] + ((d[k] - bg[k]) * d[3])/255;
-                  write3(f, px[1-rgb_dir],px[1],px[1+rgb_dir]);
+                  write3(s, px[1-rgb_dir],px[1],px[1+rgb_dir]);
                   break;
                }
                /* FALLTHROUGH */
             case 3:
-               write3(f, d[1-rgb_dir],d[1],d[1+rgb_dir]);
+               write3(s, d[1-rgb_dir],d[1],d[1+rgb_dir]);
                break;
          }
          if (write_alpha > 0)
-            fwrite(&d[comp-1], 1, 1, f);
+            s->io.write(s->io_user_data, &d[comp-1], 1);
       }
-      fwrite(&zero,scanline_pad,1,f);
+      s->io.write(s->io_user_data,&zero,scanline_pad);
    }
 }
 
-static int outfile(char const *filename, int rgb_dir, int vdir, int x, int y, int comp, void *data, int alpha, int pad, const char *fmt, ...)
+static int outfile(stbi__write_context const *s, int rgb_dir, int vdir, int x, int y, int comp, void *data, int alpha, int pad, const char *fmt, ...)
 {
-   FILE *f;
    if (y < 0 || x < 0) return 0;
-   f = fopen(filename, "wb");
-   if (f) {
-      va_list v;
-      va_start(v, fmt);
-      writefv(f, fmt, v);
-      va_end(v);
-      write_pixels(f,rgb_dir,vdir,x,y,comp,data,alpha,pad);
-      fclose(f);
-   }
-   return f != NULL;
+   va_list v;
+   va_start(v, fmt);
+   writefv(s, fmt, v);
+   va_end(v);
+   write_pixels(s,rgb_dir,vdir,x,y,comp,data,alpha,pad);
+   return 1;
 }
 
-int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *data)
+int stbi_write_bmp(stbi__write_context const *s, int x, int y, int comp, const void *data)
 {
    int pad = (-x*3) & 3;
-   return outfile(filename,-1,-1,x,y,comp,(void *) data,0,pad,
+   return outfile(s,-1,-1,x,y,comp,(void *) data,0,pad,
            "11 4 22 4" "4 44 22 444444",
            'B', 'M', 14+40+(x*3+pad)*y, 0,0, 14+40,  // file header
             40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
 }
 
-int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
+int stbi_write_bmp_to_callbacks(stbi_io_write_callbacks const *clbk, void *user, int x, int y, int comp, const void *data)
+{
+   stbi__write_context s;
+   stbi__start_write_callbacks(&s, clbk, user);
+   return stbi_write_bmp(&s, x, y, comp, data);
+}
+
+#ifndef STBI_WRITE_NO_STDIO
+
+int stbi_write_bmp_to_file(char const *filename, int x, int y, int comp, const void *data)
+{
+   stbi__write_context s;
+   stbi__start_write_file(&s,filename);
+   int r = stbi_write_bmp(&s, x, y, comp, data);
+   stbi__end_write_file(&s);
+   return r;
+}
+
+#endif //!STBI_WRITE_NO_STDIO
+
+int stbi_write_tga(stbi__write_context const *s, int x, int y, int comp, const void *data)
 {
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
    int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
-   return outfile(filename, -1,-1, x, y, comp, (void *) data, has_alpha, 0,
+   return outfile(s, -1,-1, x, y, comp, (void *) data, has_alpha, 0,
                   "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, (colorbytes+has_alpha)*8, has_alpha*8);
 }
+
+int stbi_write_tga_to_callbacks(stbi_io_write_callbacks const *clbk, void *user, int x, int y, int comp, const void *data)
+{
+   stbi__write_context s;
+   stbi__start_write_callbacks(&s, clbk, user);
+   return stbi_write_tga(&s, x, y, comp, data);
+}
+
+#ifndef STBI_WRITE_NO_STDIO
+
+int stbi_write_tga_to_file(char const *filename, int x, int y, int comp, const void *data)
+{
+   stbi__write_context s;
+   stbi__start_write_file(&s,filename);
+   int r = stbi_write_tga(&s, x, y, comp, data);
+   stbi__end_write_file(&s);
+   return r;
+}
+
+#endif //!STBI_WRITE_NO_STDIO
 
 // stretchy buffer; stbiw__sbpush() == vector<>::push_back() -- stbiw__sbcount() == vector<>::size()
 #define stbiw__sbraw(a) ((int *) (a) - 2)
@@ -490,19 +595,35 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
    return out;
 }
 
-int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
+int stbi_write_png(stbi__write_context const *s, int x, int y, int comp, const void *data, int stride_bytes)
 {
-   FILE *f;
    int len;
    unsigned char *png = stbi_write_png_to_mem((unsigned char *) data, stride_bytes, x, y, comp, &len);
    if (!png) return 0;
-   f = fopen(filename, "wb");
-   if (!f) { free(png); return 0; }
-   fwrite(png, 1, len, f);
-   fclose(f);
+   int r = s->io.write(s->io_user_data, png, len);
    free(png);
-   return 1;
+   return r;
 }
+
+int stbi_write_png_to_callbacks(stbi_io_write_callbacks const *clbk, void *user, int x, int y, int comp, const void *data, int stride_bytes)
+{
+   stbi__write_context s;
+   stbi__start_write_callbacks(&s, clbk, user);
+   return stbi_write_png(&s, x, y, comp, data, stride_bytes);
+}
+
+#ifndef STBI_WRITE_NO_STDIO
+
+int stbi_write_png_to_file(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
+{
+   stbi__write_context s;
+   stbi__start_write_file(&s,filename);
+   int r = stbi_write_png(&s, x, y, comp, data, stride_bytes);
+   stbi__end_write_file(&s);
+   return r;
+}
+#endif //!STBI_WRITE_NO_STDIO
+
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
