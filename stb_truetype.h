@@ -2331,7 +2331,6 @@ int stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, stbtt_fontinfo *inf
             rects[k].h = (stbrp_coord) (y1-y0 + spc->padding + spc->v_oversample-1);
 		 } else {
             rects[k].w = rects[k].h = 1;
-            rects[k].was_packed = false;
          }
 		 ++k;
       }
