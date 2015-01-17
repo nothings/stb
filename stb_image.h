@@ -1768,7 +1768,7 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
                } else {
                   if (r == 0) {
                      if (s)
-                        data[stbi__jpeg_dezigzag[k++]] = s;
+                        data[stbi__jpeg_dezigzag[k++]] = (short) s;
                      break;
                   }
                   --r;
@@ -2192,7 +2192,7 @@ static void stbi__idct_simd(stbi_uc *out, int out_stride, short data[64])
       // pass 1
       dct_trn16(row0, row1); // a0b0a2b2a4b4a6b6
       dct_trn16(row2, row3);
-      dct_trn16(row4, row5); 
+      dct_trn16(row4, row5);
       dct_trn16(row6, row7);
 
       // pass 2
@@ -6115,7 +6115,7 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
    #ifndef STBI_NO_PSD
    if (stbi__psd_info(s, x, y, comp))  return 1;
    #endif
-   
+
    #ifndef STBI_NO_PIC
    if (stbi__pic_info(s, x, y, comp))  return 1;
    #endif
