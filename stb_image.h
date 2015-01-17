@@ -1724,11 +1724,12 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
             short *p = &data[stbi__jpeg_dezigzag[k]];
             if (*p != 0)
                if (stbi__jpeg_get_bit(j))
-                  if ((*p & bit)==0)
+                  if ((*p & bit)==0) {
                      if (*p > 0)
                         *p += bit;
                      else
                         *p -= bit;
+                  }
          }
       } else {
          k = j->spec_start;
@@ -1760,11 +1761,12 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
                short *p = &data[stbi__jpeg_dezigzag[k]];
                if (*p != 0) {
                   if (stbi__jpeg_get_bit(j))
-                     if ((*p & bit)==0)
+                     if ((*p & bit)==0) {
                         if (*p > 0)
                            *p += bit;
                         else
                            *p -= bit;
+                     }
                   ++k;
                } else {
                   if (r == 0) {
@@ -2420,7 +2422,6 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                      for (x=0; x < z->img_comp[n].h; ++x) {
                         int x2 = (i*z->img_comp[n].h + x);
                         int y2 = (j*z->img_comp[n].v + y);
-                        int ha = z->img_comp[n].ha;
                         short *data = z->img_comp[n].coeff + 64 * (x2 + y2 * z->img_comp[n].coeff_w);
                         if (!stbi__jpeg_decode_block_prog_dc(z, data, &z->huff_dc[z->img_comp[n].hd], n))
                            return 0;
