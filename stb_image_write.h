@@ -222,9 +222,9 @@ void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
    } else {
       float normalize = (float) frexp(maxcomp, &exponent) * 256.0f/maxcomp;
 
-      rgbe[0] = (unsigned char)(linear[0] * maxcomp);
-      rgbe[1] = (unsigned char)(linear[1] * maxcomp);
-      rgbe[2] = (unsigned char)(linear[2] * maxcomp);
+      rgbe[0] = (unsigned char)(linear[0] * normalize);
+      rgbe[1] = (unsigned char)(linear[1] * normalize);
+      rgbe[2] = (unsigned char)(linear[2] * normalize);
       rgbe[3] = (unsigned char)(exponent + 128);
    }
 }
