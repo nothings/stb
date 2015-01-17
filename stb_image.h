@@ -1,4 +1,4 @@
-/* stb_image - v2.00b - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.01 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -143,6 +143,7 @@
 
 
    Latest revision history:
+      2.01  (2015-01-17) fix various warnings
       2.00b (2014-12-25) fix STBI_MALLOC in progressive JPEG
       2.00  (2014-12-25) optimize JPEG, including x86 SSE2 & ARM NEON SIMD
                          progressive JPEG
@@ -192,6 +193,8 @@
                                                  Michal Cichon
                                                  Tero Hanninen
                                                  Sergio Gonzalez
+                                                 Cass Everitt
+                                                 Engin Manap
 
 License:
    This software is in the public domain. Where that dedication is not
@@ -6179,6 +6182,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.01  (2015-01-17) fix various warnings
       2.00b (2014-12-25) fix STBI_MALLOC in progressive JPEG
       2.00  (2014-12-25) optimize JPG, including x86 SSE2 & NEON SIMD (ryg)
                          progressive JPEG (stb)
