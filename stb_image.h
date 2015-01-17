@@ -623,6 +623,14 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #define STBI_FREE(p)       free(p)
 #endif
 
+#if defined(__GNUC__) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
+// gcc doesn't support sse2 intrinsics unless you compile with -msse2,
+// (but compiling with -msse2 allows the compiler to use SSE2 everywhere;
+// this is just broken and gcc are jerks for not fixing it properly
+// http://www.virtualdub.org/blog/pivot/entry.php?id=363 )
+#define STBI_NO_SIMD
+#endif
+
 #if !defined(STBI_NO_SIMD) && (defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86))
 #define STBI_SSE2
 #include <emmintrin.h>
@@ -6182,7 +6190,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
-      2.01  (2015-01-17) fix various warnings
+      2.01  (2015-01-17) fix various warnings; suppress SIMD on gcc 32-bit without -msse2
       2.00b (2014-12-25) fix STBI_MALLOC in progressive JPEG
       2.00  (2014-12-25) optimize JPG, including x86 SSE2 & NEON SIMD (ryg)
                          progressive JPEG (stb)
