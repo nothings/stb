@@ -1,16 +1,16 @@
-/* stb_image_write - v0.95 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v0.96 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010
                             no warranty implied; use at your own risk
 
 
-Before including,
+   Before #including,
 
-    #define STB_IMAGE_WRITE_IMPLEMENTATION
+       #define STB_IMAGE_WRITE_IMPLEMENTATION
 
-in the file that you want to have the implementation.
+   in the file that you want to have the implementation.
 
-Will probably not work correctly with strict-aliasing optimizations.
 
+   Will probably not work correctly with strict-aliasing optimizations.
 
 ABOUT:
 
@@ -24,11 +24,12 @@ ABOUT:
 
 USAGE:
 
-   There are three functions, one for each image file format:
+   There are four functions, one for each image file format:
 
      int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
      int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
+     int stbi_write_hdr(char const *filename, int w, int h, int comp, const void *data);
 
    Each function returns 0 on failure and non-0 on success.
    
@@ -51,6 +52,21 @@ USAGE:
    formats do not. (Thus you cannot write a native-format BMP through the BMP
    writer, both because it is in BGR order and because it may have padding
    at the end of the line.)
+
+   HDR expects linear float data. Since the format is always 32-bit rgb(e)
+   data, alpha (if provided) is discarded, and for monochrome data it is
+   replicated across all three channels.
+
+CREDITS:
+
+   PNG/BMP/TGA
+      Sean Barrett
+   HDR
+      Baldur Karlsson
+   TGA monochrome:
+      Jean-Sebastien Guay
+   Bugfixes:
+      Chribba@github
 */
 
 #ifndef INCLUDE_STB_IMAGE_WRITE_H
@@ -60,9 +76,10 @@ USAGE:
 extern "C" {
 #endif
 
-extern int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-extern int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
-extern int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
+extern int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
+extern int stbi_write_bmp(char const *filename, int w, int h, int comp, const void  *data);
+extern int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
+extern int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
 
 #ifdef __cplusplus
 }
@@ -77,6 +94,7 @@ extern int stbi_write_tga(char const *filename, int w, int h, int comp, const vo
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
+#include <math.h>
 
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
@@ -188,6 +206,163 @@ int stbi_write_tga(char const *filename, int x, int y, int comp, const void *dat
    return outfile(filename, -1,-1, x, y, comp, 0, (void *) data, has_alpha, 0,
                   "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, (colorbytes+has_alpha)*8, has_alpha*8);
 }
+
+// *************************************************************************************************
+// Radiance RGBE HDR writer
+// by Baldur Karlsson
+#define stbiw__max(a, b)  ((a) > (b) ? (a) : (b))
+
+void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
+{
+   int exponent;
+   float maxcomp = stbiw__max(linear[0], stbiw__max(linear[1], linear[2]));
+
+   if (maxcomp < 1e-32) {
+      rgbe[0] = rgbe[1] = rgbe[2] = rgbe[3] = 0;
+   } else {
+      float normalize = (float) frexp(maxcomp, &exponent) * 256.0f/maxcomp;
+
+      rgbe[0] = (unsigned char)(linear[0] * maxcomp);
+      rgbe[1] = (unsigned char)(linear[1] * maxcomp);
+      rgbe[2] = (unsigned char)(linear[2] * maxcomp);
+      rgbe[3] = (unsigned char)(exponent + 128);
+   }
+}
+
+void stbiw__write_rle_data(FILE *f, int length, unsigned char databyte)
+{
+   unsigned char lengthbyte = 0x80 | (unsigned char)(length & 0x7f);
+   assert(length <= 0x7f);
+   fwrite(&lengthbyte, 1, 1, f);
+   fwrite(&databyte, 1, 1, f);
+}
+
+void stbiw__write_nonrle_data(FILE *f, int length, unsigned char *data)
+{
+   unsigned char lengthbyte = (unsigned char )(length & 0xff);
+   assert(length <= 0x7f);
+   fwrite(&lengthbyte, 1, 1, f);
+   fwrite(data, length, 1, f);
+}
+
+void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scratch, const float *scanline)
+{
+   unsigned char scanlineheader[4] = { 2, 2, 0, 0 };
+   unsigned char rgbe[4];
+   float linear[3];
+   int x;
+
+   scanlineheader[2] = (width&0xff00)>>8;
+   scanlineheader[3] = (width&0x00ff);
+
+   /* skip RLE for images too small or large */
+   if (width < 8 || width >= 32768) {
+      for (x=0; x < width; x++) {
+         switch (comp) {
+            case 4: /* fallthrough */
+            case 3: linear[2] = scanline[x*comp + 2];
+                    linear[1] = scanline[x*comp + 1];
+                    linear[0] = scanline[x*comp + 0];
+                    break;
+            case 2: /* fallthrough */
+            case 1: linear[0] = linear[1] = linear[2] = scanline[x*comp + 0];
+                    break;
+         }
+         stbiw__linear_to_rgbe(rgbe, linear);
+         fwrite(rgbe, 4, 1, f);
+      }
+   } else {
+      /* encode into scratch buffer */
+      for (x=0; x < width; x++) {
+         switch(comp) {
+            case 4: /* fallthrough */
+            case 3: linear[2] = scanline[x*comp + 2];
+                    linear[1] = scanline[x*comp + 1];
+                    linear[0] = scanline[x*comp + 0];
+                    break;
+            case 2: /* fallthrough */
+            case 1: linear[0] = linear[1] = linear[2] = scanline[x*comp + 0];
+                    break;
+         }
+         stbiw__linear_to_rgbe(rgbe, linear);
+         scratch[x + width*0] = rgbe[0];
+         scratch[x + width*1] = rgbe[1];
+         scratch[x + width*2] = rgbe[2];
+         scratch[x + width*3] = rgbe[3];
+      }
+
+      fwrite(scanlineheader, 4, 1, f);
+
+      /* RLE each component separately */
+      for (x=0; x < 4; x++) {
+         unsigned char *comp = &scratch[width*x];
+         int runstart = 0, head = 0, rlerun = 0;
+
+         while (head < width) {
+            head++;
+
+            if (head - runstart == 127 && rlerun == 1) {
+               // max length RLE run
+               stbiw__write_rle_data(f, head - runstart, comp[runstart]);
+               rlerun = 0;
+               runstart = head;
+            } else if (head - runstart == 128 && rlerun == 0) {
+               // max length non-RLE run
+               stbiw__write_nonrle_data(f, head - runstart, comp+runstart);
+               rlerun = 0;
+               runstart = head;
+            } else if (comp[head] != comp[head-1] && rlerun == 1) {
+               // end of RLE run
+               stbiw__write_rle_data(f, head - runstart, comp[runstart]);
+               rlerun = 0;
+               runstart = head;
+            } else {
+               // continue accumulating RLE run
+               if (rlerun == 1) continue;
+
+               // see if we can start an RLE run, at least 3 bytes same
+               if (rlerun == 0 && head - runstart >= 2
+                    && comp[head] == comp[head-1]
+                    && comp[head] == comp[head-2]) {
+                  // found a run. Flush non-run (if there is anything) and then start an RLE run
+                  if (head - runstart > 2) {
+                     stbiw__write_nonrle_data(f, head-2 - runstart, comp+runstart);
+                  }
+
+                  rlerun = 1;
+                  runstart = head-2;
+               }
+            }
+         }
+
+         // flush remaining sequence (if any)
+         if      (rlerun == 1)         stbiw__write_rle_data(f, head - runstart, comp[runstart]);
+         else if (head - runstart > 0) stbiw__write_nonrle_data(f, head - runstart, comp+runstart);
+      }
+   }
+}
+
+int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *data)
+{
+   int i;
+   FILE *f;
+   if (y <= 0 || x <= 0 || data == NULL) return 0;
+   f = fopen(filename, "wb");
+   if (f) {
+      /* Each component is stored separately. Allocate scratch space for full output scanline. */
+      unsigned char *scratch = (unsigned char *) malloc(x*4);
+      fprintf(f, "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n"      );
+      fprintf(f, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n"                 , y, x);
+      for(i=0; i < y; i++)
+         stbiw__write_hdr_scanline(f, x, comp, scratch, data + comp*i*x);
+      free(scratch);
+      fclose(f);
+   }
+   return f != NULL;
+}
+
+/////////////////////////////////////////////////////////
+// PNG
 
 // stretchy buffer; stbiw__sbpush() == vector<>::push_back() -- stbiw__sbcount() == vector<>::size()
 #define stbiw__sbraw(a) ((int *) (a) - 2)
@@ -511,6 +686,9 @@ int stbi_write_png(char const *filename, int x, int y, int comp, const void *dat
 
 /* Revision history
 
+      0.96 (2015-01-17)
+             add HDR output
+             fix monochrome BMP
       0.95 (2014-08-17)
 		       add monochrome TGA output
       0.94 (2014-05-31)
