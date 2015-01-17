@@ -851,7 +851,7 @@ void stbprint(const char *fmt, ...)
 
 
 #ifdef _WIN32
-   #define stb__fopen(x,y)    _wfopen(stb__from_utf8(x), stb__from_utf8_alt(y))
+   #define stb__fopen(x,y)    _wfopen((const wchar_t *)stb__from_utf8(x), (const wchar_t *)stb__from_utf8_alt(y))
    #define stb__windows(x,y)  x
 #else
    #define stb__fopen(x,y)    fopen(x,y)
@@ -4913,7 +4913,7 @@ void stb_nptr_recache(void)
 
 
 #ifdef _MSC_VER
-  #define stb_rename(x,y)   _wrename(stb__from_utf8(x), stb__from_utf8_alt(y))
+  #define stb_rename(x,y)   _wrename((const wchar_t *)stb__from_utf8(x), (const wchar_t *)stb__from_utf8_alt(y))
   #define stb_mktemp   _mktemp
 #else
   #define stb_mktemp   mktemp
@@ -5052,7 +5052,7 @@ int stb_fexists(char *filename)
 {
    struct stb__stat buf;
    return stb__windows(
-             _wstat(stb__from_utf8(filename), &buf),
+             _wstat((const wchar_t *)stb__from_utf8(filename), &buf),
                stat(filename,&buf)
           ) == 0;
 }
@@ -5061,7 +5061,7 @@ time_t stb_ftimestamp(char *filename)
 {
    struct stb__stat buf;
    if (stb__windows(
-             _wstat(stb__from_utf8(filename), &buf),
+             _wstat((const wchar_t *)stb__from_utf8(filename), &buf),
                stat(filename,&buf)
           ) == 0)
    {
@@ -5843,7 +5843,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
    #ifdef _MSC_VER
       strcpy(buffer+n, "*.*");
       ws = stb__from_utf8(buffer);
-      z = _wfindfirst(ws, &data);
+      z = _wfindfirst((const wchar_t *)ws, &data);
    #else
       z = opendir(dir);
    #endif
@@ -5861,7 +5861,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
          do {
             int is_subdir;
             #ifdef _MSC_VER
-            char *name = stb__to_utf8(data.name);
+            char *name = stb__to_utf8((stb__wchar *)data.name);
             if (name == NULL) {
                fprintf(stderr, "%s to convert '%S' to %s!\n", "Unable", data.name, "utf8");
                continue;
@@ -6805,9 +6805,9 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
 
    has_slash = (path[0] && path[strlen(path)-1] == '/'); 
    if (has_slash)
-      swprintf(full_path, L"%s*", stb__from_utf8(path));
+      swprintf((wchar_t *)full_path, L"%s*", stb__from_utf8(path));
    else
-      swprintf(full_path, L"%s/*", stb__from_utf8(path));
+      swprintf((wchar_t *)full_path, L"%s/*", stb__from_utf8(path));
 
    // it's possible this directory is already present: that means it was in the
    // cache, but its parent wasn't... in that case, we're done with it
@@ -6819,13 +6819,13 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
    stb__dirtree_add_dir(path, last_time, active);
    n = stb_arr_lastn(active->dirs);
 
-   if( (hFile = _wfindfirst( full_path, &c_file )) != -1L ) {
+   if( (hFile = _wfindfirst((const wchar_t *)full_path, &c_file )) != -1L ) {
       do {
          if (c_file.attrib & _A_SUBDIR) {
             // ignore subdirectories starting with '.', e.g. "." and ".."
             if (c_file.name[0] != '.') {
                char *new_path = (char *) full_path;
-               char *temp = stb__to_utf8(c_file.name);
+               char *temp = stb__to_utf8((stb__wchar *)c_file.name);
                if (has_slash)
                   sprintf(new_path, "%s%s", path, temp);
                else
@@ -6833,7 +6833,7 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
                stb__dirtree_scandir(new_path, c_file.time_write, active);
             }
          } else {
-            char *temp = stb__to_utf8(c_file.name);
+            char *temp = stb__to_utf8((stb__wchar *)c_file.name);
             stb__dirtree_add_file(temp, n, c_file.size, c_file.time_write, active);
          }
       } while( _wfindnext( hFile, &c_file ) == 0 );
