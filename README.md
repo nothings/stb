@@ -19,7 +19,7 @@ library    | lastest version | category | description
 **stb_herringbone_wang_tile.h** | 0.6 | games | herringbone Wang tile map generator
 **stb_c_lexer.h** | 0.06 | parsing | simplify writing parsers for C-like languages
 **stb_divide.h** | 0.91 | math | more useful 32-bit modulus e.g. "euclidean divide"
-**stb.h** | 2.23 | misc | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**stb.h** | 2.24 | misc | helper functions for C, mostly redundant in C++; basically author's personal stuff
 
 FAQ
 ---
