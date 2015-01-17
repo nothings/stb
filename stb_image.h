@@ -191,6 +191,7 @@
                                                  Ronny Chevalier
                                                  Michal Cichon
                                                  Tero Hanninen
+                                                 Sergio Gonzalez
 
 License:
    This software is in the public domain. Where that dedication is not
