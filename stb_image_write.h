@@ -108,7 +108,7 @@ static void write3(FILE *f, unsigned char a, unsigned char b, unsigned char c)
    fwrite(arr, 3, 1, f);
 }
 
-static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad)
+static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
 {
    unsigned char bg[3] = { 255, 0, 255}, px[3];
    stbiw_uint32 zero = 0;
@@ -128,8 +128,12 @@ static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp,
          if (write_alpha < 0)
             fwrite(&d[comp-1], 1, 1, f);
          switch (comp) {
-            case 1: 
-            case 2: fwrite(d, 1, 1, f);
+            case 1: fwrite(d, 1, 1, f);
+                    break;
+            case 2: if (expand_mono)
+                       write3(f, d[0],d[0],d[0]); // monochrome bmp
+                    else
+                       fwrite(d, 1, 1, f);  // monochrome TGA
                     break;
             case 4:
                if (!write_alpha) {
@@ -151,7 +155,7 @@ static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp,
    }
 }
 
-static int outfile(char const *filename, int rgb_dir, int vdir, int x, int y, int comp, void *data, int alpha, int pad, const char *fmt, ...)
+static int outfile(char const *filename, int rgb_dir, int vdir, int x, int y, int comp, int expand_mono, void *data, int alpha, int pad, const char *fmt, ...)
 {
    FILE *f;
    if (y < 0 || x < 0) return 0;
@@ -161,7 +165,7 @@ static int outfile(char const *filename, int rgb_dir, int vdir, int x, int y, in
       va_start(v, fmt);
       writefv(f, fmt, v);
       va_end(v);
-      write_pixels(f,rgb_dir,vdir,x,y,comp,data,alpha,pad);
+      write_pixels(f,rgb_dir,vdir,x,y,comp,data,alpha,pad,expand_mono);
       fclose(f);
    }
    return f != NULL;
@@ -170,7 +174,7 @@ static int outfile(char const *filename, int rgb_dir, int vdir, int x, int y, in
 int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *data)
 {
    int pad = (-x*3) & 3;
-   return outfile(filename,-1,-1,x,y,comp,(void *) data,0,pad,
+   return outfile(filename,-1,-1,x,y,comp,1,(void *) data,0,pad,
            "11 4 22 4" "4 44 22 444444",
            'B', 'M', 14+40+(x*3+pad)*y, 0,0, 14+40,  // file header
             40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
@@ -181,7 +185,7 @@ int stbi_write_tga(char const *filename, int x, int y, int comp, const void *dat
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
    int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
-   return outfile(filename, -1,-1, x, y, comp, (void *) data, has_alpha, 0,
+   return outfile(filename, -1,-1, x, y, comp, 0, (void *) data, has_alpha, 0,
                   "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, (colorbytes+has_alpha)*8, has_alpha*8);
 }
 
