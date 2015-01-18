@@ -10052,7 +10052,7 @@ char *stb_decompress_fromfile(char *filename, unsigned int *len)
    if (p == NULL) return NULL;
    if (p[0] != 0x57 || p[1] != 0xBc || p[2] || p[3]) { free(p); return NULL; }
    q = (char *) malloc(stb_decompress_length(p)+1);
-   if (!q) { free(p); free(p); return NULL; }
+   if (!q) { free(p); return NULL; }
    *len = stb_decompress((unsigned char *) q, p, n);
    if (*len) q[*len] = 0;
    free(p);
