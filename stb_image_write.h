@@ -1,4 +1,4 @@
-/* stb_image_write - v0.96 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v0.97 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010
                             no warranty implied; use at your own risk
 
@@ -229,18 +229,18 @@ void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
    }
 }
 
-void stbiw__write_rle_data(FILE *f, int length, unsigned char databyte)
+void stbiw__write_run_data(FILE *f, int length, unsigned char databyte)
 {
-   unsigned char lengthbyte = 0x80 | (unsigned char)(length & 0x7f);
-   assert(length <= 0x7f);
+   unsigned char lengthbyte = (unsigned char) (length+128);
+   assert(length+128 <= 255);
    fwrite(&lengthbyte, 1, 1, f);
    fwrite(&databyte, 1, 1, f);
 }
 
-void stbiw__write_nonrle_data(FILE *f, int length, unsigned char *data)
+void stbiw__write_dump_data(FILE *f, int length, unsigned char *data)
 {
    unsigned char lengthbyte = (unsigned char )(length & 0xff);
-   assert(length <= 0x7f);
+   assert(length <= 128); // inconsistent with spec but consistent with official code
    fwrite(&lengthbyte, 1, 1, f);
    fwrite(data, length, 1, f);
 }
@@ -272,6 +272,7 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
          fwrite(rgbe, 4, 1, f);
       }
    } else {
+      int c,r;
       /* encode into scratch buffer */
       for (x=0; x < width; x++) {
          switch(comp) {
@@ -294,50 +295,42 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
       fwrite(scanlineheader, 4, 1, f);
 
       /* RLE each component separately */
-      for (x=0; x < 4; x++) {
-         unsigned char *comp = &scratch[width*x];
+      for (c=0; c < 4; c++) {
+         unsigned char *comp = &scratch[width*c];
          int runstart = 0, head = 0, rlerun = 0;
 
-         while (head < width) {
-            head++;
-
-            if (head - runstart == 127 && rlerun == 1) {
-               // max length RLE run
-               stbiw__write_rle_data(f, head - runstart, comp[runstart]);
-               rlerun = 0;
-               runstart = head;
-            } else if (head - runstart == 128 && rlerun == 0) {
-               // max length non-RLE run
-               stbiw__write_nonrle_data(f, head - runstart, comp+runstart);
-               rlerun = 0;
-               runstart = head;
-            } else if (comp[head] != comp[head-1] && rlerun == 1) {
-               // end of RLE run
-               stbiw__write_rle_data(f, head - runstart, comp[runstart]);
-               rlerun = 0;
-               runstart = head;
-            } else {
-               // continue accumulating RLE run
-               if (rlerun == 1) continue;
-
-               // see if we can start an RLE run, at least 3 bytes same
-               if (rlerun == 0 && head - runstart >= 2
-                    && comp[head] == comp[head-1]
-                    && comp[head] == comp[head-2]) {
-                  // found a run. Flush non-run (if there is anything) and then start an RLE run
-                  if (head - runstart > 2) {
-                     stbiw__write_nonrle_data(f, head-2 - runstart, comp+runstart);
-                  }
-
-                  rlerun = 1;
-                  runstart = head-2;
+         x = 0;
+         while (x < width) {
+            // find first run
+            r = x;
+            while (r+2 < width) {
+               if (comp[r] == comp[r+1] && comp[r] == comp[r+2])
+                  break;
+               ++r;
+            }
+            if (r+2 >= width)
+               r = width;
+            // dump up to first run
+            while (x < r) {
+               int len = r-x;
+               if (len > 128) len = 128;
+               stbiw__write_dump_data(f, len, &comp[x]);
+               x += len;
+            }
+            // if there's a run, output it
+            if (r+2 < width) { // same test as what we break out of in search loop, so only true if we break'd
+               // find next byte after run
+               while (r < width && comp[r] == comp[x])
+                  ++r; 
+               // output run up to r
+               while (x < r) {
+                  int len = r-x;
+                  if (len > 127) len = 127;
+                  stbiw__write_run_data(f, len, comp[x]);
+                  x += len;
                }
             }
          }
-
-         // flush remaining sequence (if any)
-         if      (rlerun == 1)         stbiw__write_rle_data(f, head - runstart, comp[runstart]);
-         else if (head - runstart > 0) stbiw__write_nonrle_data(f, head - runstart, comp+runstart);
       }
    }
 }
@@ -686,6 +679,8 @@ int stbi_write_png(char const *filename, int x, int y, int comp, const void *dat
 
 /* Revision history
 
+      0.97 (2015-01-18)
+             fixed HDR asserts, rewrote HDR rle logic
       0.96 (2015-01-17)
              add HDR output
              fix monochrome BMP
