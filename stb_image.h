@@ -1,4 +1,4 @@
-/* stb_image - v2.01 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.02 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -143,6 +143,7 @@
 
 
    Latest revision history:
+      2.02  (2015-01-19) fix incorrect assert, fix warning
       2.01  (2015-01-17) fix various warnings
       2.00b (2014-12-25) fix STBI_MALLOC in progressive JPEG
       2.00  (2014-12-25) optimize JPEG, including x86 SSE2 & ARM NEON SIMD
@@ -3011,7 +3012,7 @@ static void stbi__YCbCr_to_RGB_simd(stbi_uc *out, stbi_uc const *y, stbi_uc cons
       __m128i cr_const1 = _mm_set1_epi16( - (short) ( 0.71414f*4096.0f+0.5f));
       __m128i cb_const0 = _mm_set1_epi16( - (short) ( 0.34414f*4096.0f+0.5f));
       __m128i cb_const1 = _mm_set1_epi16(   (short) ( 1.77200f*4096.0f+0.5f));
-      __m128i y_bias = _mm_set1_epi8((char) 128);
+      __m128i y_bias = _mm_set1_epi8((char) (unsigned char) 128);
       __m128i xw = _mm_set1_epi16(255); // alpha channel
 
       for (; i+7 < count; i += 8) {
@@ -4017,7 +4018,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
                   cur[i*2+0] = cur[i];
                }
             } else {
-               assert(img_n == 3);
+               STBI_ASSERT(img_n == 3);
                for (i=x-1; i >= 0; --i) {
                   cur[i*4+3] = 255;
                   cur[i*4+2] = cur[i*3+2];
@@ -6190,6 +6191,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.02  (2015-01-19) fix incorrect assert, fix warning
       2.01  (2015-01-17) fix various warnings; suppress SIMD on gcc 32-bit without -msse2
       2.00b (2014-12-25) fix STBI_MALLOC in progressive JPEG
       2.00  (2014-12-25) optimize JPG, including x86 SSE2 & NEON SIMD (ryg)
