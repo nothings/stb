@@ -122,6 +122,10 @@ SOURCE=..\stb_image_write.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_leakcheck.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_perlin.h
 # End Source File
 # Begin Source File
@@ -159,6 +163,10 @@ SOURCE=.\test_c_compilation.c
 # Begin Source File
 
 SOURCE=.\test_truetype.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\test_vorbis.c
 # End Source File
 # Begin Source File
 
