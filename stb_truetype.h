@@ -494,6 +494,9 @@ typedef struct
 
 typedef struct stbtt_pack_context stbtt_pack_context;
 typedef struct stbtt_fontinfo stbtt_fontinfo;
+#ifndef STB_RECT_PACK_VERSION
+typedef struct stbrp_rect stbrp_rect;
+#endif
 
 extern int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int width, int height, int stride_in_bytes, int padding, void *alloc_context);
 // Initializes a packing context stored in the passed-in stbtt_pack_context.
@@ -2094,11 +2097,11 @@ typedef struct
    unsigned char x;
 } stbrp_node;
 
-typedef struct
+struct stbrp_rect
 {
    stbrp_coord x,y;
    int id,w,h,was_packed;
-} stbrp_rect;
+};
 
 static void stbrp_init_target(stbrp_context *con, int pw, int ph, stbrp_node *nodes, int num_nodes)
 {
