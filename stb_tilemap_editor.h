@@ -1,4 +1,4 @@
-// stb_tilemap_editor.h - v0.30 - Sean Barrett - http://nothings.org/stb
+// stb_tilemap_editor.h - v0.31 - Sean Barrett - http://nothings.org/stb
 // placed in the public domain - not copyrighted - first released 2014-09
 //
 // Embeddable tilemap editor for C/C++
@@ -275,6 +275,9 @@
 //   either approach allows cut&pasting between levels.)
 //
 // REVISION HISTORY
+//   0.31  layername button changes
+//          - layername buttons grow with the layer panel
+//          - fix stbte_create_map being declared as stbte_create
 //   0.30  properties release
 //          - properties panel for editing user-defined "object" properties
 //          - can link each tile to one other tile
@@ -296,11 +299,11 @@
 //   Support STBTE_HITTEST_TILE above
 //  ?Cancel drags by clicking other button? - may be fixed
 //   Finish support for toolbar at side
-//   Layer name buttons grow to fill box
 //
 // CREDITS
 //
 //   Written by Sean Barrett, September & October 2014.
+//   Contributions from Josh Huelsman, January 2015.
 //
 // LICENSE
 //

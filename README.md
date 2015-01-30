@@ -15,7 +15,7 @@ library    | lastest version | category | description
 **stb_textedit.h** | 1.5 | UI | guts of a text editor for games etc implementing them from scratch
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h** | 0.2 | 3D&nbsp;graphics | revised Perlin noise (3D input, 1D output)
-**stb_tilemap_editor.h** | 0.30 | games | embeddable tilemap editor
+**stb_tilemap_editor.h** | 0.31 | games | embeddable tilemap editor
 **stb_herringbone_wang_tile.h** | 0.6 | games | herringbone Wang tile map generator
 **stb_c_lexer.h** | 0.06 | parsing | simplify writing parsers for C-like languages
 **stb_divide.h** | 0.91 | math | more useful 32-bit modulus e.g. "euclidean divide"
@@ -82,6 +82,3 @@ for other people to use them from other languages.
 
 I still use MSVC 6 (1998) as my IDE because it has better human factors
 for me than later versions of MSVC.
-
-
-
