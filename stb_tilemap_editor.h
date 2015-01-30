@@ -938,6 +938,7 @@ struct stbte_tilemap
     int tileinfo_dirty;
     stbte__layer layerinfo[STBTE_MAX_LAYERS];
     int has_layer_names;
+    int layername_width;
     int layer_scroll;
     int propmode;
     int solo_layer;
@@ -1016,6 +1017,7 @@ stbte_tilemap *stbte_create_map(int map_x, int map_y, int map_layers, int spacin
    tm->layer_scroll = 0;
    tm->propmode = 0;
    tm->has_layer_names = 0;
+   tm->layername_width = 0;
    tm->undo_available_valid = 0;
 
    for (i=0; i < tm->num_layers; ++i) {
@@ -1088,12 +1090,16 @@ void stbte_define_tile(stbte_tilemap *tm, unsigned short id, unsigned int layerm
    tm->tileinfo_dirty = 1;
 }
 
+static int stbte__text_width(const char *str);
+
 void stbte_set_layername(stbte_tilemap *tm, int layer, const char *layername)
 {
    STBTE_ASSERT(layer >= 0 && layer < tm->num_layers);
    if (layer >= 0 && layer < tm->num_layers) {
       tm->layerinfo[layer].name = layername;
       tm->has_layer_names = 1;
+      int width = stbte__text_width(layername);
+      tm->layername_width = (width > tm->layername_width ? width : tm->layername_width);
    }
 }
 
@@ -3385,7 +3391,9 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
    int i, y, n;
    int x1 = x0+w;
    int y1 = y0+h;
-   int xoff = tm->has_layer_names ? 50 : 20;
+   int side = stbte__ui.panel[STBTE__layer].side;
+   int xoff = tm->has_layer_names ? stbte__region[side].width - 42 : 20;
+   xoff = (xoff < tm->layername_width + 10 ? xoff : tm->layername_width + 10);
    static char *propmodes[3] = {
       "default", "always", "never"
    };
