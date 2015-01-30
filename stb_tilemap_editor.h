@@ -3394,9 +3394,14 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
    int i, y, n;
    int x1 = x0+w;
    int y1 = y0+h;
-   int side = stbte__ui.panel[STBTE__panel_layers].side;
-   int xoff = tm->has_layer_names ? stbte__region[side].width - 42 : 20;
-   xoff = (xoff < tm->layername_width + 10 ? xoff : tm->layername_width + 10);
+   int xoff = 20;
+   
+   if (tm->has_layer_names) {
+      int side = stbte__ui.panel[STBTE__panel_layers].side;
+      xoff = tm->has_layer_names ? stbte__region[side].width - 42 : 20;
+      xoff = (xoff < tm->layername_width + 10 ? xoff : tm->layername_width + 10);
+   }
+
    static char *propmodes[3] = {
       "default", "always", "never"
    };
