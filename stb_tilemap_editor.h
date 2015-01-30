@@ -339,7 +339,7 @@ enum
 // creation
 //
 
-extern stbte_tilemap *stbte_create(int map_x, int map_y, int map_layers, int spacing_x, int spacing_y, int max_tiles);
+extern stbte_tilemap *stbte_create_map(int map_x, int map_y, int map_layers, int spacing_x, int spacing_y, int max_tiles);
 // create an editable tilemap
 //   map_x      : dimensions of map horizontally (user can change this in editor), <= STBTE_MAX_TILEMAP_X
 //   map_y      : dimensions of map vertically (user can change this in editor)    <= STBTE_MAX_TILEMAP_Y
