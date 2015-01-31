@@ -3443,7 +3443,7 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
    n = stbte__text_width("prop:")+2;
    stbte__draw_text(x0,y+2, "prop:", w, STBTE__TEXTCOLOR(STBTE__cpanel));
    i = w - n - 4;
-   if (i > 45) i = 45;
+   if (i > 50) i = 50;
    if (stbte__button(STBTE__clayer_button, propmodes[tm->propmode], x0+n,y,0,i, STBTE__ID(STBTE__layer,256), 0,0))
       tm->propmode = (tm->propmode+1)%3;
 #endif
