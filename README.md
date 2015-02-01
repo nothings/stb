@@ -44,6 +44,20 @@ attribution requirement). They may be less featureful, slower,
 and/or use more memory. If you're already using an equivalent
 library, there's probably no good reason to switch.
 
+#### Why single-file headers?
+
+Windows doesn't have standard directories where libraries
+live. That makes deploying libraries in Windows a lot more
+painful than open source developers on Unix-derivates generally
+realize. (It also makes library dependencies a lot worse in Windows.)
+
+Making them a single file makes it very easy to just
+drop them into a project that needs them. (Of course you can
+still put them in a proper shared library tree if you want.)
+
+The difference between 10 files and 9 files is not a big deal,
+but the difference between 2 files and 1 file is a big deal.
+
 #### Why "stb"? Is this something to do with Set-Top Boxes?
 
 No, they are just the initials for my name, Sean T. Barrett.
