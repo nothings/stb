@@ -327,8 +327,6 @@ extern int stb_vorbis_get_samples_short(stb_vorbis *f, int channels, short **buf
 
 #endif
 
-extern void stb_vorbis_free(void *p);
-
 ////////   ERROR CODES
 
 enum STBVorbisError
@@ -593,11 +591,6 @@ typedef float codetype;
 #else
 typedef uint16 codetype;
 #endif
-
-//#define STB_LEAKCHECK_IMPLEMENTATION
-//#define STB_LEAKCHECK_SHOWALL
-//#include "stb_leakcheck.h"
-//void stb_vorbis_dumpmem(void) { stb_leakcheck_dumpmem(); }
 
 // @NOTE
 //
