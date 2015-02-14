@@ -485,7 +485,7 @@ extern void stbtt_GetBakedQuad(stbtt_bakedchar *chardata, int pw, int ph,  // sa
 // This provides options for packing multiple fonts into one atlas, not
 // perfectly but better than nothing.
 
-typedef struct
+typedef struct _stbtt_packedchar
 {
    unsigned short x0,y0,x1,y1; // coordinates of bbox in bitmap
    float xoff,yoff,xadvance;
