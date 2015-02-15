@@ -525,15 +525,15 @@ extern int  stbtt_PackFontRange(stbtt_pack_context *spc, unsigned char *fontdata
 //       ...,                  20 , ... // font max minus min y is 20 pixels tall
 //       ..., STBTT_POINT_SIZE(20), ... // 'M' is 20 pixels tall
 
-typedef struct
+typedef struct _stbtt_pack_range
 {
-   float font_size;
-   int first_unicode_char_in_range;
-   int num_chars_in_range;
-   stbtt_packedchar *chardata_for_range; // output
+    float font_size;
+    int first_unicode_char_in_range;
+    int num_chars_in_range;
+    stbtt_packedchar *chardata_for_range; // output
 } stbtt_pack_range;
 
-extern int  stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges);
+    extern int  stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges);
 // Creates character bitmaps from multiple ranges of characters stored in
 // ranges. This will usually create a better-packed bitmap than multiple
 // calls to stbtt_PackFontRange.
