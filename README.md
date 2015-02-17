@@ -6,20 +6,22 @@ single-file public domain libraries for C/C++
 library    | lastest version | category | description
 --------------------- | ---- | -------- | --------------------------------
 **stb_vorbis.c** | 1.04 | audio | decode ogg vorbis files from file/memory to float/16-bit signed output
-**stb_image.h** | 2.00 | graphics | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**stb_image.h** | 2.02 | graphics | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **stb_truetype.h** | 1.02 | graphics | parse, decode, and rasterize characters from truetype fonts
-**stb_image_write.h** | 0.95 | graphics | image writing to disk: PNG, TGA, BMP
+**stb_image_write.h** | 0.97 | graphics | image writing to disk: PNG, TGA, BMP
 **stb_image_resize.h** | 0.90 | graphics | resize images larger/smaller with good quality
 **stb_rect_pack.h** | 0.05 | graphics | simple 2D rectangle packer with decent quality
 **stretchy_buffer.h** | 1.01 | utility | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **stb_textedit.h** | 1.5 | UI | guts of a text editor for games etc implementing them from scratch
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h** | 0.2 | 3D&nbsp;graphics | revised Perlin noise (3D input, 1D output)
-**stb_tilemap_editor.h** | 0.30 | games | embeddable tilemap editor
-**stb_herringbone_wang_tile.h** | 0.6 | games | herringbone Wang tile map generator
+**stb_easy_font.h** | 0.5 | 3D&nbsp;graphics | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
+**stb_tilemap_editor.h** | 0.30 | game&nbsp;development | embeddable tilemap editor
+**stb_herringbone_wang_tile.h** | 0.6 | game&nbsp;development | herringbone Wang tile map generator
 **stb_c_lexer.h** | 0.06 | parsing | simplify writing parsers for C-like languages
 **stb_divide.h** | 0.91 | math | more useful 32-bit modulus e.g. "euclidean divide"
-**stb.h** | 2.23 | misc | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**stb.h** | 2.24 | misc | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**stb_leakcheck.h** | 0.1 | misc | quick-and-dirty malloc/free leak-checking
 
 FAQ
 ---
@@ -41,6 +43,20 @@ easier to use, and easier to release (single file; good API; no
 attribution requirement). They may be less featureful, slower,
 and/or use more memory. If you're already using an equivalent
 library, there's probably no good reason to switch.
+
+#### Why single-file headers?
+
+Windows doesn't have standard directories where libraries
+live. That makes deploying libraries in Windows a lot more
+painful than open source developers on Unix-derivates generally
+realize. (It also makes library dependencies a lot worse in Windows.)
+
+Making them a single file makes it very easy to just
+drop them into a project that needs them. (Of course you can
+still put them in a proper shared library tree if you want.)
+
+The difference between 10 files and 9 files is not a big deal,
+but the difference between 2 files and 1 file is a big deal.
 
 #### Why "stb"? Is this something to do with Set-Top Boxes?
 

@@ -1,4 +1,4 @@
-/* stb_image - v2.00b - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.02 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -143,6 +143,8 @@
 
 
    Latest revision history:
+      2.02  (2015-01-19) fix incorrect assert, fix warning
+      2.01  (2015-01-17) fix various warnings
       2.00b (2014-12-25) fix STBI_MALLOC in progressive JPEG
       2.00  (2014-12-25) optimize JPEG, including x86 SSE2 & ARM NEON SIMD
                          progressive JPEG
@@ -191,6 +193,9 @@
                                                  Ronny Chevalier
                                                  Michal Cichon
                                                  Tero Hanninen
+                                                 Sergio Gonzalez
+                                                 Cass Everitt
+                                                 Engin Manap
 
 License:
    This software is in the public domain. Where that dedication is not
@@ -617,6 +622,14 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #define STBI_MALLOC(sz)    malloc(sz)
 #define STBI_REALLOC(p,sz) realloc(p,sz)
 #define STBI_FREE(p)       free(p)
+#endif
+
+#if defined(__GNUC__) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
+// gcc doesn't support sse2 intrinsics unless you compile with -msse2,
+// (but compiling with -msse2 allows the compiler to use SSE2 everywhere;
+// this is just broken and gcc are jerks for not fixing it properly
+// http://www.virtualdub.org/blog/pivot/entry.php?id=363 )
+#define STBI_NO_SIMD
 #endif
 
 #if !defined(STBI_NO_SIMD) && (defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86))
@@ -1723,11 +1736,12 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
             short *p = &data[stbi__jpeg_dezigzag[k]];
             if (*p != 0)
                if (stbi__jpeg_get_bit(j))
-                  if ((*p & bit)==0)
+                  if ((*p & bit)==0) {
                      if (*p > 0)
                         *p += bit;
                      else
                         *p -= bit;
+                  }
          }
       } else {
          k = j->spec_start;
@@ -1759,16 +1773,17 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
                short *p = &data[stbi__jpeg_dezigzag[k]];
                if (*p != 0) {
                   if (stbi__jpeg_get_bit(j))
-                     if ((*p & bit)==0)
+                     if ((*p & bit)==0) {
                         if (*p > 0)
                            *p += bit;
                         else
                            *p -= bit;
+                     }
                   ++k;
                } else {
                   if (r == 0) {
                      if (s)
-                        data[stbi__jpeg_dezigzag[k++]] = s;
+                        data[stbi__jpeg_dezigzag[k++]] = (short) s;
                      break;
                   }
                   --r;
@@ -2192,7 +2207,7 @@ static void stbi__idct_simd(stbi_uc *out, int out_stride, short data[64])
       // pass 1
       dct_trn16(row0, row1); // a0b0a2b2a4b4a6b6
       dct_trn16(row2, row3);
-      dct_trn16(row4, row5); 
+      dct_trn16(row4, row5);
       dct_trn16(row6, row7);
 
       // pass 2
@@ -2419,7 +2434,6 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                      for (x=0; x < z->img_comp[n].h; ++x) {
                         int x2 = (i*z->img_comp[n].h + x);
                         int y2 = (j*z->img_comp[n].v + y);
-                        int ha = z->img_comp[n].ha;
                         short *data = z->img_comp[n].coeff + 64 * (x2 + y2 * z->img_comp[n].coeff_w);
                         if (!stbi__jpeg_decode_block_prog_dc(z, data, &z->huff_dc[z->img_comp[n].hd], n))
                            return 0;
@@ -2998,7 +3012,7 @@ static void stbi__YCbCr_to_RGB_simd(stbi_uc *out, stbi_uc const *y, stbi_uc cons
       __m128i cr_const1 = _mm_set1_epi16( - (short) ( 0.71414f*4096.0f+0.5f));
       __m128i cb_const0 = _mm_set1_epi16( - (short) ( 0.34414f*4096.0f+0.5f));
       __m128i cb_const1 = _mm_set1_epi16(   (short) ( 1.77200f*4096.0f+0.5f));
-      __m128i y_bias = _mm_set1_epi8((char) 128);
+      __m128i y_bias = _mm_set1_epi8((char) (unsigned char) 128);
       __m128i xw = _mm_set1_epi16(255); // alpha channel
 
       for (; i+7 < count; i += 8) {
@@ -4004,7 +4018,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
                   cur[i*2+0] = cur[i];
                }
             } else {
-               assert(img_n == 3);
+               STBI_ASSERT(img_n == 3);
                for (i=x-1; i >= 0; --i) {
                   cur[i*4+3] = 255;
                   cur[i*4+2] = cur[i*3+2];
@@ -6115,7 +6129,7 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
    #ifndef STBI_NO_PSD
    if (stbi__psd_info(s, x, y, comp))  return 1;
    #endif
-   
+
    #ifndef STBI_NO_PIC
    if (stbi__pic_info(s, x, y, comp))  return 1;
    #endif
@@ -6177,6 +6191,8 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.02  (2015-01-19) fix incorrect assert, fix warning
+      2.01  (2015-01-17) fix various warnings; suppress SIMD on gcc 32-bit without -msse2
       2.00b (2014-12-25) fix STBI_MALLOC in progressive JPEG
       2.00  (2014-12-25) optimize JPG, including x86 SSE2 & NEON SIMD (ryg)
                          progressive JPEG (stb)
