@@ -455,7 +455,7 @@ extern int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // font 
 // if return is 0, no characters fit and no rows were used
 // This uses a very crappy packing.
 
-typedef struct
+typedef struct _stbtt_aligned_quad
 {
    float x0,y0,s0,t0; // top-left
    float x1,y1,s1,t1; // bottom-right
