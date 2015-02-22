@@ -1,5 +1,5 @@
 #include <windows.h>
-#include "game.h"
+//#include "game.h"
 #include "stb.h"
 
 #include "sdl.h"
@@ -118,15 +118,15 @@ void camera_to_worldspace(float world[3], float cam_x, float cam_y, float cam_z)
    float vec[3] = { cam_x, cam_y, cam_z };
    float t[3];
    float s,c;
-   s = sin(camang[0]*3.141592/180);
-   c = cos(camang[0]*3.141592/180);
+   s = (float) sin(camang[0]*3.141592/180);
+   c = (float) cos(camang[0]*3.141592/180);
 
    t[0] = vec[0];
    t[1] = c*vec[1] - s*vec[2];
    t[2] = s*vec[1] + c*vec[2];
 
-   s = sin(camang[2]*3.141592/180);
-   c = cos(camang[2]*3.141592/180);
+   s = (float) sin(camang[2]*3.141592/180);
+   c = (float) cos(camang[2]*3.141592/180);
    world[0] = c*t[0] - s*t[1];
    world[1] = s*t[0] + c*t[1];
    world[2] = t[2];
@@ -137,9 +137,9 @@ float cam_vel[3];
 
 int controls;
 
-#define MAX_VEL  150      // blocks per second
-#define ACCEL      6
-#define DECEL      3
+#define MAX_VEL  150.0f      // blocks per second
+#define ACCEL      6.0f
+#define DECEL      3.0f
 
 #define STATIC_FRICTION   DECEL
 #define EFFECTIVE_ACCEL   (ACCEL+DECEL)
@@ -181,7 +181,7 @@ void process_tick_raw(float dt)
 
    if (cam_vel[0] || cam_vel[1] || cam_vel[2])
    {
-      float vel = sqrt(cam_vel[0]*cam_vel[0] + cam_vel[1]*cam_vel[1] + cam_vel[2]*cam_vel[2]);
+      float vel = (float) sqrt(cam_vel[0]*cam_vel[0] + cam_vel[1]*cam_vel[1] + cam_vel[2]*cam_vel[2]);
       float newvel = vel;
       float dec = STATIC_FRICTION + DYNAMIC_FRICTION*vel;
       newvel = vel - dec*dt;
@@ -196,8 +196,8 @@ void process_tick_raw(float dt)
    camloc[1] += cam_vel[1] * dt;
    camloc[2] += cam_vel[2] * dt;
 
-   view_x_vel *= pow(0.75, dt);
-   view_z_vel *= pow(0.75, dt);
+   view_x_vel *= (float) pow(0.75, dt);
+   view_z_vel *= (float) pow(0.75, dt);
 
    view_x_vel += (pending_view_x - view_x_vel)*dt*60;
    view_z_vel += (pending_view_z - view_z_vel)*dt*60;
@@ -207,14 +207,14 @@ void process_tick_raw(float dt)
    camang[0] += view_x_vel * dt;
    camang[2] += view_z_vel * dt;
    camang[0] = stb_clamp(camang[0], -90, 90);
-   camang[2] = fmod(camang[2], 360);
+   camang[2] = (float) fmod(camang[2], 360);
 }
 
 void process_tick(float dt)
 {
-   while (dt > 1.0/60) {
-      process_tick_raw(1.0/60);
-      dt -= 1.0/60;
+   while (dt > 1.0f/60) {
+      process_tick_raw(1.0f/60);
+      dt -= 1.0f/60;
    }
    process_tick_raw(dt);
 }
@@ -256,7 +256,7 @@ void draw_stats(void)
    chunk_server_pos = (chunk_server_pos+1) %32;
 
    for (i=0; i < 32; ++i)
-      chunk_server += chunk_server_status[i] / 32.0;
+      chunk_server += chunk_server_status[i] / 32.0f;
 
    stb_easy_font_spacing(-0.75);
    pos_y = 10;
@@ -293,7 +293,7 @@ void draw_main(void)
    #endif
    glDepthMask(GL_TRUE);
    glDisable(GL_SCISSOR_TEST);
-   glClearColor(0.6,0.7,0.9,0);
+   glClearColor(0.6f,0.7f,0.9f,0.0f);
    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);

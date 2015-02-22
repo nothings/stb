@@ -209,12 +209,12 @@ static int stb_easy_font_print(float x, float y, char *text, unsigned char color
 
 static int stb_easy_font_width(char *text)
 {
-    int len = 0;
+    float len = 0;
     while (*text) {
         len += stb_easy_font_charinfo[*text-32].advance & 15;
         len += stb_easy_font_spacing_val;
         ++text;
     }
-    return len;
+    return (int) ceil(len);
 }
 #endif
