@@ -224,6 +224,8 @@
 
 
 #ifndef INCLUDE_STB_VOXEL_RENDER_H
+#define INCLUDE_STB_VOXEL_RENDER_H
+
 #include <stdlib.h>
 
 #ifdef STBVOX_BLOCKTYPE_SHORT
@@ -287,6 +289,13 @@ extern void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_bytes
 extern void stbvox_config_use_gl(stbvox_mesh_maker *mm, int use_tex_buffer, int use_gl_modelview, int use_gl_fragment);
 extern void stbvox_config_set_z_precision(stbvox_mesh_maker *mm, int z_fractional_bits);
 extern stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm);
+extern int stbvox_get_vertex_shader(stbvox_mesh_maker *mm, char *buffer, size_t buffer_size);
+extern int stbvox_get_fragment_shader(stbvox_mesh_maker *mm, char *buffer, size_t buffer_size);
+extern void stbvox_set_default_mesh(stbvox_mesh_maker *mm, int mesh);
+extern int stbvox_get_quad_count(stbvox_mesh_maker *mm, int mesh);
+extern void stbvox_get_transform(stbvox_mesh_maker *mm, float transform[3][3]);
+extern void stbvox_get_bounds(stbvox_mesh_maker *mm, float bounds[2][3]);
+extern void stbvox_set_mesh_coordinates(stbvox_mesh_maker *mm, int x, int y, int z);
 
 // meshing API
 

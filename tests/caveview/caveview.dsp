@@ -54,7 +54,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:windows /machine:I386
-# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib sdl2.lib opengl32.lib glu32.lib winmm.lib sdl2_mixer.lib advapi32.lib /nologo /subsystem:windows /debug /machine:I386 /out:"Release/caveview.exe"
+# ADD LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib sdl2.lib opengl32.lib glu32.lib winmm.lib sdl2_mixer.lib advapi32.lib /nologo /subsystem:windows /debug /machine:I386
 # SUBTRACT LINK32 /map
 
 !ELSEIF  "$(CFG)" == "caveview - Win32 Debug"
@@ -91,11 +91,23 @@ LINK32=link.exe
 # Name "caveview - Win32 Debug"
 # Begin Source File
 
+SOURCE=.\cave_mesher.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\cave_parse.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\cave_parse.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\cave_render.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\caveview.h
 # End Source File
 # Begin Source File
 
@@ -119,19 +131,15 @@ SOURCE=.\main.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\render.c
-# End Source File
-# Begin Source File
-
 SOURCE=.\win32\SDL_windows_main.c
 # End Source File
 # Begin Source File
 
-SOURCE=.\stb.h
+SOURCE=..\..\stb.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\stb_easy_font.h
+SOURCE=..\..\stb_easy_font.h
 # End Source File
 # Begin Source File
 
@@ -143,15 +151,11 @@ SOURCE=.\stb_glprog.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\stb_image.h
+SOURCE=..\..\stb_image.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\stb_image_write.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\stb_voxel_render.h
+SOURCE=..\..\stb_voxel_render.h
 # End Source File
 # End Target
 # End Project

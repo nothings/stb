@@ -20,6 +20,8 @@
 #define STB_DEFINE
 #include "stb.h"
 
+#include "caveview.h"
+
 #define SCALE   2
 
 void error(char *s)
@@ -336,6 +338,9 @@ int SDL_main(int argc, char **argv)
    SDL_GL_SetSwapInterval(0); // only when profiling
 
    render_init();
+   mesh_init();
+   world_init();
+
    init_game();
    //editor_init();
    initialized = 1;
