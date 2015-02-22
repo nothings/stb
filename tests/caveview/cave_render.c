@@ -33,6 +33,7 @@ uint32 texture[TEX_SIZE][TEX_SIZE];
 
 GLuint voxel_tex[2];
 
+// chunk state
 enum
 {
    STATE_invalid,
@@ -79,10 +80,10 @@ void scale_texture(unsigned char *src, int x, int y, int w, int h)
 void build_base_texture(int n)
 {
    int x,y;
-   uint32 color = stb_rand() | 0xff808080;
+   uint32 color = stb_rand() | 0x808080;
    for (y=0; y<TEX_SIZE; ++y)
       for (x=0; x<TEX_SIZE; ++x) {
-         texture[y][x] = color + (stb_rand()&0x1f1f1f);
+         texture[y][x] = (color + (stb_rand()&0x1f1f1f))|0xff000000;
       }
 }
 
@@ -326,12 +327,6 @@ typedef struct
    uint8 *face_buffer ;
 } mesh_worker;
 
-mesh_worker mesh_data[MAX_MESH_WORKERS];
-int num_meshes_started;
-
-int request_chunk(int chunk_x, int chunk_y);
-void update_meshes_from_render_thread(void);
-
 enum
 {
    WSTATE_idle,
@@ -339,6 +334,12 @@ enum
    WSTATE_running,
    WSTATE_mesh_ready,
 };
+
+mesh_worker mesh_data[MAX_MESH_WORKERS];
+int num_meshes_started; // stats
+
+int request_chunk(int chunk_x, int chunk_y);
+void update_meshes_from_render_thread(void);
 
 void render_init(void)
 {
@@ -348,7 +349,7 @@ void render_init(void)
    int vertex_len;
    char fragment[5000];
    int fragment_len;
-   int w,h;
+   int w=0,h=0;
 
    unsigned char *texdata = stbi_load("terrain.png", &w, &h, NULL, 4);
 
@@ -384,7 +385,6 @@ void render_init(void)
          assert(0);
          exit(1);
       }
-      //stbgl_find_uniforms(main_prog, uniform_locations, uniforms, -1);
    }
    //init_index_buffer();
 
@@ -424,6 +424,9 @@ void render_init(void)
    glGenerateMipmapEXT(GL_TEXTURE_2D_ARRAY_EXT);
 }
 
+
+// Timing stats while optimizing the single-threaded builder
+
 // 32..-32, 32..-32, !FILL_TERRAIN, !FANCY_LEAVES on 'mcrealm' data set
 
 // 6.27s  - reblocked to do 16 z at a time instead of 256 (still using 66x66x258), 4 meshes in parallel
@@ -457,14 +460,17 @@ void render_init(void)
 // 4.58s  - using solid & empty bitmasks to early out, same as "foo" but faster bitmask building
 // 4.12s  - using solid & empty bitmasks to efficiently test neighbors
 // 4.04s  - using 16-bit fetches (not endian-independent)
+//        - note this is first place that beats previous best '4.10s - 34x34 1 mesh'
 
-// 4.30s  - current time with bitmasks disabled again (note was 4.10 earlier)
+// 4.30s  - current time with bitmasks disabled again (note was 4.10s earlier)
 // 3.95s  - bitmasks enabled again, no other changes
 // 4.00s  - current time with bitmasks disabled again, no other changes -- wide variation that is time dependent?
-//          (note that most of the numbers listed here are average of 3 values already)
+//          (note that most of the numbers listed here are median of 3 values already)
 // 3.98s  - bitmasks enabled
 
 // Bitmasks removed from the code as not worth the complexity increase
+
+
 void world_init(void)
 {
    int a,b,x,y;
@@ -477,6 +483,10 @@ void world_init(void)
    #endif
 
    start_time = SDL_GetPerformanceCounter();
+
+   // iterate in 8x8 clusters of qchunks at a time to get better converted-chunk-cache reuse
+   // than a purely row-by-row ordering is (single-threaded this is a bigger win than
+   // any of the above optimizations were, since it halves zlib/mc-conversion costs)
    for (x=-range; x <= range; x += 16)
       for (y=-range; y <= range; y += 16)
          for (b=y; b < y+16 && b <= range; b += 2)
@@ -486,10 +496,11 @@ void world_init(void)
                   SDL_Delay(1);
                }
 
-   // we can't reset the cache until all the workers are done,
-   // so wait for that (this is only needed if we want to time
+   // wait until all the workers are done,
+   // (this is only needed if we want to time
    // when the build finishes, or when we want to reset the
-   // cache size)
+   // cache size; otherwise we could just go ahead and
+   // start rendering whatever we've got)
    for(;;) {
       int i;
       update_meshes_from_render_thread();
@@ -592,6 +603,15 @@ void prepare_threads(void)
    else 
       num_mesh_workers = num_proc-1;
 
+// @TODO
+//   Thread usage is probably pretty terrible; need to make a
+//   separate queue of needed chunks, instead of just generating
+//   one request per thread per frame, and a separate queue of
+//   results. (E.g. If it takes 1.5 frames to build mesh, thread
+//   is idle for 0.5 frames.) To fake this for now, I've just
+//   doubled the number of threads to let those serve as a 'queue',
+//   but that's dumb.
+
    num_mesh_workers *= 2; // try to get better thread usage
 
    if (num_mesh_workers > MAX_MESH_WORKERS)
@@ -606,6 +626,7 @@ void prepare_threads(void)
 }
 
 
+// "better" buffer uploading
 #if 0
    if (glBufferStorage) {
       glDeleteBuffersARB(1, &vb->vbuf);
@@ -922,3 +943,8 @@ void render_caves(float campos[3])
 //   18% converting from minecraft blocks to stb blocks
 //    9% reordering from minecraft axis order to stb axis order
 //    7% uploading vertex buffer to OpenGL
+
+
+
+
+
