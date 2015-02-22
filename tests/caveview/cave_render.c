@@ -1,3 +1,6 @@
+// This file takes renders vertex buffers and manages
+// threads that invoke mesh building (found in cave_mesher.c)
+
 #include "stb_voxel_render.h"
 
 #define STB_GLEXT_DECLARE "glext_list.h"
@@ -56,10 +59,6 @@ typedef struct
    GLuint fbuf, fbuf_tex;
 
 } chunk_mesh;
-
-extern SDL_mutex * chunk_cache_mutex;
-extern SDL_mutex * chunk_get_mutex;
-
 
 void scale_texture(unsigned char *src, int x, int y, int w, int h)
 {
@@ -511,6 +510,8 @@ void world_init(void)
    reset_cache_size(32);
 }
 
+extern SDL_mutex * chunk_cache_mutex;
+
 int mesh_worker_handler(void *data)
 {
    mesh_worker *mw = data;
@@ -549,6 +550,8 @@ int mesh_worker_handler(void *data)
 
       // when done, free the chunks
 
+      // for efficiency we just take the mutex once around the whole thing,
+      // though this spreads the mutex logic over two files
       SDL_LockMutex(chunk_cache_mutex);
       for (j=0; j < 4; ++j)
          for (i=0; i < 4; ++i) {
@@ -593,9 +596,6 @@ void prepare_threads(void)
 
    if (num_mesh_workers > MAX_MESH_WORKERS)
       num_mesh_workers = MAX_MESH_WORKERS;
-
-   chunk_cache_mutex = SDL_CreateMutex();
-   chunk_get_mutex   = SDL_CreateMutex();
 
    for (i=0; i < num_mesh_workers; ++i) {
       mesh_worker *data = &mesh_data[i];

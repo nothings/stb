@@ -1,3 +1,5 @@
+// This file takes minecraft chunks (decoded by cave_parse) and
+// uses stb_voxel_render to turn them into vertex buffers.
 
 #define STB_GLEXT_DECLARE "glext_list.h"
 #include "stb_gl.h"
@@ -452,6 +454,7 @@ void reset_cache_size(int size)
    cache_size = size;
 }
 
+// this must be called inside mutex
 void deref_fastchunk(fast_chunk *fc)
 {
    if (fc) {
@@ -671,6 +674,9 @@ void build_wool_variations(int bt, unsigned char *map)
 void mesh_init(void)
 {
    int i;
+
+   chunk_cache_mutex = SDL_CreateMutex();
+   chunk_get_mutex   = SDL_CreateMutex();
 
    for (i=0; i < 256; ++i) {
       memcpy(minecraft_tex1_for_blocktype[i], minecraft_info[i]+1, 6);
