@@ -6277,7 +6277,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
       1.21    fix use of 'stbi_uc' in header (reported by jon blow)
       1.20    added support for Softimage PIC, by Tom Seddon
       1.19    bug in interlaced PNG corruption check (found by ryg)
-      1.18 2008-08-02
+      1.18  (2008-08-02)
               fix a threading bug (local mutable static)
       1.17    support interlaced PNG
       1.16    major bugfix - stbi__convert_format converted one too many pixels
@@ -6322,5 +6322,6 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
       0.52    png handles req_comp=3,4 directly; minor cleanup; jpeg comments
       0.51    obey req_comp requests, 1-component jpegs return as 1-component,
               on 'test' only check type, not whether we support this variant
-      0.50    first released version
+      0.50  (2006-11-19)
+              first released version
 */
