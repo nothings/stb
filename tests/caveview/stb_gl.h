@@ -344,7 +344,7 @@ void stbgl_Perspective(float zoom, float max_hfov, float max_vfov, float znear, 
    } else {
       vfov = (float) atan((unit_height/2) / zoom);
    }
-   vfov = stbgl_rad2deg(vfov * 2);
+   vfov = (float) stbgl_rad2deg(vfov * 2);
    gluPerspective(vfov, aspect, znear, zfar);
 }
 

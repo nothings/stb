@@ -38,6 +38,9 @@ extern void ods(char *fmt, ...); // output debug string
 extern void reset_cache_size(int size);
 
 
+extern void render_caves(float pos[3]);
+
+
 #include "cave_parse.h"  // fast_chunk
 
 extern fast_chunk *get_converted_fastchunk(int chunk_x, int chunk_y);

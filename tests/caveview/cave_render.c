@@ -772,7 +772,7 @@ void render_caves(float campos[3])
    stbglUseProgram(main_prog);
    setup_uniforms(campos); // set uniforms to default values inefficiently
    glActiveTextureARB(GL_TEXTURE2_ARB);
-   glEnableVertexAttribArrayARB(0);
+   stbglEnableVertexAttribArray(0);
 
    num_meshes_uploaded = 0;
    update_meshes_from_render_thread();
@@ -843,7 +843,7 @@ void render_caves(float campos[3])
       }
    }
 
-   glDisableVertexAttribArrayARB(0);
+   stbglDisableVertexAttribArray(0);
    glBindBufferARB(GL_ARRAY_BUFFER_ARB, 0);
    glActiveTextureARB(GL_TEXTURE0_ARB);
 
