@@ -91,6 +91,10 @@ LINK32=link.exe
 # Name "caveview - Win32 Debug"
 # Begin Source File
 
+SOURCE=.\cave_main.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\cave_mesher.c
 # End Source File
 # Begin Source File
@@ -111,23 +115,11 @@ SOURCE=.\caveview.h
 # End Source File
 # Begin Source File
 
-SOURCE=.\game.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\game.h
-# End Source File
-# Begin Source File
-
 SOURCE=.\glext.h
 # End Source File
 # Begin Source File
 
 SOURCE=.\glext_list.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\main.c
 # End Source File
 # Begin Source File
 
