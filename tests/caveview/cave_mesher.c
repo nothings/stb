@@ -286,7 +286,6 @@ unsigned char minecraft_info[256][7] =
 };
 
 unsigned char minecraft_tex1_for_blocktype[256][6];
-unsigned char minecraft_trans_for_blocktype[256];
 unsigned char effective_blocktype[256];
 unsigned char effective_block_add[256];
 unsigned char minecraft_color_for_blocktype[256][6];
@@ -551,6 +550,8 @@ void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh 
    int a,b,z;
    stbvox_input_description *map;
 
+   //unsigned char vheight[34][34][18];
+
    assert((chunk_x & 1) == 0);
    assert((chunk_y & 1) == 0);
 
@@ -595,6 +596,24 @@ void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh 
 
       map->blocktype = &rm->sv_blocktype[1][1][1-z]; // specify location of 0,0,0 so that accessing z0..z1 gets right data
       map->lighting = &rm->sv_lighting[1][1][1-z];
+
+      #if 0
+      // hacky test of vheight
+      for (a=0; a < 34; ++a) {
+         for (b=0; b < 34; ++b) {
+            int c;
+            for (c=0; c < 17; ++c) {
+               if (rm->sv_blocktype[a][b][c] != 0 && rm->sv_blocktype[a][b][c+1] == 0) {
+                  // topmost block
+                  rm->sv_blocktype[a][b][c] = 168;
+                  vheight[a][b][c] = rand() & 255;
+               }
+            }
+            vheight[a][b][c] = STBVOX_MAKE_VHEIGHT(2,2,2,2); // flat top
+         }
+      }
+      map->vheight = &vheight[1][1][1-z];
+      #endif
 
       {
          stbvox_set_input_range(&rm->mm, 0,0,z0, 32,32,z1);
@@ -680,7 +699,6 @@ void mesh_init(void)
 
    for (i=0; i < 256; ++i) {
       memcpy(minecraft_tex1_for_blocktype[i], minecraft_info[i]+1, 6);
-      minecraft_trans_for_blocktype[i] = (minecraft_info[i][0] != C_solid && minecraft_info[i][0] != C_water);
       effective_blocktype[i] = (minecraft_info[i][0] == C_empty ? 0 : i);
       minecraft_geom_for_blocktype[i] = geom_map[minecraft_info[i][0]];
    }
@@ -707,6 +725,17 @@ void mesh_init(void)
       minecraft_color_for_blocktype[10][i] = 63; // emissive lava
       minecraft_color_for_blocktype[11][i] = 63; // emissive
    }
+
+   #if 0 // vheight test
+   effective_blocktype[168] = 168;
+   minecraft_tex1_for_blocktype[168][0] = 1;
+   minecraft_tex1_for_blocktype[168][1] = 1;
+   minecraft_tex1_for_blocktype[168][2] = 1;
+   minecraft_tex1_for_blocktype[168][3] = 1;
+   minecraft_tex1_for_blocktype[168][4] = 1;
+   minecraft_tex1_for_blocktype[168][5] = 1;
+   minecraft_geom_for_blocktype[168] = STBVOX_GEOM_floor_vheight_02;
+   #endif
 
    remap[53] = 1;
    remap[67] = 2;

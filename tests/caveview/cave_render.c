@@ -1,5 +1,6 @@
-// This file takes renders vertex buffers and manages
-// threads that invoke mesh building (found in cave_mesher.c)
+// This file renders vertex buffers, converts raw meshes
+// to GL meshes, and manages threads that do the raw-mesh
+// building (found in cave_mesher.c)
 
 #include "stb_voxel_render.h"
 
@@ -14,11 +15,14 @@
 #include "sdl.h"
 #include "sdl_thread.h"
 #include <math.h>
+#include <assert.h>
 
+
+
+// currently no dynamic way to set mesh cache size or view distance
 //#define SHORTVIEW
 
 
-// renderer maintains GL meshes, draws them
 stbvox_mesh_maker g_mesh_maker;
 
 GLuint main_prog;
@@ -182,7 +186,7 @@ GLint tablei[2];
 void setup_uniforms(float pos[3])
 {
    int i,j;
-   for (i=0; i < STBVOX_UNIFORM__count; ++i) {
+   for (i=0; i < STBVOX_UNIFORM_count; ++i) {
       stbvox_uniform_info *ui = stbvox_get_uniform_info(&g_mesh_maker, i);
       uniform_loc[i] = -1;
 
@@ -663,6 +667,7 @@ static void matd_mul(double out[4][4], double src1[4][4], double src2[4][4])
    }
 }
 
+// https://fgiesen.wordpress.com/2012/08/31/frustum-planes-from-the-projection-matrix/
 static void compute_frustum(void)
 {
    int i;
@@ -684,6 +689,7 @@ static int test_plane(plane *p, float x0, float y0, float z0, float x1, float y1
 {
    // return false if the box is entirely behind the plane
    float d=0;
+   assert(x0 <= x1 && y0 <= y1 && z0 <= z1);
    if (p->x > 0) d += x1*p->x; else d += x0*p->x;
    if (p->y > 0) d += y1*p->y; else d += y0*p->y;
    if (p->z > 0) d += z1*p->z; else d += z0*p->z;

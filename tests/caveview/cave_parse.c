@@ -10,8 +10,6 @@
 #include "stb_image.h"
 #include "stb.h"
 
-// @TODO: need to unload LRU compressed chunks
-
 #define NUM_CHUNKS_PER_REGION       32  // only on one axis
 #define NUM_CHUNKS_PER_REGION_LOG2   5
 
@@ -523,6 +521,7 @@ static decoded_buffer decoded_buffers[MAX_DECODED_CHUNK_Z][MAX_DECODED_CHUNK_X];
 void lock_chunk_get_mutex(void);
 void unlock_chunk_get_mutex(void);
 
+#ifdef FAST_CHUNK
 fast_chunk *get_decoded_fastchunk_uncached(int chunk_x, int chunk_z)
 {
    unsigned char *decoded;
@@ -592,7 +591,9 @@ fast_chunk *get_decoded_fastchunk(int chunk_x, int chunk_z)
    decoded_buffer *db = get_decoded_buffer(chunk_x, chunk_z);
    return db->fc;
 }
+#endif
 
+#ifndef FAST_CHUNK
 chunk *get_decoded_chunk_raw(int chunk_x, int chunk_z)
 {
    unsigned char *decoded;
@@ -628,17 +629,4 @@ chunk *get_decoded_chunk(int chunk_x, int chunk_z)
    decoded_chunks[chunk_z&(MAX_DECODED_CHUNK_Z-1)][chunk_x&(MAX_DECODED_CHUNK_X-1)] = c;
    return c;
 }
-
-#if 0
-chunk *map[257][257];
-
-int main(int argc, char **argv)
-{
-   int i,j;
-   for (j= -32; j <= 32; ++j)
-      for (i= -32; i <= 32; ++i)
-         map[j+128][i+128] = get_decoded_chunk(i,j);
-   return 0;
-}
 #endif
-

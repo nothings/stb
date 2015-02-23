@@ -155,6 +155,14 @@
 //   stb_voxel_render 4..14 bytes  :  2015/02???
 
 
+
+
+// 
+
+#ifndef STBVOX_MODE
+#define STBVOX_MODE 0
+#endif
+
 // The following are candidate voxel modes. Only modes 0, 1, and 20 are
 // currently implemented. Reducing the storage-per-quad further
 // shouldn't improve performance, although obviously it allow you
@@ -252,7 +260,7 @@ enum
    STBVOX_UNIFORM_ambient,
    STBVOX_UNIFORM_camera_pos,
 
-   STBVOX_UNIFORM__count,
+   STBVOX_UNIFORM_count,
 };
 
 enum
@@ -928,7 +936,7 @@ stbvox_uniform_info *stbvox_get_uniform_info(stbvox_mesh_maker *mm, int uniform)
    if (stbvox_default_palette[0][0] == 0) // NOTE: not threadsafe, so call once to init
       stbvox_build_default_palette();
 
-   if (uniform < 0 || uniform >= STBVOX_UNIFORM__count)
+   if (uniform < 0 || uniform >= STBVOX_UNIFORM_count)
       return NULL;
 
    if (stbvox_check_tag(mm, stbvox_uniforms[uniform].tags))
@@ -1322,12 +1330,39 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
 
          }
       } else {
-         int i;
-         for (i=0; i < 4; ++i) {
-            *mv[i] = vertbase + face_coord[i] + p1[i];
-         }
+         *mv[0] = vertbase + face_coord[0] + p1[0];
+         *mv[1] = vertbase + face_coord[1] + p1[1];
+         *mv[2] = vertbase + face_coord[2] + p1[2];
+         *mv[3] = vertbase + face_coord[3] + p1[3];
       }
    }
+}
+
+// render non-planar quads by splitting into two triangles, rendering each as a degenerate quad
+void stbvox_make_02_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face1, int face2, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh)
+{
+   stbvox_mesh_vertex v[4];
+   v[0] = face_coord[0];
+   v[1] = face_coord[1];
+   v[2] = face_coord[2];
+   v[3] = face_coord[0];
+   stbvox_make_mesh_for_face(mm, rot, face1, v_off, pos, vertbase, v, mesh);
+   v[1] = face_coord[2];
+   v[2] = face_coord[3];
+   stbvox_make_mesh_for_face(mm, rot, face2, v_off, pos, vertbase, v, mesh);
+}
+
+void stbvox_make_13_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face1, int face2, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh)
+{
+   stbvox_mesh_vertex v[4];
+   v[0] = face_coord[1];
+   v[1] = face_coord[2];
+   v[2] = face_coord[3];
+   v[3] = face_coord[1];
+   stbvox_make_mesh_for_face(mm, rot, face1, v_off, pos, vertbase, v, mesh);
+   v[1] = face_coord[3];
+   v[2] = face_coord[0];
+   stbvox_make_mesh_for_face(mm, rot, face2, v_off, pos, vertbase, v, mesh);
 }
 
 // simple case for mesh generation: we have only solid and empty blocks
@@ -1344,17 +1379,18 @@ void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, int v_off
 
    unsigned char mesh = mm->default_mesh;
 
-   if (mm->input.selector) {
+   if (mm->input.selector)
       mesh = mm->input.selector[v_off];
-      simple_rot = mesh >> 4;
-      mesh &= 15;
-   }
 
    // check if we're going off the end
    if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
       assert(0);
       return;
    }
+
+   #ifdef STBVOX_ROTATION_IN_LIGHTING
+   simple_rot = mm->input.lighting[v_off] & 3;
+   #endif
 
    if (blockptr[ 1]==0)
       stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_up  , v_off, pos, basevert, vmesh+4*STBVOX_FACE_up, mesh);
@@ -1404,14 +1440,14 @@ static unsigned char stbvox_hasface[STBVOX_MAX_GEOM][STBVOX_NUM_ROTATION] =
    { 0,0,0,0 }, // knockout
    { 63,63,63,63 }, // solid
    { 63,63,63,63 }, // transp
-   { 63,63,63,63 }, // slabs
-   { 63,63,63,63 },
+   { 63,63,63,63 }, // slab
+   { 63,63,63,63 }, // slab
    { 1|2|4|48, 8|1|2|48, 4|8|1|48, 2|4|8|48, }, // floor slopes
    { 1|2|4|48, 8|1|2|48, 4|8|1|48, 2|4|8|48, }, // ceil slopes
    { 47,47,47,47 }, // wall-projected diagonal with down face
    { 31,31,31,31 }, // wall-projected diagonal with up face
    { 63,63,63,63 }, // crossed-pair has special handling, but avoid early-out
-   { 63,63,63,63 }, // reserved
+   { 63,63,63,63 }, // force
    { 63,63,63,63 },
    { 63,63,63,63 },
    { 63,63,63,63 },
@@ -1430,17 +1466,13 @@ enum
    STBVOX_FT_diag_013,
    STBVOX_FT_diag_123,
    STBVOX_FT_force   , // can't be covered up, used for internal faces, also hides nothing
-};
+   STBVOX_FT_partial , // only covered by solid, never covers anything else
 
-// these are additional geometry types used internally
-enum
-{
-   STBVOX_GEOM_internal_force = STBVOX_GEOM_count,
-   STBVOX_GEOM_internal_count
+   STBVOX_FT_count
 };
 
 // this determines which face type above is visible on each side of the geometry
-static unsigned char stbvox_facetype[STBVOX_GEOM_internal_count][6] =
+static unsigned char stbvox_facetype[STBVOX_GEOM_count][6] =
 {
    { 0, },  // STBVOX_GEOM_empty
    { STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid }, // knockout
@@ -1455,20 +1487,17 @@ static unsigned char stbvox_facetype[STBVOX_GEOM_internal_count][6] =
    { STBVOX_FT_diag_123, STBVOX_FT_solid, STBVOX_FT_diag_023, STBVOX_FT_force, STBVOX_FT_none, STBVOX_FT_solid },
    { STBVOX_FT_diag_012, STBVOX_FT_solid, STBVOX_FT_diag_013, STBVOX_FT_force, STBVOX_FT_solid, STBVOX_FT_none },
    { STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, 0,0 }, // crossed pair
-   { STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force },
-   //0, }, // GEOM_force, show as empty so that neighbors are always visible
+   { STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force }, // GEOM_force
 
-   { 0,0,0,0,0, STBVOX_FT_solid }, // floor vheight
-   { 0,0,0,0,0, STBVOX_FT_solid }, // floor vheight
-   { 0,0,0,0, STBVOX_FT_solid,0 }, // ceil vheight
-   { 0,0,0,0, STBVOX_FT_solid,0 }, // ceil vheight
-
-   //{ STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid }, // internal force
+   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_force, STBVOX_FT_solid }, // floor vheight, all neighbors forced
+   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_force, STBVOX_FT_solid }, // floor vheight, all neighbors forced
+   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_solid, STBVOX_FT_force }, // ceil vheight, all neighbors forced
+   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_solid, STBVOX_FT_force }, // ceil vheight, all neighbors forced
 };
 
 // this table indicates whether, for each pair of types above, a face is visible.
 // each value indicates whether a given type is visible for all neighbor types
-static unsigned short stbvox_face_visible[9] =
+static unsigned short stbvox_face_visible[STBVOX_FT_count] =
 {
    // we encode the table by listing which cases cause *obscuration*, and bitwise inverting that
    // table is pre-shifted by 5 to save a shift when it's accessed
@@ -1481,6 +1510,7 @@ static unsigned short stbvox_face_visible[9] =
    (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_012)))<<5),  // diag013 matches diag012
    (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_023)))<<5),  // diag123 matches diag023
    (unsigned short) ((~0                                               )<<5),  // force is always rendered regardless, always forces neighbor
+   (unsigned short) ((~((1<<STBVOX_FT_solid)                          ))<<5),  // partial is only completely obscured only by solid
 };
 
 // the vertex heights of the block types, in binary vertex order (zyx):
@@ -1665,7 +1695,7 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
       stbvox_mesh_vertex basevert;
       stbvox_mesh_vertex vmesh[6][4];
       stbvox_rotate rotate = { 0,0,0,0 };
-      unsigned char simple_rot = 0;
+      unsigned char simple_rot = rot;
       int i;
       // we only need to do this for the displayed faces, but it's easier
       // to just do it up front; @OPTIMIZE check if it's faster to do it
@@ -1721,8 +1751,10 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
       stbvox_mesh_vertex cube[8];
       stbvox_mesh_vertex basevert;
       stbvox_rotate rotate = { 0,0,0,0 };
-      unsigned char simple_rot = 0;
+      unsigned char simple_rot = rot;
       unsigned char ht[4];
+      int extreme;
+
       // extract the heights
       if (mm->input.vheight) {
          unsigned char v =  mm->input.vheight[v_off];
@@ -1732,15 +1764,34 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
          ht[3] = (v >> 6) & 3;
       } else if (mm->input.block_vheight) {
          unsigned char v = mm->input.block_vheight[bt];
-         // @TODO: these need to be rotated by 'rotate'
-         ht[0] = (v >> 0) & 3;
-         ht[1] = (v >> 2) & 3;
-         ht[2] = (v >> 4) & 3;
-         ht[3] = (v >> 6) & 3;
+         unsigned char raw[4];
+         int i;
+
+         raw[0] = (v >> 0) & 3;
+         raw[1] = (v >> 2) & 3;
+         raw[2] = (v >> 4) & 3;
+         raw[3] = (v >> 6) & 3;
+
+         for (i=0; i < 4; ++i)
+            ht[i] = raw[stbvox_rotate_vertex[i][rot]];
       } else {
          assert(mm->input.geometry);
       }
+
+      // flag whether any sides go off the top of the block, which means
+      // our visible_faces test was wrong
+      extreme = (ht[0] == 3 || ht[1] == 3 || ht[2] == 3 || ht[3] == 3);
+
       if (geo >= STBVOX_GEOM_ceil_vheight_02) {
+         cube[0] = stbvox_vertex_p(0,0,ht[0],0,0);
+         cube[1] = stbvox_vertex_p(0,0,ht[1],0,0);
+         cube[2] = stbvox_vertex_p(0,0,ht[2],0,0);
+         cube[3] = stbvox_vertex_p(0,0,ht[3],0,0);
+         cube[4] = stbvox_vertex_p(0,0,2,0,0);
+         cube[5] = stbvox_vertex_p(0,0,2,0,0);
+         cube[6] = stbvox_vertex_p(0,0,2,0,0);
+         cube[7] = stbvox_vertex_p(0,0,2,0,0);
+      } else {
          cube[0] = stbvox_vertex_p(0,0,0,0,0);
          cube[1] = stbvox_vertex_p(0,0,0,0,0);
          cube[2] = stbvox_vertex_p(0,0,0,0,0);
@@ -1749,26 +1800,12 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
          cube[5] = stbvox_vertex_p(0,0,ht[1],0,0);
          cube[6] = stbvox_vertex_p(0,0,ht[2],0,0);
          cube[7] = stbvox_vertex_p(0,0,ht[3],0,0);
-      } else {
-         cube[0] = stbvox_vertex_p(0,0,ht[0],0,0);
-         cube[1] = stbvox_vertex_p(0,0,ht[1],0,0);
-         cube[2] = stbvox_vertex_p(0,0,ht[2],0,0);
-         cube[3] = stbvox_vertex_p(0,0,ht[3],0,0);
-         cube[4] = stbvox_vertex_p(0,0,0,0,0);
-         cube[5] = stbvox_vertex_p(0,0,0,0,0);
-         cube[6] = stbvox_vertex_p(0,0,0,0,0);
-         cube[7] = stbvox_vertex_p(0,0,0,0,0);
       }
       if (!mm->input.vheight && mm->input.block_vheight) {
-         int i;
-         // apply rotation
-         for (i=0; i < 6*4; ++i) {
-            int vert = stbvox_vertex_selector[0][i];
-            vert = stbvox_rotate_vertex[vert][rot];
-            vmesh[0][i] = stbvox_vmesh_pre_vheight[0][i]
-                        + cube[vert];
-         }
-      } else {
+      }
+
+      // build vertex mesh
+      {
          int i;
          for (i=0; i < 6*4; ++i) {
             int vert = stbvox_vertex_selector[0][i];
@@ -1784,10 +1821,33 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
          return;
       }
 
-      if (visible_faces & (1 << STBVOX_FACE_up))
-         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh);
-      if (visible_faces & (1 << STBVOX_FACE_down))
-         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh);
+      // @TODO generate split faces
+      if (visible_faces & (1 << STBVOX_FACE_up)) {
+         #ifndef STBVOX_OPTIMIZED_VHEIGHT
+         // check if it's planar
+         if (geo < STBVOX_GEOM_ceil_vheight_02 && cube[5] + cube[6] != cube[4] + cube[7]) {
+            // not planar, split along diagonal and make degenerate
+            if (geo == STBVOX_GEOM_floor_vheight_02)
+               stbvox_make_02_split_mesh_for_face(mm, rotate, STBVOX_FACE_up, STBVOX_FACE_up, v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh);
+            else
+               stbvox_make_13_split_mesh_for_face(mm, rotate, STBVOX_FACE_up, STBVOX_FACE_up, v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh);
+         } else
+         #endif
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh);
+      }
+      if (visible_faces & (1 << STBVOX_FACE_down)) {
+         #ifndef STBVOX_OPTIMIZED_VHEIGHT
+         // check if it's planar
+         if (geo >= STBVOX_GEOM_ceil_vheight_02 && cube[1] + cube[2] != cube[0] + cube[3]) {
+            // not planar, split along diagonal and make degenerate
+            if (geo == STBVOX_GEOM_ceil_vheight_02)
+               stbvox_make_02_split_mesh_for_face(mm, rotate, STBVOX_FACE_down, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh);
+            else
+               stbvox_make_13_split_mesh_for_face(mm, rotate, STBVOX_FACE_down, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh);
+         } else
+         #endif
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh);
+      }
 
       if (mm->input.rotate) {
          unsigned char val = mm->input.rotate[v_off];
@@ -1799,15 +1859,16 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
          rotate.block = rotate.overlay = rotate.tex2 = rotate.ecolor = simple_rot;
       }
 
-      if (visible_faces & (1 << STBVOX_FACE_north))
+      if ((visible_faces & (1 << STBVOX_FACE_north)) || (extreme && (ht[2] == 3 || ht[3] == 3)))
          stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_north, v_off, pos, basevert, vmesh[STBVOX_FACE_north], mesh);
-      if (visible_faces & (1 << STBVOX_FACE_south))
+      if ((visible_faces & (1 << STBVOX_FACE_south)) || (extreme && (ht[0] == 3 || ht[1] == 3))) 
          stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_south, v_off, pos, basevert, vmesh[STBVOX_FACE_south], mesh);
-      if (visible_faces & (1 << STBVOX_FACE_east))
+      if ((visible_faces & (1 << STBVOX_FACE_east)) || (extreme && (ht[1] == 3 || ht[3] == 3)))
          stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_east , v_off, pos, basevert, vmesh[STBVOX_FACE_east ], mesh);
-      if (visible_faces & (1 << STBVOX_FACE_west))
+      if ((visible_faces & (1 << STBVOX_FACE_west)) || (extreme && (ht[0] == 3 || ht[2] == 3)))
          stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_west , v_off, pos, basevert, vmesh[STBVOX_FACE_west ], mesh);
    }
+
    if (geo == STBVOX_GEOM_crossed_pair) {
       // this can be generated with a special vmesh
       stbvox_mesh_vertex basevert = stbvox_vertex_p(pos.x, pos.y, pos.z<<mm->precision_z , 0,0);
