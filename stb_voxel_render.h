@@ -294,7 +294,7 @@ extern void stbvox_reset_buffers(stbvox_mesh_maker *mm);
 extern void stbvox_set_buffer(stbvox_mesh_maker *mm, int mesh, int slot, void *buffer, size_t len);
 extern void stbvox_set_input_range(stbvox_mesh_maker *mm, int x0, int y0, int z0, int x1, int y1, int z1);
 extern void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_bytes, int y_stride_in_bytes);
-extern void stbvox_config_use_gl(stbvox_mesh_maker *mm, int use_tex_buffer, int use_gl_modelview, int use_gl_fragment);
+extern void stbvox_config_use_gl(stbvox_mesh_maker *mm, int use_tex_buffer, int use_gl_modelview);
 extern void stbvox_config_set_z_precision(stbvox_mesh_maker *mm, int z_fractional_bits);
 extern stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm);
 extern int stbvox_get_vertex_shader(stbvox_mesh_maker *mm, char *buffer, size_t buffer_size);
@@ -2128,7 +2128,7 @@ void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_bytes, int y
 
 // this is designed to allow you to call it multiple times to change the mode
 // in case you're using multiple variants for different purposes
-void stbvox_config_use_gl(stbvox_mesh_maker *mm, int use_tex_buffer, int use_gl_modelview, int use_gl_fragment)
+void stbvox_config_use_gl(stbvox_mesh_maker *mm, int use_tex_buffer, int use_gl_modelview)
 {
    mm->config_dirty = 1;
 

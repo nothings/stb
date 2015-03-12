@@ -359,10 +359,10 @@ void render_init(void)
    unsigned char *texdata = stbi_load("terrain.png", &w, &h, NULL, 4);
 
    stbvox_init_mesh_maker(&g_mesh_maker);
-   stbvox_config_use_gl(&g_mesh_maker, 1, 1, 1);
+   stbvox_config_use_gl(&g_mesh_maker, 1, 1);
    for (i=0; i < num_mesh_workers; ++i) {
       stbvox_init_mesh_maker(&mesh_data[i].rm.mm);
-      stbvox_config_use_gl(&mesh_data[i].rm.mm, 1,1,1);
+      stbvox_config_use_gl(&mesh_data[i].rm.mm, 1,1);
    }
 
    vertex_len = stbvox_get_vertex_shader(&g_mesh_maker, vertex, sizeof(vertex));
