@@ -1,47 +1,43 @@
 #define _WIN32_WINNT 0x400
 
 #include <assert.h>
-#include <ctype.h>
-#include <stdio.h>
-#include <string.h>
-
-//#include "game.h"
-
 #include <windows.h>
 
+// stb.h
+#define STB_DEFINE
+#include "stb.h"
+
+// stb_gl.h
 #define STB_GL_IMPLEMENTATION
 #define STB_GLEXT_DEFINE "glext_list.h"
 #include "stb_gl.h"
 
-#define STB_DEFINE
-#include "stb.h"
-
-#include "caveview.h"
-
+// SDL
 #include "sdl.h"
 #include "SDL_opengl.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
-
+// stb_glprog.h
 #define STB_GLPROG_IMPLEMENTATION
 #define STB_GLPROG_ARB_DEFINE_EXTENSIONS
 #include "stb_glprog.h"
 
+// stb_image.h
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+// stb_easy_font.h
 #include "stb_easy_font.h" // doesn't require an IMPLEMENTATION
 
 #include "caveview.h"
 
 char *game_name = "caveview";
 
-// assume only a single texture with all sprites
-float texture_s_scale;
-float texture_t_scale;
-GLuint interface_tex, logo_tex;
 
-extern int screen_x, screen_y; // main.c
+#define REVERSE_DEPTH
 
-void print_string(float x, float y, char *text, float r, float g, float b)
+
+
+static void print_string(float x, float y, char *text, float r, float g, float b)
 {
    static char buffer[99999];
    int num_quads;
@@ -55,11 +51,11 @@ void print_string(float x, float y, char *text, float r, float g, float b)
    glDisableClientState(GL_VERTEX_ARRAY);
 }
 
-float text_color[3];
-float pos_x = 10;
-float pos_y = 10;
+static float text_color[3];
+static float pos_x = 10;
+static float pos_y = 10;
 
-void print(char *text, ...)
+static void print(char *text, ...)
 {
    char buffer[999];
    va_list va;
@@ -70,24 +66,10 @@ void print(char *text, ...)
    pos_y += 10;
 }
 
-// mouse offsetting 'pixel to virtual'
-float xs_p2v, ys_p2v;// xoff_p2v, yoff_p2v;
-
-// viewport offseting 'virtual to pixel'
-float xs_v2p, ys_v2p, xoff_v2p, yoff_v2p;
-
 float camang[3], camloc[3] = { 0,0,75 };
 float player_zoom = 1.0;
-int third_person;
 float rotate_view = 0.0;
 
-#define REVERSE_DEPTH
-
-
-void init_game(void)
-{
-//   init_graphics();
-}
 
 void camera_to_worldspace(float world[3], float cam_x, float cam_y, float cam_z)
 {
@@ -293,23 +275,8 @@ void draw_main(void)
    glLoadIdentity();
    stbgl_initCamera_zup_facing_y();
 
-   //glTranslatef(0,150,-5);
-   // position the camera and render it
-
-   if (third_person) {
-      glTranslatef(0,2.5,0);
-      glRotatef(-camang[0],1,0,0);
-
-      glTranslatef(0,2,0);
-      glRotatef(-camang[2]-rotate_view,0,0,1);
-
-      //glTranslatef(0,0,1);
-      //glTranslatef(0,0,-1);
-   } else {
-      glRotatef(-camang[0],1,0,0);
-      glRotatef(-camang[2],0,0,1);
-   }
-
+   glRotatef(-camang[0],1,0,0);
+   glRotatef(-camang[2],0,0,1);
    glTranslatef(-camloc[0], -camloc[1], -camloc[2]);
 
    start_time = SDL_GetPerformanceCounter();
@@ -355,7 +322,6 @@ void ods(char *fmt, ...)
 
 static SDL_Window *window;
 
-extern void init_game(void);
 extern void draw_main(void);
 extern void process_tick(float dt);
 extern void editor_init(void);
@@ -377,17 +343,11 @@ float carried_dt = 0;
 
 
 int raw_level_time;
-extern void init_game(void);
-extern void draw_main(void);
 
 float global_timer;
 
 int loopmode(float dt, int real, int in_client)
 {
-   float actual_dt = dt;
-
-   float jump_timer = dt;
-
    if (!initialized) return 0;
 
    if (!real)
@@ -413,10 +373,6 @@ int loopmode(float dt, int real, int in_client)
 
 static int quit;
 
-//int winproc(void *data, stbwingraph_event *e)
-
-extern int editor_scale;
-extern void editor_key(enum stbte_action act);
 extern int controls;
 
 void active_control_set(int key)
@@ -444,8 +400,6 @@ void process_event(SDL_Event *e)
          break;
       case SDL_MOUSEBUTTONDOWN:
       case SDL_MOUSEBUTTONUP:
-      case SDL_MOUSEWHEEL:
-         //stbte_mouse_sdl(edit_map, e, 1.0f/editor_scale,1.0f/editor_scale,0,0);
          break;
 
       case SDL_QUIT:
@@ -462,36 +416,13 @@ void process_event(SDL_Event *e)
          }
          break;
 
-      case SDL_TEXTINPUT:
-         switch(e->text.text[0]) {
-            #if 0
-            case 27: {
-               #if 0
-               int result;
-               SDL_ShowCursor(SDL_ENABLE);
-               if (MessageBox(e->handle, "Exit CLTT?", "CLTT", MB_OKCANCEL) == IDOK);
-               #endif
-               {
-                  quit = 1;
-                  break;
-               }
-               //SDL_ShowCursor(SDL_DISABLE);
-               break;
-            }
-            #endif
-         }
-         break;
-
       case SDL_KEYDOWN: {
          int k = e->key.keysym.sym;
          int s = e->key.keysym.scancode;
          SDL_Keymod mod;
          mod = SDL_GetModState();
-         if (k == SDLK_ESCAPE) {
-#ifndef DO_EDITOR
+         if (k == SDLK_ESCAPE)
             quit = 1;
-#endif
-         }
 
          if (s == SDL_SCANCODE_D)   active_control_set(0);
          if (s == SDL_SCANCODE_A)   active_control_set(1);
@@ -573,10 +504,6 @@ static float getTimestep(float minimum_time)
 
 void APIENTRY gl_debug(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *param)
 {
-   #if 0
-   if (severity == GL_DEBUG_SEVERITY_LOW_ARB)
-      return;
-   #endif
    ods("%s\n", message);
 }
 
@@ -643,7 +570,6 @@ int SDL_main(int argc, char **argv)
    mesh_init();
    world_init();
 
-   init_game();
    initialized = 1;
 
    while (!quit) {
@@ -652,7 +578,6 @@ int SDL_main(int argc, char **argv)
          process_event(&e);
 
       loopmode(getTimestep(0.0166f/8), 1, 1);
-      quit=quit;
    }
 
    return 0;
