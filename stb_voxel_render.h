@@ -482,6 +482,7 @@ struct stbvox_mesh_maker
    int vertex_gather_offset[6][4];
 
    int pos_x,pos_y,pos_z;
+   int full;
 
    // computed from user input
    char *output_cur   [STBVOX_MAX_MESHES][STBVOX_MAX_MESH_SLOTS];
@@ -1403,7 +1404,7 @@ void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, int v_off
 
    // check if we're going off the end
    if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
-      assert(0);
+      mm->full = 1;
       return;
    }
 
@@ -1651,8 +1652,6 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
    nrot[5] = (mm->input.lighting[v_off -      1]) & 3;
    #endif
 
-   //rot = 2;
-
    if (geo == STBVOX_GEOM_transp) {
       // transparency has a special rule: if the blocktype is the same,
       // and the faces are compatible, then can hide them; otherwise,
@@ -1747,7 +1746,7 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
 
       // check if we're going off the end
       if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
-         assert(0);
+         mm->full = 1;
          return;
       }
 
@@ -1856,7 +1855,7 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
       basevert = stbvox_vertex_p(pos.x, pos.y, pos.z<<mm->precision_z , 0,0);
       // check if we're going off the end
       if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
-         assert(0);
+         mm->full = 1;
          return;
       }
 
@@ -1922,7 +1921,7 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
 
       // check if we're going off the end
       if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*4 > mm->output_end[mesh][0]) {
-         assert(0);
+         mm->full = 1;
          return;
       }
 
@@ -1965,6 +1964,10 @@ void stbvox_make_mesh_for_column(stbvox_mesh_maker *mm, int x, int y, int z0)
          {  // TODO check up and down
             pos.z = z;
             stbvox_make_mesh_for_block_with_geo(mm, pos, v_off+z);
+            if (mm->full) {
+               mm->cur_z = z;
+               return;
+            }
          }
       }
    } else if (mm->input.block_geometry) {
@@ -1981,6 +1984,10 @@ void stbvox_make_mesh_for_column(stbvox_mesh_maker *mm, int x, int y, int z0)
          {
             pos.z = z;
             stbvox_make_mesh_for_block_with_geo(mm, pos, v_off+z);
+            if (mm->full) {
+               mm->cur_z = z;
+               return;
+            }
          }
       }
    } else {
@@ -1992,6 +1999,10 @@ void stbvox_make_mesh_for_column(stbvox_mesh_maker *mm, int x, int y, int z0)
          if (bt[z] && (!bt[z+ns_off] || !bt[z-ns_off] || !bt[z+ew_off] || !bt[z-ew_off] || !bt[z-1] || !bt[z+1])) {
             pos.z = z;
             stbvox_make_mesh_for_block(mm, pos, v_off+z, vmesh);
+            if (mm->full) {
+               mm->cur_z = z;
+               return;
+            }
          }
       }
    }
@@ -2023,15 +2034,27 @@ int stbvox_make_mesh(stbvox_mesh_maker *mm)
 {
    int x,y;
    stbvox_bring_up_to_date(mm);
+   mm->full = 0;
    if (mm->cur_x || mm->cur_y || mm->cur_z) {
       stbvox_make_mesh_for_column(mm, mm->cur_x, mm->cur_y, mm->cur_z);
+      if (mm->full)
+         return 0;
       ++mm->cur_y;
-      while (mm->cur_y < mm->y1)
-         stbvox_make_mesh_for_column(mm, mm->cur_x, mm->cur_y++, mm->z0);
+      while (mm->cur_y < mm->y1 && !mm->full) {
+         stbvox_make_mesh_for_column(mm, mm->cur_x, mm->cur_y, mm->z0);
+         if (mm->full)
+            return 0;
+         ++mm->cur_y;
+      }
    }
    for (x=mm->x0; x < mm->x1; ++x) {
       for (y=mm->y0; y < mm->y1; ++y) {
          stbvox_make_mesh_for_column(mm, x, y, mm->z0);
+         if (mm->full) {
+            mm->cur_x = x;
+            mm->cur_y = y;
+            return 0;
+         }
       }
    }
    return 1;

@@ -26,7 +26,7 @@ typedef struct
 // a 3D checkerboard of empty,solid would be: 32x32x255x6/2 ~= 800000
 // an all-leaf qchunk would be: 32 x 32 x 255 x 6 ~= 1,600,000
 
-#define BUILD_QUAD_MAX     800000 
+#define BUILD_QUAD_MAX     400000
 #define BUILD_BUFFER_SIZE  (4*4*BUILD_QUAD_MAX) // 4 bytes per vertex, 4 vertices per quad
 #define FACE_BUFFER_SIZE   (  4*BUILD_QUAD_MAX) // 4 bytes per quad
 
