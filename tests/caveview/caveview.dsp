@@ -123,6 +123,10 @@ SOURCE=.\glext_list.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\README.md
+# End Source File
+# Begin Source File
+
 SOURCE=.\win32\SDL_windows_main.c
 # End Source File
 # Begin Source File

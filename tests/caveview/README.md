@@ -11,11 +11,13 @@ Not very. Many Minecraft blocks are not handled correctly:
 *         Only one wood type
 *         Colored glass becomes regular glass
 *         Glass panes become glass blocks
+*         Water is opaque
 *         Water level is incorrect
 *         No biome coloration
 *         Cactus is not shrunk, shows holes
 *         Chests are not shrunk
-*         Chests, pumpkins, etc. are not rotated properly
+*         Double-chests draw as two chests
+*         Pumpkins etc. are not rotated properly
 *         Torches are drawn hackily, do not attach to walls
 *         Incorrect textures for blocks that postdate terrain.png
 *         Transparent textures have black fringes due to non-premultiplied-alpha
@@ -47,9 +49,11 @@ things that way wouldn't be so bad.
 
 Rails, ladders, and redstone lines could be implemented by
 using tex2 to overlay those effects, but you can't rotate
-tex1 and tex2 independently, so you'd have to have a
-separate texture for each orientation of rail, etc, and
-you'd need special rendering for rail up/down sections.
+tex1 and tex2 independently, so there may be cases where
+the underlying texture needs a different rotation from the
+overlaid texture, which would require separate rendering.
+Handling redstone's brightness being different from underlying
+block's brightness would require separate rendering.
 
 You can use the face-color effect to do biome coloration,
 but the change won't be smooth the way it is in Minecraft.
@@ -60,8 +64,7 @@ but the change won't be smooth the way it is in Minecraft.
 Partly because converting from minecraft data is expensive.
 
 Here is the approximate breakdown of an older version
-of this executable and lib that did the building single-threaded,
-and was a bit slower at building mesh data.
+of this executable and lib that did the building single-threaded.
 
 *       25%   loading & parsing minecraft files (4/5ths of this is my zlib)
 *       18%   converting from minecraft blockids & lighting to stb blockids & lighting

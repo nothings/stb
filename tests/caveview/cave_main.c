@@ -66,7 +66,7 @@ static void print(char *text, ...)
    pos_y += 10;
 }
 
-float camang[3], camloc[3] = { 0,0,75 };
+float camang[3], camloc[3] = { 60,22,77 };
 float player_zoom = 1.0;
 float rotate_view = 0.0;
 
@@ -551,8 +551,12 @@ int SDL_main(int argc, char **argv)
 
    SDL_GL_MakeCurrent(window, context); // is this true by default?
 
-   // if (!IsDebuggerPresent())   
    SDL_SetRelativeMouseMode(SDL_TRUE);
+   #if defined(_MSC_VER) && _MSC_VER < 1300
+   // work around broken behavior in VC6 debugging
+   if (IsDebuggerPresent())
+      SDL_SetHint(SDL_HINT_MOUSE_RELATIVE_MODE_WARP, "1");
+   #endif
 
    stbgl_initExtensions();
 

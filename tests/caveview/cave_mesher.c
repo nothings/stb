@@ -121,7 +121,7 @@ unsigned char minecraft_info[256][7] =
    { C_empty }, // fire
    { C_trans, 65,65,65,65,65,65 },
    { C_stair, 4,4,4,4,4,4 },
-   { C_solid, 27,26,26,26,25,25 },
+   { C_solid, 26,26,26,27,25,25 },
    { C_empty }, // redstone
 
    // 56
@@ -237,7 +237,7 @@ unsigned char minecraft_info[256][7] =
    // 144
    { C_empty }, // mob head
    { C_empty }, // anvil
-   { C_solid, 27,26,26,26,25,25 }, // trapped chest
+   { C_solid, 26,26,26,27,25,25 }, // trapped chest
    { C_empty }, // weighted pressure plate light
    { C_empty }, // weighted pressure plat eheavy
    { C_empty }, // comparator inactive
@@ -315,10 +315,12 @@ void convert_fastchunk_inplace(fast_chunk *fc)
 {
    int i;
    int num_blocks=0, step=0;
-   unsigned char rot[4096] = { 0 };
+   unsigned char rot[4096];
    #ifndef IN_PLACE
    unsigned char *storage;
    #endif
+
+   memset(rot, 0, 4096);
 
    for (i=0; i < 16; ++i)
       num_blocks += fc->blockdata[i] != NULL;
@@ -340,15 +342,12 @@ void convert_fastchunk_inplace(fast_chunk *fc)
          sky = fc->skylight[i];
 
          #ifdef IN_PLACE
-         assert(dd < sky && sky < lt && lt < bd);
          out = bd;
-         outb = dd;
          #else
          out = storage + 16*16*16*2*step;
-         outb = out + 16*16*16;
-         ++step;
          #endif
 
+         // bd is written in place, but also reads from dd
          for (o=0; o < 16*16*16/2; o += 1) {
             unsigned char v1,v2;
             unsigned char d = dd[o];
@@ -359,7 +358,7 @@ void convert_fastchunk_inplace(fast_chunk *fc)
             {
                //unsigned char d = bd[o] & 15;
                v1 = remap_data[remap[v1]][d&15];
-               rot[o] = rotate_data[d&3];
+               rot[o*2+0] = rotate_data[d&3];
             } else
                v1 = effective_blocktype[v1];
 
@@ -367,7 +366,7 @@ void convert_fastchunk_inplace(fast_chunk *fc)
             {
                //unsigned char d = bd[o] >> 4;
                v2 = remap_data[remap[v2]][d>>4];
-               rot[o+1] = rotate_data[(d>>4)&3];
+               rot[o*2+1] = rotate_data[(d>>4)&3];
             } else
                v2 = effective_blocktype[v2];
 
@@ -375,18 +374,54 @@ void convert_fastchunk_inplace(fast_chunk *fc)
             out[o*2+1] = v2;
          }
 
-         // because this stores to data[], can't run at same time as above loop
-         for (o=0; o < 16*16*16/2; ++o) {
-            int bright;
-            bright = (lt[o]&15)*12 + 15 + (sky[o]&15)*16;
-            if (bright > 255) bright = 255;
-            if (bright <  32) bright =  32;
-            outb[o*2+0] = STBVOX_MAKE_LIGHTING((unsigned char) bright, rot[o]);
+         // this reads from lt & sky
+         #ifndef IN_PLACE
+         outb = out + 16*16*16;
+         ++step;
+         #endif
 
-            bright = (lt[o]>>4)*12 + 15 + (sky[o]>>4)*16;
-            if (bright > 255) bright = 255;
-            if (bright <  32) bright =  32;
-            outb[o*2+1] = STBVOX_MAKE_LIGHTING((unsigned char) bright, rot[o+1]);
+         // MC used to write in this order and it makes it possible to compute in-place
+         if (dd < sky && sky < lt) {
+            // @TODO go this path always if !IN_PLACE
+            #ifdef IN_PLACE
+            outb = dd;
+            #endif
+
+            for (o=0; o < 16*16*16/2; ++o) {
+               int bright;
+               bright = (lt[o]&15)*12 + 15 + (sky[o]&15)*16;
+               if (bright > 255) bright = 255;
+               if (bright <  32) bright =  32;
+               outb[o*2+0] = STBVOX_MAKE_LIGHTING((unsigned char) bright, (rot[o*2+0]&3));
+
+               bright = (lt[o]>>4)*12 + 15 + (sky[o]>>4)*16;
+               if (bright > 255) bright = 255;
+               if (bright <  32) bright =  32;
+               outb[o*2+1] = STBVOX_MAKE_LIGHTING((unsigned char) bright, (rot[o*2+1]&3));
+            }
+         } else {
+            // @TODO: if blocktype is in between others, this breaks; need to find which side has two pointers, and use that
+            // overwrite rot[] array, then copy out
+            #ifdef IN_PLACE
+            outb = (dd < sky) ? dd : sky;
+            if (lt < outb) lt = outb;
+            #endif
+
+            for (o=0; o < 16*16*16/2; ++o) {
+               int bright;
+               bright = (lt[o]&15)*12 + 15 + (sky[o]&15)*16;
+               if (bright > 255) bright = 255;
+               if (bright <  32) bright =  32;
+               rot[o*2+0] = STBVOX_MAKE_LIGHTING((unsigned char) bright, (rot[o*2+0]&3));
+
+               bright = (lt[o]>>4)*12 + 15 + (sky[o]>>4)*16;
+               if (bright > 255) bright = 255;
+               if (bright <  32) bright =  32;
+               rot[o*2+1] = STBVOX_MAKE_LIGHTING((unsigned char) bright, (rot[o*2+1]&3));
+            }
+
+            memcpy(outb, rot, 4096);
+            fc->data[i] = outb;
          }
 
          #ifndef IN_PLACE
@@ -653,10 +688,11 @@ void build_stair_rotations(int blocktype, unsigned char *map)
    int i,j,k;
    for (j=0; j < 2; ++j) {
       int geom = j ? STBVOX_GEOM_ceil_slope_north_is_bottom : STBVOX_GEOM_floor_slope_north_is_top;
+      //int geom = STBVOX_GEOM_solid;
       for (i=0; i < 4; ++i) {
          if (i == 0 && j == 0) {
             map[j*4+i+8] = map[j*4+i] = blocktype;
-            minecraft_geom_for_blocktype[blocktype] = (unsigned char) STBVOX_MAKE_GEOMETRY(geom, mc_rot[i], 0);
+            minecraft_geom_for_blocktype[blocktype] = (unsigned char) STBVOX_MAKE_GEOMETRY(geom, 0, 0);
          } else {
             map[j*4+i+8] = map[j*4+i] = next_blocktype;
 
@@ -664,7 +700,7 @@ void build_stair_rotations(int blocktype, unsigned char *map)
                minecraft_color_for_blocktype[next_blocktype][k] = minecraft_color_for_blocktype[blocktype][k];
                minecraft_tex1_for_blocktype [next_blocktype][k] = minecraft_tex1_for_blocktype [blocktype][k];
             }
-            minecraft_geom_for_blocktype[next_blocktype] = (unsigned char) STBVOX_MAKE_GEOMETRY(geom, mc_rot[i], 0);
+            minecraft_geom_for_blocktype[next_blocktype] = (unsigned char) STBVOX_MAKE_GEOMETRY(geom, 0, 0);
             --next_blocktype;
          }
       }
@@ -689,6 +725,15 @@ void build_wool_variations(int bt, unsigned char *map)
       }
    }
 }
+
+void remap_in_place(int bt, int rm)
+{
+   int i;
+   remap[bt] = rm;
+   for (i=0; i < 16; ++i)
+      remap_data[rm][i] = bt;
+}
+
 
 void mesh_init(void)
 {
@@ -749,6 +794,10 @@ void mesh_init(void)
          build_stair_rotations(i, remap_data[remap[i]]);
    remap[35]  = 8;
    build_wool_variations(35, remap_data[remap[35]]);
+
+   // set the remap flags for these so they write the rotation values
+   remap_in_place(54, 9);
+   remap_in_place(146, 10);
 
    for (i=0; i < 256; ++i) {
       if (remap[i])
