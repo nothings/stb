@@ -8,7 +8,7 @@ Not very. Many Minecraft blocks are not handled correctly:
 *         No signs, doors, fences, carpets, or other complicated geometry
 *         Stairs are turned into ramps
 *         Upper slabs turn into lower slabs
-*         Only one wood type
+*         Wood types only for blocks, not stairs, slabs, etc
 *         Colored glass becomes regular glass
 *         Glass panes become glass blocks
 *         Water is opaque
