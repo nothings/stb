@@ -2,7 +2,7 @@
 //
 //   - compute full set of texture normals
 //   - gather vertex lighting from slopes correctly
-//   - support texture edge_clamp: explicitly mod texcoords by 1, use textureGrad to avoid
+//   - better support texture edge_clamp: explicitly mod texcoords by 1, use textureGrad to avoid
 //     mipmap articats. Need to do compute texcoords in vertex shader, offset towards
 //     center before modding, need 2 bits per vertex to know offset direction (is implicit
 //     implicit for modes without vertex data)
@@ -22,14 +22,14 @@
 //
 // It provides:
 //
-//    1. a compact vertex data format (20 bytes per quad) to
+//    1. a compact vertex data format (10-20 bytes per quad) to
 //       allow large view distances while still allowing a lot
 //       per-voxel variety and per-game/app variation
 //    2. conversion from voxel data structure to vertex mesh
 //    3. vertex & pixel shader
 //    4. assistance in setting up shader state
-//    5. planned support for much more compact vertex data formats
-//       (10, 6, and 4 bytes per quad) with more limited features.
+//    5. planned support for more compact vertex data formats
+//       (4-6 bytes per quad) with more limited features.
 //
 // Although most of it is designed to be API-agnostic, the shaders
 // are currently only in GLSL; the HLSL port will be along soon when
@@ -545,16 +545,16 @@ struct stbvox_mesh_maker
 static float stbvox_default_texgen[2][32][3] =
 {
    { {  0, 1,0 }, { 0, 0, 1 }, {  0,-1,0 }, { 0, 0,-1 },
-     {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 }, { 0, 0,-1 },
-     {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 }, { 0, 0,-1 },
      { -1, 0,0 }, { 0, 0, 1 }, {  1, 0,0 }, { 0, 0,-1 },
+     {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 }, { 0, 0,-1 },
+     {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 }, { 0, 0,-1 },
      {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 },
      { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 },
    },
    { { 0, 0,-1 }, {  0, 1,0 }, { 0, 0, 1 }, {  0,-1,0 },
-     { 0, 0,-1 }, {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 },
-     { 0, 0,-1 }, {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 },
      { 0, 0,-1 }, { -1, 0,0 }, { 0, 0, 1 }, {  1, 0,0 },
+     { 0, 0,-1 }, {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 },
+     { 0, 0,-1 }, {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 },
      { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 },
      { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 },
    },
