@@ -718,12 +718,33 @@ void build_wool_variations(int bt, unsigned char *map)
          map[i] = next_blocktype;
          for (k=0; k < 6; ++k) {
             minecraft_tex1_for_blocktype[next_blocktype][k] = tex[i];
-            minecraft_color_for_blocktype[next_blocktype][k] = 0;
          }
          minecraft_geom_for_blocktype[next_blocktype] = minecraft_geom_for_blocktype[bt];
          --next_blocktype;
       }
    }
+}
+
+void build_wood_variations(int bt, unsigned char *map)
+{
+   int i,k;
+   unsigned char tex[4] = { 5, 198, 214, 199 };
+   for (i=0; i < 4; ++i) {
+      if (i == 0)
+         map[i] = bt;
+      else {
+         map[i] = next_blocktype;
+         for (k=0; k < 6; ++k) {
+            minecraft_tex1_for_blocktype[next_blocktype][k] = tex[i];
+         }
+         minecraft_geom_for_blocktype[next_blocktype] = minecraft_geom_for_blocktype[bt];
+         --next_blocktype;
+      }
+   }
+   map[i] = map[i-1];
+   ++i;
+   for (; i < 16; ++i)
+      map[i] = bt;
 }
 
 void remap_in_place(int bt, int rm)
@@ -794,6 +815,8 @@ void mesh_init(void)
          build_stair_rotations(i, remap_data[remap[i]]);
    remap[35]  = 8;
    build_wool_variations(35, remap_data[remap[35]]);
+   remap[5] = 11;
+   build_wood_variations(5, remap_data[remap[5]]);
 
    // set the remap flags for these so they write the rotation values
    remap_in_place(54, 9);
