@@ -1,7 +1,6 @@
 // @TODO
 //
 //   - compute full set of texture normals
-//   - handle output buffer being full
 //   - gather vertex lighting from slopes correctly
 //   - support texture edge_clamp: explicitly mod texcoords by 1, use textureGrad to avoid
 //     mipmap articats. Need to do compute texcoords in vertex shader, offset towards
