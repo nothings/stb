@@ -781,6 +781,16 @@ void render_caves(float campos[3])
    glActiveTextureARB(GL_TEXTURE2_ARB);
    stbglEnableVertexAttribArray(0);
 
+   {
+      float lighting[2][3] = { { campos[0],campos[1],campos[2] }, { 0.75,0.75,0.65f } };
+      float bright = 15;
+      lighting[1][0] *= bright;
+      lighting[1][1] *= bright;
+      lighting[1][2] *= bright;
+      stbglUniform3fv(stbgl_find_uniform(main_prog, "light_source"), 2, lighting[0]);
+   }
+
+
    num_meshes_uploaded = 0;
    update_meshes_from_render_thread();
 
