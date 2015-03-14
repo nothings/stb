@@ -184,9 +184,12 @@ GLint uniform_loc[16];
 float table3[128][3];
 GLint tablei[2];
 
+float step=0;
+
 void setup_uniforms(float pos[3])
 {
    int i,j;
+   step += 1.0f/60.0f;
    for (i=0; i < STBVOX_UNIFORM_count; ++i) {
       stbvox_uniform_info *ui = stbvox_get_uniform_info(&g_mesh_maker, i);
       uniform_loc[i] = -1;
@@ -224,9 +227,11 @@ void setup_uniforms(float pos[3])
                table3[0][0] = pos[0];
                table3[0][1] = pos[1];
                table3[0][2] = pos[2];
+               table3[0][3] = stb_max(0,(float)sin(step*2)*0.125f);
                break;
 
             case STBVOX_UNIFORM_ambient: {
+               float bright = 0.75;
                float amb[3][3];
 
                // ambient direction is sky-colored upwards
@@ -245,8 +250,8 @@ void setup_uniforms(float pos[3])
                //     amb[1] + (amb[2] - amb[1]) * dot/2 + (amb[2]-amb[1])/2
 
                for (j=0; j < 3; ++j) {
-                  table3[1][j] = (amb[2][j] - amb[1][j])/2;
-                  table3[2][j] = (amb[1][j] + amb[2][j])/2;
+                  table3[1][j] = (amb[2][j] - amb[1][j])/2 * bright;
+                  table3[2][j] = (amb[1][j] + amb[2][j])/2 * bright;
                }
 
                // fog color
@@ -783,7 +788,7 @@ void render_caves(float campos[3])
 
    {
       float lighting[2][3] = { { campos[0],campos[1],campos[2] }, { 0.75,0.75,0.65f } };
-      float bright = 15;
+      float bright = 8;
       lighting[1][0] *= bright;
       lighting[1][1] *= bright;
       lighting[1][2] *= bright;

@@ -327,10 +327,10 @@ enum
    STBVOX_GEOM_force,                              // all faces always visible, e.g. minecraft fancy leaves
 
    // these access vheight input
-   STBVOX_GEOM_floor_vheight_02 = 12,  // diagonal is SW-NE -- assuming index buffer 0,1,2,0,2,3
-   STBVOX_GEOM_floor_vheight_13,       // diagonal is SE-NW -- assuming index buffer 0,1,2,0,2,3
-   STBVOX_GEOM_ceil_vheight_02,
-   STBVOX_GEOM_ceil_vheight_13,
+   STBVOX_GEOM_floor_vheight_03 = 12,  // diagonal is SW-NE
+   STBVOX_GEOM_floor_vheight_12,       // diagonal is SE-NW
+   STBVOX_GEOM_ceil_vheight_03,
+   STBVOX_GEOM_ceil_vheight_12,
 
    STBVOX_GEOM_count, // number of geom cases
 };
@@ -551,51 +551,62 @@ struct stbvox_mesh_maker
 // mode, and all the bits to choose the normal.
 // Thus the bottom 3 bits have to be:
 //      e, n, w, s, u, d, u, d
+//
+// These use compact names so tables are readable
 
 enum
 {
-   STBVOX_EFACE_east,
-   STBVOX_EFACE_north,
-   STBVOX_EFACE_west,
-   STBVOX_EFACE_south,
-   STBVOX_EFACE_up,
-   STBVOX_EFACE_down,
-   STBVOX_EFACE_east_up,
-   STBVOX_EFACE_east_down,
+   STBVF_e,
+   STBVF_n,
+   STBVF_w,
+   STBVF_s,
+   STBVF_u,
+   STBVF_d,
+   STBVF_eu,
+   STBVF_ed,
 
-   STBVOX_EFACE_east_up_wall,
-   STBVOX_EFACE_north_up_wall,
-   STBVOX_EFACE_west_up_wall,
-   STBVOX_EFACE_south_up_wall,
-   STBVOX_EFACE_dummy_up_2,
-   STBVOX_EFACE_dummy_down_2,
-   STBVOX_EFACE_north_up,
-   STBVOX_EFACE_north_down,
+   STBVF_eu_wall,
+   STBVF_nu_wall,
+   STBVF_wu_wall,
+   STBVF_su_wall,
+   STBVF_ne_u,
+   STBVF_ne_d,
+   STBVF_nu,
+   STBVF_nd,
 
-   STBVOX_EFACE_ne_up,
-   STBVOX_EFACE_nw_up,
-   STBVOX_EFACE_sw_up,
-   STBVOX_EFACE_se_up,
-   STBVOX_EFACE_dummy_up_3,
-   STBVOX_EFACE_dummy_down_3,
-   STBVOX_EFACE_west_up,
-   STBVOX_EFACE_west_down,
+   STBVF_ed_wall,
+   STBVF_nd_wall,
+   STBVF_wd_wall,
+   STBVF_sd_wall,
+   STBVF_nw_u,
+   STBVF_nw_d,
+   STBVF_wu,
+   STBVF_wd,
 
-   STBVOX_EFACE_ne_down,
-   STBVOX_EFACE_nw_down,
-   STBVOX_EFACE_sw_down,
-   STBVOX_EFACE_se_down,
-   STBVOX_EFACE_dummy_up_4,
-   STBVOX_EFACE_dummy_down_4,
-   STBVOX_EFACE_south_up,
-   STBVOX_EFACE_south_down,
+   STBVF_ne_u_cross,
+   STBVF_nw_u_cross,
+   STBVF_sw_u_cross,
+   STBVF_se_u_cross,
+   STBVF_sw_u,
+   STBVF_sw_d,
+   STBVF_su,
+   STBVF_sd,
 
-   // @TODO either we need more than 5 bits to encode the normal to fit these, or we can replace 'dummy' above with them but need to use full-size texgen table
-   // so for now we just texture them with the wrong projection
-   STBVOX_EFACE_east_down_wall = STBVOX_EFACE_east_down,
-   STBVOX_EFACE_north_down_wall = STBVOX_EFACE_north_down,
-   STBVOX_EFACE_west_down_wall = STBVOX_EFACE_west_down,
-   STBVOX_EFACE_south_down_wall = STBVOX_EFACE_south_down,
+   // @TODO we need more than 5 bits to encode the normal to fit the following
+   // so for now we use the right projection but the wrong normal
+   STBVF_se_u = STBVF_su,
+   STBVF_se_d = STBVF_sd,
+
+   STBVF_count,
+};
+
+// get opposite-facing normal & texgen for opposite face, used to map up-facing vheight data to down-facing data
+static unsigned char stbvox_reverse_face[STBVF_count] =
+{
+   STBVF_w, STBVF_s, STBVF_e, STBVF_n, STBVF_d   , STBVF_u   , STBVF_wd, STBVF_wu,
+         0,       0,       0,       0, STBVF_sw_d, STBVF_sw_u, STBVF_sd, STBVF_su,
+         0,       0,       0,       0, STBVF_se_d, STBVF_se_u, STBVF_ed, STBVF_eu,
+         0,       0,       0,       0, STBVF_ne_d, STBVF_ne_d, STBVF_nd, STBVF_nu
 };
 
 static float stbvox_default_texgen[2][32][3] =
@@ -638,26 +649,26 @@ static float stbvox_default_normals[32][3] =
    { 0, STBVOX_RSQRT2, STBVOX_RSQRT2 }, // north & up
    { -STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // west & up
    { 0,-STBVOX_RSQRT2, STBVOX_RSQRT2 }, // south & up
-   { 0,0,1 },  // up
-   { 0,0,-1 }, // down
+   {  STBVOX_RSQRT3, STBVOX_RSQRT3, STBVOX_RSQRT3 }, // ne & up
+   {  STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // ne & down
    { 0, STBVOX_RSQRT2, STBVOX_RSQRT2 }, // north & up
    { 0, STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // north & down
 
-   {  STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NE & up
-   { -STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NW & up
-   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SW & up
-   {  STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SE & up
-   { 0,0,1 },  // up
-   { 0,0,-1 }, // down
+   {  STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // east & down
+   { 0, STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // north & down
+   { -STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // west & down
+   { 0,-STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // south & down
+   { -STBVOX_RSQRT3, STBVOX_RSQRT3, STBVOX_RSQRT3 }, // NW & up
+   { -STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // NW & down
    { -STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // west & up
    { -STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // west & down
 
-   {  STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // NE & down
-   { -STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // NW & down
-   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // SW & down
-   {  STBVOX_RSQRT3,-STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // SE & down
-   { 0,0,1 },  // up
-   { 0,0,-1 }, // down
+   {  STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NE & up crossed
+   { -STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NW & up crossed
+   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SW & up crossed
+   {  STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SE & up crossed
+   { -STBVOX_RSQRT3,-STBVOX_RSQRT3, STBVOX_RSQRT3 }, // SW & up
+   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // SW & up
    { 0,-STBVOX_RSQRT2, STBVOX_RSQRT2 }, // south & up
    { 0,-STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // south & down
 };
@@ -758,6 +769,9 @@ stbvox_tagged_string stbvox_vertex_program[] =
             // per-buffer data
             "uniform vec3 transform[3];\n"
 
+            // per-frame data
+            "uniform vec4 camera_pos;\n"  // 4th value is used for arbitrary hacking
+
             // to simplify things, we avoid using more than 256 uniform vectors
             // in fragment shader to avoid possible 1024 component limit, so
             // we access this table in the fragment shader.
@@ -802,6 +816,10 @@ stbvox_tagged_string stbvox_vertex_program[] =
             "   vnormal = normal_table[(facedata.w>>2) & 31u];\n"
             "   objectspace_pos = offset * transform[0];\n"  // object-to-world scale
             "   vec3 position  = objectspace_pos + transform[1];\n"  // object-to-world translate
+#if 0 // normal debugging
+            "   if ((facedata.w & 28u) == 16u || (facedata.w & 28u) == 24u)\n"
+            "      position += vnormal.xyz * camera_pos.w;\n"
+#endif
    },
    { STBVOX_TAG_NOT | STBVOX_TAG_gl_modelview,
 
@@ -846,7 +864,7 @@ stbvox_tagged_string stbvox_fragment_program[] =
             "uniform vec3 transform[3];\n"
 
             // per-frame data
-            "uniform vec3 camera_pos;\n"
+            "uniform vec4 camera_pos;\n"  // 4th value is used for arbitrary hacking
 
             // probably constant data
             "uniform vec3 ambient[4];\n"
@@ -955,7 +973,7 @@ stbvox_tagged_string stbvox_fragment_program[] =
             "   amb_color *= amb_occ;\n"
 
             "   vec3 lit_color;\n"
-            "   vec3 lighting = compute_lighting(objectspace_pos + transform[1], normal) + amb_color * 0.25;\n"
+            "   vec3 lighting = compute_lighting(objectspace_pos + transform[1], normal) + amb_color;\n"
             "   if (!emissive)\n"
             "      lit_color = lighting * albedo;\n"
             "   else\n"
@@ -967,7 +985,7 @@ stbvox_tagged_string stbvox_fragment_program[] =
 
 // smoothstep fog:
 #if 1
-   "   vec3 dist = objectspace_pos + (transform[1] - camera_pos);\n"
+   "   vec3 dist = objectspace_pos + (transform[1] - camera_pos.xyz);\n"
    "   float f = sqrt(dot(dist,dist))/1320.0;\n"
    "   f = clamp(f, 0.0, 1.0);\n" 
    "   f = 3.0*f*f - 2.0*f*f*f;\n" // smoothstep
@@ -985,7 +1003,7 @@ stbvox_tagged_string stbvox_fragment_program[] =
 "{\n"
 "   vec3 light_dir = light_source[0] - pos;\n"
 "   float lambert = dot(light_dir, norm) / dot(light_dir, light_dir);\n"
-"   return light_source[1] * clamp(lambert, 0.0, 1.0);\n"
+"   return clamp(light_source[1] * clamp(lambert, 0.0, 1.0), 0.0, 1.0);\n"
 "}\n"
    },
 };
@@ -1052,7 +1070,7 @@ stbvox_uniform_info stbvox_uniforms[] =
    { STBVOX_UNIFORM_TYPE_vec3     , 12,  64, "texgen"       , stbvox_default_texgen[0][0] , STBVOX_TAG_textured },
 
    { STBVOX_UNIFORM_TYPE_vec3     , 12,   4, "ambient"      , 0                           , STBVOX_TAG_all },
-   { STBVOX_UNIFORM_TYPE_vec3     , 12,   1, "camera_pos"   , stbvox_dummy_transform[0]   , STBVOX_TAG_all },
+   { STBVOX_UNIFORM_TYPE_vec4     , 12,   1, "camera_pos"   , stbvox_dummy_transform[0]   , STBVOX_TAG_all },
 };
 
 stbvox_uniform_info *stbvox_get_uniform_info(stbvox_mesh_maker *mm, int uniform)
@@ -1458,31 +1476,54 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
    }
 }
 
+static stbvox_face_up_normal_012[4][4][4];
+static stbvox_face_up_normal_013[4][4][4];
+static stbvox_face_up_normal_023[4][4][4];
+static stbvox_face_up_normal_123[4][4][4];
+
 // render non-planar quads by splitting into two triangles, rendering each as a degenerate quad
-void stbvox_make_02_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face1, int face2, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh)
+void stbvox_make_12_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh, unsigned char *ht)
 {
    stbvox_mesh_vertex v[4];
-   v[0] = face_coord[0];
-   v[1] = face_coord[1];
-   v[2] = face_coord[2];
-   v[3] = face_coord[0];
-   stbvox_make_mesh_for_face(mm, rot, face1, v_off, pos, vertbase, v, mesh, face1);
-   v[1] = face_coord[2];
-   v[2] = face_coord[3];
-   stbvox_make_mesh_for_face(mm, rot, face2, v_off, pos, vertbase, v, mesh, face2);
+
+   unsigned char normal1 = stbvox_face_up_normal_012[ht[2]][ht[1]][ht[0]];
+   unsigned char normal2 = stbvox_face_up_normal_123[ht[3]][ht[2]][ht[1]];
+
+   if (face == STBVOX_FACE_down) {
+      normal1 = stbvox_reverse_face[normal1];
+      normal2 = stbvox_reverse_face[normal2];
+   }
+
+   // the floor side face_coord is stored in order NW,NE,SE,SW, but ht[] is stored SW,SE,NW,NE
+   v[0] = face_coord[2];
+   v[1] = face_coord[3];
+   v[2] = face_coord[0];
+   v[3] = face_coord[2];
+   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal1);
+   v[1] = face_coord[0];
+   v[2] = face_coord[1];
+   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal2);
 }
 
-void stbvox_make_13_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face1, int face2, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh)
+void stbvox_make_03_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh, unsigned char *ht)
 {
    stbvox_mesh_vertex v[4];
+
+   unsigned char normal1 = stbvox_face_up_normal_013[ht[3]][ht[1]][ht[0]];
+   unsigned char normal2 = stbvox_face_up_normal_023[ht[3]][ht[2]][ht[0]];
+
+   if (face == STBVOX_FACE_down) {
+      normal1 = stbvox_reverse_face[normal1];
+      normal2 = stbvox_reverse_face[normal2];
+   }
    v[0] = face_coord[1];
    v[1] = face_coord[2];
    v[2] = face_coord[3];
    v[3] = face_coord[1];
-   stbvox_make_mesh_for_face(mm, rot, face1, v_off, pos, vertbase, v, mesh, face1);
+   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal1);
    v[1] = face_coord[3];
    v[2] = face_coord[0];
-   stbvox_make_mesh_for_face(mm, rot, face2, v_off, pos, vertbase, v, mesh, face2);
+   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal2);  // this one is correct!
 }
 
 // simple case for mesh generation: we have only solid and empty blocks
@@ -1624,18 +1665,18 @@ static unsigned char stbvox_facetype[STBVOX_GEOM_count][6] =
 // @TODO this could be done with math given the current arrangement of the enum, but let's not require it
 static unsigned char stbvox_floor_slope_for_rot[4] =
 {
-   STBVOX_EFACE_south_up,
-   STBVOX_EFACE_west_up, // @TODO: why is this reversed from what it should be? this is a north-is-up face, so slope should be south&up
-   STBVOX_EFACE_north_up,
-   STBVOX_EFACE_east_up,
+   STBVF_su,
+   STBVF_wu, // @TODO: why is this reversed from what it should be? this is a north-is-up face, so slope should be south&up
+   STBVF_nu,
+   STBVF_eu,
 };
 
 static unsigned char stbvox_ceil_slope_for_rot[4] =
 {
-   STBVOX_EFACE_south_down,
-   STBVOX_EFACE_east_down,
-   STBVOX_EFACE_north_down,
-   STBVOX_EFACE_west_down,
+   STBVF_sd,
+   STBVF_ed,
+   STBVF_nd,
+   STBVF_wd,
 };
 
 // this table indicates whether, for each pair of types above, a face is visible.
@@ -1692,6 +1733,233 @@ static unsigned char stbvox_rotate_vertex[8][4] =
    { 6,4,5,7 }, // zyx=110
    { 7,6,4,5 }, // zyx=111
 };
+
+
+#ifdef STBVOX_OPTIMIZED_VHEIGHT
+// optimized vheight generates a single normal over the entire face, even if it's not planar
+static stbvox_optimized_face_up_normal[4][4][4][4] =
+{
+   {
+      {
+         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_ne_u, },
+         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_nu  , },
+         { STBVF_nw_u, STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_ne_u, },
+         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_nu  , },
+      },{
+         { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_ne_u, },
+      },{
+         { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+      },
+   },{
+      {
+         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+         { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
+      },
+   },{
+      {
+         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
+      },
+   },{
+      {
+         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
+         { STBVF_sw_u, STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
+      },{
+         { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
+         { STBVF_sw_u, STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
+         { STBVF_sw_u, STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
+      },
+   },
+};
+#else
+// which normal to use for a given vheight that's planar
+// @TODO: this table was constructed by hand and may have bugs
+//                                 nw se sw
+static stbvox_planar_face_up_normal[4][4][4] =
+{   
+   {                                                      // sw,se,nw,ne
+      { STBVF_u   , 0         , 0         , 0          }, //  0,0,0,0; 1,0,0,-1; 2,0,0,-2; 3,0,0,-3;
+      { STBVF_u   , STBVF_u   , 0         , 0          }, //  0,1,0,1; 1,1,0, 0; 2,1,0,-1; 3,1,0,-2;
+      { STBVF_wu  , STBVF_nw_u, STBVF_nu  , 0          }, //  0,2,0,2; 1,2,0, 1; 2,2,0, 0; 3,2,0,-1;
+      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nu   }, //  0,3,0,3; 1,3,0, 2; 2,3,0, 1; 3,3,0, 0;
+   },{
+      { STBVF_u   , STBVF_u   , 0         , 0          }, //  0,0,1,1; 1,0,1, 0; 2,0,1,-1; 3,0,1,-2;
+      { STBVF_sw_u, STBVF_u   , STBVF_ne_u, 0          }, //  0,1,1,2; 1,1,1, 1; 2,1,1, 0; 3,1,1,-1;
+      { STBVF_sw_u, STBVF_u   , STBVF_u   , STBVF_ne_u }, //  0,2,1,3; 1,2,1, 2; 2,2,1, 1; 3,2,1, 0;
+      { 0         , STBVF_w   , STBVF_nw_u, STBVF_nu   }, //  0,3,1,4; 1,3,1, 3; 2,3,1, 2; 3,3,1, 1;
+   },{
+      { STBVF_su  , STBVF_se_u, STBVF_eu  , 0          }, //  0,0,2,2; 1,0,2, 1; 2,0,2, 0; 3,0,2,-1;
+      { STBVF_sw_u, STBVF_u   , STBVF_u   , STBVF_ne_u }, //  0,1,2,3; 1,1,2, 2; 2,1,2, 1; 3,1,2, 0;
+      { 0         , STBVF_sw_u, STBVF_u   , STBVF_ne_u }, //  0,2,2,4; 1,2,2, 3; 2,2,2, 2; 3,2,2, 1;
+      { 0         , 0         , STBVF_u   , STBVF_u    }, //  0,3,2,5; 1,3,2, 4; 2,3,2, 3; 3,3,2, 2;
+   },{
+      { STBVF_su  , STBVF_se_u, STBVF_se_u, STBVF_eu   }, //  0,0,3,3; 1,0,3, 2; 2,0,3, 1; 3,0,3, 0;
+      { 0         , STBVF_su  , STBVF_se_u, STBVF_eu   }, //  0,1,3,4; 1,1,3, 3; 2,1,3, 2; 3,1,3, 1;
+      { 0         , 0         , STBVF_u   , STBVF_u    }, //  0,2,3,5; 1,2,3, 4; 2,2,3, 3; 3,2,3, 2;
+      { 0         , 0         , 0         , STBVF_u    }, //  0,3,3,6; 1,3,3, 5; 2,3,3, 4; 3,3,3, 3;
+   }
+};
+
+// these tables were constructed automatically using a variant of the code
+// below; however, they seem wrong, so who knows
+static stbvox_face_up_normal_012[4][4][4] =
+{
+   {
+      { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_wu  , STBVF_nu  , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_ne_u, },
+      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_wu  , STBVF_nu  , STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_su  , STBVF_eu  , STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+      { STBVF_sw_u, STBVF_su  , STBVF_eu  , STBVF_eu  , },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_su  , STBVF_eu  , },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
+   }
+};
+
+static stbvox_face_up_normal_013[4][4][4] =
+{
+   {
+      { STBVF_u   , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+      { STBVF_nw_u, STBVF_nu  , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_nw_u, STBVF_nw_u, STBVF_nu  , STBVF_ne_u, },
+      { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+      { STBVF_wu  , STBVF_u   , STBVF_eu  , STBVF_eu  , },
+      { STBVF_nw_u, STBVF_nw_u, STBVF_nu  , STBVF_ne_u, },
+      { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+      { STBVF_sw_u, STBVF_su  , STBVF_eu  , STBVF_eu  , },
+      { STBVF_wu  , STBVF_wu  , STBVF_u   , STBVF_eu  , },
+      { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+      { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_su  , STBVF_eu  , },
+      { STBVF_wu  , STBVF_wu  , STBVF_wu  , STBVF_u   , },
+   }
+};
+
+static stbvox_face_up_normal_023[4][4][4] =
+{
+   {
+      { STBVF_u   , STBVF_nu  , STBVF_nu  , STBVF_nu  , },
+      { STBVF_eu  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+      { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+   },{
+      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_su  , STBVF_u   , STBVF_nu  , STBVF_nu  , },
+      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+      { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+   },{
+      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_su  , STBVF_su  , STBVF_u   , STBVF_nu  , },
+      { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+   },{
+      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nw_u, },
+      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_u   , },
+   }
+};
+
+static stbvox_face_up_normal_123[4][4][4] =
+{
+   {
+      { STBVF_u   , STBVF_nu  , STBVF_nu  , STBVF_nu  , },
+      { STBVF_eu  , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_eu  , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_eu  , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+   },{
+      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_su  , STBVF_u   , STBVF_nu  , STBVF_nu  , },
+      { STBVF_eu  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_eu  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
+   },{
+      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nw_u, },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nw_u, },
+      { STBVF_su  , STBVF_su  , STBVF_u   , STBVF_nu  , },
+      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+   },{
+      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_wu  , },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_wu  , },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_wu  , },
+      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_u   , },
+   }
+};
+#endif
 
 void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, int v_off)
 {
@@ -1911,7 +2179,7 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
       if (visible_faces & (1 << STBVOX_FACE_west))
          stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_west , v_off, pos, basevert, vmesh[STBVOX_FACE_west ], mesh, STBVOX_FACE_west);
    }
-   if (geo >= STBVOX_GEOM_floor_vheight_02) {
+   if (geo >= STBVOX_GEOM_floor_vheight_03) {
       // this case can also be generated with regular block gen with special vmesh,
       // except:
       //     if we want to generate middle diagonal for 'weird' blocks
@@ -1951,7 +2219,7 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
       // our visible_faces test was wrong
       extreme = (ht[0] == 3 || ht[1] == 3 || ht[2] == 3 || ht[3] == 3);
 
-      if (geo >= STBVOX_GEOM_ceil_vheight_02) {
+      if (geo >= STBVOX_GEOM_ceil_vheight_03) {
          cube[0] = stbvox_vertex_p(0,0,ht[0],0,0);
          cube[1] = stbvox_vertex_p(0,0,ht[1],0,0);
          cube[2] = stbvox_vertex_p(0,0,ht[2],0,0);
@@ -1992,30 +2260,44 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
 
       // @TODO generate split faces
       if (visible_faces & (1 << STBVOX_FACE_up)) {
-         #ifndef STBVOX_OPTIMIZED_VHEIGHT
-         // check if it's planar
-         if (geo < STBVOX_GEOM_ceil_vheight_02 && cube[5] + cube[6] != cube[4] + cube[7]) {
-            // not planar, split along diagonal and make degenerate
-            if (geo == STBVOX_GEOM_floor_vheight_02)
-               stbvox_make_02_split_mesh_for_face(mm, rotate, STBVOX_FACE_up, STBVOX_FACE_up, v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh);
-            else
-               stbvox_make_13_split_mesh_for_face(mm, rotate, STBVOX_FACE_up, STBVOX_FACE_up, v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh);
-         } else
-         #endif
+         if (geo >= STBVOX_GEOM_ceil_vheight_03)
+            // flat
             stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, STBVOX_FACE_up);
+         else {
+         #ifndef STBVOX_OPTIMIZED_VHEIGHT
+            // check if it's non-planar
+            if (cube[5] + cube[6] != cube[4] + cube[7]) {
+               // not planar, split along diagonal and make degenerate quads
+               if (geo == STBVOX_GEOM_floor_vheight_03)
+                  stbvox_make_03_split_mesh_for_face(mm, rotate, STBVOX_FACE_up, v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, ht);
+               else
+                  stbvox_make_12_split_mesh_for_face(mm, rotate, STBVOX_FACE_up, v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, ht);
+            } else
+               stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, stbvox_planar_face_up_normal[ht[2]][ht[1]][ht[0]]);
+         #else
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, stbvox_optimized_face_up_normal[ht[3]][ht[2]][ht[1]][ht[0]]);
+         #endif
+         }
       }
       if (visible_faces & (1 << STBVOX_FACE_down)) {
-         #ifndef STBVOX_OPTIMIZED_VHEIGHT
-         // check if it's planar
-         if (geo >= STBVOX_GEOM_ceil_vheight_02 && cube[1] + cube[2] != cube[0] + cube[3]) {
-            // not planar, split along diagonal and make degenerate
-            if (geo == STBVOX_GEOM_ceil_vheight_02)
-               stbvox_make_02_split_mesh_for_face(mm, rotate, STBVOX_FACE_down, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh);
-            else
-               stbvox_make_13_split_mesh_for_face(mm, rotate, STBVOX_FACE_down, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh);
-         } else
-         #endif
+         if (geo < STBVOX_GEOM_ceil_vheight_03)
+            // flat
             stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, STBVOX_FACE_down);
+         else {
+         #ifndef STBVOX_OPTIMIZED_VHEIGHT
+            // check if it's non-planar
+            if (cube[1] + cube[2] != cube[0] + cube[3]) {
+               // not planar, split along diagonal and make degenerate quads
+               if (geo == STBVOX_GEOM_ceil_vheight_03)
+                  stbvox_make_03_split_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, ht);
+               else
+                  stbvox_make_12_split_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, ht);
+            } else
+               stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, stbvox_reverse_face[stbvox_planar_face_up_normal[ht[2]][ht[1]][ht[0]]]);
+         #else
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, stbvox_reverse_face[stbvox_optimized_face_up_normal[ht[3]][ht[2]][ht[1]][ht[0]]]);
+         #endif
+         }
       }
 
       if (mm->input.rotate) {
@@ -2067,10 +2349,10 @@ void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, 
       }
       rot.facerot = 0;
 
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_north, v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_north], mesh, STBVOX_EFACE_ne_up);
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_south, v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_south], mesh, STBVOX_EFACE_sw_up);
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_east , v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_east ], mesh, STBVOX_EFACE_se_up);
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_west , v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_west ], mesh, STBVOX_EFACE_nw_up);
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_north, v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_north], mesh, STBVF_ne_u_cross);
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_south, v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_south], mesh, STBVF_sw_u_cross);
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_east , v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_east ], mesh, STBVF_se_u_cross);
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_west , v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_west ], mesh, STBVF_nw_u_cross);
    }
 
 
@@ -2356,5 +2638,58 @@ void stbvox_config_set_z_precision(stbvox_mesh_maker *mm, int z_fractional_bits)
    mm->precision_z = z_fractional_bits;
 }
 
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//    offline computation
+//
+
+#if 0
+// compute optimized vheight table
+static char *normal_names[32] =
+{
+   0,0,0,0,"u   ",0, "eu  ",0,
+   0,0,0,0,"ne_u",0, "nu  ",0,
+   0,0,0,0,"nw_u",0, "wu  ",0,
+   0,0,0,0,"sw_u",0, "su  ",0,
+};
+
+static char *find_best_normal(float x, float y, float z)
+{
+   int best_slot = 4;
+   float best_dot = 0;
+   int i;
+   for (i=0; i < 32; ++i) {
+      if (normal_names[i]) {
+         float dot = x * stbvox_default_normals[i].x + y * stbvox_default_normals[i].y + z * stbvox_default_normals[i].z;
+         if (dot > best_dot) {
+            best_dot = dot;
+            best_slot = i;
+         }
+      }
+   }
+   return normal_names[best_slot];
+}
+
+int main(int argc, char **argv)
+{
+   int sw,se,nw,ne;
+   for (ne=0; ne < 4; ++ne) {
+      for (nw=0; nw < 4; ++nw) {
+         for (se=0; se < 4; ++se) {
+            printf("        { ");
+            for (sw=0; sw < 4; ++sw) {
+               float x = (float) (nw + sw - ne - se);
+               float y = (float) (sw + se - nw - ne);
+               float z = 2;
+               printf("STBVF_%s, ", find_best_normal(x,y,z));
+            }
+            printf("},\n");
+         }
+      }
+   }
+   return 0;
+}
+#endif
 
 #endif // STB_VOXEL_RENDER_IMPLEMENTATION

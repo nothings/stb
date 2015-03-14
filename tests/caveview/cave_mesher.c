@@ -13,8 +13,11 @@
 #include "sdl_thread.h"
 #include <math.h>
 
-#define STB_VOXEL_RENDER_IMPLEMENTATION
+//#define VHEIGHT_TEST
+//#define STBVOX_OPTIMIZED_VHEIGHT
+
 #define STBVOX_ROTATION_IN_LIGHTING
+#define STB_VOXEL_RENDER_IMPLEMENTATION
 #include "stb_voxel_render.h"
 
 extern void ods(char *fmt, ...);
@@ -585,7 +588,9 @@ void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh 
    int a,b,z;
    stbvox_input_description *map;
 
-   //unsigned char vheight[34][34][18];
+   #ifdef VHEIGHT_TEST
+   unsigned char vheight[34][34][18];
+   #endif
 
    assert((chunk_x & 1) == 0);
    assert((chunk_y & 1) == 0);
@@ -632,7 +637,7 @@ void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh 
       map->blocktype = &rm->sv_blocktype[1][1][1-z]; // specify location of 0,0,0 so that accessing z0..z1 gets right data
       map->lighting = &rm->sv_lighting[1][1][1-z];
 
-      #if 0
+      #ifdef VHEIGHT_TEST
       // hacky test of vheight
       for (a=0; a < 34; ++a) {
          for (b=0; b < 34; ++b) {
@@ -640,8 +645,12 @@ void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh 
             for (c=0; c < 17; ++c) {
                if (rm->sv_blocktype[a][b][c] != 0 && rm->sv_blocktype[a][b][c+1] == 0) {
                   // topmost block
-                  rm->sv_blocktype[a][b][c] = 168;
                   vheight[a][b][c] = rand() & 255;
+                  rm->sv_blocktype[a][b][c] = 168;
+               } else if (c > 0 && rm->sv_blocktype[a][b][c] != 0 && rm->sv_blocktype[a][b][c-1] == 0) {
+                  // bottommost block
+                  vheight[a][b][c] = ((rand() % 3) << 6) + ((rand() % 3) << 4) + ((rand() % 3) << 2) + (rand() % 3);
+                  rm->sv_blocktype[a][b][c] = 169;
                }
             }
             vheight[a][b][c] = STBVOX_MAKE_VHEIGHT(2,2,2,2); // flat top
@@ -792,7 +801,7 @@ void mesh_init(void)
       minecraft_color_for_blocktype[11][i] = 63; // emissive
    }
 
-   #if 0 // vheight test
+   #ifdef VHEIGHT_TEST
    effective_blocktype[168] = 168;
    minecraft_tex1_for_blocktype[168][0] = 1;
    minecraft_tex1_for_blocktype[168][1] = 1;
@@ -800,7 +809,15 @@ void mesh_init(void)
    minecraft_tex1_for_blocktype[168][3] = 1;
    minecraft_tex1_for_blocktype[168][4] = 1;
    minecraft_tex1_for_blocktype[168][5] = 1;
-   minecraft_geom_for_blocktype[168] = STBVOX_GEOM_floor_vheight_02;
+   minecraft_geom_for_blocktype[168] = STBVOX_GEOM_floor_vheight_12;
+   effective_blocktype[169] = 169;
+   minecraft_tex1_for_blocktype[169][0] = 1;
+   minecraft_tex1_for_blocktype[169][1] = 1;
+   minecraft_tex1_for_blocktype[169][2] = 1;
+   minecraft_tex1_for_blocktype[169][3] = 1;
+   minecraft_tex1_for_blocktype[169][4] = 1;
+   minecraft_tex1_for_blocktype[169][5] = 1;
+   minecraft_geom_for_blocktype[169] = STBVOX_GEOM_ceil_vheight_03;
    #endif
 
    remap[53] = 1;
