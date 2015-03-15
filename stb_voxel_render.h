@@ -154,42 +154,10 @@
 //   zmc engine 96-byte quads      :  2011/10
 //   zmc engine 32-byte quads      :  2013/12
 //   stb_voxel_render 20-byte quads:  2015/01
-//   stb_voxel_render 4..14 bytes  :  2015/02???
+//   stb_voxel_render 4..14 bytes  :  2015/???
 
 
 
-
-// 
-
-#ifndef STBVOX_MODE
-#define STBVOX_MODE 0
-#endif
-
-// The following are candidate voxel modes. Only modes 0, 1, and 20 are
-// currently implemented. Reducing the storage-per-quad further
-// shouldn't improve performance, although obviously it allow you
-// to create larger worlds without streaming.
-//
-//        
-//            Mode:     0     1     2     3     4     5     6       10    11    12       20    21    22    23
-// ============================================================================================================
-//  uses Tex Buffer     n     Y     Y     Y     Y     Y     Y        Y     Y     Y        Y     Y     Y     Y
-//   bytes per quad    32    20    14    12    10     6     6        8     6     4       20    10     6     4
-//     vertex bytes     8     4     2     1     1     0     0        1     1     0        4     1     0     0
-//       non-blocks   all   all   some  some  some slabs stairs    some  some  none     all  slabs slabs  none
-//             tex1   256   256   256   256   256   256   256      256   256   256        n     n     n     n
-//             tex2   256   256   256   256   256   256   128        n     n     n        n     n     n     n
-//           colors    64    64    64    64    64    64    64        8     n     n      2^24  2^24  2^24  256
-//        vertex ao     Y     Y     Y     Y     Y     n     n        Y     Y     n        Y     Y     n     n
-//   vertex texlerp     Y     Y     Y     n     n     n     n        -     -     -        -     -     -     -
-//      x&y extents   127   127   128    64    64   128    64       64   128   128       64    64   128   128
-//        z extents   255   255   128   128   128    64    64       32    64   128       64    64    64   128
-//    vertex x bits     7     7     0     6     0     0     0        0     0     0        7     0     0     0
-//    vertex y bits     7     7     0     0     0     0     0        0     0     0        7     0     0     0
-//    vertex z bits     9     9     7     4     2     0     0        2     2     0        9     2     0     0
-//   vertex ao bits     6     6     6     6     6     0     0        6     6     0        6     6     0     0
-//
-//
 
 //
 //
@@ -542,6 +510,108 @@ struct stbvox_mesh_maker
 #endif
 
 
+
+#ifndef STBVOX_CONFIG_MODE
+#error "Must defined STBVOX_CONFIG_MODE to select the mode"
+#endif
+
+// The following are candidate voxel modes. Only modes 0, 1, and 20 are
+// currently implemented. Reducing the storage-per-quad further
+// shouldn't improve performance, although obviously it allow you
+// to create larger worlds without streaming.
+//
+//        
+//                      -----------  Two textures -----------       -- One texture --     ---- Color only ----
+//            Mode:     0     1     2     3     4     5     6        10    11    12       20    21    22    23
+// ============================================================================================================
+//  uses Tex Buffer     n     Y     Y     Y     Y     Y     Y         Y     Y     Y        Y     Y     Y     Y
+//   bytes per quad    32    20    14    12    10     6     6         8     8     4       20    10     6     4
+//       non-blocks   all   all   some  some  some slabs stairs     some  some  none     all  slabs slabs  none
+//             tex1   256   256   256   256   256   256   256       256   256   256        n     n     n     n
+//             tex2   256   256   256   256   256   256   128         n     n     n        n     n     n     n
+//           colors    64    64    64    64    64    64    64         8     n     n      2^24  2^24  2^24  256
+//        vertex ao     Y     Y     Y     Y     Y     n     n         Y     Y     n        Y     Y     n     n
+//   vertex texlerp     Y     Y     Y     n     n     n     n         -     -     -        -     -     -     -
+//      x&y extents   127   127   128    64    64   128    64        64   128   128      127   128   128   128
+//        z extents   255   255   128    64?   64?   64    64        32    64   128      255   128    64   128
+
+// not sure why I only wrote down the above "result data" and didn't preserve
+// the vertex formats, but here I've tried to reconstruct the designs:
+
+//            Mode:     0     1     2     3     4     5     6        10    11    12       20    21    22    23
+// =============================================================================================================
+//   bytes per quad    32    20    14    12    10     6     6         8     8     4       20    10     6     4
+//                                                                 
+//    vertex x bits     7     7     0     6     0     0     0         0     0     0        7     0     0     0
+//    vertex y bits     7     7     0     0     0     0     0         0     0     0        7     0     0     0
+//    vertex z bits     9     9     7     4     2     0     0         2     2     0        9     2     0     0
+//   vertex ao bits     6     6     6     6     6     0     0         6     6     0        6     6     0     0
+//  vertex txl bits     3     3     3     0     0     0     0         0     0     0       (3)    0     0     0
+//
+//   face tex1 bits    (8)    8     8     8     8     8     8         8     8     8                    
+//   face tex2 bits    (8)    8     8     8     8     8     7         -     -     -         
+//  face color bits    (8)    8     8     8     8     8     8         3     0     0       24    24    24     8
+// face normal bits    (8)    8     8     8     6     4     7         4     4     3        8     3     4     3
+//      face x bits                 7     0     6     7     6         6     7     7        0     7     7     7
+//      face y bits                 7     6     6     7     6         6     7     7        0     7     7     7
+//      face z bits                 2     2     6     6     6         5     6     7        0     7     6     7
+
+
+#if STBVOX_CONFIG_MODE==0 || STBVOX_CONFIG_MODE==1
+
+   // the only difference between 0 & 1:
+   #if STBVOX_CONFIG_MODE==0
+   #define STBVOX_ICONFIG_FACE_ATTRIBUTE
+   #endif
+
+   // the shared properties of 0 & 1:
+   #define STBVOX_ICONFIG_VERTEX_32
+   #define STBVOX_ICONFIG_FACE1_1
+
+#elif STBVOX_CONFIG_MODE==20
+
+#else
+#error "Selected value of STBVOX_CONFIG_MODE is not supported"
+#endif
+
+#ifndef STBVOX_CONFIG_HLSL
+#define STBVOX_ICONFIG_GLSL
+#endif
+
+#ifdef STBVOX_CONFIG_OPENGL_MODELVIEW
+#define STBVOX_ICONFIG_OPENGL_3_1_COMPATIBILITY
+#endif
+
+#if defined(STBVOX_ICONFIG_VERTEX_32)
+   typedef stbvox_uint32 stbvox_mesh_vertex;
+   #define stbvox_vertex_encode(x,y,z,ao,texlerp) \
+      ((stbvox_uint32) ((x)+((y)<<7)+((z)<<14)+((ao)<<23)+((texlerp)<<29)))
+#elif defined(STBVOX_ICONFIG_VERTEX_16_1)  // mode=2
+   typedef stbvox_uint16 stbvox_mesh_vertex;
+   #define stbvox_vertex_encode(x,y,z,ao,texlerp) \
+      ((stbvox_uint16) ((z)+((ao)<<7)+((texlerp)<<13)
+#elif defined(STBVOX_ICONFIG_VERTEX_16_2)  // mode=3
+   typedef stbvox_uint16 stbvox_mesh_vertex;
+   #define stbvox_vertex_encode(x,y,z,ao,texlerp) \
+      ((stbvox_uint16) ((x)+((z)<<6))+((ao)<<10))
+#else defined(STBVOX_ICONFIG_VERTEX_8)
+   typedef stbvox_uint8 stbvox_mesh_vertex;
+   #define stbvox_vertex_encode(x,y,z,ao,texlerp) \
+      ((stbvox_uint8) ((z)+((ao)<<6))
+#else
+   #error "internal error, no vertex type"
+#endif
+
+#ifdef STBVOX_ICONFIG_FACE1_1
+   typedef struct
+   {
+      unsigned char tex1,tex2,color,face_info;
+   } stbvox_mesh_face;
+#else
+   #error "internal error, no face type"
+#endif
+
+
 // 20-byte quad format:
 //
 // per vertex:
@@ -650,7 +720,7 @@ static void stbvox_build_default_palette(void)
    #define STBVOX_SHADER_VERSION ""
 #endif
 
-static char *stbvox_vertex_program =
+static char *stbvox_vertex_encoderogram =
 {
       STBVOX_SHADER_VERSION
 
@@ -730,11 +800,13 @@ static char *stbvox_fragment_program =
 {
       STBVOX_SHADER_VERSION
 
+      // rlerp is lerp but with t on the left, like god intended
       #if defined(STBVOX_ICONFIG_GLSL)
-         // rlerp is lerp but with t on the left, like god intended
          "#define rlerp(t,x,y) mix(x,y,t)\n"
-      #elif defined(STBVOX_ICONFIG_HLSL)
+      #elif defined(STBVOX_CONFIG_HLSL)
          "#define rlerp(t,x,y) lerp(x,t,y)\n"
+      #else
+         #error "need definition of rlerp()"
       #endif
 
 
@@ -754,7 +826,7 @@ static char *stbvox_fragment_program =
       // probably constant data
       "uniform vec3 ambient[4];\n"
 
-      #ifdef STBVOX_ICONFIG_TEXTURED
+      #ifndef STBVOX_ICONFIG_UNTEXTURED
          // generally constant data
          "uniform sampler2DArray tex_array[2];\n"
 
@@ -783,7 +855,7 @@ static char *stbvox_fragment_program =
       "   vec3 albedo;\n"
       "   float fragment_alpha;\n"
 
-      #ifdef STBVOX_ICONFIG_TEXTURED         
+      #ifndef STBVOX_ICONFIG_UNTEXTURED
          // unpack the values
          "   uint tex1_id = facedata.x;\n"
          "   uint tex2_id = facedata.y;\n"
@@ -830,7 +902,7 @@ static char *stbvox_fragment_program =
          "      albedo = rlerp(tex2.a, tex1.xyz, tex2.xyz);\n" // @TODO premultiplied alpha
 
          "   fragment_alpha = tex1.a;\n"
-      #else // NOT TEXTURED
+      #else // UNTEXTURED
          "   vec4 color;"
          "   color.xyz = vec3(facedata.xyz) / 255.0;\n"
          "   bool emissive = (facedata.w & 128) != 0;\n"
@@ -897,7 +969,7 @@ static char *stbvox_fragment_program =
 
 STBVXDEC char *stbvox_get_vertex_shader(void)
 {
-   return stbvox_vertex_program;
+   return stbvox_vertex_encoderogram;
 }
 
 STBVXDEC char *stbvox_get_fragment_shader(void)
@@ -936,15 +1008,6 @@ STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform)
 }
 
 #define STBVOX_GET_GEO(geom_data)  ((geom_data) & 15)
-
-typedef stbvox_uint32 stbvox_mesh_vertex;
-
-typedef struct
-{
-   unsigned char tex1,tex2,color,face_info;
-} stbvox_mesh_face;
-
-#define stbvox_vertex_p(x,y,z,ao,texlerp) ((stbvox_uint32) ((x)+((y)<<7)+((z)<<14)+((ao)<<23)+((texlerp)<<29)))
 
 typedef struct
 {
@@ -1101,17 +1164,17 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
    if (mm->input.block_texlerp) {
       stbvox_block_type bt = mm->input.blocktype[v_off];
       unsigned char val = mm->input.block_texlerp[bt];
-      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,val);
+      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_encode(0,0,0,0,val);
    } else if (mm->input.block_texlerp_face) {
       stbvox_block_type bt = mm->input.blocktype[v_off];
       unsigned char bt_face = STBVOX_ROTATE(face, rot.block);
       unsigned char val = mm->input.block_texlerp_face[bt][bt_face];
-      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,val);
+      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_encode(0,0,0,0,val);
    } else if (mm->input.texlerp_face3) {
       unsigned char val = (mm->input.texlerp_face3[v_off] >> stbvox_face3_lerp[face]) & 7;
       if (face >= 4)
          val = stbvox_face3_updown[val];
-      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,val);
+      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_encode(0,0,0,0,val);
    } else if (mm->input.texlerp) {
       unsigned char facelerp = (mm->input.texlerp[v_off] >> stbvox_face_lerp[face]) & 3;
       if (facelerp == STBVOX_TEXLERP_use_vert) {
@@ -1127,15 +1190,15 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
             p1[2] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][2]]>>6];
             p1[3] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][3]]>>6];
          }
-         p1[0] = stbvox_vertex_p(0,0,0,0,p1[0]);
-         p1[1] = stbvox_vertex_p(0,0,0,0,p1[1]);
-         p1[2] = stbvox_vertex_p(0,0,0,0,p1[2]);
-         p1[3] = stbvox_vertex_p(0,0,0,0,p1[3]);
+         p1[0] = stbvox_vertex_encode(0,0,0,0,p1[0]);
+         p1[1] = stbvox_vertex_encode(0,0,0,0,p1[1]);
+         p1[2] = stbvox_vertex_encode(0,0,0,0,p1[2]);
+         p1[3] = stbvox_vertex_encode(0,0,0,0,p1[3]);
       } else {
-         p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,stbvox_vert_lerp_for_face_lerp[facelerp]);
+         p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_encode(0,0,0,0,stbvox_vert_lerp_for_face_lerp[facelerp]);
       }
    } else {
-      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,7);
+      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_encode(0,0,0,0,7);
    }
 
    {
@@ -1147,7 +1210,7 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
             int i;
             for (i=0; i < 4; ++i) {
                *mv[i] = vertbase + face_coord[i];
-                          + stbvox_vertex_p(0,0,0,mm->input.lighting[v_off + mm->cube_vertex_offset[face][i]] & 63,0);
+                          + stbvox_vertex_encode(0,0,0,mm->input.lighting[v_off + mm->cube_vertex_offset[face][i]] & 63,0);
             }
          } else {
             unsigned char *amb = &mm->input.lighting[v_off];
@@ -1167,7 +1230,7 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
                for (j=0; j < 4; ++j)
                   total += STBVOX_GET_LIGHTING(vamb[mm->vertex_gather_offset[face][j]]);
                *mv[i] = vertbase + face_coord[i]
-                          + stbvox_vertex_p(0,0,0,(total+STBVOX_LIGHTING_ROUNDOFF)>>4,0);
+                          + stbvox_vertex_encode(0,0,0,(total+STBVOX_LIGHTING_ROUNDOFF)>>4,0);
                           // >> 4 is because:
                           //   >> 2 to divide by 4 to get average over 4 samples
                           //   >> 2 because input is 8 bits, output is 6 bits
@@ -1261,7 +1324,7 @@ static void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, in
    int ew_off = mm->x_stride_in_bytes;
 
    unsigned char *blockptr = &mm->input.blocktype[v_off];
-   stbvox_mesh_vertex basevert = stbvox_vertex_p(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z , 0,0);
+   stbvox_mesh_vertex basevert = stbvox_vertex_encode(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z , 0,0);
 
    stbvox_rotate rot = { 0,0,0,0,0 };
    unsigned char simple_rot = 0;
@@ -1535,7 +1598,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
                      + stbvox_geometry_vheight[geo][vert];
       }
 
-      basevert = stbvox_vertex_p(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z, 0,0);
+      basevert = stbvox_vertex_encode(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z, 0,0);
       if (mm->input.selector) {
          mesh = mm->input.selector[v_off];
       }
@@ -1630,23 +1693,23 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       extreme = (ht[0] == 3 || ht[1] == 3 || ht[2] == 3 || ht[3] == 3);
 
       if (geo >= STBVOX_GEOM_ceil_vheight_03) {
-         cube[0] = stbvox_vertex_p(0,0,ht[0],0,0);
-         cube[1] = stbvox_vertex_p(0,0,ht[1],0,0);
-         cube[2] = stbvox_vertex_p(0,0,ht[2],0,0);
-         cube[3] = stbvox_vertex_p(0,0,ht[3],0,0);
-         cube[4] = stbvox_vertex_p(0,0,2,0,0);
-         cube[5] = stbvox_vertex_p(0,0,2,0,0);
-         cube[6] = stbvox_vertex_p(0,0,2,0,0);
-         cube[7] = stbvox_vertex_p(0,0,2,0,0);
+         cube[0] = stbvox_vertex_encode(0,0,ht[0],0,0);
+         cube[1] = stbvox_vertex_encode(0,0,ht[1],0,0);
+         cube[2] = stbvox_vertex_encode(0,0,ht[2],0,0);
+         cube[3] = stbvox_vertex_encode(0,0,ht[3],0,0);
+         cube[4] = stbvox_vertex_encode(0,0,2,0,0);
+         cube[5] = stbvox_vertex_encode(0,0,2,0,0);
+         cube[6] = stbvox_vertex_encode(0,0,2,0,0);
+         cube[7] = stbvox_vertex_encode(0,0,2,0,0);
       } else {
-         cube[0] = stbvox_vertex_p(0,0,0,0,0);
-         cube[1] = stbvox_vertex_p(0,0,0,0,0);
-         cube[2] = stbvox_vertex_p(0,0,0,0,0);
-         cube[3] = stbvox_vertex_p(0,0,0,0,0);
-         cube[4] = stbvox_vertex_p(0,0,ht[0],0,0);
-         cube[5] = stbvox_vertex_p(0,0,ht[1],0,0);
-         cube[6] = stbvox_vertex_p(0,0,ht[2],0,0);
-         cube[7] = stbvox_vertex_p(0,0,ht[3],0,0);
+         cube[0] = stbvox_vertex_encode(0,0,0,0,0);
+         cube[1] = stbvox_vertex_encode(0,0,0,0,0);
+         cube[2] = stbvox_vertex_encode(0,0,0,0,0);
+         cube[3] = stbvox_vertex_encode(0,0,0,0,0);
+         cube[4] = stbvox_vertex_encode(0,0,ht[0],0,0);
+         cube[5] = stbvox_vertex_encode(0,0,ht[1],0,0);
+         cube[6] = stbvox_vertex_encode(0,0,ht[2],0,0);
+         cube[7] = stbvox_vertex_encode(0,0,ht[3],0,0);
       }
       if (!mm->input.vheight && mm->input.block_vheight) {
       }
@@ -1661,7 +1724,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          }
       }
 
-      basevert = stbvox_vertex_p(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z, 0,0);
+      basevert = stbvox_vertex_encode(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z, 0,0);
       // check if we're going off the end
       if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
          mm->full = 1;
@@ -1732,7 +1795,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
 
    if (geo == STBVOX_GEOM_crossed_pair) {
       // this can be generated with a special vmesh
-      stbvox_mesh_vertex basevert = stbvox_vertex_p(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z , 0,0);
+      stbvox_mesh_vertex basevert = stbvox_vertex_encode(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z , 0,0);
       unsigned char simple_rot=0;
       stbvox_rotate rot = { 0,0,0,0,0 };
       unsigned char mesh = mm->default_mesh;
@@ -2152,115 +2215,115 @@ static unsigned char stbvox_vertex_selector[6][4] =
 
 static stbvox_mesh_vertex stbvox_vmesh_delta_normal[6][4] =
 {
-   {  stbvox_vertex_p(1,0,1,0,0) , 
-      stbvox_vertex_p(1,1,1,0,0) ,
-      stbvox_vertex_p(1,1,0,0,0) ,
-      stbvox_vertex_p(1,0,0,0,0)  },
-   {  stbvox_vertex_p(1,1,1,0,0) ,
-      stbvox_vertex_p(0,1,1,0,0) ,
-      stbvox_vertex_p(0,1,0,0,0) ,
-      stbvox_vertex_p(1,1,0,0,0)  },
-   {  stbvox_vertex_p(0,1,1,0,0) ,
-      stbvox_vertex_p(0,0,1,0,0) ,
-      stbvox_vertex_p(0,0,0,0,0) ,
-      stbvox_vertex_p(0,1,0,0,0)  },
-   {  stbvox_vertex_p(0,0,1,0,0) ,
-      stbvox_vertex_p(1,0,1,0,0) ,
-      stbvox_vertex_p(1,0,0,0,0) ,
-      stbvox_vertex_p(0,0,0,0,0)  },
-   {  stbvox_vertex_p(0,1,1,0,0) ,
-      stbvox_vertex_p(1,1,1,0,0) ,
-      stbvox_vertex_p(1,0,1,0,0) ,
-      stbvox_vertex_p(0,0,1,0,0)  },
-   {  stbvox_vertex_p(0,0,0,0,0) ,
-      stbvox_vertex_p(1,0,0,0,0) ,
-      stbvox_vertex_p(1,1,0,0,0) ,
-      stbvox_vertex_p(0,1,0,0,0)  }
+   {  stbvox_vertex_encode(1,0,1,0,0) , 
+      stbvox_vertex_encode(1,1,1,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0)  },
+   {  stbvox_vertex_encode(1,1,1,0,0) ,
+      stbvox_vertex_encode(0,1,1,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0)  },
+   {  stbvox_vertex_encode(0,1,1,0,0) ,
+      stbvox_vertex_encode(0,0,1,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0)  },
+   {  stbvox_vertex_encode(0,0,1,0,0) ,
+      stbvox_vertex_encode(1,0,1,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0)  },
+   {  stbvox_vertex_encode(0,1,1,0,0) ,
+      stbvox_vertex_encode(1,1,1,0,0) ,
+      stbvox_vertex_encode(1,0,1,0,0) ,
+      stbvox_vertex_encode(0,0,1,0,0)  },
+   {  stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0)  }
 };
 
 static stbvox_mesh_vertex stbvox_vmesh_pre_vheight[6][4] =
 {
-   {  stbvox_vertex_p(1,0,0,0,0) , 
-      stbvox_vertex_p(1,1,0,0,0) ,
-      stbvox_vertex_p(1,1,0,0,0) ,
-      stbvox_vertex_p(1,0,0,0,0)  },
-   {  stbvox_vertex_p(1,1,0,0,0) ,
-      stbvox_vertex_p(0,1,0,0,0) ,
-      stbvox_vertex_p(0,1,0,0,0) ,
-      stbvox_vertex_p(1,1,0,0,0)  },
-   {  stbvox_vertex_p(0,1,0,0,0) ,
-      stbvox_vertex_p(0,0,0,0,0) ,
-      stbvox_vertex_p(0,0,0,0,0) ,
-      stbvox_vertex_p(0,1,0,0,0)  },
-   {  stbvox_vertex_p(0,0,0,0,0) ,
-      stbvox_vertex_p(1,0,0,0,0) ,
-      stbvox_vertex_p(1,0,0,0,0) ,
-      stbvox_vertex_p(0,0,0,0,0)  },
-   {  stbvox_vertex_p(0,1,0,0,0) ,
-      stbvox_vertex_p(1,1,0,0,0) ,
-      stbvox_vertex_p(1,0,0,0,0) ,
-      stbvox_vertex_p(0,0,0,0,0)  },
-   {  stbvox_vertex_p(0,0,0,0,0) ,
-      stbvox_vertex_p(1,0,0,0,0) ,
-      stbvox_vertex_p(1,1,0,0,0) ,
-      stbvox_vertex_p(0,1,0,0,0)  }
+   {  stbvox_vertex_encode(1,0,0,0,0) , 
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0)  },
+   {  stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0)  },
+   {  stbvox_vertex_encode(0,1,0,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0)  },
+   {  stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0)  },
+   {  stbvox_vertex_encode(0,1,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0)  },
+   {  stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0)  }
 };
 
 static stbvox_mesh_vertex stbvox_vmesh_delta_half_z[6][4] =
 {
-   { stbvox_vertex_p(1,0,2,0,0) , 
-     stbvox_vertex_p(1,1,2,0,0) ,
-     stbvox_vertex_p(1,1,0,0,0) ,
-     stbvox_vertex_p(1,0,0,0,0)  },
-   { stbvox_vertex_p(1,1,2,0,0) ,
-     stbvox_vertex_p(0,1,2,0,0) ,
-     stbvox_vertex_p(0,1,0,0,0) ,
-     stbvox_vertex_p(1,1,0,0,0)  },
-   { stbvox_vertex_p(0,1,2,0,0) ,
-     stbvox_vertex_p(0,0,2,0,0) ,
-     stbvox_vertex_p(0,0,0,0,0) ,
-     stbvox_vertex_p(0,1,0,0,0)  },
-   { stbvox_vertex_p(0,0,2,0,0) ,
-     stbvox_vertex_p(1,0,2,0,0) ,
-     stbvox_vertex_p(1,0,0,0,0) ,
-     stbvox_vertex_p(0,0,0,0,0)  },
-   { stbvox_vertex_p(0,1,2,0,0) ,
-     stbvox_vertex_p(1,1,2,0,0) ,
-     stbvox_vertex_p(1,0,2,0,0) ,
-     stbvox_vertex_p(0,0,2,0,0)  },
-   { stbvox_vertex_p(0,0,0,0,0) ,
-     stbvox_vertex_p(1,0,0,0,0) ,
-     stbvox_vertex_p(1,1,0,0,0) ,
-     stbvox_vertex_p(0,1,0,0,0)  }
+   { stbvox_vertex_encode(1,0,2,0,0) , 
+     stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0)  },
+   { stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0)  },
+   { stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(0,0,2,0,0) ,
+     stbvox_vertex_encode(0,0,0,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0)  },
+   { stbvox_vertex_encode(0,0,2,0,0) ,
+     stbvox_vertex_encode(1,0,2,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0) ,
+     stbvox_vertex_encode(0,0,0,0,0)  },
+   { stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(1,0,2,0,0) ,
+     stbvox_vertex_encode(0,0,2,0,0)  },
+   { stbvox_vertex_encode(0,0,0,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0)  }
 };
 
 static stbvox_mesh_vertex stbvox_vmesh_crossed_pair[6][4] =
 {
-   { stbvox_vertex_p(1,0,2,0,0) , 
-     stbvox_vertex_p(0,1,2,0,0) ,
-     stbvox_vertex_p(0,1,0,0,0) ,
-     stbvox_vertex_p(1,0,0,0,0)  },
-   { stbvox_vertex_p(1,1,2,0,0) ,
-     stbvox_vertex_p(0,0,2,0,0) ,
-     stbvox_vertex_p(0,0,0,0,0) ,
-     stbvox_vertex_p(1,1,0,0,0)  },
-   { stbvox_vertex_p(0,1,2,0,0) ,
-     stbvox_vertex_p(1,0,2,0,0) ,
-     stbvox_vertex_p(1,0,0,0,0) ,
-     stbvox_vertex_p(0,1,0,0,0)  },
-   { stbvox_vertex_p(0,0,2,0,0) ,
-     stbvox_vertex_p(1,1,2,0,0) ,
-     stbvox_vertex_p(1,1,0,0,0) ,
-     stbvox_vertex_p(0,0,0,0,0)  },
+   { stbvox_vertex_encode(1,0,2,0,0) , 
+     stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0)  },
+   { stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(0,0,2,0,0) ,
+     stbvox_vertex_encode(0,0,0,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0)  },
+   { stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(1,0,2,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0)  },
+   { stbvox_vertex_encode(0,0,2,0,0) ,
+     stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0) ,
+     stbvox_vertex_encode(0,0,0,0,0)  },
    // not used, so we leave it non-degenerate to make sure it doesn't get gen'd accidentally
-   { stbvox_vertex_p(0,1,2,0,0) ,
-     stbvox_vertex_p(1,1,2,0,0) ,
-     stbvox_vertex_p(1,0,2,0,0) ,
-     stbvox_vertex_p(0,0,2,0,0)  },
-   { stbvox_vertex_p(0,0,0,0,0) ,
-     stbvox_vertex_p(1,0,0,0,0) ,
-     stbvox_vertex_p(1,1,0,0,0) ,
-     stbvox_vertex_p(0,1,0,0,0)  }
+   { stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(1,0,2,0,0) ,
+     stbvox_vertex_encode(0,0,2,0,0)  },
+   { stbvox_vertex_encode(0,0,0,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0)  }
 };
 
 
@@ -2350,14 +2413,14 @@ static unsigned short stbvox_face_visible[STBVOX_FT_count] =
 static stbvox_mesh_vertex stbvox_geometry_vheight[8][8] =
 {
    #define STBVOX_HEIGHTS(a,b,c,d,e,f,g,h) \
-     { stbvox_vertex_p(0,0,a,0,0),  \
-       stbvox_vertex_p(0,0,b,0,0),  \
-       stbvox_vertex_p(0,0,c,0,0),  \
-       stbvox_vertex_p(0,0,d,0,0),  \
-       stbvox_vertex_p(0,0,e,0,0),  \
-       stbvox_vertex_p(0,0,f,0,0),  \
-       stbvox_vertex_p(0,0,g,0,0),  \
-       stbvox_vertex_p(0,0,h,0,0) }
+     { stbvox_vertex_encode(0,0,a,0,0),  \
+       stbvox_vertex_encode(0,0,b,0,0),  \
+       stbvox_vertex_encode(0,0,c,0,0),  \
+       stbvox_vertex_encode(0,0,d,0,0),  \
+       stbvox_vertex_encode(0,0,e,0,0),  \
+       stbvox_vertex_encode(0,0,f,0,0),  \
+       stbvox_vertex_encode(0,0,g,0,0),  \
+       stbvox_vertex_encode(0,0,h,0,0) }
 
    STBVOX_HEIGHTS(0,0,0,0, 2,2,2,2),
    STBVOX_HEIGHTS(0,0,0,0, 2,2,2,2),
