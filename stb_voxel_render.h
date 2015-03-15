@@ -1,6 +1,5 @@
 // @TODO
 //
-//   - compute full set of texture normals
 //   - switch to #ifdef
 //   - premultiplied alpha
 //   - edge clamp
@@ -8,7 +7,7 @@
 //   - better support texture edge_clamp: explicitly mod texcoords by 1, use textureGrad to avoid
 //     mipmap articats. Need to do compute texcoords in vertex shader, offset towards
 //     center before modding, need 2 bits per vertex to know offset direction (is implicit
-//     implicit for modes without vertex data)
+//     for modes without vertex data)
 //   - add 10-byte quad type (loses per-face tex1/tex2 blend mode)
 //   - add 6-byte quad type (loses baked ao, most geometry, flags, texlerp)
 //   - add 4-byte quad type (only texture or only color, no baked light, no recolor)
@@ -174,12 +173,12 @@
 // ============================================================================================================
 //  uses Tex Buffer     n     Y     Y     Y     Y     Y     Y        Y     Y     Y        Y     Y     Y     Y
 //   bytes per quad    32    20    14    12    10     6     6        8     6     4       20    10     6     4
+//     vertex bytes     8     4     2     1     1     0     0        1     1     0        4     1     0     0
 //       non-blocks   all   all   some  some  some slabs stairs    some  some  none     all  slabs slabs  none
 //             tex1   256   256   256   256   256   256   256      256   256   256        n     n     n     n
 //             tex2   256   256   256   256   256   256   128        n     n     n        n     n     n     n
 //           colors    64    64    64    64    64    64    64        8     n     n      2^24  2^24  2^24  256
 //        vertex ao     Y     Y     Y     Y     Y     n     n        Y     Y     n        Y     Y     n     n
-//    face texblend     Y     Y     Y     Y     n     n     n        -     -     -        -     -     -     -
 //   vertex texlerp     Y     Y     Y     n     n     n     n        -     -     -        -     -     -     -
 //      x&y extents   127   127   128    64    64   128    64       64   128   128       64    64   128   128
 //        z extents   255   255   128   128   128    64    64       32    64   128       64    64    64   128
