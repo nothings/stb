@@ -191,7 +191,8 @@ void setup_uniforms(float pos[3])
    int i,j;
    step += 1.0f/60.0f;
    for (i=0; i < STBVOX_UNIFORM_count; ++i) {
-      stbvox_uniform_info *ui = stbvox_get_uniform_info(&g_mesh_maker, i);
+      stbvox_uniform_info raw, *ui=&raw;
+      stbvox_get_uniform_info(&raw, i);
       uniform_loc[i] = -1;
 
       if (i == STBVOX_UNIFORM_texscale || i == STBVOX_UNIFORM_texgen || i == STBVOX_UNIFORM_color_table)
@@ -231,7 +232,8 @@ void setup_uniforms(float pos[3])
                break;
 
             case STBVOX_UNIFORM_ambient: {
-               float bright = 0.75;
+               float bright = 1.0;
+               //float bright = 0.75;
                float amb[3][3];
 
                // ambient direction is sky-colored upwards
@@ -278,8 +280,11 @@ GLuint unitex[64], unibuf[64];
 void make_texture_buffer_for_uniform(int uniform, int slot)
 {
    GLenum type;
-   stbvox_uniform_info *ui = stbvox_get_uniform_info(&g_mesh_maker, uniform);
-   GLint uloc = stbgl_find_uniform(main_prog, ui->name);
+   stbvox_uniform_info raw, *ui=&raw;
+   GLint uloc;
+   
+   stbvox_get_uniform_info(ui, uniform);
+   uloc = stbgl_find_uniform(main_prog, ui->name);
 
    if (uniform == STBVOX_UNIFORM_color_table)
       ((float *)ui->default_value)[63*4+3] = 1.0f; // emissive
@@ -355,35 +360,19 @@ void render_init(void)
 {
    int i;
    char *binds[] = { "attr_vertex", "attr_face", NULL };
-   char vertex[5000];
-   int vertex_len;
-   char fragment[5000];
-   int fragment_len;
+   char *vertex;
+   char *fragment;
    int w=0,h=0;
 
    unsigned char *texdata = stbi_load("terrain.png", &w, &h, NULL, 4);
 
    stbvox_init_mesh_maker(&g_mesh_maker);
-   stbvox_config_use_gl(&g_mesh_maker, 1, 1);
    for (i=0; i < num_mesh_workers; ++i) {
       stbvox_init_mesh_maker(&mesh_data[i].rm.mm);
-      stbvox_config_use_gl(&mesh_data[i].rm.mm, 1,1);
    }
 
-   vertex_len = stbvox_get_vertex_shader(&g_mesh_maker, vertex, sizeof(vertex));
-   fragment_len = stbvox_get_fragment_shader(&g_mesh_maker, fragment, sizeof(fragment));
-
-   if (vertex_len < 0) {
-      ods("Vertex shader was too long!\n");
-      assert(0);
-      exit(1);
-   }
-   if (fragment_len < 0) {
-      ods("fragment shader was too long!\n");
-      assert(0);
-      exit(1);
-   }
-   ods("Shader lengths: %d %d\n", vertex_len, fragment_len);
+   vertex = stbvox_get_vertex_shader();
+   fragment = stbvox_get_fragment_shader();
 
    {
       char error_buffer[1024];

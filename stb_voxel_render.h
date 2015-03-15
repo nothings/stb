@@ -1,8 +1,10 @@
 // @TODO
 //
-//   - switch to #ifdef
+//   - API for texture rotation on side faces (& top&bottom ?)
 //   - premultiplied alpha
 //   - edge clamp
+//   - better culling of vheight faces with vheight neighbors
+//   - better culling of non-vheight faces with fheight neighbors
 //   - gather vertex lighting from slopes correctly
 //   - better support texture edge_clamp: explicitly mod texcoords by 1, use textureGrad to avoid
 //     mipmap articats. Need to do compute texcoords in vertex shader, offset towards
@@ -11,7 +13,7 @@
 //   - add 10-byte quad type (loses per-face tex1/tex2 blend mode)
 //   - add 6-byte quad type (loses baked ao, most geometry, flags, texlerp)
 //   - add 4-byte quad type (only texture or only color, no baked light, no recolor)
-
+//   - enable/disable fog at run-time
 
 // stb_voxel_render.h - 0.01 - Sean Barrett, 2015
 //
@@ -182,6 +184,13 @@
 //   vertex texlerp     Y     Y     Y     n     n     n     n        -     -     -        -     -     -     -
 //      x&y extents   127   127   128    64    64   128    64       64   128   128       64    64   128   128
 //        z extents   255   255   128   128   128    64    64       32    64   128       64    64    64   128
+//    vertex x bits     7     7     0     6     0     0     0        0     0     0        7     0     0     0
+//    vertex y bits     7     7     0     0     0     0     0        0     0     0        7     0     0     0
+//    vertex z bits     9     9     7     4     2     0     0        2     2     0        9     2     0     0
+//   vertex ao bits     6     6     6     6     6     0     0        6     6     0        6     6     0     0
+//
+//
+
 //
 //
 // With TexBuffer for the fixed vertex data, we can actually do
@@ -248,15 +257,11 @@ enum
 {
    STBVOX_UNIFORM_face_data,
    STBVOX_UNIFORM_transform,
-
    STBVOX_UNIFORM_tex_array,
    STBVOX_UNIFORM_texscale,
-
    STBVOX_UNIFORM_color_table,
-
    STBVOX_UNIFORM_normals,
    STBVOX_UNIFORM_texgen,
-
    STBVOX_UNIFORM_ambient,
    STBVOX_UNIFORM_camera_pos,
 
@@ -279,31 +284,43 @@ typedef struct
    int array_length;
    char *name;
    float *default_value; // if not NULL, you can use this as the uniform
-   unsigned int tags;
+   int use_tex_buffer;
 } stbvox_uniform_info;
 
 typedef struct stbvox_mesh_maker stbvox_mesh_maker;
 typedef struct stbvox_input_description stbvox_input_description;
 
-extern stbvox_uniform_info *stbvox_get_uniform_info(stbvox_mesh_maker *mm, int uniform);
-extern void stbvox_init_mesh_maker(stbvox_mesh_maker *mm);
-extern int stbvox_make_mesh(stbvox_mesh_maker *mm);
-extern int stbvox_get_buffer_count(stbvox_mesh_maker *mm);
-extern int stbvox_get_buffer_size_per_quad(stbvox_mesh_maker *mm, int n);
-extern void stbvox_reset_buffers(stbvox_mesh_maker *mm);
-extern void stbvox_set_buffer(stbvox_mesh_maker *mm, int mesh, int slot, void *buffer, size_t len);
-extern void stbvox_set_input_range(stbvox_mesh_maker *mm, int x0, int y0, int z0, int x1, int y1, int z1);
-extern void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_bytes, int y_stride_in_bytes);
-extern void stbvox_config_use_gl(stbvox_mesh_maker *mm, int use_tex_buffer, int use_gl_modelview);
-extern void stbvox_config_set_z_precision(stbvox_mesh_maker *mm, int z_fractional_bits);
-extern stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm);
-extern int stbvox_get_vertex_shader(stbvox_mesh_maker *mm, char *buffer, size_t buffer_size);
-extern int stbvox_get_fragment_shader(stbvox_mesh_maker *mm, char *buffer, size_t buffer_size);
-extern void stbvox_set_default_mesh(stbvox_mesh_maker *mm, int mesh);
-extern int stbvox_get_quad_count(stbvox_mesh_maker *mm, int mesh);
-extern void stbvox_get_transform(stbvox_mesh_maker *mm, float transform[3][3]);
-extern void stbvox_get_bounds(stbvox_mesh_maker *mm, float bounds[2][3]);
-extern void stbvox_set_mesh_coordinates(stbvox_mesh_maker *mm, int x, int y, int z);
+#ifdef STBVOX_STATIC_IMPLEMENATION
+#define STBVXDEC static
+#else
+#define STBVXDEC extern
+#endif
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform);
+STBVXDEC void stbvox_init_mesh_maker(stbvox_mesh_maker *mm);
+STBVXDEC int stbvox_make_mesh(stbvox_mesh_maker *mm);
+STBVXDEC int stbvox_get_buffer_count(stbvox_mesh_maker *mm);
+STBVXDEC int stbvox_get_buffer_size_per_quad(stbvox_mesh_maker *mm, int n);
+STBVXDEC void stbvox_reset_buffers(stbvox_mesh_maker *mm);
+STBVXDEC void stbvox_set_buffer(stbvox_mesh_maker *mm, int mesh, int slot, void *buffer, size_t len);
+STBVXDEC void stbvox_set_input_range(stbvox_mesh_maker *mm, int x0, int y0, int z0, int x1, int y1, int z1);
+STBVXDEC void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_bytes, int y_stride_in_bytes);
+STBVXDEC stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm);
+STBVXDEC char *stbvox_get_vertex_shader(void);
+STBVXDEC char *stbvox_get_fragment_shader(void);
+STBVXDEC void stbvox_set_default_mesh(stbvox_mesh_maker *mm, int mesh);
+STBVXDEC int stbvox_get_quad_count(stbvox_mesh_maker *mm, int mesh);
+STBVXDEC void stbvox_get_transform(stbvox_mesh_maker *mm, float transform[3][3]);
+STBVXDEC void stbvox_get_bounds(stbvox_mesh_maker *mm, float bounds[2][3]);
+STBVXDEC void stbvox_set_mesh_coordinates(stbvox_mesh_maker *mm, int x, int y, int z);
+
+#ifdef __cplusplus
+}
+#endif
 
 // meshing API
 
@@ -476,7 +493,6 @@ struct stbvox_mesh_maker
    int x0,y0,z0,x1,y1,z1;
    int x_stride_in_bytes;
    int y_stride_in_bytes;
-   int precision_z;
    int config_dirty;
    int default_mesh;
    unsigned int tags;
@@ -600,113 +616,15 @@ enum
 };
 
 // get opposite-facing normal & texgen for opposite face, used to map up-facing vheight data to down-facing data
-static unsigned char stbvox_reverse_face[STBVF_count] =
-{
-   STBVF_w, STBVF_s, STBVF_e, STBVF_n, STBVF_d   , STBVF_u   , STBVF_wd, STBVF_wu,
-         0,       0,       0,       0, STBVF_sw_d, STBVF_sw_u, STBVF_sd, STBVF_su,
-         0,       0,       0,       0, STBVF_se_d, STBVF_se_u, STBVF_ed, STBVF_eu,
-         0,       0,       0,       0, STBVF_ne_d, STBVF_ne_d, STBVF_nd, STBVF_nu
-};
+static unsigned char stbvox_reverse_face[STBVF_count];
+static float stbvox_default_texgen[2][32][3];
+static float stbvox_default_normals[32][3];
+static float stbvox_default_texscale[128][2];
 
-static float stbvox_default_texgen[2][32][3] =
-{
-   { {  0, 1,0 }, { 0, 0, 1 }, {  0,-1,0 }, { 0, 0,-1 },
-     { -1, 0,0 }, { 0, 0, 1 }, {  1, 0,0 }, { 0, 0,-1 },
-     {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 }, { 0, 0,-1 },
-     {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 }, { 0, 0,-1 },
-     {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 },
-     { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 },
-     {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 },
-     { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 },
-   },
-   { { 0, 0,-1 }, {  0, 1,0 }, { 0, 0, 1 }, {  0,-1,0 },
-     { 0, 0,-1 }, { -1, 0,0 }, { 0, 0, 1 }, {  1, 0,0 },
-     { 0, 0,-1 }, {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 },
-     { 0, 0,-1 }, {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 },
-     { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 },
-     { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 },
-     { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 },
-     { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 },
-   },
-};
-
-#define STBVOX_RSQRT2   0.7071067811865f
-#define STBVOX_RSQRT3   0.5773502691896f
-
-static float stbvox_default_normals[32][3] =
-{
-   { 1,0,0 },  // east
-   { 0,1,0 },  // north
-   { -1,0,0 }, // west
-   { 0,-1,0 }, // south
-   { 0,0,1 },  // up
-   { 0,0,-1 }, // down
-   {  STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // east & up
-   {  STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // east & down
-
-   {  STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // east & up
-   { 0, STBVOX_RSQRT2, STBVOX_RSQRT2 }, // north & up
-   { -STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // west & up
-   { 0,-STBVOX_RSQRT2, STBVOX_RSQRT2 }, // south & up
-   {  STBVOX_RSQRT3, STBVOX_RSQRT3, STBVOX_RSQRT3 }, // ne & up
-   {  STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // ne & down
-   { 0, STBVOX_RSQRT2, STBVOX_RSQRT2 }, // north & up
-   { 0, STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // north & down
-
-   {  STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // east & down
-   { 0, STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // north & down
-   { -STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // west & down
-   { 0,-STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // south & down
-   { -STBVOX_RSQRT3, STBVOX_RSQRT3, STBVOX_RSQRT3 }, // NW & up
-   { -STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // NW & down
-   { -STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // west & up
-   { -STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // west & down
-
-   {  STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NE & up crossed
-   { -STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NW & up crossed
-   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SW & up crossed
-   {  STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SE & up crossed
-   { -STBVOX_RSQRT3,-STBVOX_RSQRT3, STBVOX_RSQRT3 }, // SW & up
-   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // SW & up
-   { 0,-STBVOX_RSQRT2, STBVOX_RSQRT2 }, // south & up
-   { 0,-STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // south & down
-};
-
-static float stbvox_default_texscale[128][2] =
-{
-   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
-};
-
-static unsigned char stbvox_default_palette_compact[64][3] =
-{
-   { 255,255,255 }, { 238,238,238 }, { 221,221,221 }, { 204,204,204 },
-   { 187,187,187 }, { 170,170,170 }, { 153,153,153 }, { 136,136,136 },
-   { 119,119,119 }, { 102,102,102 }, {  85, 85, 85 }, {  68, 68, 68 },
-   {  51, 51, 51 }, {  34, 34, 34 }, {  17, 17, 17 }, {   0,  0,  0 },
-   { 255,240,240 }, { 255,220,220 }, { 255,160,160 }, { 255, 32, 32 },
-   { 200,120,160 }, { 200, 60,150 }, { 220,100,130 }, { 255,  0,128 },
-   { 240,240,255 }, { 220,220,255 }, { 160,160,255 }, {  32, 32,255 },
-   { 120,160,200 }, {  60,150,200 }, { 100,130,220 }, {   0,128,255 },
-   { 240,255,240 }, { 220,255,220 }, { 160,255,160 }, {  32,255, 32 },
-   { 160,200,120 }, { 150,200, 60 }, { 130,220,100 }, { 128,255,  0 },
-   { 255,255,240 }, { 255,255,220 }, { 220,220,180 }, { 255,255, 32 },
-   { 200,160,120 }, { 200,150, 60 }, { 220,130,100 }, { 255,128,  0 },
-   { 255,240,255 }, { 255,220,255 }, { 220,180,220 }, { 255, 32,255 },
-   { 160,120,200 }, { 150, 60,200 }, { 130,100,220 }, { 128,  0,255 },
-   { 240,255,255 }, { 220,255,255 }, { 180,220,220 }, {  32,255,255 },
-   { 120,200,160 }, {  60,200,150 }, { 100,220,130 }, {   0,255,128 },
-};
-
+static unsigned char stbvox_default_palette_compact[64][3];
 static float stbvox_default_palette[64][4];
 
-void stbvox_build_default_palette(void)
+static void stbvox_build_default_palette(void)
 {
    int i;
    for (i=0; i < 64; ++i) {
@@ -717,373 +635,304 @@ void stbvox_build_default_palette(void)
    }
 }
 
+//////////////////////////////////////////////////////////////////////////////
+//
 // Shaders
+//
 
-#define STBVOX_TAG_all                       (1 <<  0)
-#define STBVOX_TAG_gl                        (1 <<  1)
-#define STBVOX_TAG_d3d                       (1 <<  2)
-#define STBVOX_TAG_glsl_130                  (1 <<  3)
-#define STBVOX_TAG_glsl_150                  (1 <<  4)
-#define STBVOX_TAG_glsl_150_compatibility    (1 <<  5)
-#define STBVOX_TAG_face_sampled              (1 <<  6)
-#define STBVOX_TAG_face_attribute            (1 <<  7)
-#define STBVOX_TAG_gl_modelview              (1 <<  8)
-#define STBVOX_TAG_textured                  (1 << 10)
-
-#define STBVOX_TAG_NOT                       (1 << 31)
-
-typedef struct
-{
-   unsigned int tag;
-   char *str;
-} stbvox_tagged_string;
-
-stbvox_tagged_string stbvox_vertex_program[] =
-{
-   { STBVOX_TAG_glsl_130,
-
-            "#version 130\n"
-   },
-   { STBVOX_TAG_glsl_150,
-
-            "#version 150\n"
-   },
-   { STBVOX_TAG_glsl_150_compatibility,
-
-            "#version 150 compatibility\n"
-   },
-   { STBVOX_TAG_face_sampled,
-
-            "uniform usamplerBuffer facearray;\n"
-   },
-   { STBVOX_TAG_face_attribute,
-
-            "in uvec4 attr_face;\n"
-   },
-   { STBVOX_TAG_all,
-
-            // vertex input data
-            "in uint attr_vertex;\n"
-
-            // per-buffer data
-            "uniform vec3 transform[3];\n"
-
-            // per-frame data
-            "uniform vec4 camera_pos;\n"  // 4th value is used for arbitrary hacking
-
-            // to simplify things, we avoid using more than 256 uniform vectors
-            // in fragment shader to avoid possible 1024 component limit, so
-            // we access this table in the fragment shader.
-            "uniform vec3 normal_table[32];\n"
-
-            // fragment output data
-            "flat out uvec4  facedata;\n"
-            "     out  vec3  objectspace_pos;\n"
-            "     out  vec3  vnormal;\n"
-            "     out float  texlerp;\n"
-            "     out float  amb_occ;\n"
-   },
-   { STBVOX_TAG_NOT | STBVOX_TAG_gl_modelview,
-
-            "uniform mat44 model_view;\n"
-   },
-   { STBVOX_TAG_all,
-   
-            // @TODO handle the HLSL way to do this
-            "void main()\n"
-            "{\n"
-   },
-   { STBVOX_TAG_face_attribute,
-
-            "   facedata = attr_face;\n"
-   },
-   { STBVOX_TAG_face_sampled,
-
-            "   int faceID = gl_VertexID >> 2;\n"
-            "   facedata   = texelFetch(facearray, faceID);\n"
-   },
-   { STBVOX_TAG_all,
-
-            // extract data for vertex
-            "   vec3 offset;\n"
-            "   offset.x = float( (attr_vertex       ) & 127u );\n"             // a[0..6]
-            "   offset.y = float( (attr_vertex >>  7u) & 127u );\n"             // a[7..13]
-            "   offset.z = float( (attr_vertex >> 14u) & 511u );\n"             // a[14..22]
-            "   amb_occ  = float( (attr_vertex >> 23u) &  63u ) / 63.0;\n"      // a[23..28]
-            "   texlerp  = float( (attr_vertex >> 29u)        ) /  7.0;\n"      // a[29..31]
-
-            "   vnormal = normal_table[(facedata.w>>2) & 31u];\n"
-            "   objectspace_pos = offset * transform[0];\n"  // object-to-world scale
-            "   vec3 position  = objectspace_pos + transform[1];\n"  // object-to-world translate
-#if 0 // normal debugging
-            "   if ((facedata.w & 28u) == 16u || (facedata.w & 28u) == 24u)\n"
-            "      position += vnormal.xyz * camera_pos.w;\n"
+#if defined(STBVOX_ICONFIG_OPENGL_3_1_COMPATIBILITY)
+   #define STBVOX_SHADER_VERSION "#version 150 compatibility\n"
+#elif defined(STBVOX_ICONFIG_OPENGL_3_0)
+   #define STBVOX_SHADER_VERSION "#version 130\n"
+#elif defined(STBVOX_ICONFIG_GLSL)
+   #define STBVOX_SHADER_VERSION "#version 150\n"
+#else
+   #define STBVOX_SHADER_VERSION ""
 #endif
-   },
-   { STBVOX_TAG_NOT | STBVOX_TAG_gl_modelview,
 
-            "   gl_Position = model_view * vec4(position,1.0);\n"
-            "}"
-   },
-   { STBVOX_TAG_gl_modelview,
+static char *stbvox_vertex_program =
+{
+      STBVOX_SHADER_VERSION
 
-            "   gl_Position = gl_ModelViewProjectionMatrix * vec4(position,1.0);\n"
-            "}"
-   },
+   #ifdef STBVOX_ICONFIG_FACE_ATTRIBUTE  // NOT TAG_face_sampled
+      "in uvec4 attr_face;\n"
+   #else
+      "uniform usamplerBuffer facearray;\n"
+   #endif
+
+   #ifdef STBVOX_ICONFIG_FACE_ARRAY_2
+      "uniform usamplerBuffer facearray2;\n"
+   #endif
+
+      // vertex input data
+      "in uint attr_vertex;\n"
+
+      // per-buffer data
+      "uniform vec3 transform[3];\n"
+
+      // per-frame data
+      "uniform vec4 camera_pos;\n"  // 4th value is used for arbitrary hacking
+
+      // to simplify things, we avoid using more than 256 uniform vectors
+      // in fragment shader to avoid possible 1024 component limit, so
+      // we access this table in the fragment shader.
+      "uniform vec3 normal_table[32];\n"
+
+      #ifndef STBVOX_CONFIG_OPENGL_MODELVIEW
+         "uniform mat44 model_view;\n"
+      #endif
+
+      // fragment output data
+      "flat out uvec4  facedata;\n"
+      "     out  vec3  objectspace_pos;\n"
+      "     out  vec3  vnormal;\n"
+      "     out float  texlerp;\n"
+      "     out float  amb_occ;\n"
+
+      // @TODO handle the HLSL way to do this
+      "void main()\n"
+      "{\n"
+      #ifdef STBVOX_ICONFIG_FACE_ATTRIBUTE
+         "   facedata = attr_face;\n"
+      #else
+         "   int faceID = gl_VertexID >> 2;\n"
+         "   facedata   = texelFetch(facearray, faceID);\n"
+      #endif
+
+      // extract data for vertex
+      "   vec3 offset;\n"
+      "   offset.x = float( (attr_vertex       ) & 127u );\n"             // a[0..6]
+      "   offset.y = float( (attr_vertex >>  7u) & 127u );\n"             // a[7..13]
+      "   offset.z = float( (attr_vertex >> 14u) & 511u );\n"             // a[14..22]
+      "   amb_occ  = float( (attr_vertex >> 23u) &  63u ) / 63.0;\n"      // a[23..28]
+      "   texlerp  = float( (attr_vertex >> 29u)        ) /  7.0;\n"      // a[29..31]
+
+      "   vnormal = normal_table[(facedata.w>>2) & 31u];\n"
+      "   objectspace_pos = offset * transform[0];\n"  // object-to-world scale
+      "   vec3 position  = objectspace_pos + transform[1];\n"  // object-to-world translate
+
+      #ifdef STBVOX_DEBUG_TEST_NORMALS
+         "   if ((facedata.w & 28u) == 16u || (facedata.w & 28u) == 24u)\n"
+         "      position += vnormal.xyz * camera_pos.w;\n"
+      #endif
+
+      #ifndef STBVOX_CONFIG_OPENGL_MODELVIEW
+         "   gl_Position = model_view * vec4(position,1.0);\n"
+      #else
+         "   gl_Position = gl_ModelViewProjectionMatrix * vec4(position,1.0);\n"
+      #endif
+
+      "}\n"
 };
 
 
-stbvox_tagged_string stbvox_fragment_program[] =
+static char *stbvox_fragment_program =
 {
-   { STBVOX_TAG_glsl_130,
+      STBVOX_SHADER_VERSION
 
-            "#version 130\n"
-   },
-   { STBVOX_TAG_glsl_150,
-
-            "#version 150\n"
-   },
-   { STBVOX_TAG_glsl_150_compatibility,
-
-            "#version 150 compatibility\n"
-   },
-   { STBVOX_TAG_all,
-
-            // rlerp is lerp but with t on the left, like god intended
-            "#define rlerp(t,x,y) mix(x,y,t)\n"
-
-            // fragment output data
-            "flat in uvec4  facedata;\n"
-            "     in  vec3  objectspace_pos;\n"
-            "     in  vec3  vnormal;\n"
-            "     in float  texlerp;\n"
-            "     in float  amb_occ;\n"
-
-            // per-buffer data
-            "uniform vec3 transform[3];\n"
-
-            // per-frame data
-            "uniform vec4 camera_pos;\n"  // 4th value is used for arbitrary hacking
-
-            // probably constant data
-            "uniform vec3 ambient[4];\n"
-
-   },
-   { STBVOX_TAG_textured,
+      #if defined(STBVOX_ICONFIG_GLSL)
+         // rlerp is lerp but with t on the left, like god intended
+         "#define rlerp(t,x,y) mix(x,y,t)\n"
+      #elif defined(STBVOX_ICONFIG_HLSL)
+         "#define rlerp(t,x,y) lerp(x,t,y)\n"
+      #endif
 
 
-            // generally constant data
-            "uniform sampler2DArray tex_array[2];\n"
-#if 0
+      // vertex-shader output data
+      "flat in uvec4  facedata;\n"
+      "     in  vec3  objectspace_pos;\n"
+      "     in  vec3  vnormal;\n"
+      "     in float  texlerp;\n"
+      "     in float  amb_occ;\n"
 
-            "uniform vec4 color_table[64];\n"
-            "uniform vec2 texscale[64];\n" // instead of 128, to avoid running out of uniforms
-            "uniform vec3 texgen[64];\n"
-#else
+      // per-buffer data
+      "uniform vec3 transform[3];\n"
+
+      // per-frame data
+      "uniform vec4 camera_pos;\n"  // 4th value is used for arbitrary hacking
+
+      // probably constant data
+      "uniform vec3 ambient[4];\n"
+
+      #ifdef STBVOX_ICONFIG_TEXTURED
+         // generally constant data
+         "uniform sampler2DArray tex_array[2];\n"
+
+         #ifdef STBVOX_CONFIG_PREFER_TEXBUFFER
             "uniform samplerBuffer color_table;\n"
             "uniform samplerBuffer texscale;\n"
             "uniform samplerBuffer texgen;\n"
-#endif
-   },
-   { STBVOX_TAG_all,
+         #else
+            "uniform vec4 color_table[64];\n"
+            "uniform vec2 texscale[64];\n" // instead of 128, to avoid running out of uniforms
+            "uniform vec3 texgen[64];\n"
+         #endif
+      #endif
 
-            "out vec4  outcolor;\n"
-            "uniform vec3 light_source[2];\n"
-            "vec3 compute_lighting(vec3 pos, vec3 norm);\n"
-   },
-   { STBVOX_TAG_all,
+      "out vec4  outcolor;\n"
 
-            "void main()\n"
-            "{\n"
-            "   vec3 albedo;\n"
-            "   float fragment_alpha;\n"
+      #if defined(STBVOX_CONFIG_LIGHTING) || defined(STBVOX_CONFIG_LIGHTING_SIMPLE)
+      "vec3 compute_lighting(vec3 pos, vec3 norm, vec3 albedo, vec3 ambient);\n"
+      #endif
+      #if defined(STBVOX_CONFIG_FOG) || defined(STBVOX_CONFIG_FOG_SMOOTHSTEP)
+      "vec3 compute_fog(vec3 color, vec3 relative_pos);\n"
+      #endif
 
-   },
-   { STBVOX_TAG_textured,
+      "void main()\n"
+      "{\n"
+      "   vec3 albedo;\n"
+      "   float fragment_alpha;\n"
 
-            // unpack the values
-            "   uint tex1_id = facedata.x;\n"
-            "   uint tex2_id = facedata.y;\n"
-            "   uint texprojid = facedata.w & 31u;\n"
-            "   uint color_id  = facedata.z;\n"
-            "   bool texblend_mode = ((facedata.w & 128u) != 0u);\n"
+      #ifdef STBVOX_ICONFIG_TEXTURED         
+         // unpack the values
+         "   uint tex1_id = facedata.x;\n"
+         "   uint tex2_id = facedata.y;\n"
+         "   uint texprojid = facedata.w & 31u;\n"
+         "   uint color_id  = facedata.z;\n"
+         "   bool texblend_mode = ((facedata.w & 128u) != 0u);\n"
 
-#if 0
+         #ifndef STBVOX_CONFIG_PREFER_TEXBUFFER
             // load from uniforms / texture buffers 
             "   vec3 texgen_s = texgen[texprojid];\n"
             "   vec3 texgen_t = texgen[texprojid+32u];\n"
             "   float tex1_scale = texscale[tex1_id & 63u].x;\n"
             "   float tex2_scale = texscale[tex2_id & 63u].y;\n"
             "   vec4 color = color_table[color_id & 63u];\n"
-#else
+         #else
             "   vec3 texgen_s = texelFetch(texgen, int(texprojid)).xyz;\n"
             "   vec3 texgen_t = texelFetch(texgen, int(texprojid+32u)).xyz;\n"
             "   float tex1_scale = texelFetch(texscale, int(tex1_id & 127u)).x;\n"
             "   float tex2_scale = texelFetch(texscale, int(tex2_id & 127u)).y;\n"
             "   vec4 color = texelFetch(color_table, int(color_id & 63u));\n"
-#endif
-            "   vec2 texcoord;\n"
-            "   vec3 texturespace_pos = objectspace_pos + transform[2].xyz;\n"
-            "   texcoord.s = dot(texturespace_pos, texgen_s);\n"
-            "   texcoord.t = dot(texturespace_pos, texgen_t);\n"
+         #endif
+         "   vec2 texcoord;\n"
+         "   vec3 texturespace_pos = objectspace_pos + transform[2].xyz;\n"
+         "   texcoord.s = dot(texturespace_pos, texgen_s);\n"
+         "   texcoord.t = dot(texturespace_pos, texgen_t);\n"
 
-            // @TODO: use 2 bits of facedata.w to enable animation of facedata.x & y?
-   
-            "   vec4 tex1 = texture(tex_array[0], vec3(tex1_scale * texcoord, float(tex1_id)));\n"
-            "   vec4 tex2 = texture(tex_array[1], vec3(tex2_scale * texcoord, float(tex2_id)));\n"
+         // @TODO: use 2 bits of facedata.w to enable animation of facedata.x & y?
 
-            "   bool emissive = (int(color.w) & 1) != 0;\n"
+         "   vec4 tex1 = texture(tex_array[0], vec3(tex1_scale * texcoord, float(tex1_id)));\n"
+         "   vec4 tex2 = texture(tex_array[1], vec3(tex2_scale * texcoord, float(tex2_id)));\n"
 
-            // recolor textures
-            "   if ((color_id &  64u) != 0u) tex1.xyz *= color.xyz;\n"
-            "   if ((color_id & 128u) != 0u) tex2.xyz *= color.xyz;\n"
+         "   bool emissive = (int(color.w) & 1) != 0;\n"
 
-            "   tex2.a *= texlerp;\n"
+         // recolor textures
+         "   if ((color_id &  64u) != 0u) tex1.xyz *= color.xyz;\n"
+         "   if ((color_id & 128u) != 0u) tex2.xyz *= color.xyz;\n"
 
-            //  @TODO: could use a separate lookup table keyed on tex2 to determine this
-            "   if (texblend_mode)\n"
-            "      albedo = tex2.xyz * rlerp(tex2.a, 2.0*tex1.xyz, vec3(1.0,1.0,1.0));\n"
-            "   else\n"
-            "      albedo = rlerp(tex2.a, tex1.xyz, tex2.xyz);\n" // @TODO premultiplied alpha
+         "   tex2.a *= texlerp;\n"
 
-            "   fragment_alpha = tex1.a;\n"
-   },
-   { STBVOX_TAG_NOT | STBVOX_TAG_textured,
+         //  @TODO: could use a separate lookup table keyed on tex2 to determine this
+         "   if (texblend_mode)\n"
+         "      albedo = tex2.xyz * rlerp(tex2.a, 2.0*tex1.xyz, vec3(1.0,1.0,1.0));\n"
+         "   else\n"
+         "      albedo = rlerp(tex2.a, tex1.xyz, tex2.xyz);\n" // @TODO premultiplied alpha
 
-            "   vec4 color;"
-            "   color.xyz = vec3(facedata.xyz) / 255.0;\n"
-            "   bool emissive = (facedata.w & 128) != 0;\n"
-            "   albedo = color.xyz;\n"
-            "   fragment_alpha = 1.0;\n"
+         "   fragment_alpha = tex1.a;\n"
+      #else // NOT TEXTURED
+         "   vec4 color;"
+         "   color.xyz = vec3(facedata.xyz) / 255.0;\n"
+         "   bool emissive = (facedata.w & 128) != 0;\n"
+         "   albedo = color.xyz;\n"
+         "   fragment_alpha = 1.0;\n"
+      #endif
 
-   },
-   { STBVOX_TAG_all,
+      #ifdef STBVOX_ICONFIG_VARYING_VERTEX_NORMALS
+         // currently, there are no modes that trigger this path; idea is that there
+         // could be a couple of bits per vertex to perturb the normal to e.g. get curved look
+         "   vec3 normal = normalize(vnormal);\n"
+      #else
+         "   vec3 normal = vnormal;\n"
+      #endif
 
-            // compute the normal
+      "   vec3 ambient_color = dot(normal, ambient[0]) * ambient[1] + ambient[2];\n"
 
-            "   vec3 normal = vnormal;\n"
-            //"   vec3 normal = normalize(vnormal);\n"
+      "   ambient_color = clamp(ambient_color, 0.0, 1.0);"
+      "   ambient_color *= amb_occ;\n"
 
-            // @TODO: bump map normal
+      "   vec3 lit_color;\n"
+      "   if (!emissive)\n"
+      #if defined(STBVOX_ICONFIG_LIGHTING) || defined(STBVOX_CONFIG_LIGHTING_SIMPLE)
+         "      lit_color = compute_lighting(objectspace_pos + transform[1], normal, albedo, ambient_color);\n"
+      #else
+         "      lit_color = albedo * ambient_color ;\n"
+      #endif
+      "   else\n"
+      "      lit_color = albedo;\n"
 
-            "   vec3 amb_color = dot(normal, ambient[0]) * ambient[1] + ambient[2];\n"
+      #if defined(STBVOX_ICONFIG_FOG) || defined(STBVOX_CONFIG_FOG_SMOOTHSTEP)
+         "   vec3 dist = objectspace_pos + (transform[1] - camera_pos.xyz);\n"
+         "   lit_color = compute_fog(lit_color, dist);\n"
+      #endif
 
-            "   amb_color = clamp(amb_color, 0.0, 1.0);"
-            "   amb_color *= amb_occ;\n"
+      "   vec4 final_color = vec4(lit_color, fragment_alpha);\n"
+      "   outcolor = final_color;\n"
+      "}\n"
 
-            "   vec3 lit_color;\n"
-            "   vec3 lighting = compute_lighting(objectspace_pos + transform[1], normal) + amb_color;\n"
-            "   if (!emissive)\n"
-            "      lit_color = lighting * albedo;\n"
-            "   else\n"
-            "      lit_color = albedo;\n"
+   #ifdef STBVOX_CONFIG_LIGHTING_SIMPLE
+      "\n"
+      "uniform vec3 light_source[2];\n"
+      "vec3 compute_lighting(vec3 pos, vec3 norm, vec3 albedo, vec3 ambient)\n"
+      "{\n"
+      "   vec3 light_dir = light_source[0] - pos;\n"
+      "   float lambert = dot(light_dir, norm) / dot(light_dir, light_dir);\n"
+      "   vec3 diffuse = clamp(light_source[1] * clamp(lambert, 0.0, 1.0), 0.0, 1.0);\n"
+      "   return (diffuse + ambient) * albedo;\n"
+      "}\n"
+   #endif
 
-            // @TODO dynamic lighting based on normal, and based on "vec3 worldspace_pos = objectspace_pos + o2w[1];\n"
-            // @TODO shadow test
-            // @TODO fog
-
-// smoothstep fog:
-#if 1
-   "   vec3 dist = objectspace_pos + (transform[1] - camera_pos.xyz);\n"
-   "   float f = sqrt(dot(dist,dist))/1320.0;\n"
-   "   f = clamp(f, 0.0, 1.0);\n" 
-   "   f = 3.0*f*f - 2.0*f*f*f;\n" // smoothstep
-   "   f = f*f;\n"  // fade in more smoothly
-   "   lit_color.xyz = rlerp(f, lit_color.xyz, ambient[3]);\n"
-#endif
-
-
-
-            "   vec4 final_color = vec4(lit_color, fragment_alpha);\n"
-            "   outcolor = final_color;\n"
-            "}"
-
-"vec3 compute_lighting(vec3 pos, vec3 norm)\n"
-"{\n"
-"   vec3 light_dir = light_source[0] - pos;\n"
-"   float lambert = dot(light_dir, norm) / dot(light_dir, light_dir);\n"
-"   return clamp(light_source[1] * clamp(lambert, 0.0, 1.0), 0.0, 1.0);\n"
-"}\n"
-   },
+   #ifdef STBVOX_CONFIG_FOG_SMOOTHSTEP
+      "\n"
+      "vec3 compute_fog(vec3 color, vec3 relative_pos)\n"
+      "{\n"
+      "   float f = sqrt(dot(relative_pos,relative_pos))/1320.0;\n"
+      "   f = clamp(f, 0.0, 1.0);\n" 
+      "   f = 3.0*f*f - 2.0*f*f*f;\n" // smoothstep
+      "   f = f*f;\n"  // fade in more smoothly
+      "   return rlerp(f, color.xyz, ambient[3]);\n"
+      "}\n"
+   #endif
 };
 
-static int stbvox_check_tag(stbvox_mesh_maker *mm, unsigned int test_tag)
+STBVXDEC char *stbvox_get_vertex_shader(void)
 {
-   if (test_tag & STBVOX_TAG_NOT)
-      return (test_tag & mm->tags) == 0;        // require absence of all tags
-   else
-      return (test_tag & mm->tags) == test_tag; // require AND of all tags
-
+   return stbvox_vertex_program;
 }
 
-static int stbvox_build_tagged_string(stbvox_mesh_maker *mm, char *buffer, size_t buffer_size, stbvox_tagged_string *str, int num_chunks)
+STBVXDEC char *stbvox_get_fragment_shader(void)
 {
-   size_t pos=0;
-   int i;
-   for (i=0; i < num_chunks; ++i) {
-      if (stbvox_check_tag(mm, str[i].tag)) {
-         char *text = str[i].str;
-         while (*text) {
-            if (pos < buffer_size)
-               buffer[pos] = *text;
-            ++pos;
-            ++text;
-         }
-      }
-   }
-   if (pos < buffer_size) {
-      buffer[pos++] = 0;
-      return pos;
-   } else {
-      return -(int)pos;
-   }
-}
-
-int stbvox_get_vertex_shader(stbvox_mesh_maker *mm, char *buffer, size_t buffer_size)
-{
-   return stbvox_build_tagged_string(mm, buffer, buffer_size,
-                                     stbvox_vertex_program,
-                                     sizeof(stbvox_vertex_program)/sizeof(stbvox_vertex_program[0]));
-}
-
-int stbvox_get_fragment_shader(stbvox_mesh_maker *mm, char *buffer, size_t buffer_size)
-{
-   return stbvox_build_tagged_string(mm, buffer, buffer_size,
-                                     stbvox_fragment_program,
-                                     sizeof(stbvox_fragment_program)/sizeof(stbvox_fragment_program[0]));
+   return stbvox_fragment_program;
 }
 
 static float stbvox_dummy_transform[3][3];
 
-stbvox_uniform_info stbvox_uniforms[] =
+#ifdef STBVOX_CONFIG_PREFER_TEXBUFFER
+#define STBVOX_TEXBUF 1
+#else
+#define STBVOX_TEXBUF 0
+#endif
+
+static stbvox_uniform_info stbvox_uniforms[] =
 {
-   { STBVOX_UNIFORM_TYPE_sampler  ,  4,   1, "facearray"    , 0                           , STBVOX_TAG_face_sampled },
-   { STBVOX_UNIFORM_TYPE_vec3     , 12,   3, "transform"    , stbvox_dummy_transform[0]   , STBVOX_TAG_all },
-
-   { STBVOX_UNIFORM_TYPE_sampler  ,  4,   2, "tex_array"    , 0                           , STBVOX_TAG_textured },
-   { STBVOX_UNIFORM_TYPE_vec2     ,  8, 128, "texscale"     , stbvox_default_texscale[0]  , STBVOX_TAG_textured },
-
-   { STBVOX_UNIFORM_TYPE_vec4     , 16,  64, "color_table"  , stbvox_default_palette[0]   , STBVOX_TAG_textured },
-
-   { STBVOX_UNIFORM_TYPE_vec3     , 12,  32, "normal_table" , stbvox_default_normals[0]   , STBVOX_TAG_all },
-   { STBVOX_UNIFORM_TYPE_vec3     , 12,  64, "texgen"       , stbvox_default_texgen[0][0] , STBVOX_TAG_textured },
-
-   { STBVOX_UNIFORM_TYPE_vec3     , 12,   4, "ambient"      , 0                           , STBVOX_TAG_all },
-   { STBVOX_UNIFORM_TYPE_vec4     , 12,   1, "camera_pos"   , stbvox_dummy_transform[0]   , STBVOX_TAG_all },
+   { STBVOX_UNIFORM_TYPE_sampler  ,  4,   1, "facearray"    , 0                           },
+   { STBVOX_UNIFORM_TYPE_vec3     , 12,   3, "transform"    , stbvox_dummy_transform[0]   },
+   { STBVOX_UNIFORM_TYPE_sampler  ,  4,   2, "tex_array"    , 0                           },
+   { STBVOX_UNIFORM_TYPE_vec2     ,  8, 128, "texscale"     , stbvox_default_texscale[0] , STBVOX_TEXBUF },
+   { STBVOX_UNIFORM_TYPE_vec4     , 16,  64, "color_table"  , stbvox_default_palette[0]  , STBVOX_TEXBUF },
+   { STBVOX_UNIFORM_TYPE_vec3     , 12,  32, "normal_table" , stbvox_default_normals[0]   },
+   { STBVOX_UNIFORM_TYPE_vec3     , 12,  64, "texgen"       , stbvox_default_texgen[0][0], STBVOX_TEXBUF },
+   { STBVOX_UNIFORM_TYPE_vec3     , 12,   4, "ambient"      , 0                           },
+   { STBVOX_UNIFORM_TYPE_vec4     , 12,   1, "camera_pos"   , stbvox_dummy_transform[0]   },
 };
 
-stbvox_uniform_info *stbvox_get_uniform_info(stbvox_mesh_maker *mm, int uniform)
+STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform)
 {
-   if (stbvox_default_palette[0][0] == 0) // NOTE: not threadsafe, so call once to init
-      stbvox_build_default_palette();
-
    if (uniform < 0 || uniform >= STBVOX_UNIFORM_count)
-      return NULL;
+      return 0;
 
-   if (stbvox_check_tag(mm, stbvox_uniforms[uniform].tags))
-      return &stbvox_uniforms[uniform];
-   else
-      return NULL;
+   *info = stbvox_uniforms[uniform];
+   return 1;
 }
 
 #define STBVOX_GET_GEO(geom_data)  ((geom_data) & 15)
@@ -1206,6 +1055,1079 @@ static unsigned char stbvox_face3_lerp[6] = { 0,3,6,9,12,14 };
 static unsigned char stbvox_face3_updown[8] = { 0,2,4,7,0,2,4,7 };
 
 // vertex offsets for face vertices
+static unsigned char stbvox_vertex_vector[6][4][3];
+static stbvox_mesh_vertex stbvox_vmesh_delta_normal[6][4];
+static stbvox_mesh_vertex stbvox_vmesh_pre_vheight[6][4];
+static stbvox_mesh_vertex stbvox_vmesh_delta_half_z[6][4];
+static stbvox_mesh_vertex stbvox_vmesh_crossed_pair[6][4];
+
+// stbvox_vertex_vector, but read coordinates as binary numbers, zyx
+static unsigned char stbvox_vertex_selector[6][4];
+
+void stbvox_get_quad_vertex_pointer(stbvox_mesh_maker *mm, int mesh, stbvox_mesh_vertex **vertices, stbvox_mesh_face face)
+{
+   char *p = mm->output_cur[mesh][0];
+   int step = mm->output_step[mesh][0];
+
+   // allocate a new quad from the mesh
+   vertices[0] = (stbvox_mesh_vertex *) p; p += step;
+   vertices[1] = (stbvox_mesh_vertex *) p; p += step;
+   vertices[2] = (stbvox_mesh_vertex *) p; p += step;
+   vertices[3] = (stbvox_mesh_vertex *) p; p += step;
+   mm->output_cur[mesh][0] = p;
+
+   // output the face
+   #ifdef STBVOX_ICONFIG_FACE_ATTRIBUTE
+      // write face as interleaved vertex data
+      *(stbvox_mesh_face *) (vertices[0]+1) = face;
+      *(stbvox_mesh_face *) (vertices[1]+1) = face;
+      *(stbvox_mesh_face *) (vertices[2]+1) = face;
+      *(stbvox_mesh_face *) (vertices[3]+1) = face;
+   #else
+      *(stbvox_mesh_face *) mm->output_cur[mesh][1] = face;
+      mm->output_cur[mesh][1] += 4;
+   #endif
+}
+
+void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh, int normal)
+{
+   stbvox_mesh_face face_data = stbvox_compute_mesh_face_value(mm,rot,face,v_off, normal);
+
+   // still need to compute ao & texlerp for each vertex
+
+   // first compute texlerp into p1
+   stbvox_mesh_vertex p1[4] = { 0 };
+
+   if (mm->input.block_texlerp) {
+      stbvox_block_type bt = mm->input.blocktype[v_off];
+      unsigned char val = mm->input.block_texlerp[bt];
+      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,val);
+   } else if (mm->input.block_texlerp_face) {
+      stbvox_block_type bt = mm->input.blocktype[v_off];
+      unsigned char bt_face = STBVOX_ROTATE(face, rot.block);
+      unsigned char val = mm->input.block_texlerp_face[bt][bt_face];
+      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,val);
+   } else if (mm->input.texlerp_face3) {
+      unsigned char val = (mm->input.texlerp_face3[v_off] >> stbvox_face3_lerp[face]) & 7;
+      if (face >= 4)
+         val = stbvox_face3_updown[val];
+      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,val);
+   } else if (mm->input.texlerp) {
+      unsigned char facelerp = (mm->input.texlerp[v_off] >> stbvox_face_lerp[face]) & 3;
+      if (facelerp == STBVOX_TEXLERP_use_vert) {
+         if (mm->input.texlerp_vert3 && face != STBVOX_FACE_down) {
+            unsigned char shift = stbvox_vert3_lerp[face];
+            p1[0] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][0]] >> shift) & 7;
+            p1[1] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][1]] >> shift) & 7;
+            p1[2] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][2]] >> shift) & 7;
+            p1[3] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][3]] >> shift) & 7;
+         } else {
+            p1[0] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][0]]>>6];
+            p1[1] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][1]]>>6];
+            p1[2] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][2]]>>6];
+            p1[3] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][3]]>>6];
+         }
+         p1[0] = stbvox_vertex_p(0,0,0,0,p1[0]);
+         p1[1] = stbvox_vertex_p(0,0,0,0,p1[1]);
+         p1[2] = stbvox_vertex_p(0,0,0,0,p1[2]);
+         p1[3] = stbvox_vertex_p(0,0,0,0,p1[3]);
+      } else {
+         p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,stbvox_vert_lerp_for_face_lerp[facelerp]);
+      }
+   } else {
+      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,7);
+   }
+
+   {
+      stbvox_mesh_vertex *mv[4];
+      stbvox_get_quad_vertex_pointer(mm, mesh, mv, face_data);
+
+      if (mm->input.lighting) {
+         if (mm->input.lighting_at_vertices) {
+            int i;
+            for (i=0; i < 4; ++i) {
+               *mv[i] = vertbase + face_coord[i];
+                          + stbvox_vertex_p(0,0,0,mm->input.lighting[v_off + mm->cube_vertex_offset[face][i]] & 63,0);
+            }
+         } else {
+            unsigned char *amb = &mm->input.lighting[v_off];
+            int i,j;
+            #ifdef STBVOX_ROTATION_IN_LIGHTING
+            #define STBVOX_GET_LIGHTING(light) ((light) & ~3)
+            #define STBVOX_LIGHTING_ROUNDOFF   8
+            #else
+            #define STBVOX_GET_LIGHTING(light) (light)
+            #define STBVOX_LIGHTING_ROUNDOFF   2
+            #endif
+
+            for (i=0; i < 4; ++i) {
+               // for each vertex, gather from the four neighbor blocks it's facing
+               unsigned char *vamb = &amb[mm->cube_vertex_offset[face][i]];
+               int total=0;
+               for (j=0; j < 4; ++j)
+                  total += STBVOX_GET_LIGHTING(vamb[mm->vertex_gather_offset[face][j]]);
+               *mv[i] = vertbase + face_coord[i]
+                          + stbvox_vertex_p(0,0,0,(total+STBVOX_LIGHTING_ROUNDOFF)>>4,0);
+                          // >> 4 is because:
+                          //   >> 2 to divide by 4 to get average over 4 samples
+                          //   >> 2 because input is 8 bits, output is 6 bits
+            }
+
+            // @TODO: gather baked lighting where we have precomputed
+            // shadow bits for each light and we gather them from neighbors
+            // as above then do normal diffuse light computation--this
+            // needs a variant shader which has 8-bit rgb as well, in
+            // which case 'lighting' isn't needed so we have ~14 more
+            // bits to store stuff per vertex
+            //
+            // Or alternatively note that gathering baked *lighting*
+            // is different from gathering baked ao; baked ao can count
+            // solid blocks as 0 ao, but baked lighting wants average
+            // of non-blocked, not average & treat blocked as 0. And
+            // we can't bake the right value into the solid blocks
+            // because they can have different lighting values on
+            // different sides.
+
+         }
+      } else {
+         *mv[0] = vertbase + face_coord[0] + p1[0];
+         *mv[1] = vertbase + face_coord[1] + p1[1];
+         *mv[2] = vertbase + face_coord[2] + p1[2];
+         *mv[3] = vertbase + face_coord[3] + p1[3];
+      }
+   }
+}
+
+#ifndef STBVOX_OPTIMIZED_VHEIGHT
+static stbvox_face_up_normal_012[4][4][4];
+static stbvox_face_up_normal_013[4][4][4];
+static stbvox_face_up_normal_023[4][4][4];
+static stbvox_face_up_normal_123[4][4][4];
+
+// render non-planar quads by splitting into two triangles, rendering each as a degenerate quad
+static void stbvox_make_12_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh, unsigned char *ht)
+{
+   stbvox_mesh_vertex v[4];
+
+   unsigned char normal1 = stbvox_face_up_normal_012[ht[2]][ht[1]][ht[0]];
+   unsigned char normal2 = stbvox_face_up_normal_123[ht[3]][ht[2]][ht[1]];
+
+   if (face == STBVOX_FACE_down) {
+      normal1 = stbvox_reverse_face[normal1];
+      normal2 = stbvox_reverse_face[normal2];
+   }
+
+   // the floor side face_coord is stored in order NW,NE,SE,SW, but ht[] is stored SW,SE,NW,NE
+   v[0] = face_coord[2];
+   v[1] = face_coord[3];
+   v[2] = face_coord[0];
+   v[3] = face_coord[2];
+   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal1);
+   v[1] = face_coord[0];
+   v[2] = face_coord[1];
+   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal2);
+}
+
+static void stbvox_make_03_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh, unsigned char *ht)
+{
+   stbvox_mesh_vertex v[4];
+
+   unsigned char normal1 = stbvox_face_up_normal_013[ht[3]][ht[1]][ht[0]];
+   unsigned char normal2 = stbvox_face_up_normal_023[ht[3]][ht[2]][ht[0]];
+
+   if (face == STBVOX_FACE_down) {
+      normal1 = stbvox_reverse_face[normal1];
+      normal2 = stbvox_reverse_face[normal2];
+   }
+   v[0] = face_coord[1];
+   v[1] = face_coord[2];
+   v[2] = face_coord[3];
+   v[3] = face_coord[1];
+   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal1);
+   v[1] = face_coord[3];
+   v[2] = face_coord[0];
+   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal2);  // this one is correct!
+}
+#endif
+
+#ifndef STBVOX_CONFIG_PRECISION_Z
+#define STBVOX_CONFIG_PRECISION_Z 1
+#endif
+
+// simple case for mesh generation: we have only solid and empty blocks
+static void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, int v_off, stbvox_mesh_vertex *vmesh)
+{
+   int ns_off = mm->y_stride_in_bytes;
+   int ew_off = mm->x_stride_in_bytes;
+
+   unsigned char *blockptr = &mm->input.blocktype[v_off];
+   stbvox_mesh_vertex basevert = stbvox_vertex_p(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z , 0,0);
+
+   stbvox_rotate rot = { 0,0,0,0,0 };
+   unsigned char simple_rot = 0;
+
+   unsigned char mesh = mm->default_mesh;
+
+   if (mm->input.selector)
+      mesh = mm->input.selector[v_off];
+
+   // check if we're going off the end
+   if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
+      mm->full = 1;
+      return;
+   }
+
+   #ifdef STBVOX_ROTATION_IN_LIGHTING
+   simple_rot = mm->input.lighting[v_off] & 3;
+   #endif
+
+   if (blockptr[ 1]==0) {
+      rot.facerot = simple_rot;
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_up  , v_off, pos, basevert, vmesh+4*STBVOX_FACE_up, mesh, STBVOX_FACE_up);
+   }
+   if (blockptr[-1]==0) {
+      rot.facerot = (-simple_rot) & 3;
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_down, v_off, pos, basevert, vmesh+4*STBVOX_FACE_down, mesh, STBVOX_FACE_down);
+   }
+
+   if (mm->input.rotate) {
+      unsigned char val = mm->input.rotate[v_off];
+      rot.block   = (val >> 0) & 3;
+      rot.overlay = (val >> 2) & 3;
+      rot.tex2    = (val >> 4) & 3;
+      rot.ecolor  = (val >> 6) & 3;
+   } else {
+      rot.block = rot.overlay = rot.tex2 = rot.ecolor = simple_rot;
+   }
+   rot.facerot = 0;
+
+   if (blockptr[ ns_off]==0)
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_north, v_off, pos, basevert, vmesh+4*STBVOX_FACE_north, mesh, STBVOX_FACE_north);
+   if (blockptr[-ns_off]==0)
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_south, v_off, pos, basevert, vmesh+4*STBVOX_FACE_south, mesh, STBVOX_FACE_south);
+   if (blockptr[ ew_off]==0)
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_east , v_off, pos, basevert, vmesh+4*STBVOX_FACE_east, mesh, STBVOX_FACE_east);
+   if (blockptr[-ew_off]==0)
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_west , v_off, pos, basevert, vmesh+4*STBVOX_FACE_west, mesh, STBVOX_FACE_west);
+}
+
+
+// void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, int v_off)
+//
+// complex case for mesh generation: we have lots of different
+// block types, and we don't want to generate faces of blocks
+// if they're hidden by neighbors.
+//
+// we use lots of tables to determine this: we have a table
+// which tells us what face type is generated for each type of
+// geometry, and then a table that tells us whether that type
+// is hidden by a neighbor.
+
+
+#define STBVOX_MAX_GEOM     16
+#define STBVOX_NUM_ROTATION  4
+
+// this is used to determine if a face is ever generated at all
+static unsigned char stbvox_hasface[STBVOX_MAX_GEOM][STBVOX_NUM_ROTATION];
+
+// this determines which face type above is visible on each side of the geometry
+static unsigned char stbvox_facetype[STBVOX_GEOM_count][6];
+
+// This table indicates what normal to use for the "up" face of a sloped geom
+static unsigned char stbvox_floor_slope_for_rot[4];
+static unsigned char stbvox_ceil_slope_for_rot[4];
+
+// these are the types of faces each block can have
+enum
+{
+   STBVOX_FT_none    ,
+   STBVOX_FT_upper   ,
+   STBVOX_FT_lower   ,
+   STBVOX_FT_solid   ,
+   STBVOX_FT_diag_012,
+   STBVOX_FT_diag_023,
+   STBVOX_FT_diag_013,
+   STBVOX_FT_diag_123,
+   STBVOX_FT_force   , // can't be covered up, used for internal faces, also hides nothing
+   STBVOX_FT_partial , // only covered by solid, never covers anything else
+
+   STBVOX_FT_count
+};
+
+// this table indicates whether, for each pair of types above, a face is visible.
+// each value indicates whether a given type is visible for each neighbor type
+static unsigned short stbvox_face_visible[STBVOX_FT_count];
+
+// the vertex heights of the block types, in binary vertex order (zyx):
+// lower: SW, SE, NW, NE; upper: SW, SE, NW, NE
+static stbvox_mesh_vertex stbvox_geometry_vheight[8][8];
+
+// rotate vertices defined as [z][y][x] coords
+static unsigned char stbvox_rotate_vertex[8][4];
+
+#ifdef STBVOX_OPTIMIZED_VHEIGHT
+static stbvox_optimized_face_up_normal[4][4][4][4];
+#else
+static stbvox_planar_face_up_normal[4][4][4];
+#endif
+
+static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, int v_off)
+{
+   int ns_off = mm->y_stride_in_bytes;
+   int ew_off = mm->x_stride_in_bytes;
+   int visible_faces, visible_base;
+   unsigned char mesh;
+
+   // first gather the geometry info for this block and all neighbors
+
+   unsigned char bt, nbt[6];
+   unsigned char geo, ngeo[6];
+   unsigned char rot, nrot[6];
+
+   bt = mm->input.blocktype[v_off];
+   nbt[0] = mm->input.blocktype[v_off + ew_off];
+   nbt[1] = mm->input.blocktype[v_off + ns_off];
+   nbt[2] = mm->input.blocktype[v_off - ew_off];
+   nbt[3] = mm->input.blocktype[v_off - ns_off];
+   nbt[4] = mm->input.blocktype[v_off +      1];
+   nbt[5] = mm->input.blocktype[v_off -      1];
+   if (mm->input.geometry) {
+      int i;
+      geo = mm->input.geometry[v_off];
+      ngeo[0] = mm->input.geometry[v_off + ew_off];
+      ngeo[1] = mm->input.geometry[v_off + ns_off];
+      ngeo[2] = mm->input.geometry[v_off - ew_off];
+      ngeo[3] = mm->input.geometry[v_off - ns_off];
+      ngeo[4] = mm->input.geometry[v_off +      1];
+      ngeo[5] = mm->input.geometry[v_off -      1];
+
+      #ifndef STBVOX_ROTATION_IN_LIGHTING
+      rot = (geo >> 4) & 3;
+      geo &= 15;
+      for (i=0; i < 6; ++i) {
+         nrot[i] = (ngeo[i] >> 4) & 3;
+         ngeo[i] &= 15;
+      }
+      #endif
+      STBVOX_NOTUSED(i);
+   } else {
+      int i;
+      assert(mm->input.block_geometry);
+      geo = mm->input.block_geometry[bt];
+      for (i=0; i < 6; ++i)
+         ngeo[i] = mm->input.block_geometry[nbt[i]];
+      if (mm->input.selector) {
+         #ifndef STBVOX_ROTATION_IN_LIGHTING
+         rot     = (mm->input.selector[v_off         ] >> 4) & 3;
+         nrot[0] = (mm->input.selector[v_off + ew_off] >> 4) & 3;
+         nrot[1] = (mm->input.selector[v_off + ns_off] >> 4) & 3;
+         nrot[2] = (mm->input.selector[v_off - ew_off] >> 4) & 3;
+         nrot[3] = (mm->input.selector[v_off - ns_off] >> 4) & 3;
+         nrot[4] = (mm->input.selector[v_off +      1] >> 4) & 3;
+         nrot[5] = (mm->input.selector[v_off -      1] >> 4) & 3;
+         #endif
+      } else {
+         #ifndef STBVOX_ROTATION_IN_LIGHTING
+         rot = (geo>>4)&3;
+         geo &= 15;
+         for (i=0; i < 6; ++i) {
+            nrot[i] = (ngeo[i]>>4)&3;
+            ngeo[i] &= 15;
+         }
+         #endif
+      }
+   }
+
+   #ifdef STBVOX_ROTATION_IN_LIGHTING
+   rot = mm->input.lighting[v_off] & 3;
+   nrot[0] = (mm->input.lighting[v_off + ew_off]) & 3;
+   nrot[1] = (mm->input.lighting[v_off + ns_off]) & 3;
+   nrot[2] = (mm->input.lighting[v_off - ew_off]) & 3;
+   nrot[3] = (mm->input.lighting[v_off - ns_off]) & 3;
+   nrot[4] = (mm->input.lighting[v_off +      1]) & 3;
+   nrot[5] = (mm->input.lighting[v_off -      1]) & 3;
+   #endif
+
+   if (geo == STBVOX_GEOM_transp) {
+      // transparency has a special rule: if the blocktype is the same,
+      // and the faces are compatible, then can hide them; otherwise,
+      // force them on
+      // Note that this means we don't support any transparentshapes other
+      // than solid blocks, since detecting them is too complicated. If
+      // you wanted to do something like minecraft water, you probably
+      // should just do that with a separate renderer anyway. (We don't
+      // support transparency sorting so you need to use alpha test
+      // anyway)
+      int i;
+      for (i=0; i < 6; ++i)
+         if (nbt[i] != bt) {
+            nbt[i] = 0;
+            ngeo[i] = STBVOX_GEOM_empty;
+         } else
+            ngeo[i] = STBVOX_GEOM_solid;
+      geo = STBVOX_GEOM_solid;
+   }
+
+   // now compute the face visibility
+   visible_base = stbvox_hasface[geo][rot];
+   // @TODO: assert(visible_base != 0); // we should have early-outted earlier in this case
+   visible_faces = 0;
+
+   // now, for every face that might be visible, check if neighbor hides it
+   if (visible_base & (1 << STBVOX_FACE_east)) {
+      int  type = stbvox_facetype[ geo   ][(STBVOX_FACE_east+ rot   )&3];
+      int ntype = stbvox_facetype[ngeo[0]][(STBVOX_FACE_west+nrot[0])&3];
+      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_east)) & (1 << STBVOX_FACE_east);
+   }
+   if (visible_base & (1 << STBVOX_FACE_north)) {
+      int  type = stbvox_facetype[ geo   ][(STBVOX_FACE_north+ rot   )&3];
+      int ntype = stbvox_facetype[ngeo[1]][(STBVOX_FACE_south+nrot[1])&3];
+      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_north)) & (1 << STBVOX_FACE_north);
+   }
+   if (visible_base & (1 << STBVOX_FACE_west)) {
+      int  type = stbvox_facetype[ geo   ][(STBVOX_FACE_west+ rot   )&3];
+      int ntype = stbvox_facetype[ngeo[2]][(STBVOX_FACE_east+nrot[2])&3];
+      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_west)) & (1 << STBVOX_FACE_west);
+   }
+   if (visible_base & (1 << STBVOX_FACE_south)) {
+      int  type = stbvox_facetype[ geo   ][(STBVOX_FACE_south+ rot   )&3];
+      int ntype = stbvox_facetype[ngeo[3]][(STBVOX_FACE_north+nrot[3])&3];
+      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_south)) & (1 << STBVOX_FACE_south);
+   }
+   if (visible_base & (1 << STBVOX_FACE_up)) {
+      int  type = stbvox_facetype[ geo   ][STBVOX_FACE_up];
+      int ntype = stbvox_facetype[ngeo[4]][STBVOX_FACE_down];
+      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_up)) & (1 << STBVOX_FACE_up);
+   }
+   if (visible_base & (1 << STBVOX_FACE_down)) {
+      int  type = stbvox_facetype[ geo   ][STBVOX_FACE_down];
+      int ntype = stbvox_facetype[ngeo[5]][STBVOX_FACE_up];
+      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_down)) & (1 << STBVOX_FACE_down);
+   }
+
+   if (geo == STBVOX_GEOM_force)
+      geo = STBVOX_GEOM_solid;
+
+   assert((geo == STBVOX_GEOM_crossed_pair) ? (visible_faces == 15) : 1);
+
+   // now we finally know for sure which faces are getting generated
+   if (visible_faces == 0)
+      return;
+
+   mesh = mm->default_mesh;
+   if (mm->input.selector)
+      mesh = mm->input.selector[v_off];
+
+   if (geo <= STBVOX_GEOM_ceil_slope_north_is_bottom) {
+      // this is the simple case, we can just use regular block gen with special vmesh calculated with vheight
+      stbvox_mesh_vertex basevert;
+      stbvox_mesh_vertex vmesh[6][4];
+      stbvox_rotate rotate = { 0,0,0,0,0 };
+      unsigned char simple_rot = rot;
+      int i;
+      // we only need to do this for the displayed faces, but it's easier
+      // to just do it up front; @OPTIMIZE check if it's faster to do it
+      // for visible faces only
+      for (i=0; i < 6*4; ++i) {
+         int vert = stbvox_vertex_selector[0][i];
+         vert = stbvox_rotate_vertex[vert][rot];
+         vmesh[0][i] = stbvox_vmesh_pre_vheight[0][i]
+                     + stbvox_geometry_vheight[geo][vert];
+      }
+
+      basevert = stbvox_vertex_p(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z, 0,0);
+      if (mm->input.selector) {
+         mesh = mm->input.selector[v_off];
+      }
+
+      // check if we're going off the end
+      if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
+         mm->full = 1;
+         return;
+      }
+
+      if (geo >= STBVOX_GEOM_floor_slope_north_is_top) {
+         if (visible_faces & (1 << STBVOX_FACE_up)) {
+            int normal = geo == STBVOX_GEOM_floor_slope_north_is_top ? stbvox_floor_slope_for_rot[simple_rot] : STBVOX_FACE_up;
+            rotate.facerot = simple_rot;
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, normal);
+         }
+         if (visible_faces & (1 << STBVOX_FACE_down)) {
+            int normal = geo == STBVOX_GEOM_ceil_slope_north_is_bottom ? stbvox_ceil_slope_for_rot[simple_rot] : STBVOX_FACE_down;
+            rotate.facerot = (-rotate.facerot) & 3;
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, normal);
+         }
+      } else {
+         if (visible_faces & (1 << STBVOX_FACE_up)) {
+            rotate.facerot = simple_rot;
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, STBVOX_FACE_up);
+         }
+         if (visible_faces & (1 << STBVOX_FACE_down)) {
+            rotate.facerot = (-rotate.facerot) & 3;
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, STBVOX_FACE_down);
+         }
+      }
+
+      if (mm->input.rotate) {
+         unsigned char val = mm->input.rotate[v_off];
+         rotate.block   = (val >> 0) & 3;
+         rotate.overlay = (val >> 2) & 3;
+         rotate.tex2    = (val >> 4) & 3;
+         rotate.ecolor  = (val >> 6) & 3;
+      } else {
+         rotate.block = rotate.overlay = rotate.tex2 = rotate.ecolor = simple_rot;
+      }
+
+      rotate.facerot = 0;
+
+      if (visible_faces & (1 << STBVOX_FACE_north))
+         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_north, v_off, pos, basevert, vmesh[STBVOX_FACE_north], mesh, STBVOX_FACE_north);
+      if (visible_faces & (1 << STBVOX_FACE_south))
+         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_south, v_off, pos, basevert, vmesh[STBVOX_FACE_south], mesh, STBVOX_FACE_south);
+      if (visible_faces & (1 << STBVOX_FACE_east))
+         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_east , v_off, pos, basevert, vmesh[STBVOX_FACE_east ], mesh, STBVOX_FACE_east);
+      if (visible_faces & (1 << STBVOX_FACE_west))
+         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_west , v_off, pos, basevert, vmesh[STBVOX_FACE_west ], mesh, STBVOX_FACE_west);
+   }
+   if (geo >= STBVOX_GEOM_floor_vheight_03) {
+      // this case can also be generated with regular block gen with special vmesh,
+      // except:
+      //     if we want to generate middle diagonal for 'weird' blocks
+      //     it's more complicated to detect neighbor matchups
+      stbvox_mesh_vertex vmesh[6][4];
+      stbvox_mesh_vertex cube[8];
+      stbvox_mesh_vertex basevert;
+      stbvox_rotate rotate = { 0,0,0,0,0 };
+      unsigned char simple_rot = rot;
+      unsigned char ht[4];
+      int extreme;
+
+      // extract the heights
+      if (mm->input.vheight) {
+         unsigned char v =  mm->input.vheight[v_off];
+         ht[0] = (v >> 0) & 3;
+         ht[1] = (v >> 2) & 3;
+         ht[2] = (v >> 4) & 3;
+         ht[3] = (v >> 6) & 3;
+      } else if (mm->input.block_vheight) {
+         unsigned char v = mm->input.block_vheight[bt];
+         unsigned char raw[4];
+         int i;
+
+         raw[0] = (v >> 0) & 3;
+         raw[1] = (v >> 2) & 3;
+         raw[2] = (v >> 4) & 3;
+         raw[3] = (v >> 6) & 3;
+
+         for (i=0; i < 4; ++i)
+            ht[i] = raw[stbvox_rotate_vertex[i][rot]];
+      } else {
+         assert(0);
+      }
+
+      // flag whether any sides go off the top of the block, which means
+      // our visible_faces test was wrong
+      extreme = (ht[0] == 3 || ht[1] == 3 || ht[2] == 3 || ht[3] == 3);
+
+      if (geo >= STBVOX_GEOM_ceil_vheight_03) {
+         cube[0] = stbvox_vertex_p(0,0,ht[0],0,0);
+         cube[1] = stbvox_vertex_p(0,0,ht[1],0,0);
+         cube[2] = stbvox_vertex_p(0,0,ht[2],0,0);
+         cube[3] = stbvox_vertex_p(0,0,ht[3],0,0);
+         cube[4] = stbvox_vertex_p(0,0,2,0,0);
+         cube[5] = stbvox_vertex_p(0,0,2,0,0);
+         cube[6] = stbvox_vertex_p(0,0,2,0,0);
+         cube[7] = stbvox_vertex_p(0,0,2,0,0);
+      } else {
+         cube[0] = stbvox_vertex_p(0,0,0,0,0);
+         cube[1] = stbvox_vertex_p(0,0,0,0,0);
+         cube[2] = stbvox_vertex_p(0,0,0,0,0);
+         cube[3] = stbvox_vertex_p(0,0,0,0,0);
+         cube[4] = stbvox_vertex_p(0,0,ht[0],0,0);
+         cube[5] = stbvox_vertex_p(0,0,ht[1],0,0);
+         cube[6] = stbvox_vertex_p(0,0,ht[2],0,0);
+         cube[7] = stbvox_vertex_p(0,0,ht[3],0,0);
+      }
+      if (!mm->input.vheight && mm->input.block_vheight) {
+      }
+
+      // build vertex mesh
+      {
+         int i;
+         for (i=0; i < 6*4; ++i) {
+            int vert = stbvox_vertex_selector[0][i];
+            vmesh[0][i] = stbvox_vmesh_pre_vheight[0][i]
+                        + cube[vert];
+         }
+      }
+
+      basevert = stbvox_vertex_p(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z, 0,0);
+      // check if we're going off the end
+      if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
+         mm->full = 1;
+         return;
+      }
+
+      // @TODO generate split faces
+      if (visible_faces & (1 << STBVOX_FACE_up)) {
+         if (geo >= STBVOX_GEOM_ceil_vheight_03)
+            // flat
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, STBVOX_FACE_up);
+         else {
+         #ifndef STBVOX_OPTIMIZED_VHEIGHT
+            // check if it's non-planar
+            if (cube[5] + cube[6] != cube[4] + cube[7]) {
+               // not planar, split along diagonal and make degenerate quads
+               if (geo == STBVOX_GEOM_floor_vheight_03)
+                  stbvox_make_03_split_mesh_for_face(mm, rotate, STBVOX_FACE_up, v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, ht);
+               else
+                  stbvox_make_12_split_mesh_for_face(mm, rotate, STBVOX_FACE_up, v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, ht);
+            } else
+               stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, stbvox_planar_face_up_normal[ht[2]][ht[1]][ht[0]]);
+         #else
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, stbvox_optimized_face_up_normal[ht[3]][ht[2]][ht[1]][ht[0]]);
+         #endif
+         }
+      }
+      if (visible_faces & (1 << STBVOX_FACE_down)) {
+         if (geo < STBVOX_GEOM_ceil_vheight_03)
+            // flat
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, STBVOX_FACE_down);
+         else {
+         #ifndef STBVOX_OPTIMIZED_VHEIGHT
+            // check if it's non-planar
+            if (cube[1] + cube[2] != cube[0] + cube[3]) {
+               // not planar, split along diagonal and make degenerate quads
+               if (geo == STBVOX_GEOM_ceil_vheight_03)
+                  stbvox_make_03_split_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, ht);
+               else
+                  stbvox_make_12_split_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, ht);
+            } else
+               stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, stbvox_reverse_face[stbvox_planar_face_up_normal[ht[2]][ht[1]][ht[0]]]);
+         #else
+            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, stbvox_reverse_face[stbvox_optimized_face_up_normal[ht[3]][ht[2]][ht[1]][ht[0]]]);
+         #endif
+         }
+      }
+
+      if (mm->input.rotate) {
+         unsigned char val = mm->input.rotate[v_off];
+         rotate.block   = (val >> 0) & 3;
+         rotate.overlay = (val >> 2) & 3;
+         rotate.tex2    = (val >> 4) & 3;
+         rotate.ecolor  = (val >> 6) & 3;
+      } else if (mm->input.selector) {
+         rotate.block = rotate.overlay = rotate.tex2 = rotate.ecolor = simple_rot;
+      }
+
+      if ((visible_faces & (1 << STBVOX_FACE_north)) || (extreme && (ht[2] == 3 || ht[3] == 3)))
+         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_north, v_off, pos, basevert, vmesh[STBVOX_FACE_north], mesh, STBVOX_FACE_north);
+      if ((visible_faces & (1 << STBVOX_FACE_south)) || (extreme && (ht[0] == 3 || ht[1] == 3))) 
+         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_south, v_off, pos, basevert, vmesh[STBVOX_FACE_south], mesh, STBVOX_FACE_south);
+      if ((visible_faces & (1 << STBVOX_FACE_east)) || (extreme && (ht[1] == 3 || ht[3] == 3)))
+         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_east , v_off, pos, basevert, vmesh[STBVOX_FACE_east ], mesh, STBVOX_FACE_east);
+      if ((visible_faces & (1 << STBVOX_FACE_west)) || (extreme && (ht[0] == 3 || ht[2] == 3)))
+         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_west , v_off, pos, basevert, vmesh[STBVOX_FACE_west ], mesh, STBVOX_FACE_west);
+   }
+
+   if (geo == STBVOX_GEOM_crossed_pair) {
+      // this can be generated with a special vmesh
+      stbvox_mesh_vertex basevert = stbvox_vertex_p(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z , 0,0);
+      unsigned char simple_rot=0;
+      stbvox_rotate rot = { 0,0,0,0,0 };
+      unsigned char mesh = mm->default_mesh;
+      if (mm->input.selector) {
+         mesh = mm->input.selector[v_off];
+         simple_rot = mesh >> 4;
+         mesh &= 15;
+      }
+
+      // check if we're going off the end
+      if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*4 > mm->output_end[mesh][0]) {
+         mm->full = 1;
+         return;
+      }
+
+      if (mm->input.rotate) {
+         unsigned char val = mm->input.rotate[v_off];
+         rot.block   = (val >> 0) & 3;
+         rot.overlay = (val >> 2) & 3;
+         rot.tex2    = (val >> 4) & 3;
+         rot.ecolor  = (val >> 6) & 3;
+      } else if (mm->input.selector) {
+         rot.block = rot.overlay = rot.tex2 = rot.ecolor = simple_rot;
+      }
+      rot.facerot = 0;
+
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_north, v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_north], mesh, STBVF_ne_u_cross);
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_south, v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_south], mesh, STBVF_sw_u_cross);
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_east , v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_east ], mesh, STBVF_se_u_cross);
+      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_west , v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_west ], mesh, STBVF_nw_u_cross);
+   }
+
+
+   // @TODO
+   // STBVOX_GEOM_floor_slope_north_is_top_as_wall,
+   // STBVOX_GEOM_ceil_slope_north_is_bottom_as_wall,
+}
+
+static void stbvox_make_mesh_for_column(stbvox_mesh_maker *mm, int x, int y, int z0)
+{
+   stbvox_pos pos = { x,y,0 };
+   int v_off = x * mm->x_stride_in_bytes + y * mm->y_stride_in_bytes;
+   int ns_off = mm->y_stride_in_bytes;
+   int ew_off = mm->x_stride_in_bytes;
+   if (mm->input.geometry) {
+      unsigned char *bt  = mm->input.blocktype + v_off;
+      unsigned char *geo = mm->input.geometry + v_off;
+      int z;
+      for (z=z0; z < mm->z1; ++z) {
+         if (bt[z] && ( !bt[z+ns_off] || !STBVOX_GET_GEO(geo[z+ns_off]) || !bt[z-ns_off] || !STBVOX_GET_GEO(geo[z-ns_off])
+                      || !bt[z+ew_off] || !STBVOX_GET_GEO(geo[z+ew_off]) || !bt[z-ew_off] || !STBVOX_GET_GEO(geo[z-ew_off])))
+         {  // TODO check up and down
+            pos.z = z;
+            stbvox_make_mesh_for_block_with_geo(mm, pos, v_off+z);
+            if (mm->full) {
+               mm->cur_z = z;
+               return;
+            }
+         }
+      }
+   } else if (mm->input.block_geometry) {
+      int z;
+      unsigned char *bt  = mm->input.blocktype + v_off;
+      unsigned char *geo = mm->input.block_geometry;
+      for (z=z0; z < mm->z1; ++z) {
+         if (bt[z] && (    geo[bt[z+ns_off]] != STBVOX_GEOM_solid
+                        || geo[bt[z-ns_off]] != STBVOX_GEOM_solid
+                        || geo[bt[z+ew_off]] != STBVOX_GEOM_solid
+                        || geo[bt[z-ew_off]] != STBVOX_GEOM_solid
+                        || geo[bt[z-1]] != STBVOX_GEOM_solid
+                        || geo[bt[z+1]] != STBVOX_GEOM_solid))
+         {
+            pos.z = z;
+            stbvox_make_mesh_for_block_with_geo(mm, pos, v_off+z);
+            if (mm->full) {
+               mm->cur_z = z;
+               return;
+            }
+         }
+      }
+   } else {
+      unsigned char *bt = mm->input.blocktype + v_off;
+      int z;
+      #if STBVOX_CONFIG_PRECISION_Z == 1
+      stbvox_mesh_vertex *vmesh = stbvox_vmesh_delta_half_z[0];
+      #else
+      stbvox_mesh_vertex *vmesh = stbvox_vmesh_delta_normal[0];
+      #endif
+      for (z=z0; z < mm->z1; ++z) {
+         // if it's solid and at least one neighbor isn't solid
+         if (bt[z] && (!bt[z+ns_off] || !bt[z-ns_off] || !bt[z+ew_off] || !bt[z-ew_off] || !bt[z-1] || !bt[z+1])) {
+            pos.z = z;
+            stbvox_make_mesh_for_block(mm, pos, v_off+z, vmesh);
+            if (mm->full) {
+               mm->cur_z = z;
+               return;
+            }
+         }
+      }
+   }
+}
+
+static void stbvox_bring_up_to_date(stbvox_mesh_maker *mm)
+{
+   if (mm->config_dirty) {
+      int i;
+      #ifdef STBVOX_ICONFIG_FACE_ATTRIBUTE
+         mm->num_mesh_slots = 1;
+         for (i=0; i < STBVOX_MAX_MESHES; ++i) {
+            mm->output_size[i][0] = 32;
+            mm->output_step[i][0] = 8;
+         }
+      #else
+         mm->num_mesh_slots = 2;
+         for (i=0; i < STBVOX_MAX_MESHES; ++i) {
+            mm->output_size[i][0] = 16;
+            mm->output_step[i][0] = 4;
+            mm->output_size[i][1] = 4;
+            mm->output_step[i][1] = 4;
+         }
+      #endif
+
+      mm->config_dirty = 0;
+   }
+}
+
+int stbvox_make_mesh(stbvox_mesh_maker *mm)
+{
+   int x,y;
+   stbvox_bring_up_to_date(mm);
+   mm->full = 0;
+   if (mm->cur_x || mm->cur_y || mm->cur_z) {
+      stbvox_make_mesh_for_column(mm, mm->cur_x, mm->cur_y, mm->cur_z);
+      if (mm->full)
+         return 0;
+      ++mm->cur_y;
+      while (mm->cur_y < mm->y1 && !mm->full) {
+         stbvox_make_mesh_for_column(mm, mm->cur_x, mm->cur_y, mm->z0);
+         if (mm->full)
+            return 0;
+         ++mm->cur_y;
+      }
+   }
+   for (x=mm->x0; x < mm->x1; ++x) {
+      for (y=mm->y0; y < mm->y1; ++y) {
+         stbvox_make_mesh_for_column(mm, x, y, mm->z0);
+         if (mm->full) {
+            mm->cur_x = x;
+            mm->cur_y = y;
+            return 0;
+         }
+      }
+   }
+   return 1;
+}
+
+void stbvox_init_mesh_maker(stbvox_mesh_maker *mm)
+{
+   memset(mm, 0, sizeof(*mm));
+   stbvox_build_default_palette();
+
+   mm->config_dirty = 1;
+   mm->default_mesh = 0;
+}
+
+int stbvox_get_buffer_count(stbvox_mesh_maker *mm)
+{
+   stbvox_bring_up_to_date(mm);
+   return mm->num_mesh_slots;
+}
+
+int stbvox_get_buffer_size_per_quad(stbvox_mesh_maker *mm, int n)
+{
+   return mm->output_size[0][n];
+}
+
+void stbvox_reset_buffers(stbvox_mesh_maker *mm)
+{
+   int i;
+   for (i=0; i < STBVOX_MAX_MESHES*STBVOX_MAX_MESH_SLOTS; ++i) {
+      mm->output_cur[0][i] = 0;
+      mm->output_buffer[0][i] = 0;
+   }
+}
+
+void stbvox_set_buffer(stbvox_mesh_maker *mm, int mesh, int slot, void *buffer, size_t len)
+{
+   int i;
+   stbvox_bring_up_to_date(mm);
+   mm->output_buffer[mesh][slot] = (char *) buffer;
+   mm->output_cur   [mesh][slot] = (char *) buffer;
+   mm->output_len   [mesh][slot] = len;
+   mm->output_end   [mesh][slot] = (char *) buffer + len;
+   for (i=0; i < STBVOX_MAX_MESH_SLOTS; ++i) {
+      if (mm->output_buffer[mesh][i]) {
+         assert(mm->output_len[mesh][i] / mm->output_size[mesh][i] == mm->output_len[mesh][slot] / mm->output_size[mesh][slot]);
+      }
+   }
+}
+
+void stbvox_set_default_mesh(stbvox_mesh_maker *mm, int mesh)
+{
+   mm->default_mesh = mesh;
+}
+
+int stbvox_get_quad_count(stbvox_mesh_maker *mm, int mesh)
+{
+   return (mm->output_cur[mesh][0] - mm->output_buffer[mesh][0]) / mm->output_size[mesh][0];
+}
+
+stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm)
+{
+   return &mm->input;
+}
+
+void stbvox_set_input_range(stbvox_mesh_maker *mm, int x0, int y0, int z0, int x1, int y1, int z1)
+{
+   mm->x0 = x0;
+   mm->y0 = y0;
+   mm->z0 = z0;
+
+   mm->x1 = x1;
+   mm->y1 = y1;
+   mm->z1 = z1;
+
+   mm->cur_x = x0;
+   mm->cur_y = y0;
+   mm->cur_z = z0;
+
+   // @TODO validate that this range is representable in this mode
+}
+
+void stbvox_get_transform(stbvox_mesh_maker *mm, float transform[3][3])
+{
+   // scale
+   transform[0][0] = 1.0;
+   transform[0][1] = 1.0;
+   #if STBVOX_CONFIG_PRECISION_Z==1
+   transform[0][2] = 0.5f;
+   #else
+   transform[0][2] = 1.0f;
+   #endif
+   // translation
+   transform[1][0] = (float) (mm->pos_x);
+   transform[1][1] = (float) (mm->pos_y);
+   transform[1][2] = (float) (mm->pos_z);
+   // texture coordinate projection translation
+   transform[2][0] = (float) (mm->pos_x & 63); // @TODO depends on max texture scale
+   transform[2][1] = (float) (mm->pos_y & 63);
+   transform[2][2] = (float) (mm->pos_z & 63);
+}
+
+void stbvox_get_bounds(stbvox_mesh_maker *mm, float bounds[2][3])
+{
+   bounds[0][0] = (float) (mm->pos_x + mm->x0);
+   bounds[0][1] = (float) (mm->pos_y + mm->y0);
+   bounds[0][2] = (float) (mm->pos_z + mm->z0);
+   bounds[1][0] = (float) (mm->pos_x + mm->x1);
+   bounds[1][1] = (float) (mm->pos_y + mm->y1);
+   bounds[1][2] = (float) (mm->pos_z + mm->z1);
+}
+
+void stbvox_set_mesh_coordinates(stbvox_mesh_maker *mm, int x, int y, int z)
+{
+   mm->pos_x = x;
+   mm->pos_y = y;
+   mm->pos_z = z;
+}
+
+void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_bytes, int y_stride_in_bytes)
+{
+   int f,v;
+   mm->x_stride_in_bytes = x_stride_in_bytes;
+   mm->y_stride_in_bytes = y_stride_in_bytes;
+   for (f=0; f < 6; ++f) {
+      for (v=0; v < 4; ++v) {
+         mm->cube_vertex_offset[f][v]   =   stbvox_vertex_vector[f][v][0]    * mm->x_stride_in_bytes
+                                         +  stbvox_vertex_vector[f][v][1]    * mm->y_stride_in_bytes
+                                         +  stbvox_vertex_vector[f][v][2]                           ;
+         mm->vertex_gather_offset[f][v] =  (stbvox_vertex_vector[f][v][0]-1) * mm->x_stride_in_bytes
+                                         + (stbvox_vertex_vector[f][v][1]-1) * mm->y_stride_in_bytes
+                                         + (stbvox_vertex_vector[f][v][2]-1)                        ; 
+      }
+   }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+//
+//    tables
+//
+
+// get opposite-facing normal & texgen for opposite face, used to map up-facing vheight data to down-facing data
+static unsigned char stbvox_reverse_face[STBVF_count] =
+{
+   STBVF_w, STBVF_s, STBVF_e, STBVF_n, STBVF_d   , STBVF_u   , STBVF_wd, STBVF_wu,
+         0,       0,       0,       0, STBVF_sw_d, STBVF_sw_u, STBVF_sd, STBVF_su,
+         0,       0,       0,       0, STBVF_se_d, STBVF_se_u, STBVF_ed, STBVF_eu,
+         0,       0,       0,       0, STBVF_ne_d, STBVF_ne_d, STBVF_nd, STBVF_nu
+};
+
+static float stbvox_default_texgen[2][32][3] =
+{
+   { {  0, 1,0 }, { 0, 0, 1 }, {  0,-1,0 }, { 0, 0,-1 },
+     { -1, 0,0 }, { 0, 0, 1 }, {  1, 0,0 }, { 0, 0,-1 },
+     {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 }, { 0, 0,-1 },
+     {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 }, { 0, 0,-1 },
+     {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 },
+     { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 },
+     {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 },
+     { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 },
+   },
+   { { 0, 0,-1 }, {  0, 1,0 }, { 0, 0, 1 }, {  0,-1,0 },
+     { 0, 0,-1 }, { -1, 0,0 }, { 0, 0, 1 }, {  1, 0,0 },
+     { 0, 0,-1 }, {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 },
+     { 0, 0,-1 }, {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 },
+     { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 },
+     { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 },
+     { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 },
+     { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 },
+   },
+};
+
+#define STBVOX_RSQRT2   0.7071067811865f
+#define STBVOX_RSQRT3   0.5773502691896f
+
+static float stbvox_default_normals[32][3] =
+{
+   { 1,0,0 },  // east
+   { 0,1,0 },  // north
+   { -1,0,0 }, // west
+   { 0,-1,0 }, // south
+   { 0,0,1 },  // up
+   { 0,0,-1 }, // down
+   {  STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // east & up
+   {  STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // east & down
+
+   {  STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // east & up
+   { 0, STBVOX_RSQRT2, STBVOX_RSQRT2 }, // north & up
+   { -STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // west & up
+   { 0,-STBVOX_RSQRT2, STBVOX_RSQRT2 }, // south & up
+   {  STBVOX_RSQRT3, STBVOX_RSQRT3, STBVOX_RSQRT3 }, // ne & up
+   {  STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // ne & down
+   { 0, STBVOX_RSQRT2, STBVOX_RSQRT2 }, // north & up
+   { 0, STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // north & down
+
+   {  STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // east & down
+   { 0, STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // north & down
+   { -STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // west & down
+   { 0,-STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // south & down
+   { -STBVOX_RSQRT3, STBVOX_RSQRT3, STBVOX_RSQRT3 }, // NW & up
+   { -STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // NW & down
+   { -STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // west & up
+   { -STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // west & down
+
+   {  STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NE & up crossed
+   { -STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NW & up crossed
+   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SW & up crossed
+   {  STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SE & up crossed
+   { -STBVOX_RSQRT3,-STBVOX_RSQRT3, STBVOX_RSQRT3 }, // SW & up
+   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // SW & up
+   { 0,-STBVOX_RSQRT2, STBVOX_RSQRT2 }, // south & up
+   { 0,-STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // south & down
+};
+
+static float stbvox_default_texscale[128][2] =
+{
+   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+};
+
+static unsigned char stbvox_default_palette_compact[64][3] =
+{
+   { 255,255,255 }, { 238,238,238 }, { 221,221,221 }, { 204,204,204 },
+   { 187,187,187 }, { 170,170,170 }, { 153,153,153 }, { 136,136,136 },
+   { 119,119,119 }, { 102,102,102 }, {  85, 85, 85 }, {  68, 68, 68 },
+   {  51, 51, 51 }, {  34, 34, 34 }, {  17, 17, 17 }, {   0,  0,  0 },
+   { 255,240,240 }, { 255,220,220 }, { 255,160,160 }, { 255, 32, 32 },
+   { 200,120,160 }, { 200, 60,150 }, { 220,100,130 }, { 255,  0,128 },
+   { 240,240,255 }, { 220,220,255 }, { 160,160,255 }, {  32, 32,255 },
+   { 120,160,200 }, {  60,150,200 }, { 100,130,220 }, {   0,128,255 },
+   { 240,255,240 }, { 220,255,220 }, { 160,255,160 }, {  32,255, 32 },
+   { 160,200,120 }, { 150,200, 60 }, { 130,220,100 }, { 128,255,  0 },
+   { 255,255,240 }, { 255,255,220 }, { 220,220,180 }, { 255,255, 32 },
+   { 200,160,120 }, { 200,150, 60 }, { 220,130,100 }, { 255,128,  0 },
+   { 255,240,255 }, { 255,220,255 }, { 220,180,220 }, { 255, 32,255 },
+   { 160,120,200 }, { 150, 60,200 }, { 130,100,220 }, { 128,  0,255 },
+   { 240,255,255 }, { 220,255,255 }, { 180,220,220 }, {  32,255,255 },
+   { 120,200,160 }, {  60,200,150 }, { 100,220,130 }, {   0,255,128 },
+};
 
 static unsigned char stbvox_vertex_vector[6][4][3] =
 {
@@ -1342,262 +2264,6 @@ static stbvox_mesh_vertex stbvox_vmesh_crossed_pair[6][4] =
 };
 
 
-void stbvox_get_quad_vertex_pointer(stbvox_mesh_maker *mm, int mesh, stbvox_mesh_vertex **vertices, stbvox_mesh_face face)
-{
-   char *p = mm->output_cur[mesh][0];
-   int step = mm->output_step[mesh][0];
-
-   // allocate a new quad from the mesh
-   vertices[0] = (stbvox_mesh_vertex *) p; p += step;
-   vertices[1] = (stbvox_mesh_vertex *) p; p += step;
-   vertices[2] = (stbvox_mesh_vertex *) p; p += step;
-   vertices[3] = (stbvox_mesh_vertex *) p; p += step;
-   mm->output_cur[mesh][0] = p;
-
-   // output the face
-   if (mm->tags & STBVOX_TAG_face_attribute) {
-      *(stbvox_mesh_face *) (vertices[0]+1) = face;
-      *(stbvox_mesh_face *) (vertices[1]+1) = face;
-      *(stbvox_mesh_face *) (vertices[2]+1) = face;
-      *(stbvox_mesh_face *) (vertices[3]+1) = face;
-   } else {
-      *(stbvox_mesh_face *) mm->output_cur[mesh][1] = face;
-      mm->output_cur[mesh][1] += 4;
-   }
-}
-
-void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh, int normal)
-{
-   stbvox_mesh_face face_data = stbvox_compute_mesh_face_value(mm,rot,face,v_off, normal);
-
-   // still need to compute ao & texlerp for each vertex
-
-   // first compute texlerp into p1
-   stbvox_mesh_vertex p1[4] = { 0 };
-
-   if (mm->input.block_texlerp) {
-      stbvox_block_type bt = mm->input.blocktype[v_off];
-      unsigned char val = mm->input.block_texlerp[bt];
-      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,val);
-   } else if (mm->input.block_texlerp_face) {
-      stbvox_block_type bt = mm->input.blocktype[v_off];
-      unsigned char bt_face = STBVOX_ROTATE(face, rot.block);
-      unsigned char val = mm->input.block_texlerp_face[bt][bt_face];
-      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,val);
-   } else if (mm->input.texlerp_face3) {
-      unsigned char val = (mm->input.texlerp_face3[v_off] >> stbvox_face3_lerp[face]) & 7;
-      if (face >= 4)
-         val = stbvox_face3_updown[val];
-      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,val);
-   } else if (mm->input.texlerp) {
-      unsigned char facelerp = (mm->input.texlerp[v_off] >> stbvox_face_lerp[face]) & 3;
-      if (facelerp == STBVOX_TEXLERP_use_vert) {
-         if (mm->input.texlerp_vert3 && face != STBVOX_FACE_down) {
-            unsigned char shift = stbvox_vert3_lerp[face];
-            p1[0] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][0]] >> shift) & 7;
-            p1[1] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][1]] >> shift) & 7;
-            p1[2] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][2]] >> shift) & 7;
-            p1[3] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][3]] >> shift) & 7;
-         } else {
-            p1[0] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][0]]>>6];
-            p1[1] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][1]]>>6];
-            p1[2] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][2]]>>6];
-            p1[3] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][3]]>>6];
-         }
-         p1[0] = stbvox_vertex_p(0,0,0,0,p1[0]);
-         p1[1] = stbvox_vertex_p(0,0,0,0,p1[1]);
-         p1[2] = stbvox_vertex_p(0,0,0,0,p1[2]);
-         p1[3] = stbvox_vertex_p(0,0,0,0,p1[3]);
-      } else {
-         p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,stbvox_vert_lerp_for_face_lerp[facelerp]);
-      }
-   } else {
-      p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_p(0,0,0,0,7);
-   }
-
-   {
-      stbvox_mesh_vertex *mv[4];
-      stbvox_get_quad_vertex_pointer(mm, mesh, mv, face_data);
-
-      if (mm->input.lighting) {
-         if (mm->input.lighting_at_vertices) {
-            int i;
-            for (i=0; i < 4; ++i) {
-               *mv[i] = vertbase + face_coord[i];
-                          + stbvox_vertex_p(0,0,0,mm->input.lighting[v_off + mm->cube_vertex_offset[face][i]] & 63,0);
-            }
-         } else {
-            unsigned char *amb = &mm->input.lighting[v_off];
-            int i,j;
-            #ifdef STBVOX_ROTATION_IN_LIGHTING
-            #define STBVOX_GET_LIGHTING(light) ((light) & ~3)
-            #define STBVOX_LIGHTING_ROUNDOFF   8
-            #else
-            #define STBVOX_GET_LIGHTING(light) (light)
-            #define STBVOX_LIGHTING_ROUNDOFF   2
-            #endif
-
-            for (i=0; i < 4; ++i) {
-               // for each vertex, gather from the four neighbor blocks it's facing
-               unsigned char *vamb = &amb[mm->cube_vertex_offset[face][i]];
-               int total=0;
-               for (j=0; j < 4; ++j)
-                  total += STBVOX_GET_LIGHTING(vamb[mm->vertex_gather_offset[face][j]]);
-               *mv[i] = vertbase + face_coord[i]
-                          + stbvox_vertex_p(0,0,0,(total+STBVOX_LIGHTING_ROUNDOFF)>>4,0);
-                          // >> 4 is because:
-                          //   >> 2 to divide by 4 to get average over 4 samples
-                          //   >> 2 because input is 8 bits, output is 6 bits
-            }
-
-            // @TODO: gather baked lighting where we have precomputed
-            // shadow bits for each light and we gather them from neighbors
-            // as above then do normal diffuse light computation--this
-            // needs a variant shader which has 8-bit rgb as well, in
-            // which case 'lighting' isn't needed so we have ~14 more
-            // bits to store stuff per vertex
-            //
-            // Or alternatively note that gathering baked *lighting*
-            // is different from gathering baked ao; baked ao can count
-            // solid blocks as 0 ao, but baked lighting wants average
-            // of non-blocked, not average & treat blocked as 0. And
-            // we can't bake the right value into the solid blocks
-            // because they can have different lighting values on
-            // different sides.
-
-         }
-      } else {
-         *mv[0] = vertbase + face_coord[0] + p1[0];
-         *mv[1] = vertbase + face_coord[1] + p1[1];
-         *mv[2] = vertbase + face_coord[2] + p1[2];
-         *mv[3] = vertbase + face_coord[3] + p1[3];
-      }
-   }
-}
-
-static stbvox_face_up_normal_012[4][4][4];
-static stbvox_face_up_normal_013[4][4][4];
-static stbvox_face_up_normal_023[4][4][4];
-static stbvox_face_up_normal_123[4][4][4];
-
-// render non-planar quads by splitting into two triangles, rendering each as a degenerate quad
-void stbvox_make_12_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh, unsigned char *ht)
-{
-   stbvox_mesh_vertex v[4];
-
-   unsigned char normal1 = stbvox_face_up_normal_012[ht[2]][ht[1]][ht[0]];
-   unsigned char normal2 = stbvox_face_up_normal_123[ht[3]][ht[2]][ht[1]];
-
-   if (face == STBVOX_FACE_down) {
-      normal1 = stbvox_reverse_face[normal1];
-      normal2 = stbvox_reverse_face[normal2];
-   }
-
-   // the floor side face_coord is stored in order NW,NE,SE,SW, but ht[] is stored SW,SE,NW,NE
-   v[0] = face_coord[2];
-   v[1] = face_coord[3];
-   v[2] = face_coord[0];
-   v[3] = face_coord[2];
-   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal1);
-   v[1] = face_coord[0];
-   v[2] = face_coord[1];
-   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal2);
-}
-
-void stbvox_make_03_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh, unsigned char *ht)
-{
-   stbvox_mesh_vertex v[4];
-
-   unsigned char normal1 = stbvox_face_up_normal_013[ht[3]][ht[1]][ht[0]];
-   unsigned char normal2 = stbvox_face_up_normal_023[ht[3]][ht[2]][ht[0]];
-
-   if (face == STBVOX_FACE_down) {
-      normal1 = stbvox_reverse_face[normal1];
-      normal2 = stbvox_reverse_face[normal2];
-   }
-   v[0] = face_coord[1];
-   v[1] = face_coord[2];
-   v[2] = face_coord[3];
-   v[3] = face_coord[1];
-   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal1);
-   v[1] = face_coord[3];
-   v[2] = face_coord[0];
-   stbvox_make_mesh_for_face(mm, rot, face, v_off, pos, vertbase, v, mesh, normal2);  // this one is correct!
-}
-
-// simple case for mesh generation: we have only solid and empty blocks
-void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, int v_off, stbvox_mesh_vertex *vmesh)
-{
-   int ns_off = mm->y_stride_in_bytes;
-   int ew_off = mm->x_stride_in_bytes;
-
-   unsigned char *blockptr = &mm->input.blocktype[v_off];
-   stbvox_mesh_vertex basevert = stbvox_vertex_p(pos.x, pos.y, pos.z<<mm->precision_z , 0,0);
-
-   stbvox_rotate rot = { 0,0,0,0,0 };
-   unsigned char simple_rot = 0;
-
-   unsigned char mesh = mm->default_mesh;
-
-   if (mm->input.selector)
-      mesh = mm->input.selector[v_off];
-
-   // check if we're going off the end
-   if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
-      mm->full = 1;
-      return;
-   }
-
-   #ifdef STBVOX_ROTATION_IN_LIGHTING
-   simple_rot = mm->input.lighting[v_off] & 3;
-   #endif
-
-   if (blockptr[ 1]==0) {
-      rot.facerot = simple_rot;
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_up  , v_off, pos, basevert, vmesh+4*STBVOX_FACE_up, mesh, STBVOX_FACE_up);
-   }
-   if (blockptr[-1]==0) {
-      rot.facerot = (-simple_rot) & 3;
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_down, v_off, pos, basevert, vmesh+4*STBVOX_FACE_down, mesh, STBVOX_FACE_down);
-   }
-
-   if (mm->input.rotate) {
-      unsigned char val = mm->input.rotate[v_off];
-      rot.block   = (val >> 0) & 3;
-      rot.overlay = (val >> 2) & 3;
-      rot.tex2    = (val >> 4) & 3;
-      rot.ecolor  = (val >> 6) & 3;
-   } else {
-      rot.block = rot.overlay = rot.tex2 = rot.ecolor = simple_rot;
-   }
-   rot.facerot = 0;
-
-   if (blockptr[ ns_off]==0)
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_north, v_off, pos, basevert, vmesh+4*STBVOX_FACE_north, mesh, STBVOX_FACE_north);
-   if (blockptr[-ns_off]==0)
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_south, v_off, pos, basevert, vmesh+4*STBVOX_FACE_south, mesh, STBVOX_FACE_south);
-   if (blockptr[ ew_off]==0)
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_east , v_off, pos, basevert, vmesh+4*STBVOX_FACE_east, mesh, STBVOX_FACE_east);
-   if (blockptr[-ew_off]==0)
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_west , v_off, pos, basevert, vmesh+4*STBVOX_FACE_west, mesh, STBVOX_FACE_west);
-}
-
-
-// void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, int v_off)
-//
-// complex case for mesh generation: we have lots of different
-// block types, and we don't want to generate faces of blocks
-// if they're hidden by neighbors.
-//
-// we use lots of tables to determine this: we have a table
-// which tells us what face type is generated for each type of
-// geometry, and then a table that tells us whether that type
-// is hidden by a neighbor.
-
-
-#define STBVOX_MAX_GEOM     16
-#define STBVOX_NUM_ROTATION  4
-
 // this is used to determine if a face is ever generated at all
 static unsigned char stbvox_hasface[STBVOX_MAX_GEOM][STBVOX_NUM_ROTATION] =
 {
@@ -1617,23 +2283,6 @@ static unsigned char stbvox_hasface[STBVOX_MAX_GEOM][STBVOX_NUM_ROTATION] =
    { 63,63,63,63 },
    { 63,63,63,63 },
    { 63,63,63,63 },
-};
-
-// these are the types of faces each block can have
-enum
-{
-   STBVOX_FT_none    ,
-   STBVOX_FT_upper   ,
-   STBVOX_FT_lower   ,
-   STBVOX_FT_solid   ,
-   STBVOX_FT_diag_012,
-   STBVOX_FT_diag_023,
-   STBVOX_FT_diag_013,
-   STBVOX_FT_diag_123,
-   STBVOX_FT_force   , // can't be covered up, used for internal faces, also hides nothing
-   STBVOX_FT_partial , // only covered by solid, never covers anything else
-
-   STBVOX_FT_count
 };
 
 // this determines which face type above is visible on each side of the geometry
@@ -1732,7 +2381,6 @@ static unsigned char stbvox_rotate_vertex[8][4] =
    { 6,4,5,7 }, // zyx=110
    { 7,6,4,5 }, // zyx=111
 };
-
 
 #ifdef STBVOX_OPTIMIZED_VHEIGHT
 // optimized vheight generates a single normal over the entire face, even if it's not planar
@@ -1960,687 +2608,9 @@ static stbvox_face_up_normal_123[4][4][4] =
 };
 #endif
 
-void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, int v_off)
-{
-   int ns_off = mm->y_stride_in_bytes;
-   int ew_off = mm->x_stride_in_bytes;
-   int visible_faces, visible_base;
-   unsigned char mesh;
-
-   // first gather the geometry info for this block and all neighbors
-
-   unsigned char bt, nbt[6];
-   unsigned char geo, ngeo[6];
-   unsigned char rot, nrot[6];
-
-   bt = mm->input.blocktype[v_off];
-   nbt[0] = mm->input.blocktype[v_off + ew_off];
-   nbt[1] = mm->input.blocktype[v_off + ns_off];
-   nbt[2] = mm->input.blocktype[v_off - ew_off];
-   nbt[3] = mm->input.blocktype[v_off - ns_off];
-   nbt[4] = mm->input.blocktype[v_off +      1];
-   nbt[5] = mm->input.blocktype[v_off -      1];
-   if (mm->input.geometry) {
-      int i;
-      geo = mm->input.geometry[v_off];
-      ngeo[0] = mm->input.geometry[v_off + ew_off];
-      ngeo[1] = mm->input.geometry[v_off + ns_off];
-      ngeo[2] = mm->input.geometry[v_off - ew_off];
-      ngeo[3] = mm->input.geometry[v_off - ns_off];
-      ngeo[4] = mm->input.geometry[v_off +      1];
-      ngeo[5] = mm->input.geometry[v_off -      1];
-
-      #ifndef STBVOX_ROTATION_IN_LIGHTING
-      rot = (geo >> 4) & 3;
-      geo &= 15;
-      for (i=0; i < 6; ++i) {
-         nrot[i] = (ngeo[i] >> 4) & 3;
-         ngeo[i] &= 15;
-      }
-      #endif
-      STBVOX_NOTUSED(i);
-   } else {
-      int i;
-      assert(mm->input.block_geometry);
-      geo = mm->input.block_geometry[bt];
-      for (i=0; i < 6; ++i)
-         ngeo[i] = mm->input.block_geometry[nbt[i]];
-      if (mm->input.selector) {
-         #ifndef STBVOX_ROTATION_IN_LIGHTING
-         rot     = (mm->input.selector[v_off         ] >> 4) & 3;
-         nrot[0] = (mm->input.selector[v_off + ew_off] >> 4) & 3;
-         nrot[1] = (mm->input.selector[v_off + ns_off] >> 4) & 3;
-         nrot[2] = (mm->input.selector[v_off - ew_off] >> 4) & 3;
-         nrot[3] = (mm->input.selector[v_off - ns_off] >> 4) & 3;
-         nrot[4] = (mm->input.selector[v_off +      1] >> 4) & 3;
-         nrot[5] = (mm->input.selector[v_off -      1] >> 4) & 3;
-         #endif
-      } else {
-         #ifndef STBVOX_ROTATION_IN_LIGHTING
-         rot = (geo>>4)&3;
-         geo &= 15;
-         for (i=0; i < 6; ++i) {
-            nrot[i] = (ngeo[i]>>4)&3;
-            ngeo[i] &= 15;
-         }
-         #endif
-      }
-   }
-
-   #ifdef STBVOX_ROTATION_IN_LIGHTING
-   rot = mm->input.lighting[v_off] & 3;
-   nrot[0] = (mm->input.lighting[v_off + ew_off]) & 3;
-   nrot[1] = (mm->input.lighting[v_off + ns_off]) & 3;
-   nrot[2] = (mm->input.lighting[v_off - ew_off]) & 3;
-   nrot[3] = (mm->input.lighting[v_off - ns_off]) & 3;
-   nrot[4] = (mm->input.lighting[v_off +      1]) & 3;
-   nrot[5] = (mm->input.lighting[v_off -      1]) & 3;
-   #endif
-
-   if (geo == STBVOX_GEOM_transp) {
-      // transparency has a special rule: if the blocktype is the same,
-      // and the faces are compatible, then can hide them; otherwise,
-      // force them on
-      // Note that this means we don't support any transparentshapes other
-      // than solid blocks, since detecting them is too complicated. If
-      // you wanted to do something like minecraft water, you probably
-      // should just do that with a separate renderer anyway. (We don't
-      // support transparency sorting so you need to use alpha test
-      // anyway)
-      int i;
-      for (i=0; i < 6; ++i)
-         if (nbt[i] != bt) {
-            nbt[i] = 0;
-            ngeo[i] = STBVOX_GEOM_empty;
-         } else
-            ngeo[i] = STBVOX_GEOM_solid;
-      geo = STBVOX_GEOM_solid;
-   }
-
-   // now compute the face visibility
-   visible_base = stbvox_hasface[geo][rot];
-   // @TODO: assert(visible_base != 0); // we should have early-outted earlier in this case
-   visible_faces = 0;
-
-   // now, for every face that might be visible, check if neighbor hides it
-   if (visible_base & (1 << STBVOX_FACE_east)) {
-      int  type = stbvox_facetype[ geo   ][(STBVOX_FACE_east+ rot   )&3];
-      int ntype = stbvox_facetype[ngeo[0]][(STBVOX_FACE_west+nrot[0])&3];
-      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_east)) & (1 << STBVOX_FACE_east);
-   }
-   if (visible_base & (1 << STBVOX_FACE_north)) {
-      int  type = stbvox_facetype[ geo   ][(STBVOX_FACE_north+ rot   )&3];
-      int ntype = stbvox_facetype[ngeo[1]][(STBVOX_FACE_south+nrot[1])&3];
-      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_north)) & (1 << STBVOX_FACE_north);
-   }
-   if (visible_base & (1 << STBVOX_FACE_west)) {
-      int  type = stbvox_facetype[ geo   ][(STBVOX_FACE_west+ rot   )&3];
-      int ntype = stbvox_facetype[ngeo[2]][(STBVOX_FACE_east+nrot[2])&3];
-      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_west)) & (1 << STBVOX_FACE_west);
-   }
-   if (visible_base & (1 << STBVOX_FACE_south)) {
-      int  type = stbvox_facetype[ geo   ][(STBVOX_FACE_south+ rot   )&3];
-      int ntype = stbvox_facetype[ngeo[3]][(STBVOX_FACE_north+nrot[3])&3];
-      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_south)) & (1 << STBVOX_FACE_south);
-   }
-   if (visible_base & (1 << STBVOX_FACE_up)) {
-      int  type = stbvox_facetype[ geo   ][STBVOX_FACE_up];
-      int ntype = stbvox_facetype[ngeo[4]][STBVOX_FACE_down];
-      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_up)) & (1 << STBVOX_FACE_up);
-   }
-   if (visible_base & (1 << STBVOX_FACE_down)) {
-      int  type = stbvox_facetype[ geo   ][STBVOX_FACE_down];
-      int ntype = stbvox_facetype[ngeo[5]][STBVOX_FACE_up];
-      visible_faces |= ((stbvox_face_visible[type]) >> (ntype + 5 - STBVOX_FACE_down)) & (1 << STBVOX_FACE_down);
-   }
-
-   if (geo == STBVOX_GEOM_force)
-      geo = STBVOX_GEOM_solid;
-
-   assert((geo == STBVOX_GEOM_crossed_pair) ? (visible_faces == 15) : 1);
-
-   // now we finally know for sure which faces are getting generated
-   if (visible_faces == 0)
-      return;
-
-   mesh = mm->default_mesh;
-   if (mm->input.selector)
-      mesh = mm->input.selector[v_off];
-
-   if (geo <= STBVOX_GEOM_ceil_slope_north_is_bottom) {
-      // this is the simple case, we can just use regular block gen with special vmesh calculated with vheight
-      stbvox_mesh_vertex basevert;
-      stbvox_mesh_vertex vmesh[6][4];
-      stbvox_rotate rotate = { 0,0,0,0,0 };
-      unsigned char simple_rot = rot;
-      int i;
-      // we only need to do this for the displayed faces, but it's easier
-      // to just do it up front; @OPTIMIZE check if it's faster to do it
-      // for visible faces only
-      for (i=0; i < 6*4; ++i) {
-         int vert = stbvox_vertex_selector[0][i];
-         vert = stbvox_rotate_vertex[vert][rot];
-         vmesh[0][i] = stbvox_vmesh_pre_vheight[0][i]
-                     + stbvox_geometry_vheight[geo][vert];
-      }
-
-      basevert = stbvox_vertex_p(pos.x, pos.y, pos.z<<mm->precision_z , 0,0);
-      if (mm->input.selector) {
-         mesh = mm->input.selector[v_off];
-      }
-
-      // check if we're going off the end
-      if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
-         mm->full = 1;
-         return;
-      }
-
-      if (geo >= STBVOX_GEOM_floor_slope_north_is_top) {
-         if (visible_faces & (1 << STBVOX_FACE_up)) {
-            int normal = geo == STBVOX_GEOM_floor_slope_north_is_top ? stbvox_floor_slope_for_rot[simple_rot] : STBVOX_FACE_up;
-            rotate.facerot = simple_rot;
-            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, normal);
-         }
-         if (visible_faces & (1 << STBVOX_FACE_down)) {
-            int normal = geo == STBVOX_GEOM_ceil_slope_north_is_bottom ? stbvox_ceil_slope_for_rot[simple_rot] : STBVOX_FACE_down;
-            rotate.facerot = (-rotate.facerot) & 3;
-            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, normal);
-         }
-      } else {
-         if (visible_faces & (1 << STBVOX_FACE_up)) {
-            rotate.facerot = simple_rot;
-            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, STBVOX_FACE_up);
-         }
-         if (visible_faces & (1 << STBVOX_FACE_down)) {
-            rotate.facerot = (-rotate.facerot) & 3;
-            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, STBVOX_FACE_down);
-         }
-      }
-
-      if (mm->input.rotate) {
-         unsigned char val = mm->input.rotate[v_off];
-         rotate.block   = (val >> 0) & 3;
-         rotate.overlay = (val >> 2) & 3;
-         rotate.tex2    = (val >> 4) & 3;
-         rotate.ecolor  = (val >> 6) & 3;
-      } else {
-         rotate.block = rotate.overlay = rotate.tex2 = rotate.ecolor = simple_rot;
-      }
-
-      rotate.facerot = 0;
-
-      if (visible_faces & (1 << STBVOX_FACE_north))
-         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_north, v_off, pos, basevert, vmesh[STBVOX_FACE_north], mesh, STBVOX_FACE_north);
-      if (visible_faces & (1 << STBVOX_FACE_south))
-         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_south, v_off, pos, basevert, vmesh[STBVOX_FACE_south], mesh, STBVOX_FACE_south);
-      if (visible_faces & (1 << STBVOX_FACE_east))
-         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_east , v_off, pos, basevert, vmesh[STBVOX_FACE_east ], mesh, STBVOX_FACE_east);
-      if (visible_faces & (1 << STBVOX_FACE_west))
-         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_west , v_off, pos, basevert, vmesh[STBVOX_FACE_west ], mesh, STBVOX_FACE_west);
-   }
-   if (geo >= STBVOX_GEOM_floor_vheight_03) {
-      // this case can also be generated with regular block gen with special vmesh,
-      // except:
-      //     if we want to generate middle diagonal for 'weird' blocks
-      //     it's more complicated to detect neighbor matchups
-      stbvox_mesh_vertex vmesh[6][4];
-      stbvox_mesh_vertex cube[8];
-      stbvox_mesh_vertex basevert;
-      stbvox_rotate rotate = { 0,0,0,0,0 };
-      unsigned char simple_rot = rot;
-      unsigned char ht[4];
-      int extreme;
-
-      // extract the heights
-      if (mm->input.vheight) {
-         unsigned char v =  mm->input.vheight[v_off];
-         ht[0] = (v >> 0) & 3;
-         ht[1] = (v >> 2) & 3;
-         ht[2] = (v >> 4) & 3;
-         ht[3] = (v >> 6) & 3;
-      } else if (mm->input.block_vheight) {
-         unsigned char v = mm->input.block_vheight[bt];
-         unsigned char raw[4];
-         int i;
-
-         raw[0] = (v >> 0) & 3;
-         raw[1] = (v >> 2) & 3;
-         raw[2] = (v >> 4) & 3;
-         raw[3] = (v >> 6) & 3;
-
-         for (i=0; i < 4; ++i)
-            ht[i] = raw[stbvox_rotate_vertex[i][rot]];
-      } else {
-         assert(0);
-      }
-
-      // flag whether any sides go off the top of the block, which means
-      // our visible_faces test was wrong
-      extreme = (ht[0] == 3 || ht[1] == 3 || ht[2] == 3 || ht[3] == 3);
-
-      if (geo >= STBVOX_GEOM_ceil_vheight_03) {
-         cube[0] = stbvox_vertex_p(0,0,ht[0],0,0);
-         cube[1] = stbvox_vertex_p(0,0,ht[1],0,0);
-         cube[2] = stbvox_vertex_p(0,0,ht[2],0,0);
-         cube[3] = stbvox_vertex_p(0,0,ht[3],0,0);
-         cube[4] = stbvox_vertex_p(0,0,2,0,0);
-         cube[5] = stbvox_vertex_p(0,0,2,0,0);
-         cube[6] = stbvox_vertex_p(0,0,2,0,0);
-         cube[7] = stbvox_vertex_p(0,0,2,0,0);
-      } else {
-         cube[0] = stbvox_vertex_p(0,0,0,0,0);
-         cube[1] = stbvox_vertex_p(0,0,0,0,0);
-         cube[2] = stbvox_vertex_p(0,0,0,0,0);
-         cube[3] = stbvox_vertex_p(0,0,0,0,0);
-         cube[4] = stbvox_vertex_p(0,0,ht[0],0,0);
-         cube[5] = stbvox_vertex_p(0,0,ht[1],0,0);
-         cube[6] = stbvox_vertex_p(0,0,ht[2],0,0);
-         cube[7] = stbvox_vertex_p(0,0,ht[3],0,0);
-      }
-      if (!mm->input.vheight && mm->input.block_vheight) {
-      }
-
-      // build vertex mesh
-      {
-         int i;
-         for (i=0; i < 6*4; ++i) {
-            int vert = stbvox_vertex_selector[0][i];
-            vmesh[0][i] = stbvox_vmesh_pre_vheight[0][i]
-                        + cube[vert];
-         }
-      }
-
-      basevert = stbvox_vertex_p(pos.x, pos.y, pos.z<<mm->precision_z , 0,0);
-      // check if we're going off the end
-      if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
-         mm->full = 1;
-         return;
-      }
-
-      // @TODO generate split faces
-      if (visible_faces & (1 << STBVOX_FACE_up)) {
-         if (geo >= STBVOX_GEOM_ceil_vheight_03)
-            // flat
-            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, STBVOX_FACE_up);
-         else {
-         #ifndef STBVOX_OPTIMIZED_VHEIGHT
-            // check if it's non-planar
-            if (cube[5] + cube[6] != cube[4] + cube[7]) {
-               // not planar, split along diagonal and make degenerate quads
-               if (geo == STBVOX_GEOM_floor_vheight_03)
-                  stbvox_make_03_split_mesh_for_face(mm, rotate, STBVOX_FACE_up, v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, ht);
-               else
-                  stbvox_make_12_split_mesh_for_face(mm, rotate, STBVOX_FACE_up, v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, ht);
-            } else
-               stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, stbvox_planar_face_up_normal[ht[2]][ht[1]][ht[0]]);
-         #else
-            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_up  , v_off, pos, basevert, vmesh[STBVOX_FACE_up], mesh, stbvox_optimized_face_up_normal[ht[3]][ht[2]][ht[1]][ht[0]]);
-         #endif
-         }
-      }
-      if (visible_faces & (1 << STBVOX_FACE_down)) {
-         if (geo < STBVOX_GEOM_ceil_vheight_03)
-            // flat
-            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, STBVOX_FACE_down);
-         else {
-         #ifndef STBVOX_OPTIMIZED_VHEIGHT
-            // check if it's non-planar
-            if (cube[1] + cube[2] != cube[0] + cube[3]) {
-               // not planar, split along diagonal and make degenerate quads
-               if (geo == STBVOX_GEOM_ceil_vheight_03)
-                  stbvox_make_03_split_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, ht);
-               else
-                  stbvox_make_12_split_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, ht);
-            } else
-               stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, stbvox_reverse_face[stbvox_planar_face_up_normal[ht[2]][ht[1]][ht[0]]]);
-         #else
-            stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_down, v_off, pos, basevert, vmesh[STBVOX_FACE_down], mesh, stbvox_reverse_face[stbvox_optimized_face_up_normal[ht[3]][ht[2]][ht[1]][ht[0]]]);
-         #endif
-         }
-      }
-
-      if (mm->input.rotate) {
-         unsigned char val = mm->input.rotate[v_off];
-         rotate.block   = (val >> 0) & 3;
-         rotate.overlay = (val >> 2) & 3;
-         rotate.tex2    = (val >> 4) & 3;
-         rotate.ecolor  = (val >> 6) & 3;
-      } else if (mm->input.selector) {
-         rotate.block = rotate.overlay = rotate.tex2 = rotate.ecolor = simple_rot;
-      }
-
-      if ((visible_faces & (1 << STBVOX_FACE_north)) || (extreme && (ht[2] == 3 || ht[3] == 3)))
-         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_north, v_off, pos, basevert, vmesh[STBVOX_FACE_north], mesh, STBVOX_FACE_north);
-      if ((visible_faces & (1 << STBVOX_FACE_south)) || (extreme && (ht[0] == 3 || ht[1] == 3))) 
-         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_south, v_off, pos, basevert, vmesh[STBVOX_FACE_south], mesh, STBVOX_FACE_south);
-      if ((visible_faces & (1 << STBVOX_FACE_east)) || (extreme && (ht[1] == 3 || ht[3] == 3)))
-         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_east , v_off, pos, basevert, vmesh[STBVOX_FACE_east ], mesh, STBVOX_FACE_east);
-      if ((visible_faces & (1 << STBVOX_FACE_west)) || (extreme && (ht[0] == 3 || ht[2] == 3)))
-         stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_west , v_off, pos, basevert, vmesh[STBVOX_FACE_west ], mesh, STBVOX_FACE_west);
-   }
-
-   if (geo == STBVOX_GEOM_crossed_pair) {
-      // this can be generated with a special vmesh
-      stbvox_mesh_vertex basevert = stbvox_vertex_p(pos.x, pos.y, pos.z<<mm->precision_z , 0,0);
-      unsigned char simple_rot=0;
-      stbvox_rotate rot = { 0,0,0,0,0 };
-      unsigned char mesh = mm->default_mesh;
-      if (mm->input.selector) {
-         mesh = mm->input.selector[v_off];
-         simple_rot = mesh >> 4;
-         mesh &= 15;
-      }
-
-      // check if we're going off the end
-      if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*4 > mm->output_end[mesh][0]) {
-         mm->full = 1;
-         return;
-      }
-
-      if (mm->input.rotate) {
-         unsigned char val = mm->input.rotate[v_off];
-         rot.block   = (val >> 0) & 3;
-         rot.overlay = (val >> 2) & 3;
-         rot.tex2    = (val >> 4) & 3;
-         rot.ecolor  = (val >> 6) & 3;
-      } else if (mm->input.selector) {
-         rot.block = rot.overlay = rot.tex2 = rot.ecolor = simple_rot;
-      }
-      rot.facerot = 0;
-
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_north, v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_north], mesh, STBVF_ne_u_cross);
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_south, v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_south], mesh, STBVF_sw_u_cross);
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_east , v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_east ], mesh, STBVF_se_u_cross);
-      stbvox_make_mesh_for_face(mm, rot, STBVOX_FACE_west , v_off, pos, basevert, stbvox_vmesh_crossed_pair[STBVOX_FACE_west ], mesh, STBVF_nw_u_cross);
-   }
-
-
-   // @TODO
-   // STBVOX_GEOM_floor_slope_north_is_top_as_wall,
-   // STBVOX_GEOM_ceil_slope_north_is_bottom_as_wall,
-}
-
-void stbvox_make_mesh_for_column(stbvox_mesh_maker *mm, int x, int y, int z0)
-{
-   stbvox_pos pos = { x,y,0 };
-   int v_off = x * mm->x_stride_in_bytes + y * mm->y_stride_in_bytes;
-   int ns_off = mm->y_stride_in_bytes;
-   int ew_off = mm->x_stride_in_bytes;
-   if (mm->input.geometry) {
-      unsigned char *bt  = mm->input.blocktype + v_off;
-      unsigned char *geo = mm->input.geometry + v_off;
-      int z;
-      for (z=z0; z < mm->z1; ++z) {
-         if (bt[z] && ( !bt[z+ns_off] || !STBVOX_GET_GEO(geo[z+ns_off]) || !bt[z-ns_off] || !STBVOX_GET_GEO(geo[z-ns_off])
-                      || !bt[z+ew_off] || !STBVOX_GET_GEO(geo[z+ew_off]) || !bt[z-ew_off] || !STBVOX_GET_GEO(geo[z-ew_off])))
-         {  // TODO check up and down
-            pos.z = z;
-            stbvox_make_mesh_for_block_with_geo(mm, pos, v_off+z);
-            if (mm->full) {
-               mm->cur_z = z;
-               return;
-            }
-         }
-      }
-   } else if (mm->input.block_geometry) {
-      int z;
-      unsigned char *bt  = mm->input.blocktype + v_off;
-      unsigned char *geo = mm->input.block_geometry;
-      for (z=z0; z < mm->z1; ++z) {
-         if (bt[z] && (    geo[bt[z+ns_off]] != STBVOX_GEOM_solid
-                        || geo[bt[z-ns_off]] != STBVOX_GEOM_solid
-                        || geo[bt[z+ew_off]] != STBVOX_GEOM_solid
-                        || geo[bt[z-ew_off]] != STBVOX_GEOM_solid
-                        || geo[bt[z-1]] != STBVOX_GEOM_solid
-                        || geo[bt[z+1]] != STBVOX_GEOM_solid))
-         {
-            pos.z = z;
-            stbvox_make_mesh_for_block_with_geo(mm, pos, v_off+z);
-            if (mm->full) {
-               mm->cur_z = z;
-               return;
-            }
-         }
-      }
-   } else {
-      unsigned char *bt = mm->input.blocktype + v_off;
-      int z;
-      stbvox_mesh_vertex *vmesh = mm->precision_z ? stbvox_vmesh_delta_half_z[0] : stbvox_vmesh_delta_normal[0];
-      for (z=z0; z < mm->z1; ++z) {
-         // if it's solid and at least one neighbor isn't solid
-         if (bt[z] && (!bt[z+ns_off] || !bt[z-ns_off] || !bt[z+ew_off] || !bt[z-ew_off] || !bt[z-1] || !bt[z+1])) {
-            pos.z = z;
-            stbvox_make_mesh_for_block(mm, pos, v_off+z, vmesh);
-            if (mm->full) {
-               mm->cur_z = z;
-               return;
-            }
-         }
-      }
-   }
-}
-
-void stbvox_bring_up_to_date(stbvox_mesh_maker *mm)
-{
-   if (mm->config_dirty) {
-      int i;
-      mm->num_mesh_slots = (mm->tags & STBVOX_TAG_face_sampled ? 2 : 1);
-      for (i=0; i < STBVOX_MAX_MESHES; ++i) {
-         if (mm->num_mesh_slots == 2) {
-            mm->output_size[i][0] = 16;
-            mm->output_step[i][0] = 4;
-            mm->output_size[i][1] = 4;
-            mm->output_step[i][1] = 4;
-         } else {
-            mm->output_size[i][0] = 32;
-            mm->output_step[i][0] = 8;
-         }
-      }
-
-      mm->config_dirty = 0;
-   }
-}
-
-
-int stbvox_make_mesh(stbvox_mesh_maker *mm)
-{
-   int x,y;
-   stbvox_bring_up_to_date(mm);
-   mm->full = 0;
-   if (mm->cur_x || mm->cur_y || mm->cur_z) {
-      stbvox_make_mesh_for_column(mm, mm->cur_x, mm->cur_y, mm->cur_z);
-      if (mm->full)
-         return 0;
-      ++mm->cur_y;
-      while (mm->cur_y < mm->y1 && !mm->full) {
-         stbvox_make_mesh_for_column(mm, mm->cur_x, mm->cur_y, mm->z0);
-         if (mm->full)
-            return 0;
-         ++mm->cur_y;
-      }
-   }
-   for (x=mm->x0; x < mm->x1; ++x) {
-      for (y=mm->y0; y < mm->y1; ++y) {
-         stbvox_make_mesh_for_column(mm, x, y, mm->z0);
-         if (mm->full) {
-            mm->cur_x = x;
-            mm->cur_y = y;
-            return 0;
-         }
-      }
-   }
-   return 1;
-}
-
-void stbvox_init_mesh_maker(stbvox_mesh_maker *mm)
-{
-   memset(mm, 0, sizeof(*mm));
-   stbvox_build_default_palette();
-   mm->tags = STBVOX_TAG_textured;
-   mm->precision_z  = 1;
-
-   mm->config_dirty = 1;
-   mm->default_mesh = 0;
-}
-
-int stbvox_get_buffer_count(stbvox_mesh_maker *mm)
-{
-   stbvox_bring_up_to_date(mm);
-   return mm->num_mesh_slots;
-}
-
-int stbvox_get_buffer_size_per_quad(stbvox_mesh_maker *mm, int n)
-{
-   return mm->output_size[0][n];
-}
-
-void stbvox_reset_buffers(stbvox_mesh_maker *mm)
-{
-   int i;
-   for (i=0; i < STBVOX_MAX_MESHES*STBVOX_MAX_MESH_SLOTS; ++i) {
-      mm->output_cur[0][i] = 0;
-      mm->output_buffer[0][i] = 0;
-   }
-}
-
-void stbvox_set_buffer(stbvox_mesh_maker *mm, int mesh, int slot, void *buffer, size_t len)
-{
-   int i;
-   stbvox_bring_up_to_date(mm);
-   mm->output_buffer[mesh][slot] = (char *) buffer;
-   mm->output_cur   [mesh][slot] = (char *) buffer;
-   mm->output_len   [mesh][slot] = len;
-   mm->output_end   [mesh][slot] = (char *) buffer + len;
-   for (i=0; i < STBVOX_MAX_MESH_SLOTS; ++i) {
-      if (mm->output_buffer[mesh][i]) {
-         assert(mm->output_len[mesh][i] / mm->output_size[mesh][i] == mm->output_len[mesh][slot] / mm->output_size[mesh][slot]);
-      }
-   }
-}
-
-void stbvox_set_default_mesh(stbvox_mesh_maker *mm, int mesh)
-{
-   mm->default_mesh = mesh;
-}
-
-int stbvox_get_quad_count(stbvox_mesh_maker *mm, int mesh)
-{
-   return (mm->output_cur[mesh][0] - mm->output_buffer[mesh][0]) / mm->output_size[mesh][0];
-}
-
-stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm)
-{
-   return &mm->input;
-}
-
-void stbvox_set_input_range(stbvox_mesh_maker *mm, int x0, int y0, int z0, int x1, int y1, int z1)
-{
-   mm->x0 = x0;
-   mm->y0 = y0;
-   mm->z0 = z0;
-
-   mm->x1 = x1;
-   mm->y1 = y1;
-   mm->z1 = z1;
-
-   mm->cur_x = x0;
-   mm->cur_y = y0;
-   mm->cur_z = z0;
-
-   // @TODO validate that this range is representable in this mode
-}
-
-void stbvox_get_transform(stbvox_mesh_maker *mm, float transform[3][3])
-{
-   // scale
-   transform[0][0] = 1.0;
-   transform[0][1] = 1.0;
-   transform[0][2] = mm->precision_z ? 0.5f : 1.0f;
-   // translation
-   transform[1][0] = (float) (mm->pos_x);
-   transform[1][1] = (float) (mm->pos_y);
-   transform[1][2] = (float) (mm->pos_z);
-   // texture coordinate projection translation
-   transform[2][0] = (float) (mm->pos_x & 63); // @TODO depends on max texture scale
-   transform[2][1] = (float) (mm->pos_y & 63);
-   transform[2][2] = (float) (mm->pos_z & 63);
-}
-
-void stbvox_get_bounds(stbvox_mesh_maker *mm, float bounds[2][3])
-{
-   bounds[0][0] = (float) (mm->pos_x + mm->x0);
-   bounds[0][1] = (float) (mm->pos_y + mm->y0);
-   bounds[0][2] = (float) (mm->pos_z + mm->z0);
-   bounds[1][0] = (float) (mm->pos_x + mm->x1);
-   bounds[1][1] = (float) (mm->pos_y + mm->y1);
-   bounds[1][2] = (float) (mm->pos_z + mm->z1);
-}
-
-void stbvox_set_mesh_coordinates(stbvox_mesh_maker *mm, int x, int y, int z)
-{
-   mm->pos_x = x;
-   mm->pos_y = y;
-   mm->pos_z = z;
-}
-
-void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_bytes, int y_stride_in_bytes)
-{
-   int f,v;
-   mm->x_stride_in_bytes = x_stride_in_bytes;
-   mm->y_stride_in_bytes = y_stride_in_bytes;
-   for (f=0; f < 6; ++f) {
-      for (v=0; v < 4; ++v) {
-         mm->cube_vertex_offset[f][v]   =   stbvox_vertex_vector[f][v][0]    * mm->x_stride_in_bytes
-                                         +  stbvox_vertex_vector[f][v][1]    * mm->y_stride_in_bytes
-                                         +  stbvox_vertex_vector[f][v][2]                           ;
-         mm->vertex_gather_offset[f][v] =  (stbvox_vertex_vector[f][v][0]-1) * mm->x_stride_in_bytes
-                                         + (stbvox_vertex_vector[f][v][1]-1) * mm->y_stride_in_bytes
-                                         + (stbvox_vertex_vector[f][v][2]-1)                        ; 
-      }
-   }
-}
-
-// this is designed to allow you to call it multiple times to change the mode
-// in case you're using multiple variants for different purposes
-void stbvox_config_use_gl(stbvox_mesh_maker *mm, int use_tex_buffer, int use_gl_modelview)
-{
-   mm->config_dirty = 1;
-
-   mm->tags |= STBVOX_TAG_gl | STBVOX_TAG_all;
-
-   if (use_tex_buffer) {
-      mm->tags &= ~STBVOX_TAG_face_attribute;
-      mm->tags |=  STBVOX_TAG_face_sampled;
-   } else {
-      mm->tags &= ~STBVOX_TAG_face_sampled;
-      mm->tags |=  STBVOX_TAG_face_attribute;
-   }
-
-   if (use_gl_modelview)
-      mm->tags |=  STBVOX_TAG_gl_modelview;
-   else
-      mm->tags &= ~STBVOX_TAG_gl_modelview;
-
-   mm->tags &= ~(STBVOX_TAG_glsl_130 | STBVOX_TAG_glsl_150 | STBVOX_TAG_glsl_150_compatibility);
-   if (use_tex_buffer)
-      if (use_gl_modelview)
-         mm->tags |= STBVOX_TAG_glsl_150_compatibility;
-      else
-         mm->tags |= STBVOX_TAG_glsl_150_compatibility;
-   else
-      mm->tags |= STBVOX_TAG_glsl_130;
-}
-
-void stbvox_config_set_z_precision(stbvox_mesh_maker *mm, int z_fractional_bits)
-{
-   assert(z_fractional_bits >= 0 && z_fractional_bits <= 1);
-   mm->precision_z = z_fractional_bits;
-}
-
-
 /////////////////////////////////////////////////////////////////////////////
 //
-//    offline computation
+//    offline computation of tables
 //
 
 #if 0

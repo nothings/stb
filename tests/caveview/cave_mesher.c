@@ -16,6 +16,14 @@
 //#define VHEIGHT_TEST
 //#define STBVOX_OPTIMIZED_VHEIGHT
 
+#define STBVOX_ICONFIG_OPENGL_3_1_COMPATIBILITY
+#define STBVOX_CONFIG_OPENGL_MODELVIEW
+#define STBVOX_ICONFIG_TEXTURED
+#define STBVOX_ICONFIG_GLSL
+#define STBVOX_CONFIG_PREFER_TEXBUFFER
+//#define STBVOX_CONFIG_LIGHTING_SIMPLE
+#define STBVOX_CONFIG_FOG_SMOOTHSTEP
+
 #define STBVOX_ROTATION_IN_LIGHTING
 #define STB_VOXEL_RENDER_IMPLEMENTATION
 #include "stb_voxel_render.h"
@@ -606,7 +614,6 @@ void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh 
    map->block_tex1_face = minecraft_tex1_for_blocktype;
    map->block_color_face = minecraft_color_for_blocktype;
    map->block_geometry = minecraft_geom_for_blocktype;
-   stbvox_config_set_z_precision(&rm->mm, 1);
 
    // we're going to build 4 meshes in parallel, each covering 2x2 chunks
    stbvox_reset_buffers(&rm->mm);
