@@ -21,7 +21,7 @@
 #define STBVOX_CONFIG_PREFER_TEXBUFFER
 //#define STBVOX_CONFIG_LIGHTING_SIMPLE
 #define STBVOX_CONFIG_FOG_SMOOTHSTEP
-#define STBVOX_CONFIG_PREMULTIPLIED_ALPHA  // use this even though it doesn't really work for alpha test without next #define
+//#define STBVOX_CONFIG_PREMULTIPLIED_ALPHA  // use this even though it doesn't really work for alpha test without next #define
 //#define STBVOX_CONFIG_UNPREMULTIPLY  // slower, makes windows & fancy leaves look better
 
 #define STBVOX_ROTATION_IN_LIGHTING

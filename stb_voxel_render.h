@@ -861,6 +861,7 @@ static char *stbvox_fragment_program =
          "   uint tex2_id = facedata.y;\n"
          "   uint texprojid = facedata.w & 31u;\n"
          "   uint color_id  = facedata.z;\n"
+         //  @TODO: could use a separate lookup table keyed on tex2 to determine this; maybe another field of texscale?
          "   bool texblend_mode = ((facedata.w & 128u) != 0u);\n"
 
          #ifndef STBVOX_CONFIG_PREFER_TEXBUFFER
@@ -899,17 +900,15 @@ static char *stbvox_fragment_program =
          "   tex2.a *= texlerp;\n"
          #endif
 
-         //  @TODO: could use a separate lookup table keyed on tex2 to determine this
          "   if (texblend_mode)\n"
          "      albedo = tex2.xyz * rlerp(tex2.a, 2.0*tex1.xyz, vec3(1.0,1.0,1.0));\n"
          "   else {\n"
          #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
          "      albedo = (1.0-tex2.a)*tex1.xyz + tex2.xyz;\n"
-         "      fragment_alpha = tex1.a;\n"
          #else
          "      albedo = rlerp(tex2.a, tex1.xyz, tex2.xyz);\n"
-         "      fragment_alpha = tex1.a*(1-tex2.a)+tex2.a;\n"
          #endif
+         "      fragment_alpha = tex1.a*(1-tex2.a)+tex2.a;\n"
          "   }\n"
 
          "   fragment_alpha = tex1.a;\n"
@@ -1050,16 +1049,8 @@ static char *stbvox_fragment_program_alpha_only =
 
       "   tex2.a *= texlerp;\n"
 
-      //  @TODO: could use a separate lookup table keyed on tex2 to determine this
-      "   if (texblend_mode)\n"
-      "      ;\n"
-      "   else {\n"
-      #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
-      "      fragment_alpha = tex1.a;\n"
-      #else
+      "   if (!texblend_mode)\n"
       "      fragment_alpha = tex1.a*(1-tex2.a)+tex2.a;\n"
-      #endif
-      "   }\n"
 
    #else // UNTEXTURED
       "   vec4 color;"
