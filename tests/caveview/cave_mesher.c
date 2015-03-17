@@ -21,7 +21,8 @@
 #define STBVOX_CONFIG_PREFER_TEXBUFFER
 //#define STBVOX_CONFIG_LIGHTING_SIMPLE
 #define STBVOX_CONFIG_FOG_SMOOTHSTEP
-
+#define STBVOX_CONFIG_PREMULTIPLIED_ALPHA  // use this even though it doesn't really work for alpha test without next #define
+//#define STBVOX_CONFIG_UNPREMULTIPLY  // slower, makes windows & fancy leaves look better
 
 #define STBVOX_ROTATION_IN_LIGHTING
 #define STB_VOXEL_RENDER_IMPLEMENTATION
@@ -33,7 +34,9 @@ extern void ods(char *fmt, ...);
 #define FAST_CHUNK
 #define IN_PLACE
 
-#define SKIP_TERRAIN   0 // must be a multiple of 16; doesn't build some underground stuff
+#define SKIP_TERRAIN   0 // use to avoid building underground stuff
+                         // allows you to see what perf would be like if underground was efficiently culled,
+                         // or if you were making a game without underground
 
 enum
 {
@@ -189,7 +192,7 @@ unsigned char minecraft_info[256][7] =
    { C_empty },
    { C_solid, 54,54,54,54,54,54 },
    { C_solid, 125,125,125,125,125,125 },
-   { C_solid, 124,124,124,124,124,124 },
+   { C_solid, 126,126,126,126,126,126 },
    { C_empty }, // bars
    { C_trans, 49,49,49,49,49,49 }, // glass pane
    { C_solid, 136,136,136,136,137,137 }, // melon
@@ -227,7 +230,7 @@ unsigned char minecraft_info[256][7] =
    // 128
    { C_solid, 192,192,192,192,176,176 }, // sandstone stairs
    { C_solid, 32,32,32,32,32,32 }, // emerald ore
-   { C_empty }, // ender chest
+   { C_solid, 26,26,26,27,25,25 }, // ender chest
    { C_empty },
    { C_empty },
    { C_solid, 23,23,23,23,23,23 }, // emerald block

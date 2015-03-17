@@ -1,7 +1,6 @@
 // @TODO
 //
 //   - API for texture rotation on side faces (& top&bottom ?)
-//   - premultiplied alpha
 //   - edge clamp
 //   - better culling of vheight faces with vheight neighbors
 //   - better culling of non-vheight faces with fheight neighbors
@@ -280,6 +279,7 @@ STBVXDEC void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_byt
 STBVXDEC stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm);
 STBVXDEC char *stbvox_get_vertex_shader(void);
 STBVXDEC char *stbvox_get_fragment_shader(void);
+STBVXDEC char *stbvox_get_fragment_shader_alpha_only(void);
 STBVXDEC void stbvox_set_default_mesh(stbvox_mesh_maker *mm, int mesh);
 STBVXDEC int stbvox_get_quad_count(stbvox_mesh_maker *mm, int mesh);
 STBVXDEC void stbvox_get_transform(stbvox_mesh_maker *mm, float transform[3][3]);
@@ -754,7 +754,7 @@ static char *stbvox_vertex_encoderogram =
 
       // fragment output data
       "flat out uvec4  facedata;\n"
-      "     out  vec3  objectspace_pos;\n"
+      "     out  vec3  voxelspace_pos;\n"
       "     out  vec3  vnormal;\n"
       "     out float  texlerp;\n"
       "     out float  amb_occ;\n"
@@ -778,8 +778,8 @@ static char *stbvox_vertex_encoderogram =
       "   texlerp  = float( (attr_vertex >> 29u)        ) /  7.0;\n"      // a[29..31]
 
       "   vnormal = normal_table[(facedata.w>>2) & 31u];\n"
-      "   objectspace_pos = offset * transform[0];\n"  // object-to-world scale
-      "   vec3 position  = objectspace_pos + transform[1];\n"  // object-to-world translate
+      "   voxelspace_pos = offset * transform[0];\n"  // mesh-to-object scale
+      "   vec3 position  = voxelspace_pos + transform[1];\n"  // mesh-to-object translate
 
       #ifdef STBVOX_DEBUG_TEST_NORMALS
          "   if ((facedata.w & 28u) == 16u || (facedata.w & 28u) == 24u)\n"
@@ -812,7 +812,7 @@ static char *stbvox_fragment_program =
 
       // vertex-shader output data
       "flat in uvec4  facedata;\n"
-      "     in  vec3  objectspace_pos;\n"
+      "     in  vec3  voxelspace_pos;\n"
       "     in  vec3  vnormal;\n"
       "     in float  texlerp;\n"
       "     in float  amb_occ;\n"
@@ -847,7 +847,7 @@ static char *stbvox_fragment_program =
       "vec3 compute_lighting(vec3 pos, vec3 norm, vec3 albedo, vec3 ambient);\n"
       #endif
       #if defined(STBVOX_CONFIG_FOG) || defined(STBVOX_CONFIG_FOG_SMOOTHSTEP)
-      "vec3 compute_fog(vec3 color, vec3 relative_pos);\n"
+      "vec3 compute_fog(vec3 color, vec3 relative_pos, float fragment_alpha);\n"
       #endif
 
       "void main()\n"
@@ -878,7 +878,7 @@ static char *stbvox_fragment_program =
             "   vec4 color = texelFetch(color_table, int(color_id & 63u));\n"
          #endif
          "   vec2 texcoord;\n"
-         "   vec3 texturespace_pos = objectspace_pos + transform[2].xyz;\n"
+         "   vec3 texturespace_pos = voxelspace_pos + transform[2].xyz;\n"
          "   texcoord.s = dot(texturespace_pos, texgen_s);\n"
          "   texcoord.t = dot(texturespace_pos, texgen_t);\n"
 
@@ -893,13 +893,24 @@ static char *stbvox_fragment_program =
          "   if ((color_id &  64u) != 0u) tex1.xyz *= color.xyz;\n"
          "   if ((color_id & 128u) != 0u) tex2.xyz *= color.xyz;\n"
 
+         #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
+         "   tex2.rgba *= texlerp;\n"
+         #else
          "   tex2.a *= texlerp;\n"
+         #endif
 
          //  @TODO: could use a separate lookup table keyed on tex2 to determine this
          "   if (texblend_mode)\n"
          "      albedo = tex2.xyz * rlerp(tex2.a, 2.0*tex1.xyz, vec3(1.0,1.0,1.0));\n"
-         "   else\n"
-         "      albedo = rlerp(tex2.a, tex1.xyz, tex2.xyz);\n" // @TODO premultiplied alpha
+         "   else {\n"
+         #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
+         "      albedo = (1.0-tex2.a)*tex1.xyz + tex2.xyz;\n"
+         "      fragment_alpha = tex1.a;\n"
+         #else
+         "      albedo = rlerp(tex2.a, tex1.xyz, tex2.xyz);\n"
+         "      fragment_alpha = tex1.a*(1-tex2.a)+tex2.a;\n"
+         #endif
+         "   }\n"
 
          "   fragment_alpha = tex1.a;\n"
       #else // UNTEXTURED
@@ -926,7 +937,7 @@ static char *stbvox_fragment_program =
       "   vec3 lit_color;\n"
       "   if (!emissive)\n"
       #if defined(STBVOX_ICONFIG_LIGHTING) || defined(STBVOX_CONFIG_LIGHTING_SIMPLE)
-         "      lit_color = compute_lighting(objectspace_pos + transform[1], normal, albedo, ambient_color);\n"
+         "      lit_color = compute_lighting(voxelspace_pos + transform[1], normal, albedo, ambient_color);\n"
       #else
          "      lit_color = albedo * ambient_color ;\n"
       #endif
@@ -934,11 +945,15 @@ static char *stbvox_fragment_program =
       "      lit_color = albedo;\n"
 
       #if defined(STBVOX_ICONFIG_FOG) || defined(STBVOX_CONFIG_FOG_SMOOTHSTEP)
-         "   vec3 dist = objectspace_pos + (transform[1] - camera_pos.xyz);\n"
-         "   lit_color = compute_fog(lit_color, dist);\n"
+         "   vec3 dist = voxelspace_pos + (transform[1] - camera_pos.xyz);\n"
+         "   lit_color = compute_fog(lit_color, dist, fragment_alpha);\n"
       #endif
-
+      
+      #ifdef STBVOX_CONFIG_UNPREMULTIPLY
+      "   vec4 final_color = vec4(lit_color/fragment_alpha, fragment_alpha);\n"
+      #else
       "   vec4 final_color = vec4(lit_color, fragment_alpha);\n"
+      #endif
       "   outcolor = final_color;\n"
       "}\n"
 
@@ -956,16 +971,105 @@ static char *stbvox_fragment_program =
 
    #ifdef STBVOX_CONFIG_FOG_SMOOTHSTEP
       "\n"
-      "vec3 compute_fog(vec3 color, vec3 relative_pos)\n"
+      "vec3 compute_fog(vec3 color, vec3 relative_pos, float fragment_alpha)\n"
       "{\n"
       "   float f = sqrt(dot(relative_pos,relative_pos))/1320.0;\n"
       "   f = clamp(f, 0.0, 1.0);\n" 
       "   f = 3.0*f*f - 2.0*f*f*f;\n" // smoothstep
       "   f = f*f;\n"  // fade in more smoothly
+      #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
+      "   return rlerp(f, color.xyz, ambient[3]*fragment_alpha);\n"
+      #else
       "   return rlerp(f, color.xyz, ambient[3]);\n"
+      #endif
       "}\n"
    #endif
 };
+
+
+static char *stbvox_fragment_program_alpha_only =
+{
+   STBVOX_SHADER_VERSION
+
+   // vertex-shader output data
+   "flat in uvec4  facedata;\n"
+   "     in  vec3  voxelspace_pos;\n"
+   "     in float  texlerp;\n"
+
+   // per-buffer data
+   "uniform vec3 transform[3];\n"
+
+   #ifndef STBVOX_ICONFIG_UNTEXTURED
+      // generally constant data
+      "uniform sampler2DArray tex_array[2];\n"
+
+      #ifdef STBVOX_CONFIG_PREFER_TEXBUFFER
+         "uniform samplerBuffer texscale;\n"
+         "uniform samplerBuffer texgen;\n"
+      #else
+         "uniform vec2 texscale[64];\n" // instead of 128, to avoid running out of uniforms
+         "uniform vec3 texgen[64];\n"
+      #endif
+   #endif
+
+   "out vec4  outcolor;\n"
+
+   "void main()\n"
+   "{\n"
+   "   vec3 albedo;\n"
+   "   float fragment_alpha;\n"
+
+   #ifndef STBVOX_ICONFIG_UNTEXTURED
+      // unpack the values
+      "   uint tex1_id = facedata.x;\n"
+      "   uint tex2_id = facedata.y;\n"
+      "   uint texprojid = facedata.w & 31u;\n"
+      "   bool texblend_mode = ((facedata.w & 128u) != 0u);\n"
+
+      #ifndef STBVOX_CONFIG_PREFER_TEXBUFFER
+         // load from uniforms / texture buffers 
+         "   vec3 texgen_s = texgen[texprojid];\n"
+         "   vec3 texgen_t = texgen[texprojid+32u];\n"
+         "   float tex1_scale = texscale[tex1_id & 63u].x;\n"
+         "   float tex2_scale = texscale[tex2_id & 63u].y;\n"
+      #else
+         "   vec3 texgen_s = texelFetch(texgen, int(texprojid)).xyz;\n"
+         "   vec3 texgen_t = texelFetch(texgen, int(texprojid+32u)).xyz;\n"
+         "   float tex1_scale = texelFetch(texscale, int(tex1_id & 127u)).x;\n"
+         "   float tex2_scale = texelFetch(texscale, int(tex2_id & 127u)).y;\n"
+      #endif
+      "   vec2 texcoord;\n"
+      "   vec3 texturespace_pos = voxelspace_pos + transform[2].xyz;\n"
+      "   texcoord.s = dot(texturespace_pos, texgen_s);\n"
+      "   texcoord.t = dot(texturespace_pos, texgen_t);\n"
+
+      // @TODO: use 2 bits of facedata.w to enable animation of facedata.x & y?
+
+      "   vec4 tex1 = texture(tex_array[0], vec3(tex1_scale * texcoord, float(tex1_id)));\n"
+      "   vec4 tex2 = texture(tex_array[1], vec3(tex2_scale * texcoord, float(tex2_id)));\n"
+
+      "   tex2.a *= texlerp;\n"
+
+      //  @TODO: could use a separate lookup table keyed on tex2 to determine this
+      "   if (texblend_mode)\n"
+      "      ;\n"
+      "   else {\n"
+      #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
+      "      fragment_alpha = tex1.a;\n"
+      #else
+      "      fragment_alpha = tex1.a*(1-tex2.a)+tex2.a;\n"
+      #endif
+      "   }\n"
+
+   #else // UNTEXTURED
+      "   vec4 color;"
+      "   fragment_alpha = 1.0;\n"
+   #endif
+
+   "   outcolor = vec4(0.0, 0.0, 0.0, fragment_alpha);\n"
+   "}\n"
+};
+
 
 STBVXDEC char *stbvox_get_vertex_shader(void)
 {
@@ -975,6 +1079,11 @@ STBVXDEC char *stbvox_get_vertex_shader(void)
 STBVXDEC char *stbvox_get_fragment_shader(void)
 {
    return stbvox_fragment_program;
+}
+
+STBVXDEC char *stbvox_get_fragment_shader_alpha_only(void)
+{
+   return stbvox_fragment_program_alpha_only;
 }
 
 static float stbvox_dummy_transform[3][3];
