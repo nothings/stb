@@ -18,6 +18,7 @@
 #include <math.h>
 #include <assert.h>
 
+//#define STBVOX_CONFIG_TEX1_EDGE_CLAMP
 
 
 // currently no dynamic way to set mesh cache size or view distance
@@ -182,6 +183,7 @@ static void upload_mesh_data(raw_mesh *rm)
 
 GLint uniform_loc[16];
 float table3[128][3];
+float table4[64][4];
 GLint tablei[2];
 
 float step=0;
@@ -238,9 +240,9 @@ void setup_uniforms(float pos[3])
 
                // ambient direction is sky-colored upwards
                // "ambient" lighting is from above
-               table3[0][0] =  0.3f;
-               table3[0][1] = -0.5f;
-               table3[0][2] =  0.9f;
+               table4[0][0] =  0.3f;
+               table4[0][1] = -0.5f;
+               table4[0][2] =  0.9f;
 
                amb[1][0] = 0.3f; amb[1][1] = 0.3f; amb[1][2] = 0.3f; // dark-grey
                amb[2][0] = 1.0; amb[2][1] = 1.0; amb[2][2] = 1.0; // white
@@ -252,16 +254,16 @@ void setup_uniforms(float pos[3])
                //     amb[1] + (amb[2] - amb[1]) * dot/2 + (amb[2]-amb[1])/2
 
                for (j=0; j < 3; ++j) {
-                  table3[1][j] = (amb[2][j] - amb[1][j])/2 * bright;
-                  table3[2][j] = (amb[1][j] + amb[2][j])/2 * bright;
+                  table4[1][j] = (amb[2][j] - amb[1][j])/2 * bright;
+                  table4[2][j] = (amb[1][j] + amb[2][j])/2 * bright;
                }
 
                // fog color
-               table3[3][0] = 0.6f, table3[3][1] = 0.7f, table3[3][2] = 0.9f;
-               // fog distance
-               //table3[3][3] = 1200;
+               table4[3][0] = 0.6f, table4[3][1] = 0.7f, table4[3][2] = 0.9f;
+               table4[3][3] = 1.0f / 1320.0f;
+               table4[3][3] *= table4[3][3];
 
-               data = table3;
+               data = table4;
                break;
             }
          }
@@ -407,6 +409,10 @@ void render_init(void)
    glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
    glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
    glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_MAX_ANISOTROPY_EXT, 16);
+   #ifdef STBVOX_CONFIG_TEX1_EDGE_CLAMP
+   glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+   glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+   #endif
 
    glGenerateMipmapEXT(GL_TEXTURE_2D_ARRAY_EXT);
 

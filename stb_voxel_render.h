@@ -1,20 +1,21 @@
 // @TODO
 //
-//   - API for texture rotation on side faces (& top&bottom ?)
-//   - edge clamp
+//   - test API for texture rotation on side faces
+//   - API for texture rotation on top & bottom
 //   - better culling of vheight faces with vheight neighbors
 //   - better culling of non-vheight faces with fheight neighbors
 //   - gather vertex lighting from slopes correctly
-//   - better support texture edge_clamp: explicitly mod texcoords by 1, use textureGrad to avoid
-//     mipmap articats. Need to do compute texcoords in vertex shader, offset towards
-//     center before modding, need 2 bits per vertex to know offset direction (is implicit
-//     for modes without vertex data)
+//   - better support texture edge_clamp: currently if you fall
+//     exactly on 1.0 you get wrapped incorrectly; this is rare, but
+//     can avoid: compute texcoords in vertex shader, offset towards
+//     center before modding, need 2 bits per vertex to know offset direction)
 //   - add 10-byte quad type (loses per-face tex1/tex2 blend mode)
 //   - add 6-byte quad type (loses baked ao, most geometry, flags, texlerp)
 //   - add 4-byte quad type (only texture or only color, no baked light, no recolor)
+//   - fog properties
 //   - enable/disable fog at run-time
 
-// stb_voxel_render.h - 0.01 - Sean Barrett, 2015
+// stb_voxel_render.h - 0.01 - Sean Barrett, 2015 - public domain
 //
 // This library helps render large "voxel" worlds for games,
 // in this case one with blocks that can have textures and that
@@ -381,6 +382,7 @@ enum
 #define STBVOX_MAKE_TEXLERP1(vert,e2,n2,w2,s2,u4,d2) STBVOX_MAKE_TEXLERP(s2, w2, d2, vert)
 #define STBVOX_MAKE_TEXLERP2(vert,e2,n2,w2,s2,u4,d2) ((u2)*16 + (n2)*4 + (s2))
 #define STBVOX_MAKE_FACE_MASK(e,n,w,s,u,d)  ((e)+(n)*2+(w)*4+(s)*8+(u)*16+(d)*32)
+#define STBVOX_MAKE_SIDE_TEXROT(e,n,w,s) ((e)+(n)*4+(w)*16+(s)*64)
 
 #ifdef STBVOX_ROTATION_IN_LIGHTING
 #define STBVOX_MAKE_LIGHTING(lighting, rot)  (((lighting)&~3)+(rot))
@@ -408,6 +410,7 @@ struct stbvox_input_description
    unsigned char *tex2;                    // raw tex2 value to use on all sides of block
    unsigned char *tex2_replace;            // STBVOX_MAKE_TEX2_REPLACE --  tex2:6, face_1:2
    unsigned char *tex2_facemask;           // facemask:6 (use all bits of tex2_replace as texture)
+   unsigned char *side_texrot;             // e:2,n:2,w:2,s:2 texture rotation
    unsigned char *vheight;                 // STBVOX_MAKE_VHEIGHT   -- sw:2, se:2, nw:2, ne:2, doesn't rotate
    unsigned char *texlerp;                 // STBVOX_MAKE_TEXLERP   -- vert:2, ud:2, ew:2, ns:2
    unsigned char *texlerp2;                // STBVOX_MAKE_TEXLERP2 (and use STBVOX_MAKE_TEXLERP1 for 'texlerp' -- e:2, n:2, u:3, unused:1
@@ -440,11 +443,13 @@ struct stbvox_input_description
    unsigned char *block_color;
    unsigned char *block_texlerp;
    unsigned char *block_selector;
+   unsigned char *block_side_texrot;
 
    // indexed by overlay*6+side; in all cases 0 means 'nochange'
    unsigned char (*overlay_tex1)[6];
    unsigned char (*overlay_tex2)[6];
    unsigned char (*overlay_color)[6];
+   unsigned char *overlay_side_texrot;
 
    // indexed by extended_color
    unsigned char *ecolor_color;    // 256
@@ -824,7 +829,7 @@ static char *stbvox_fragment_program =
       "uniform vec4 camera_pos;\n"  // 4th value is used for arbitrary hacking
 
       // probably constant data
-      "uniform vec3 ambient[4];\n"
+      "uniform vec4 ambient[4];\n"
 
       #ifndef STBVOX_ICONFIG_UNTEXTURED
          // generally constant data
@@ -875,7 +880,9 @@ static char *stbvox_fragment_program =
             "   vec3 texgen_s = texelFetch(texgen, int(texprojid)).xyz;\n"
             "   vec3 texgen_t = texelFetch(texgen, int(texprojid+32u)).xyz;\n"
             "   float tex1_scale = texelFetch(texscale, int(tex1_id & 127u)).x;\n"
+            #ifndef STBVOX_CONFIG_DISABLE_TEX2
             "   float tex2_scale = texelFetch(texscale, int(tex2_id & 127u)).y;\n"
+            #endif
             "   vec4 color = texelFetch(color_table, int(color_id & 63u));\n"
          #endif
          "   vec2 texcoord;\n"
@@ -883,35 +890,55 @@ static char *stbvox_fragment_program =
          "   texcoord.s = dot(texturespace_pos, texgen_s);\n"
          "   texcoord.t = dot(texturespace_pos, texgen_t);\n"
 
-         // @TODO: use 2 bits of facedata.w to enable animation of facedata.x & y?
+         "   vec2  texcoord_1 = tex1_scale * texcoord;\n"
+         #ifndef STBVOX_CONFIG_DISABLE_TEX2
+         "   vec2  texcoord_2 = tex2_scale * texcoord;\n"
+         #endif
 
-         "   vec4 tex1 = texture(tex_array[0], vec3(tex1_scale * texcoord, float(tex1_id)));\n"
-         "   vec4 tex2 = texture(tex_array[1], vec3(tex2_scale * texcoord, float(tex2_id)));\n"
+         #ifdef STBVOX_CONFIG_TEX1_EDGE_CLAMP
+         "   texcoord_1 = texcoord_1 - floor(texcoord_1);\n"
+         "   vec4 tex1 = textureGrad(tex_array[0], vec3(texcoord_1, float(tex1_id)), dFdx(tex1_scale*texcoord), dFdy(tex1_scale*texcoord));\n"
+         #else
+         "   vec4 tex1 = texture(tex_array[0], vec3(texcoord_1, float(tex1_id)));\n"
+         #endif
+
+         #ifndef STBVOX_CONFIG_DISABLE_TEX2
+         #ifdef STBVOX_CONFIG_TEX2_EDGE_CLAMP
+         "   texcoord_2 = texcoord_2 - floor(texcoord_2);\n"
+         "   vec4 tex2 = textureGrad(tex_array[0], vec3(texcoord_2, float(tex2_id)), dFdx(tex2_scale*texcoord), dFdy(tex2_scale*texcoord));\n"
+         #else
+         "   vec4 tex2 = texture(tex_array[1], vec3(texcoord_2, float(tex2_id)));\n"
+         #endif
+         #endif
 
          "   bool emissive = (int(color.w) & 1) != 0;\n"
 
          // recolor textures
          "   if ((color_id &  64u) != 0u) tex1.xyz *= color.xyz;\n"
-         "   if ((color_id & 128u) != 0u) tex2.xyz *= color.xyz;\n"
-
-         #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
-         "   tex2.rgba *= texlerp;\n"
-         #else
-         "   tex2.a *= texlerp;\n"
-         #endif
-
-         "   if (texblend_mode)\n"
-         "      albedo = tex2.xyz * rlerp(tex2.a, 2.0*tex1.xyz, vec3(1.0,1.0,1.0));\n"
-         "   else {\n"
-         #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
-         "      albedo = (1.0-tex2.a)*tex1.xyz + tex2.xyz;\n"
-         #else
-         "      albedo = rlerp(tex2.a, tex1.xyz, tex2.xyz);\n"
-         #endif
-         "      fragment_alpha = tex1.a*(1-tex2.a)+tex2.a;\n"
-         "   }\n"
-
          "   fragment_alpha = tex1.a;\n"
+         #ifndef STBVOX_CONFIG_DISABLE_TEX2
+            "   if ((color_id & 128u) != 0u) tex2.xyz *= color.xyz;\n"
+
+            #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
+            "   tex2.rgba *= texlerp;\n"
+            #else
+            "   tex2.a *= texlerp;\n"
+            #endif
+
+            "   if (texblend_mode)\n"
+            "      albedo = tex2.xyz * rlerp(tex2.a, 2.0*tex1.xyz, vec3(1.0,1.0,1.0));\n"
+            "   else {\n"
+            #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
+            "      albedo = (1.0-tex2.a)*tex1.xyz + tex2.xyz;\n"
+            #else
+            "      albedo = rlerp(tex2.a, tex1.xyz, tex2.xyz);\n"
+            #endif
+            "      fragment_alpha = tex1.a*(1-tex2.a)+tex2.a;\n"
+            "   }\n"
+         #else
+            "      albedo = tex1.xyz;\n"
+         #endif
+
       #else // UNTEXTURED
          "   vec4 color;"
          "   color.xyz = vec3(facedata.xyz) / 255.0;\n"
@@ -928,7 +955,7 @@ static char *stbvox_fragment_program =
          "   vec3 normal = vnormal;\n"
       #endif
 
-      "   vec3 ambient_color = dot(normal, ambient[0]) * ambient[1] + ambient[2];\n"
+      "   vec3 ambient_color = dot(normal, ambient[0].xyz) * ambient[1].xyz + ambient[2].xyz;\n"
 
       "   ambient_color = clamp(ambient_color, 0.0, 1.0);"
       "   ambient_color *= amb_occ;\n"
@@ -972,14 +999,15 @@ static char *stbvox_fragment_program =
       "\n"
       "vec3 compute_fog(vec3 color, vec3 relative_pos, float fragment_alpha)\n"
       "{\n"
-      "   float f = sqrt(dot(relative_pos,relative_pos))/1320.0;\n"
+      "   float f = dot(relative_pos,relative_pos)*ambient[3].w;\n"
+      //"   f = rlerp(f, -2,1);\n"
       "   f = clamp(f, 0.0, 1.0);\n" 
       "   f = 3.0*f*f - 2.0*f*f*f;\n" // smoothstep
-      "   f = f*f;\n"  // fade in more smoothly
+      //"   f = f*f;\n"  // fade in more smoothly
       #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
-      "   return rlerp(f, color.xyz, ambient[3]*fragment_alpha);\n"
+      "   return rlerp(f, color.xyz, ambient[3].xyz*fragment_alpha);\n"
       #else
-      "   return rlerp(f, color.xyz, ambient[3]);\n"
+      "   return rlerp(f, color.xyz, ambient[3].xyz);\n"
       #endif
       "}\n"
    #endif
@@ -1042,10 +1070,22 @@ static char *stbvox_fragment_program_alpha_only =
       "   texcoord.s = dot(texturespace_pos, texgen_s);\n"
       "   texcoord.t = dot(texturespace_pos, texgen_t);\n"
 
-      // @TODO: use 2 bits of facedata.w to enable animation of facedata.x & y?
+      "   vec2  texcoord_1 = tex1_scale * texcoord;\n"
+      "   vec2  texcoord_2 = tex2_scale * texcoord;\n"
 
-      "   vec4 tex1 = texture(tex_array[0], vec3(tex1_scale * texcoord, float(tex1_id)));\n"
-      "   vec4 tex2 = texture(tex_array[1], vec3(tex2_scale * texcoord, float(tex2_id)));\n"
+      #ifdef STBVOX_CONFIG_TEX1_EDGE_CLAMP
+      "   texcoord_1 = texcoord_1 - floor(texcoord_1);\n"
+      "   vec4 tex1 = textureGrad(tex_array[0], vec3(texcoord_1, float(tex1_id)), dFdx(tex1_scale*texcoord), dFdy(tex1_scale*texcoord));\n"
+      #else
+      "   vec4 tex1 = texture(tex_array[0], vec3(texcoord_1, float(tex1_id)));\n"
+      #endif
+
+      #ifdef STBVOX_CONFIG_TEX2_EDGE_CLAMP
+      "   texcoord_2 = texcoord_2 - floor(texcoord_2);\n"
+      "   vec4 tex2 = textureGrad(tex_array[0], vec3(texcoord_2, float(tex2_id)), dFdx(tex2_scale*texcoord), dFdy(tex2_scale*texcoord));\n"
+      #else
+      "   vec4 tex2 = texture(tex_array[1], vec3(texcoord_2, float(tex2_id)));\n"
+      #endif
 
       "   tex2.a *= texlerp;\n"
 
@@ -1094,8 +1134,8 @@ static stbvox_uniform_info stbvox_uniforms[] =
    { STBVOX_UNIFORM_TYPE_vec4     , 16,  64, "color_table"  , stbvox_default_palette[0]  , STBVOX_TEXBUF },
    { STBVOX_UNIFORM_TYPE_vec3     , 12,  32, "normal_table" , stbvox_default_normals[0]   },
    { STBVOX_UNIFORM_TYPE_vec3     , 12,  64, "texgen"       , stbvox_default_texgen[0][0], STBVOX_TEXBUF },
-   { STBVOX_UNIFORM_TYPE_vec3     , 12,   4, "ambient"      , 0                           },
-   { STBVOX_UNIFORM_TYPE_vec4     , 12,   1, "camera_pos"   , stbvox_dummy_transform[0]   },
+   { STBVOX_UNIFORM_TYPE_vec4     , 16,   4, "ambient"      , 0                           },
+   { STBVOX_UNIFORM_TYPE_vec4     , 16,   1, "camera_pos"   , stbvox_dummy_transform[0]   },
 };
 
 STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform)
@@ -1141,6 +1181,7 @@ stbvox_mesh_face stbvox_compute_mesh_face_value(stbvox_mesh_maker *mm, stbvox_ro
    stbvox_mesh_face face_data = { 0 };
    stbvox_block_type bt = mm->input.blocktype[v_off];
    unsigned char bt_face = STBVOX_ROTATE(face, rot.block);
+   int facerot = rot.facerot;
 
    if (mm->input.color)
       face_data.color = mm->input.color[v_off];
@@ -1167,6 +1208,13 @@ stbvox_mesh_face stbvox_compute_mesh_face_value(stbvox_mesh_maker *mm, stbvox_ro
          face_data.color = mcol;
    }
 
+   if (face <= STBVOX_FACE_south) {
+      if (mm->input.side_texrot)
+         facerot = mm->input.side_texrot[v_off] >> (2 * face);
+      else if (mm->input.block_side_texrot)
+         facerot = mm->input.block_side_texrot[v_off] >> (2 * bt_face);
+   }
+
    if (mm->input.overlay) {
       int over_face = STBVOX_ROTATE(face, rot.overlay);
       unsigned char over = mm->input.overlay[v_off];
@@ -1185,7 +1233,11 @@ stbvox_mesh_face stbvox_compute_mesh_face_value(stbvox_mesh_maker *mm, stbvox_ro
          if (rep3)
             face_data.color = rep3;
       }
+
+      if (face <= STBVOX_FACE_south)
+         facerot = mm->input.overlay_side_texrot[over] >> (2*over_face);
    }
+
    if (mm->input.tex2_for_tex1)
       face_data.tex2 = mm->input.tex2_for_tex1[face_data.tex1];
    if (mm->input.tex2)
@@ -1195,19 +1247,22 @@ stbvox_mesh_face stbvox_compute_mesh_face_value(stbvox_mesh_maker *mm, stbvox_ro
       if (mm->input.tex2_facemask[v_off] & (1 << tex2_face))
          face_data.tex2 = mm->input.tex2_replace[v_off];
    }
+
    color_face = STBVOX_ROTATE(face, rot.ecolor);
    if (mm->input.extended_color) {
       unsigned char ec = mm->input.extended_color[v_off];
       if (mm->input.ecolor_facemask[ec] & (1 << color_face))
          face_data.color = mm->input.ecolor_color[ec];
    }
+
    if (mm->input.color2) {
       if (mm->input.color2_facemask[v_off] & (1 << color_face))
          face_data.color = mm->input.color2[v_off];
       if (mm->input.color3 && (mm->input.color3_facemask[v_off] & (1 << color_face)))
          face_data.color = mm->input.color3[v_off];
    }
-   face_data.face_info = (normal<<2) + rot.facerot;
+
+   face_data.face_info = (normal<<2) + facerot;
    return face_data;
 }
 
@@ -1309,8 +1364,9 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
          if (mm->input.lighting_at_vertices) {
             int i;
             for (i=0; i < 4; ++i) {
-               *mv[i] = vertbase + face_coord[i];
-                          + stbvox_vertex_encode(0,0,0,mm->input.lighting[v_off + mm->cube_vertex_offset[face][i]] & 63,0);
+               *mv[i] = vertbase + face_coord[i]
+                          + stbvox_vertex_encode(0,0,0,mm->input.lighting[v_off + mm->cube_vertex_offset[face][i]] & 63,0)
+                          + p1[i];
             }
          } else {
             unsigned char *amb = &mm->input.lighting[v_off];
@@ -1330,7 +1386,8 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
                for (j=0; j < 4; ++j)
                   total += STBVOX_GET_LIGHTING(vamb[mm->vertex_gather_offset[face][j]]);
                *mv[i] = vertbase + face_coord[i]
-                          + stbvox_vertex_encode(0,0,0,(total+STBVOX_LIGHTING_ROUNDOFF)>>4,0);
+                          + stbvox_vertex_encode(0,0,0,(total+STBVOX_LIGHTING_ROUNDOFF)>>4,0)
+                          + p1[i];
                           // >> 4 is because:
                           //   >> 2 to divide by 4 to get average over 4 samples
                           //   >> 2 because input is 8 bits, output is 6 bits
@@ -2143,9 +2200,9 @@ void stbvox_get_transform(stbvox_mesh_maker *mm, float transform[3][3])
    transform[1][1] = (float) (mm->pos_y);
    transform[1][2] = (float) (mm->pos_z);
    // texture coordinate projection translation
-   transform[2][0] = (float) (mm->pos_x & 63); // @TODO depends on max texture scale
-   transform[2][1] = (float) (mm->pos_y & 63);
-   transform[2][2] = (float) (mm->pos_z & 63);
+   transform[2][0] = (float) (mm->pos_x & 255); // @TODO depends on max texture scale
+   transform[2][1] = (float) (mm->pos_y & 255);
+   transform[2][2] = (float) (mm->pos_z & 255);
 }
 
 void stbvox_get_bounds(stbvox_mesh_maker *mm, float bounds[2][3])

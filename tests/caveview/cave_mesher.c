@@ -21,8 +21,10 @@
 #define STBVOX_CONFIG_PREFER_TEXBUFFER
 //#define STBVOX_CONFIG_LIGHTING_SIMPLE
 #define STBVOX_CONFIG_FOG_SMOOTHSTEP
-//#define STBVOX_CONFIG_PREMULTIPLIED_ALPHA  // use this even though it doesn't really work for alpha test without next #define
-//#define STBVOX_CONFIG_UNPREMULTIPLY  // slower, makes windows & fancy leaves look better
+//#define STBVOX_CONFIG_PREMULTIPLIED_ALPHA  // this doesn't work properly alpha test without next #define
+//#define STBVOX_CONFIG_UNPREMULTIPLY  // slower, fixes alpha test makes windows & fancy leaves look better
+//#define STBVOX_CONFIG_TEX1_EDGE_CLAMP
+#define STBVOX_CONFIG_DISABLE_TEX2
 
 #define STBVOX_ROTATION_IN_LIGHTING
 #define STB_VOXEL_RENDER_IMPLEMENTATION
@@ -300,7 +302,6 @@ unsigned char minecraft_info[256][7] =
 
 unsigned char minecraft_tex1_for_blocktype[256][6];
 unsigned char effective_blocktype[256];
-unsigned char effective_block_add[256];
 unsigned char minecraft_color_for_blocktype[256][6];
 unsigned char minecraft_geom_for_blocktype[256];
 
@@ -703,26 +704,21 @@ unsigned char mc_rot[4] = { 1,3,2,0 };
 // in lighting
 void build_stair_rotations(int blocktype, unsigned char *map)
 {
-   int i,j,k;
-   for (j=0; j < 2; ++j) {
-      int geom = j ? STBVOX_GEOM_ceil_slope_north_is_bottom : STBVOX_GEOM_floor_slope_north_is_top;
-      //int geom = STBVOX_GEOM_solid;
-      for (i=0; i < 4; ++i) {
-         if (i == 0 && j == 0) {
-            map[j*4+i+8] = map[j*4+i] = blocktype;
-            minecraft_geom_for_blocktype[blocktype] = (unsigned char) STBVOX_MAKE_GEOMETRY(geom, 0, 0);
-         } else {
-            map[j*4+i+8] = map[j*4+i] = next_blocktype;
+   int i;
 
-            for (k=0; k < 6; ++k) {
-               minecraft_color_for_blocktype[next_blocktype][k] = minecraft_color_for_blocktype[blocktype][k];
-               minecraft_tex1_for_blocktype [next_blocktype][k] = minecraft_tex1_for_blocktype [blocktype][k];
-            }
-            minecraft_geom_for_blocktype[next_blocktype] = (unsigned char) STBVOX_MAKE_GEOMETRY(geom, 0, 0);
-            --next_blocktype;
-         }
-      }
+   // use the existing block type for floor stairs; allocate a new type for ceil stairs
+   for (i=0; i < 6; ++i) {
+      minecraft_color_for_blocktype[next_blocktype][i] = minecraft_color_for_blocktype[blocktype][i];
+      minecraft_tex1_for_blocktype [next_blocktype][i] = minecraft_tex1_for_blocktype [blocktype][i];
    }
+   minecraft_geom_for_blocktype[next_blocktype] = (unsigned char) STBVOX_MAKE_GEOMETRY(STBVOX_GEOM_ceil_slope_north_is_bottom, 0, 0);
+   minecraft_geom_for_blocktype[     blocktype] = (unsigned char) STBVOX_MAKE_GEOMETRY(STBVOX_GEOM_floor_slope_north_is_top, 0, 0);
+
+   for (i=0; i < 4; ++i) {
+      map[0+i+8] = map[0+i] =      blocktype;
+      map[4+i+8] = map[4+i] = next_blocktype;
+   }
+   --next_blocktype;
 }
 
 void build_wool_variations(int bt, unsigned char *map)
@@ -847,11 +843,4 @@ void mesh_init(void)
    // set the remap flags for these so they write the rotation values
    remap_in_place(54, 9);
    remap_in_place(146, 10);
-
-   for (i=0; i < 256; ++i) {
-      if (remap[i])
-         effective_block_add[i] = 0;
-      else
-         effective_block_add[i] = effective_blocktype[i];
-   }
 }
