@@ -188,6 +188,12 @@ GLint tablei[2];
 
 float step=0;
 
+#ifdef SHORTVIEW
+int view_dist_in_chunks = 50;
+#else
+int view_dist_in_chunks = 80;
+#endif
+
 void setup_uniforms(float pos[3])
 {
    int i,j;
@@ -222,7 +228,7 @@ void setup_uniforms(float pos[3])
 
             case STBVOX_UNIFORM_color_table:
                data = ui->default_value;
-               ((float *)data)[63*4+3] = 1.0f; // emissive
+               ((float *)data)[63*4+3] = 2.0f; // emissive
                break;
 
             case STBVOX_UNIFORM_camera_pos:
@@ -260,7 +266,7 @@ void setup_uniforms(float pos[3])
 
                // fog color
                table4[3][0] = 0.6f, table4[3][1] = 0.7f, table4[3][2] = 0.9f;
-               table4[3][3] = 1.0f / 1320.0f;
+               table4[3][3] = 1.0f / (view_dist_in_chunks * 16);
                table4[3][3] *= table4[3][3];
 
                data = table4;
@@ -289,7 +295,7 @@ void make_texture_buffer_for_uniform(int uniform, int slot)
    uloc = stbgl_find_uniform(main_prog, ui->name);
 
    if (uniform == STBVOX_UNIFORM_color_table)
-      ((float *)ui->default_value)[63*4+3] = 1.0f; // emissive
+      ((float *)ui->default_value)[63*4+3] = 2.0f; // emissive
 
    glGenBuffersARB(1, &unibuf[uniform]);
    glBindBufferARB(GL_ARRAY_BUFFER_ARB, unibuf[uniform]);
@@ -705,12 +711,6 @@ static int is_box_in_frustum(float *bmin, float *bmax)
          return 0;
    return 1;
 }
-
-#ifdef SHORTVIEW
-int view_dist_in_chunks = 50;
-#else
-int view_dist_in_chunks = 80;
-#endif
 
 float compute_priority(int cx, int cy, float x, float y)
 {

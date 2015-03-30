@@ -36,9 +36,9 @@ extern void ods(char *fmt, ...);
 #define FAST_CHUNK
 #define IN_PLACE
 
-#define SKIP_TERRAIN   0 // use to avoid building underground stuff
-                         // allows you to see what perf would be like if underground was efficiently culled,
-                         // or if you were making a game without underground
+#define SKIP_TERRAIN   0  // use to avoid building underground stuff
+                          // allows you to see what perf would be like if underground was efficiently culled,
+                          // or if you were making a game without underground
 
 enum
 {
