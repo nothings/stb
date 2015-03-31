@@ -341,10 +341,12 @@ int screen_x,screen_y;
 float carried_dt = 0;
 #define TICKRATE 60
 
+float tex2_alpha = 1.0;
 
 int raw_level_time;
 
 float global_timer;
+int global_hack;
 
 int loopmode(float dt, int real, int in_client)
 {
@@ -360,6 +362,11 @@ int loopmode(float dt, int real, int in_client)
 
    carried_dt += dt;
    while (carried_dt > 1.0/TICKRATE) {
+      if (global_hack) {
+         tex2_alpha += global_hack / 60.0f;
+         if (tex2_alpha < 0) tex2_alpha = 0;
+         if (tex2_alpha > 1) tex2_alpha = 1;
+      }
       //update_input();
       // if the player is dead, stop the sim
       carried_dt -= 1.0/TICKRATE;
@@ -432,6 +439,8 @@ void process_event(SDL_Event *e)
          if (s == SDL_SCANCODE_LCTRL)   active_control_set(5);
          if (s == SDL_SCANCODE_S)   active_control_set(6);
          if (s == SDL_SCANCODE_D)   active_control_set(7);
+         if (k == '1') global_hack = !global_hack;
+         if (k == '2') global_hack = -1;
 
          #if 0
          if (game_mode == GAME_editor) {
@@ -568,7 +577,7 @@ int SDL_main(int argc, char **argv)
    }
    #endif
 
-   SDL_GL_SetSwapInterval(0); // only when profiling
+   SDL_GL_SetSwapInterval(1);
 
    render_init();
    mesh_init();

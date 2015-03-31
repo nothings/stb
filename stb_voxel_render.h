@@ -341,16 +341,22 @@ enum
 
 enum
 {
-   STBVOX_TEXLERP4_0_8,
-   STBVOX_TEXLERP4_1_8,
-   STBVOX_TEXLERP4_2_8,
-   STBVOX_TEXLERP4_3_8,
-   STBVOX_TEXLERP4_4_8,
-   STBVOX_TEXLERP4_5_8,
-   STBVOX_TEXLERP4_6_8,
-   STBVOX_TEXLERP4_7_8,
+   STBVOX_TEXLERP_BASE_0,    // 0.0
+   STBVOX_TEXLERP_BASE_2_7,  // 2/7
+   STBVOX_TEXLERP_BASE_5_7,  // 4/7
+   STBVOX_TEXLERP_BASE_1     // 1.0
+};
 
-   STBVOX_TEXLERP4_use_vert=15,
+enum
+{
+   STBVOX_TEXLERP3_0_8,
+   STBVOX_TEXLERP3_1_8,
+   STBVOX_TEXLERP3_2_8,
+   STBVOX_TEXLERP3_3_8,
+   STBVOX_TEXLERP3_4_8,
+   STBVOX_TEXLERP3_5_8,
+   STBVOX_TEXLERP3_6_8,
+   STBVOX_TEXLERP3_7_8,
 };
 
 enum
@@ -365,6 +371,7 @@ enum
    STBVOX_FACE__count,
 };
 
+#define STBVOX_FACE_NONE  7
 
 #define STBVOX_BLOCKTYPE_EMPTY    0
 
@@ -379,6 +386,7 @@ enum
 #define STBVOX_MAKE_MATROT(block, overlay, tex2, color)  ((block) + (overlay)*4 + (tex2)*16 + (color)*64)
 #define STBVOX_MAKE_TEX2_REPLACE(tex2, tex2_replace_face) ((tex2) + ((tex2_replace_face) & 3)*64)
 #define STBVOX_MAKE_TEXLERP(ns2, ew2, ud2, vert)  ((ew2) + (ns2)*4 + (ud2)*16 + (vert)*64)
+#define STBVOX_MAKE_TEXLERP_SIMPLE(baselerp,vert,face)   ((vert)*32 + (face)*4 + (baselerp))
 #define STBVOX_MAKE_TEXLERP1(vert,e2,n2,w2,s2,u4,d2) STBVOX_MAKE_TEXLERP(s2, w2, d2, vert)
 #define STBVOX_MAKE_TEXLERP2(vert,e2,n2,w2,s2,u4,d2) ((u2)*16 + (n2)*4 + (s2))
 #define STBVOX_MAKE_FACE_MASK(e,n,w,s,u,d)  ((e)+(n)*2+(w)*4+(s)*8+(u)*16+(d)*32)
@@ -419,6 +427,7 @@ struct stbvox_input_description
    unsigned char *vheight;                 // STBVOX_MAKE_VHEIGHT   -- sw:2, se:2, nw:2, ne:2, doesn't rotate
    unsigned char *texlerp;                 // STBVOX_MAKE_TEXLERP   -- vert:2, ud:2, ew:2, ns:2
    unsigned char *texlerp2;                // STBVOX_MAKE_TEXLERP2 (and use STBVOX_MAKE_TEXLERP1 for 'texlerp' -- e:2, n:2, u:3, unused:1
+   unsigned char *texlerp_simple;          // STBVOX_MAKE_TEXLERP_SIMPLE -- baselerp:2, vert_lerp:3, face_to_use_vert_lerp:3
    unsigned short *texlerp_vert3;          // e:3,n:3,w:3,s:3,u:3 (down comes from 'texlerp')
    unsigned short *texlerp_face3;          // e:3,n:3,w:3,s:3,u:2,d:2
    unsigned char *lighting;                // lighting:8
@@ -944,7 +953,7 @@ static char *stbvox_fragment_program =
             #endif
 
             "   if (texblend_mode)\n"
-            "      albedo = tex1.xyz * rlerp(tex2.a, 2.0*tex2.xyz, vec3(1.0,1.0,1.0));\n"
+            "      albedo = tex1.xyz * rlerp(tex2.a, vec3(1.0,1.0,1.0), 2.0*tex2.xyz);\n"
             "   else {\n"
             #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
             "      albedo = (1.0-tex2.a)*tex1.xyz + tex2.xyz;\n"
@@ -1314,10 +1323,10 @@ stbvox_mesh_face stbvox_compute_mesh_face_value(stbvox_mesh_maker *mm, stbvox_ro
 
 static unsigned char stbvox_face_lerp[6] = { 0,2,0,2,4,4 };
 static unsigned char stbvox_vert3_lerp[6] = { 0,3,6,9,12,12 };
-static unsigned char stbvox_vert_lerp_for_face_lerp[6] = { 0, 4, 7 };
+static unsigned char stbvox_vert_lerp_for_face_lerp[4] = { 0, 4, 7, 7 };
 static unsigned char stbvox_face3_lerp[6] = { 0,3,6,9,12,14 };
 static unsigned char stbvox_face3_updown[8] = { 0,2,4,7,0,2,4,7 };
-
+static unsigned char stbvox_vert_lerp_for_simple[4] = { 0,2,5,7 };
 // vertex offsets for face vertices
 static unsigned char stbvox_vertex_vector[6][4][3];
 static stbvox_mesh_vertex stbvox_vmesh_delta_normal[6][4];
@@ -1376,6 +1385,22 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
       if (face >= 4)
          val = stbvox_face3_updown[val];
       p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_encode(0,0,0,0,val);
+   } else if (mm->input.texlerp_simple) {
+      unsigned char val = mm->input.texlerp_simple[v_off];
+      unsigned char lerp_face = (val >> 2) & 7;
+      if (lerp_face == face) {
+         p1[0] = (mm->input.texlerp_simple[v_off + mm->cube_vertex_offset[face][0]] >> 5) & 7;
+         p1[1] = (mm->input.texlerp_simple[v_off + mm->cube_vertex_offset[face][1]] >> 5) & 7;
+         p1[2] = (mm->input.texlerp_simple[v_off + mm->cube_vertex_offset[face][2]] >> 5) & 7;
+         p1[3] = (mm->input.texlerp_simple[v_off + mm->cube_vertex_offset[face][3]] >> 5) & 7;
+         p1[0] = stbvox_vertex_encode(0,0,0,0,p1[0]);
+         p1[1] = stbvox_vertex_encode(0,0,0,0,p1[1]);
+         p1[2] = stbvox_vertex_encode(0,0,0,0,p1[2]);
+         p1[3] = stbvox_vertex_encode(0,0,0,0,p1[3]);
+      } else {
+         unsigned char base = stbvox_vert_lerp_for_simple[val&3];
+         p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_encode(0,0,0,0,base);
+      }
    } else if (mm->input.texlerp) {
       unsigned char facelerp = (mm->input.texlerp[v_off] >> stbvox_face_lerp[face]) & 3;
       if (facelerp == STBVOX_TEXLERP_use_vert) {
@@ -1407,6 +1432,7 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
       stbvox_get_quad_vertex_pointer(mm, mesh, mv, face_data);
 
       if (mm->input.lighting) {
+         // @TODO: lighting at block centers, but not gathered, instead constant-per-face
          if (mm->input.lighting_at_vertices) {
             int i;
             for (i=0; i < 4; ++i) {
@@ -2128,7 +2154,7 @@ int stbvox_make_mesh(stbvox_mesh_maker *mm)
    int x,y;
    stbvox_bring_up_to_date(mm);
    mm->full = 0;
-   if (mm->cur_x || mm->cur_y || mm->cur_z) {
+   if (mm->cur_x > mm->x0 || mm->cur_y > mm->y0 || mm->cur_z > mm->z0) {
       stbvox_make_mesh_for_column(mm, mm->cur_x, mm->cur_y, mm->cur_z);
       if (mm->full)
          return 0;
@@ -2139,8 +2165,9 @@ int stbvox_make_mesh(stbvox_mesh_maker *mm)
             return 0;
          ++mm->cur_y;
       }
+      ++mm->cur_x;
    }
-   for (x=mm->x0; x < mm->x1; ++x) {
+   for (x=mm->cur_x; x < mm->x1; ++x) {
       for (y=mm->y0; y < mm->y1; ++y) {
          stbvox_make_mesh_for_column(mm, x, y, mm->z0);
          if (mm->full) {
@@ -2805,8 +2832,6 @@ static stbvox_face_up_normal_012[4][4][4] =
       { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
    }
 };
-//  013[3][3][1]
-//  023[3][1][1]
 
 static stbvox_face_up_normal_013[4][4][4] =
 {

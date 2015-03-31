@@ -364,6 +364,42 @@ int num_meshes_started; // stats
 int request_chunk(int chunk_x, int chunk_y);
 void update_meshes_from_render_thread(void);
 
+unsigned char tex2_data[64][4];
+
+void init_tex2_gradient(void)
+{
+   int i;
+   for (i=0; i < 16; ++i) {
+      tex2_data[i+ 0][0] = 64 + 12*i;
+      tex2_data[i+ 0][1] = 32;
+      tex2_data[i+ 0][2] = 64;
+
+      tex2_data[i+16][0] = 255;
+      tex2_data[i+16][1] = 32 + 8*i;
+      tex2_data[i+16][2] = 64;
+
+      tex2_data[i+32][0] = 255;
+      tex2_data[i+32][1] = 160;
+      tex2_data[i+32][2] = 64 + 12*i;
+
+      tex2_data[i+48][0] = 255;
+      tex2_data[i+48][1] = 160 + 6*i;
+      tex2_data[i+48][2] = 255;
+   }
+}
+
+void set_tex2_alpha(float fa)
+{
+   int i;
+   int a = (int) stb_lerp(fa, 0, 255);
+   if (a < 0) a = 0; else if (a > 255) a = 255;
+   glBindTexture(GL_TEXTURE_2D_ARRAY_EXT, voxel_tex[1]);
+   for (i=0; i < 64; ++i) {
+      tex2_data[i][3] = a;
+      glTexSubImage3DEXT(GL_TEXTURE_2D_ARRAY_EXT, 0, 0,0,i, 1,1,1, GL_RGBA, GL_UNSIGNED_BYTE, tex2_data[i]);
+   }
+}
+
 void render_init(void)
 {
    int i;
@@ -424,63 +460,20 @@ void render_init(void)
 
    glBindTexture(GL_TEXTURE_2D_ARRAY_EXT, voxel_tex[1]);
    glTexImage3DEXT(GL_TEXTURE_2D_ARRAY_EXT, 0, GL_RGBA,
-                      TEX_SIZE,TEX_SIZE,128,
+                      1,1,64,
                       0,GL_RGBA,GL_UNSIGNED_BYTE,NULL);
+   init_tex2_gradient();
+   set_tex2_alpha(0.0);
+   #if 0
    for (i=0; i < 128; ++i) {
-      build_overlay_texture(i);
+      //build_overlay_texture(i);
       glTexSubImage3DEXT(GL_TEXTURE_2D_ARRAY_EXT, 0, 0,0,i, TEX_SIZE,TEX_SIZE,1, GL_RGBA, GL_UNSIGNED_BYTE, texture[0]);
    }
+   #endif
    glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
    glTexParameteri(GL_TEXTURE_2D_ARRAY_EXT, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
    glGenerateMipmapEXT(GL_TEXTURE_2D_ARRAY_EXT);
 }
-
-
-// Timing stats while optimizing the single-threaded builder
-
-// 32..-32, 32..-32, !FILL_TERRAIN, !FANCY_LEAVES on 'mcrealm' data set
-
-// 6.27s  - reblocked to do 16 z at a time instead of 256 (still using 66x66x258), 4 meshes in parallel
-// 5.96s  - reblocked to use FAST_CHUNK (no intermediate data structure)
-// 5.45s  - unknown change, or previous measurement was wrong
-
-// 6.12s  - use preconverted data, not in-place
-// 5.91s  - use preconverted, in-place
-// 5.34s  - preconvert, in-place, avoid dependency chain (suggested by ryg)
-// 5.34s  - preconvert, in-place, avoid dependency chain, use bit-table instead of byte-table
-// 5.50s  - preconvert, in-place, branchless
-
-// 6.42s  - non-preconvert, avoid dependency chain (not an error)
-// 5.40s  - non-preconvert, w/dependency chain (same as earlier)
-
-// 5.50s  - non-FAST_CHUNK, reblocked outer loop for better cache reuse
-// 4.73s  - FAST_CHUNK non-preconvert, reblocked outer loop
-// 4.25s  - preconvert, in-place, reblocked outer loop
-// 4.18s  - preconvert, in-place, unrolled again
-// 4.10s  - 34x34 1 mesh instead of 66x66 and 4 meshes (will make it easier to do multiple threads)
-
-// 4.83s  - building bitmasks but not using them (2 bits per block, one if empty, one if solid)
-
-// 5.16s  - using empty bitmasks to early out
-// 5.01s  - using solid & empty bitmasks to early out - "foo"
-// 4.64s  - empty bitmask only, test 8 at a time, then test geom
-// 4.72s  - empty bitmask only, 8 at a time, then test bits
-// 4.46s  - split bitmask building into three loops (each byte is separate)
-// 4.42s  - further optimize computing bitmask
-
-// 4.58s  - using solid & empty bitmasks to early out, same as "foo" but faster bitmask building
-// 4.12s  - using solid & empty bitmasks to efficiently test neighbors
-// 4.04s  - using 16-bit fetches (not endian-independent)
-//        - note this is first place that beats previous best '4.10s - 34x34 1 mesh'
-
-// 4.30s  - current time with bitmasks disabled again (note was 4.10s earlier)
-// 3.95s  - bitmasks enabled again, no other changes
-// 4.00s  - current time with bitmasks disabled again, no other changes -- wide variation that is time dependent?
-//          (note that most of the numbers listed here are median of 3 values already)
-// 3.98s  - bitmasks enabled
-
-// Bitmasks removed from the code as not worth the complexity increase
-
 
 void world_init(void)
 {
@@ -751,6 +744,8 @@ void update_meshes_from_render_thread(void)
    }
 }
 
+extern float tex2_alpha;
+extern int global_hack;
 int num_threads_active;
 float chunk_server_activity;
 
@@ -790,6 +785,8 @@ void render_caves(float campos[3])
       stbglUniform3fv(stbgl_find_uniform(main_prog, "light_source"), 2, lighting[0]);
    }
 
+   if (global_hack)
+      set_tex2_alpha(tex2_alpha);
 
    num_meshes_uploaded = 0;
    update_meshes_from_render_thread();
@@ -952,16 +949,3 @@ void render_caves(float campos[3])
       num_threads_active += (mesh_data[i].state == WSTATE_running);
    }
 }
-
-// Raw data for Q&A:
-//
-//   26% parsing & loading minecraft files (4/5ths of which is zlib decode)
-//   39% building mesh from stb input format
-//   18% converting from minecraft blocks to stb blocks
-//    9% reordering from minecraft axis order to stb axis order
-//    7% uploading vertex buffer to OpenGL
-
-
-
-
-

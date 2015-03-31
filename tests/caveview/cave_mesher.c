@@ -32,11 +32,11 @@
 
 extern void ods(char *fmt, ...);
 
-#define FANCY_LEAVES  // nearly 2x the triangles when enabled (if underground is filled)
+//#define FANCY_LEAVES  // nearly 2x the triangles when enabled (if underground is filled)
 #define FAST_CHUNK
 #define IN_PLACE
 
-#define SKIP_TERRAIN   0  // use to avoid building underground stuff
+#define SKIP_TERRAIN   48 // use to avoid building underground stuff
                           // allows you to see what perf would be like if underground was efficiently culled,
                           // or if you were making a game without underground
 
@@ -594,6 +594,7 @@ void make_map_segment_for_superchunk_preconvert(int chunk_x, int chunk_y, int se
    }
 }
 
+// build 1 mesh covering 2x2 chunks
 void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh *rm)
 {
    int a,b,z;
@@ -601,6 +602,10 @@ void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh 
 
    #ifdef VHEIGHT_TEST
    unsigned char vheight[34][34][18];
+   #endif
+
+   #ifndef STBVOX_CONFIG_DISABLE_TEX2
+   unsigned char tex2_choice[34][34][18];
    #endif
 
    assert((chunk_x & 1) == 0);
@@ -618,7 +623,6 @@ void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh 
    map->block_color_face = minecraft_color_for_blocktype;
    map->block_geometry = minecraft_geom_for_blocktype;
 
-   // we're going to build 4 meshes in parallel, each covering 2x2 chunks
    stbvox_reset_buffers(&rm->mm);
    stbvox_set_buffer(&rm->mm, 0, 0, rm->build_buffer, BUILD_BUFFER_SIZE);
    stbvox_set_buffer(&rm->mm, 0, 1, rm->face_buffer , FACE_BUFFER_SIZE);
@@ -636,6 +640,25 @@ void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh 
       }
    }
 
+   #ifndef STBVOX_CONFIG_DISABLE_TEX2
+   for (a=0; a < 34; ++a) {
+      for (b=0; b < 34; ++b) {
+         int px = chunk_x*16 + a - 1;
+         int py = chunk_y*16 + b - 1;
+         float dist = (float) sqrt(px*px + py*py);
+         float s1 = (float) sin(dist / 16), s2, s3;
+         dist = (float) sqrt((px-80)*(px-80) + (py-50)*(py-50));
+         s2 = (float) sin(dist / 11);
+         for (z=0; z < 18; ++z) {
+            s3 = (float) sin(z * 3.141592 / 8);
+
+            s3 = s1*s2*s3;
+            tex2_choice[a][b][z] = 63 & (int) stb_linear_remap(s3,-1,1, -20,83);
+         }
+      }
+   }
+   #endif
+
    for (z=256-16; z >= SKIP_TERRAIN; z -= 16)
    {
       int z0 = z;
@@ -646,6 +669,9 @@ void build_chunk(int chunk_x, int chunk_y, fast_chunk *fc_table[4][4], raw_mesh 
 
       map->blocktype = &rm->sv_blocktype[1][1][1-z]; // specify location of 0,0,0 so that accessing z0..z1 gets right data
       map->lighting = &rm->sv_lighting[1][1][1-z];
+      #ifndef STBVOX_CONFIG_DISABLE_TEX2
+      map->tex2 = &tex2_choice[1][1][1-z];
+      #endif
 
       #ifdef VHEIGHT_TEST
       // hacky test of vheight
@@ -844,3 +870,58 @@ void mesh_init(void)
    remap_in_place(54, 9);
    remap_in_place(146, 10);
 }
+
+// Timing stats while optimizing the single-threaded builder
+
+// 32..-32, 32..-32, SKIP_TERRAIN=0, !FANCY_LEAVES on 'mcrealm' data set
+
+// 6.27s  - reblocked to do 16 z at a time instead of 256 (still using 66x66x258), 4 meshes in parallel
+// 5.96s  - reblocked to use FAST_CHUNK (no intermediate data structure)
+// 5.45s  - unknown change, or previous measurement was wrong
+
+// 6.12s  - use preconverted data, not in-place
+// 5.91s  - use preconverted, in-place
+// 5.34s  - preconvert, in-place, avoid dependency chain (suggested by ryg)
+// 5.34s  - preconvert, in-place, avoid dependency chain, use bit-table instead of byte-table
+// 5.50s  - preconvert, in-place, branchless
+
+// 6.42s  - non-preconvert, avoid dependency chain (not an error)
+// 5.40s  - non-preconvert, w/dependency chain (same as earlier)
+
+// 5.50s  - non-FAST_CHUNK, reblocked outer loop for better cache reuse
+// 4.73s  - FAST_CHUNK non-preconvert, reblocked outer loop
+// 4.25s  - preconvert, in-place, reblocked outer loop
+// 4.18s  - preconvert, in-place, unrolled again
+// 4.10s  - 34x34 1 mesh instead of 66x66 and 4 meshes (will make it easier to do multiple threads)
+
+// 4.83s  - building bitmasks but not using them (2 bits per block, one if empty, one if solid)
+
+// 5.16s  - using empty bitmasks to early out
+// 5.01s  - using solid & empty bitmasks to early out - "foo"
+// 4.64s  - empty bitmask only, test 8 at a time, then test geom
+// 4.72s  - empty bitmask only, 8 at a time, then test bits
+// 4.46s  - split bitmask building into three loops (each byte is separate)
+// 4.42s  - further optimize computing bitmask
+
+// 4.58s  - using solid & empty bitmasks to early out, same as "foo" but faster bitmask building
+// 4.12s  - using solid & empty bitmasks to efficiently test neighbors
+// 4.04s  - using 16-bit fetches (not endian-independent)
+//        - note this is first place that beats previous best '4.10s - 34x34 1 mesh'
+
+// 4.30s  - current time with bitmasks disabled again (note was 4.10s earlier)
+// 3.95s  - bitmasks enabled again, no other changes
+// 4.00s  - current time with bitmasks disabled again, no other changes -- wide variation that is time dependent?
+//          (note that most of the numbers listed here are median of 3 values already)
+// 3.98s  - bitmasks enabled
+
+// Bitmasks removed from the code as not worth the complexity increase
+
+
+
+// Raw data for Q&A:
+//
+//   26% parsing & loading minecraft files (4/5ths of which is zlib decode)
+//   39% building mesh from stb input format
+//   18% converting from minecraft blocks to stb blocks
+//    9% reordering from minecraft axis order to stb axis order
+//    7% uploading vertex buffer to OpenGL
