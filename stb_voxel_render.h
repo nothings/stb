@@ -4,6 +4,8 @@
 // in this case, one with blocks that can have textures and that
 // can also be a few shapes other than cubes.
 //
+// Video introduction: https://www.youtube.com/watch?v=2vnTtiLrV1w
+//
 // It works by creating triangle meshes. The library includes
 //
 //    - converter from dense 3D arrays of block info to vertex mesh
@@ -31,48 +33,48 @@
 //
 // FEATURES
 //
-//     - you can choose textured blocks with the features below,
-//       or colored voxels with 2^24 colors and no textures.
+//   - you can choose textured blocks with the features below,
+//     or colored voxels with 2^24 colors and no textures.
 //
-//     - voxels are mostly just cubes, but there's support for
-//       half-height cubes and diagonal slopes, half-height
-//       diagonals, and even odder shapes especially for doing
-//       more-continuous "ground".
+//   - voxels are mostly just cubes, but there's support for
+//     half-height cubes and diagonal slopes, half-height
+//     diagonals, and even odder shapes especially for doing
+//     more-continuous "ground".
 //
-//     - texture coordinates are projections along one of the major
-//       axes, with the per-texture scaling.
+//   - texture coordinates are projections along one of the major
+//     axes, with the per-texture scaling.
 //
-//     - a number of aspects of the shader and the vertex format
-//       are configurable; the library generally takes care of
-//       coordinating the vertex format with the mesh for you.
+//   - a number of aspects of the shader and the vertex format
+//     are configurable; the library generally takes care of
+//     coordinating the vertex format with the mesh for you.
 //
 //
 // FEATURES (SHADER PERSPECTIVE)
 //
-//     - vertices aligned on integer lattice, z on multiples of 0.5
-//     - per-vertex "lighting" or "ambient occlusion" value (6 bits)
-//     - per-vertex texture crossfade (3 bits)
+//   - vertices aligned on integer lattice, z on multiples of 0.5
+//   - per-vertex "lighting" or "ambient occlusion" value (6 bits)
+//   - per-vertex texture crossfade (3 bits)
 //
-//     - per-face texture #1 id (8-bit index into array texture)
-//     - per-face texture #2 id (8-bit index into second array texture)
-//     - per-face color (6-bit palette index, 2 bits of per-texture boolean enable)
-//     - per-face 5-bit normal for lighting calculations & texture coord computation
-//     - per-face 2-bit texture matrix rotation to rotate faces
+//   - per-face texture #1 id (8-bit index into array texture)
+//   - per-face texture #2 id (8-bit index into second array texture)
+//   - per-face color (6-bit palette index, 2 bits of per-texture boolean enable)
+//   - per-face 5-bit normal for lighting calculations & texture coord computation
+//   - per-face 2-bit texture matrix rotation to rotate faces
 //
-//     - indexed-by-texture-id scale factor (separate for texture #1 and texture #2)
-//     - indexed-by-texture-#2-id blend mode (alpha composite or modulate/multiply);
-//       the first is good for decals, the second for detail textures, "light maps",
-//       etc; both modes are controlled by texture #2's alpha, scaled by the
-//       per-vertex texture crossfade and the per-face color (if enabled on texture #2)
+//   - indexed-by-texture-id scale factor (separate for texture #1 and texture #2)
+//   - indexed-by-texture-#2-id blend mode (alpha composite or modulate/multiply);
+//     the first is good for decals, the second for detail textures, "light maps",
+//     etc; both modes are controlled by texture #2's alpha, scaled by the
+//     per-vertex texture crossfade and the per-face color (if enabled on texture #2)
 //
-//     - ambient lighting: half-lambert directional plus constant, all scaled by vertex ao
-//     - face can be fullbright (emissive), controlled by per-face color
-//     - installable lighting, with default single-point-light
-//     - installable fog, with default hacked smoothstep
+//   - ambient lighting: half-lambert directional plus constant, all scaled by vertex ao
+//   - face can be fullbright (emissive), controlled by per-face color
+//   - installable lighting, with default single-point-light
+//   - installable fog, with default hacked smoothstep
 //
-//   Note that all the variations of lighting selection and texture
-//   blending are run-time conditions in the shader, so they can be
-//   intermixed in a single mesh.
+//  Note that all the variations of lighting selection and texture
+//  blending are run-time conditions in the shader, so they can be
+//  intermixed in a single mesh.
 //
 //
 // INTEGRATION ARC
