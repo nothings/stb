@@ -1,46 +1,25 @@
-// @TODO
+// stb_voxel_render.h - v0.75 - Sean Barrett, 2015 - public domain
 //
-//   - test API for texture rotation on side faces
-//   - API for texture rotation on top & bottom
-//   - better culling of vheight faces with vheight neighbors
-//   - better culling of non-vheight faces with fheight neighbors
-//   - gather vertex lighting from slopes correctly
-//   - better support texture edge_clamp: currently if you fall
-//     exactly on 1.0 you get wrapped incorrectly; this is rare, but
-//     can avoid: compute texcoords in vertex shader, offset towards
-//     center before modding, need 2 bits per vertex to know offset direction)
-//   - add 10-byte quad type (loses per-face tex1/tex2 blend mode)
-//   - add 6-byte quad type (loses baked ao, most geometry, flags, texlerp)
-//   - add 4-byte quad type (only texture or only color, no baked light, no recolor)
-//   - fog properties
-//   - enable/disable fog at run-time
-
-// stb_voxel_render.h - 0.01 - Sean Barrett, 2015 - public domain
-//
-// This library helps render large "voxel" worlds for games,
-// in this case one with blocks that can have textures and that
+// This library helps render large-scale "voxel" worlds for games,
+// in this case, one with blocks that can have textures and that
 // can also be a few shapes other than cubes.
 //
-// It works by traditional rasterization, rendering the world
-// as triangles.
+// It works by creating triangle meshes. The library includes
 //
-// It provides:
+//    - converter from dense 3D arrays of block info to vertex mesh
+//    - shader for the vertex mesh
+//    - assistance in setting up shader state
 //
-//    1. a compact vertex data format (10-20 bytes per quad) to
-//       allow large view distances while still allowing a lot
-//       per-voxel variety and per-game/app variation
-//    2. conversion from voxel data structure to vertex mesh
-//    3. vertex & pixel shader
-//    4. assistance in setting up shader state
-//    5. planned support for more compact vertex data formats
-//       (4-6 bytes per quad) with more limited features.
+// For portability, none of the library code actually accesses
+// the 3D graphics API. (At the moment, it's not actually portable
+// since the shaders are GLSL only, but patches are welcome.)
 //
-// Although most of it is designed to be API-agnostic, the shaders
-// are currently only in GLSL; the HLSL port will be along soon when
-// someone else writes it.
+// Currently the preferred vertex format is 20 bytes per quad.
+// There are plans to allow more compact formats with a slight
+// reduction in features.
 //
 //
-// USAGE:
+// USAGE
 //
 //   #define the symbol STB_VOXEL_RENDER_IMPLEMENTATION in *one*
 //   C/C++ file before the #include of this file; the impleemtnation
@@ -50,210 +29,132 @@
 //   implementation will be private to that file.
 //
 //
-// FEATURE SET:
+// FEATURES
 //
-//     - voxels are mostly just cubes, but there is also
-//       support for half-height cubes and diagonal slopes,
-//       and half-height diagonals and even odder shapes
-//       for doing more-continuous "ground".
+//     - you can choose textured blocks with the features below,
+//       or colored voxels with 2^24 colors and no textures.
 //
-//     - you can choose textured blocks or solid-colored voxels
+//     - voxels are mostly just cubes, but there's support for
+//       half-height cubes and diagonal slopes, half-height
+//       diagonals, and even odder shapes especially for doing
+//       more-continuous "ground".
 //
-//     - if textured, each face specifies a base texture, chosen from
-//       up to 256 textures stored in a texture array. All the textures
-//       have be the same dimensions, but each texture can choose its
-//       scale: it can repeat every block, or it can be finer (e.g.
-//       repeat four times per block) or coarser (e.g. cover 4x4
-//       blocks).
+//     - texture coordinates are projections along one of the major
+//       axes, with the per-texture scaling.
 //
-//       Texture coordinates are projections along one of the major
-//       axes.
+//     - a number of aspects of the shader and the vertex format
+//       are configurable; the library generally takes care of
+//       coordinating the vertex format with the mesh for you.
 //
-//     - a secondary texture: chosen from another set of 256 textures
-//       (or the same set, if you choose), which have all the same
-//       properties as above. these textures can be used to as
-//       detail textures, to apply decals, or to have lightmapping
-//       effects.
 //
-//     - each face gets one of 64 colors; per face, this can modulate
-//       the primary texture, the secondary texture, or both.
+// FEATURES (SHADER PERSPECTIVE)
 //
-//     - if you disable textures, then each face gets a 24-bit rgb color
+//     - vertices aligned on integer lattice, z on multiples of 0.5
+//     - per-vertex "lighting" or "ambient occlusion" value (6 bits)
+//     - per-vertex texture crossfade (3 bits)
 //
-//     - per face, you choose whether the secondary texture is
-//       alpha composited onto the first texture, or multiplies
-//       it (scaled up by 2, which can be used so that detail
-//       textures don't darken on average). 
+//     - per-face texture #1 id (8-bit index into array texture)
+//     - per-face texture #2 id (8-bit index into second array texture)
+//     - per-face color (6-bit palette index, 2 bits of per-texture boolean enable)
+//     - per-face 5-bit normal for lighting calculations & texture coord computation
+//     - per-face 2-bit texture matrix rotation to rotate faces
 //
-//     - per vertex, you choose an extra alpha that controls the
-//       degree to which the secondary texture affects the primary;
-//       for example, this can be used to soften effects locally,
-//       or if both textures come from the same source, to transition
-//       between two textures
+//     - indexed-by-texture-id scale factor (separate for texture #1 and texture #2)
+//     - indexed-by-texture-#2-id blend mode (alpha composite or modulate/multiply);
+//       the first is good for decals, the second for detail textures, "light maps",
+//       etc; both modes are controlled by texture #2's alpha, scaled by the
+//       per-vertex texture crossfade and the per-face color (if enabled on texture #2)
 //
-//     - each vertex of each face computes a separate "lighting"
-//       value. this is typically essentially an ambient lighting
-//       value, which can be ambient occlusion, or baked local
-//       lighting, or etc.
+//     - ambient lighting: half-lambert directional plus constant, all scaled by vertex ao
+//     - face can be fullbright (emissive), controlled by per-face color
+//     - installable lighting, with default single-point-light
+//     - installable fog, with default hacked smoothstep
 //
-//     - per-pixel lighting is computed using a face normal and
-//       a single directional light combined with the baked occlusion.
+//   Note that all the variations of lighting selection and texture
+//   blending are run-time conditions in the shader, so they can be
+//   intermixed in a single mesh.
 //
-//     - per-face you can mark the face as being "fullbright",
-//       in which case it is drawn without any lighting faces
-//       (e.g. it's an emissive texture)
 //
-//     - you can install a custom lighting function that takes the
-//       face normal & albedo color as input plus whatever uniforms
-//       you want.
+// INTEGRATION ARC
 //
-//     - the library generally takes care of coordinating the vertex
-//       format with the meshdata for you.
+//   The way to get this library to work from scratch is to do the following:
+//
+//      Step 1. define STBVOX_CONFIG_MODE to 0
+//
+//        This mode uses only vertex attributes and uniforms, and is easiest
+//        to get working. It requires 32 bytes per quad and limits the
+//        size of some tables to avoid hitting uniform limits.
+//
+//      Step 2. define STBVOX_CONFIG_MODE to 1
+//
+//        This requires using a texture buffer to store the quad data,
+//        reducing the size to 20 bytes per quad.
+//
+//      Step 3: define STBVOX_CONFIG_PREFER_TEXBUFFER
+//
+//        This causes some uniforms to be stored as texture buffers
+//        instead. This increases the size of some of those tables,
+//        and avoids a potential slow path (gathering non-uniform
+//        data from uniforms) on some hardware.
+//
+//   In the future I hope to add additional modes that have significantly
+//   smaller meshes but reduce features, down as small as 6 bytes per quad.
+//   See elsewhere in this file for a table of candidate modes. Switching
+//   to a mode will require changing some of your mesh creation code, but
+//   everything else should be seamless. (And I'd like to change the API
+//   so that mesh creation is data-driven the way the uniforms are, and
+//   then you wouldn't even have to change anything but the mode number.)
 //
 //
 // VOXEL MESH API
 //
-// Context
+//   Context
 //
-//   To understand the API, make sure you first understand the feature set
-//   listed above.
+//     To understand the API, make sure you first understand the feature set
+//     listed above.
 //
-//   Because the vertices are compact, they have very limited spatial
-//   precision. Thus a single mesh can only contain the data for a limited
-//   area. To make very large voxel maps, you'll need to build multiple
-//   vertex buffers. (But you want this anyway for frustum culling.)
+//     Because the vertices are compact, they have very limited spatial
+//     precision. Thus a single mesh can only contain the data for a limited
+//     area. To make very large voxel maps, you'll need to build multiple
+//     vertex buffers. (But you want this anyway for frustum culling.)
 //
-//   Each generated mesh has three components:
-//           - vertex data (vertex buffer)
-//           - face data (optional, stored in texture buffer)
-//           - mesh transform (uniforms)
+//     Each generated mesh has three components:
+//             - vertex data (vertex buffer)
+//             - face data (optional, stored in texture buffer)
+//             - mesh transform (uniforms)
 //
-//   Once you've generated the mesh with this library, it's up to you
-//   to upload it to the GPU, to keep track of the state, and to render
-//   it.
+//     Once you've generated the mesh with this library, it's up to you
+//     to upload it to the GPU, to keep track of the state, and to render
+//     it.
 //
-// Concept
+//   Concept
 //
-//   The basic design is that you pass in one or more 3D arrays; each array
-//   is (typically) one-byte-per-voxel and contains information about one
-//   or more properties of the voxel particular property.
+//     The basic design is that you pass in one or more 3D arrays; each array
+//     is (typically) one-byte-per-voxel and contains information about one
+//     or more properties of some particular voxel property.
 //
-//   Because there is so much per-vertex and per-face data possible
-//   in the output, and each voxel can have 6 faces and 8 faces, it
-//   would require an impossible large data structure to describe all
-//   of the possibilities. Instead, the API provides multiple ways
-//   to express each property; each such way has some limitations on
-//   what it can express. For the extreme case where you want to control
-//   every aspect manually, there is the option to pass in "sparse data",
-//   where you only pass in data for voxels that affect rendering (but
-//   in this case you could nearly build the mesh yourself).
+//     Because there is so much per-vertex and per-face data possible
+//     in the output, and each voxel can have 6 faces and 8 faces, it
+//     would require an impossible large data structure to describe all
+//     of the possibilities. Instead, the API provides multiple ways
+//     to express each property; each such way has some limitations on
+//     what it can express.
 //
+//   Details
 //
-// HISTORY:
-//
-//   zmc engine 96-byte quads      :  2011/10
-//   zmc engine 32-byte quads      :  2013/12
-//   stb_voxel_render 20-byte quads:  2015/01
-//   stb_voxel_render 4..14 bytes  :  2015/???
-
-
-
-
+//     See the API documentation in the header-file section.
 //
 //
-// With TexBuffer for the fixed vertex data, we can actually do
-// minecrafty non-blocks like stairs -- we still probably only
-// want 256 or so, so we can't do the equivalent of all the vheight
-// combos, but that's ok. The 256 includes baked rotations, but only
-// some of them need it, and lots of block types share some faces.
+// HISTORICAL FOUNDATION
 //
-// mode 5 (6 bytes):   mode 6 (6 bytes)
-//   x:7                x:6
-//   y:7                y:6
-//   z:6                z:6
-//   tex1:8             tex1:8
-//   tex2:8             tex2:7
-//   color:8            color:8
-//   face:4             face:7
-//
-//
-//  side faces (all x4)        top&bottom faces (2x)    internal faces (1x)
-//     1  regular                1 regular
-//     2  slabs                                             2
-//     8  stairs                 4 stairs                  16
-//     4  diag side                                         8
-//     4  upper diag side                                   8
-//     4  lower diag side                                   8
-//                                                          4 crossed pairs
-//
-//    23*4                   +   5*4                    +  46
-//  == 92 + 20 + 46 = 158
-//
-//   Must drop 30 of them to fit in 7 bits:
-//       ceiling half diagonals: 16+8 = 24
-//   Need to get rid of 6 more.
-//       ceiling diagonals: 8+4 = 12
-//   This brings it to 122, so can add a crossed-pair variant.
-//       (diagonal and non-diagonal, or randomly offset)
-//   Or carpet, which would be 5 more.
-//
-//
-// Mode 4 (10 bytes):
-//  v:  z:2,light:6
-//  f:  x:6,y:6,z:7, t1:8,t2:8,c:8,f:5
-//
-// Mode ? (10 bytes)
-//  v:  xyz:5 (27 values), light:3
-//  f:  x:7,y:7,z:6, t1:8,t2:8,c:8,f:4
-// (v:  x:2,y:2,z:2,light:2)
-
+//   zmc engine         96-byte quads   2011/10
+//   zmc engine         32-byte quads   2013/12
+//   stb_voxel_render   20-byte quads   2015/01
 
 #ifndef INCLUDE_STB_VOXEL_RENDER_H
 #define INCLUDE_STB_VOXEL_RENDER_H
 
 #include <stdlib.h>
-
-#ifdef STBVOX_BLOCKTYPE_SHORT
-typedef unsigned short stbvox_block_type;
-#else
-typedef unsigned char stbvox_block_type;
-#endif
-
-// rendering API
-
-enum
-{
-   STBVOX_UNIFORM_face_data,
-   STBVOX_UNIFORM_transform,
-   STBVOX_UNIFORM_tex_array,
-   STBVOX_UNIFORM_texscale,
-   STBVOX_UNIFORM_color_table,
-   STBVOX_UNIFORM_normals,
-   STBVOX_UNIFORM_texgen,
-   STBVOX_UNIFORM_ambient,
-   STBVOX_UNIFORM_camera_pos,
-
-   STBVOX_UNIFORM_count,
-};
-
-enum
-{
-   STBVOX_UNIFORM_TYPE_none,
-   STBVOX_UNIFORM_TYPE_sampler,
-   STBVOX_UNIFORM_TYPE_vec2,
-   STBVOX_UNIFORM_TYPE_vec3,
-   STBVOX_UNIFORM_TYPE_vec4,
-};
-
-typedef struct
-{
-   int type;
-   int bytes_per_element;
-   int array_length;
-   char *name;
-   float *default_value; // if not NULL, you can use this as the uniform
-   int use_tex_buffer;
-} stbvox_uniform_info;
 
 typedef struct stbvox_mesh_maker stbvox_mesh_maker;
 typedef struct stbvox_input_description stbvox_input_description;
@@ -268,31 +169,271 @@ typedef struct stbvox_input_description stbvox_input_description;
 extern "C" {
 #endif
 
-STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform);
+//////////////////////////////////////////////////////////////////////////////
+//
+// MESHING
+//
+// A mesh represents a (typically) small chunk of a larger level.
+// Meshes encode coordinates using small integers, so those
+// coordinates must be relative to some base location.
+// All of the coordinates in the functions below use
+// these relative coordinates unless explicitly stated
+// otherwise.
+//
+// Input to the meshing step is documented further down
+
 STBVXDEC void stbvox_init_mesh_maker(stbvox_mesh_maker *mm);
-STBVXDEC int stbvox_make_mesh(stbvox_mesh_maker *mm);
-STBVXDEC int stbvox_get_buffer_count(stbvox_mesh_maker *mm);
-STBVXDEC int stbvox_get_buffer_size_per_quad(stbvox_mesh_maker *mm, int n);
-STBVXDEC void stbvox_reset_buffers(stbvox_mesh_maker *mm);
+// Call this function to initialize a mesh-maker context structure
+// used to build meshes. You should have one context per thread
+// that's building meshes.
+
 STBVXDEC void stbvox_set_buffer(stbvox_mesh_maker *mm, int mesh, int slot, void *buffer, size_t len);
-STBVXDEC void stbvox_set_input_range(stbvox_mesh_maker *mm, int x0, int y0, int z0, int x1, int y1, int z1);
-STBVXDEC void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_bytes, int y_stride_in_bytes);
-STBVXDEC stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm);
-STBVXDEC char *stbvox_get_vertex_shader(void);
-STBVXDEC char *stbvox_get_fragment_shader(void);
-STBVXDEC char *stbvox_get_fragment_shader_alpha_only(void);
+// Call this to set the buffer into which stbvox will write the mesh
+// it creates. It can build more than one mesh in parallel (distinguished
+// by the 'mesh' parameter), and each mesh can be made up of more than
+// one buffer (distinguished by the 'slot' parameter).
+//
+// Multiple meshes are under your control; use the 'selector' input
+// variable to choose which mesh each voxel's vertices are written to.
+// For example, you can use this to generate separate meshes for opaque
+// and transparent data.
+//
+// You can query the number of slots by calling stbvox_get_buffer_count
+// described below. The meaning of the buffer for each slot depends
+// on STBVOX_CONFIG_MODE.
+//
+//   In mode 0 & mode 20, there is only one slot. The mesh data for that
+//   slot is two interleaved vertex attributes: attr_vertex, a single
+//   32-bit uint, and attr_face, a single 32-bit uint.
+//
+//   In mode 1 & mode 21, there are two slots. The first buffer should
+//   be four times as large as the second buffer. The first buffer
+//   contains a single vertex attribute: 'attr_vertex', a single 32-bit uint.
+//   The second buffer contains texture buffer data (an array of 32-bit uints)
+//   that will be accessed through the sampler identified by STBVOX_UNIFORM_face_data.
+
+STBVXDEC int stbvox_get_buffer_count(stbvox_mesh_maker *mm);
+// Returns the number of buffers needed per mesh as described above.
+
+STBVXDEC int stbvox_get_buffer_size_per_quad(stbvox_mesh_maker *mm, int slot);
+// Returns how much of a given buffer will get used per quad.
+// This allows you to choose correct relative sizes for each buffer.
+
 STBVXDEC void stbvox_set_default_mesh(stbvox_mesh_maker *mm, int mesh);
+// Selects which mesh the mesher will output to (see previous function)
+// if the input doesn't specify a per-voxel selector. (I doubt this is
+// useful, but it's here just in case.)
+
+STBVXDEC stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm);
+// This function call returns a pointer to the stbvox_input_description part
+// of stbvox_mesh_maker (which you should otherwise treat as opaque). You
+// zero this structure, then fill out the relevant pointers to the data
+// describing your voxel object/world.
+//
+// See further documentation at the description of stbvox_input_description below.
+
+STBVXDEC void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_elements, int y_stride_in_elements);
+// This sets the stride between successive elements of the 3D arrays
+// in the stbvox_input_description. Z values are always stored consecutively.
+// (The preferred coordinate system for stbvox is X right, Y forwards, Z up.)
+
+STBVXDEC void stbvox_set_input_range(stbvox_mesh_maker *mm, int x0, int y0, int z0, int x1, int y1, int z1);
+// This sets the range of values in the 3D array for the voxels that
+// the mesh generator will convert. The lower values are inclusive,
+// the higher values are exclusive, so (0,0,0) to (16,16,16) generates
+// mesh data associated with voxels up to (15,15,15) but no higher.
+//
+// The mesh generate generates faces at the boundary between open space
+// and solid space but associates them with the solid space, so if (15,0,0)
+// is open and (16,0,0) is solid, then the mesh will contain the boundary
+// between them if x0 <= 16 and x1 > 16.
+//
+// Note that the mesh generator will access array elements 1 beyond the
+// limits set in these parameters. For example, if you set the limits
+// to be (0,0,0) and (16,16,16), then the generator will access all of
+// the voxels between (-1,-1,-1) and (16,16,16), including (16,16,16).
+// You may have to do pointer arithmetic to make it work.
+//
+// For example, caveview processes mesh chunks that are 32x32x16, but it
+// does this using input buffers that are 34x34x18.
+//
+// The lower limits are x0 >= 0, y0 >= 0, and z0 >= 0.
+//
+// The upper limits are mode dependent, but all the current methods are
+// limited to x1 < 127, y1 < 127, z1 < 255. Note that these are not
+// powers of two; if you want to use power-of-two chunks (to make
+// it efficient to decide which chunk a coordinate falls in), you're
+// limited to at most x1=64, y1=64, z1=128. For classic Minecraft-style
+// worlds with limited vertical extent, I recommend using a single
+// chunk for the entire height, which limits the height to 255 blocks
+// (one less than Minecraft), and only chunk the map in X & Y.
+
+STBVXDEC int stbvox_make_mesh(stbvox_mesh_maker *mm);
+// Call this function to create mesh data for the currently configured
+// set of input data. This appends to the currently configured mesh output
+// buffer. Returns 1 on success. If there is not enough room in the buffer,
+// it outputs as much as it can, and returns 0; you need to switch output
+// buffers (either by calling stbvox_set_buffer to set new buffers, or
+// by copying the data out and calling stbvox_reset_buffers), and then
+// call this function again without changing any of the input parameters.
+//
+// Note that this function appends; you can call it multiple times to
+// build a single mesh. For example, caveview uses chunks that are
+// 32x32x255, but builds the mesh for it by processing 32x32x16 at atime
+// (this is faster as it is reuses the same 34x34x18 input buffers rather
+// than needing 34x34x257 input buffers).
+
+// Once you're done creating a mesh into a given buffer,
+// consider the following functions:
+
 STBVXDEC int stbvox_get_quad_count(stbvox_mesh_maker *mm, int mesh);
-STBVXDEC void stbvox_get_transform(stbvox_mesh_maker *mm, float transform[3][3]);
-STBVXDEC void stbvox_get_bounds(stbvox_mesh_maker *mm, float bounds[2][3]);
+// Returns the number of quads in the mesh currently generated by mm.
+// This is the sum of all consecutive stbvox_make_mesh runs appending
+// to the same buffer. 'mesh' distinguishes between the multiple user
+// meshes available via 'selector' or stbvox_set_default_mesh.
+//
+// Typically you use this function when you're done building the mesh
+// and want to record how to draw it.
+//
+// Note that there are no index buffers; the data stored in the buffers
+// should be drawn as quads (e.g. with GL_QUAD); if your API does not
+// support quads, you can create a single index buffer large enough to
+// draw your largest vertex buffer, and reuse it for every rendering.
+// (Note that if you use 32-bit indices, you'll use 24 bytes of bandwidth
+// per quad, more than the 20 bytes for the vertex/face mesh data.)
+
 STBVXDEC void stbvox_set_mesh_coordinates(stbvox_mesh_maker *mm, int x, int y, int z);
+// Sets the global coordinates for this chunk, such that (0,0,0) relative
+// coordinates will be at (x,y,z) in global coordinates.
+
+STBVXDEC void stbvox_get_bounds(stbvox_mesh_maker *mm, float bounds[2][3]);
+// Returns the bounds for the mesh in global coordinates. Use this
+// for e.g. frustum culling the mesh. @BUG: this just uses the
+// values from stbvox_set_input_range(), so if you build by
+// appending multiple values, this will be wrong, and you need to
+// set stbvox_set_input_range() to the full size. Someday this
+// will switch to tracking the actual bounds of the *mesh*, though.
+
+STBVXDEC void stbvox_get_transform(stbvox_mesh_maker *mm, float transform[3][3]);
+// Returns the 'transform' data for the shader uniforms. It is your
+// job to set this to the shader before drawing the mesh. It is the
+// only uniform that needs to change per-mesh. Note that it is not
+// a 3x3 matrix, but rather a scale to decode fixed point numbers as
+// floats, a translate from relative to global space, and a special
+// translation for texture coordinate generation that avoids
+// floating-point precision issues. @TODO: currently we add the
+// global translation to the vertex, than multiply by modelview,
+// but this means if camera location and vertex are far from the
+// origin, we lose precision. Need to make a special modelview with
+// the translation (or some of it) factored out to avoid this.
+
+STBVXDEC void stbvox_reset_buffers(stbvox_mesh_maker *mm);
+// Call this function if you're done with the current output buffer
+// but want to reuse it (e.g. you're done appending with
+// stbvox_make_mesh and you've copied the data out to your graphics API
+// so can reuse the buffer).
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// RENDERING
+//
+
+STBVXDEC char *stbvox_get_vertex_shader(void);
+// Returns the (currently GLSL-only) vertex shader.
+
+STBVXDEC char *stbvox_get_fragment_shader(void);
+// Returns the (currently GLSL-only) fragment shader.
+// You can override the lighting and fogging calculations
+// by appending data to the end of these; see the #define
+// documentation for more information.
+
+STBVXDEC char *stbvox_get_fragment_shader_alpha_only(void);
+// Returns a slightly cheaper fragment shader that computes
+// alpha but not color. This is useful for e.g. a depth-only
+// pass when using alpha test.
+
+typedef struct stbvox_uniform_info stbvox_uniform_info;
+
+STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform);
+// Gets the information about a uniform necessary for you to
+// set up each uniform with a minimal amount of explicit code.
+// See the sample code for examples.
+//
+// "uniform" is from the list immediately following. For many
+// of these, default values are provided which you can set.
+// Most values are shared for most draw calls; e.g. for stateful
+// APIs you can set most of the state only once. Only
+// STBVOX_UNIFORM_transform needs to change per draw call.
+//
+// The info from this function allows you to cal
+//
+// STBVOX_UNIFORM_texscale
+//    64- or 128-long vec4 array. (128 only if STBVOX_CONFIG_PREFER_TEXBUFFER)
+//    x: scale factor to apply to texture #1. must be a power of two. 1.0 means 'face-sized'
+//    y: scale factor to apply to texture #2. must be a power of two. 1.0 means 'face-sized'
+//    z: blend mode indexed by texture #2. 0.0 is alpha compositing; 1.0 is multiplication.
+//    w: unused currently. @TODO use to support texture animation?
+//
+//    Texscale is indexed by the bottom 6 or 7 bits of the texture id; thus for
+//    example the texture at index 0 in the array and the texture in index 128 of
+//    the array must be scaled the same.
+//
+// STBVOX_UNIFORM_ambient
+//    4-long vec4 array:
+//      ambient[0].xyz   - negative of direction of a directional light for half-lambert
+//      ambient[1].rgb   - color of light scaled by NdotL (can be negative)
+//      ambient[2].rgb   - constant light added to above calculation;
+//                         effectively light ranges from ambient[2]-ambient[1] to ambient[2]+ambient[1]
+//      ambient[3].rgb   - fog color for STBVOX_CONFIG_FOG_SMOOTHSTEP
+//      ambient[3].a     - reciprocal of squared distance of farthest fog point (viewing distance)
+
+
+                               // +----- has a default value
+                               // |  +-- always use the default value
+enum                           // V  V
+{                              // ------------------------------------------------
+   STBVOX_UNIFORM_face_data,   // n      the sampler with the face texture buffer
+   STBVOX_UNIFORM_transform,   // n      the transform data from stbvox_get_transform
+   STBVOX_UNIFORM_tex_array,   // n      an array of two texture samplers containing the two texture arrays
+   STBVOX_UNIFORM_texscale,    // Y      a table of texture properties, see above
+   STBVOX_UNIFORM_color_table, // Y      64 vec4 RGBA values; a default palette is provided
+   STBVOX_UNIFORM_normals,     // Y  Y   table of normals, internal-only
+   STBVOX_UNIFORM_texgen,      // Y  Y   table of texgen vectors, internal-only
+   STBVOX_UNIFORM_ambient,     // n      lighting & fog info, see above
+   STBVOX_UNIFORM_camera_pos,  // Y      camera position in global voxel space (for lighting & fog)
+
+   STBVOX_UNIFORM_count,
+};
+
+enum
+{
+   STBVOX_UNIFORM_TYPE_none,
+   STBVOX_UNIFORM_TYPE_sampler,
+   STBVOX_UNIFORM_TYPE_vec2,
+   STBVOX_UNIFORM_TYPE_vec3,
+   STBVOX_UNIFORM_TYPE_vec4,
+};
+
+struct stbvox_uniform_info
+{
+   int type;                    // which type of uniform
+   int bytes_per_element;       // the size of each uniform array element (e.g. vec3 = 12 bytes)
+   int array_length;            // length of the uniform array
+   char *name;                  // name in the shader @TODO use numeric binding
+   float *default_value;        // if not NULL, you can use this as the uniform pointer
+   int use_tex_buffer;          // if true, then the uniform is a sampler but the data can come from default_value
+};
 
 #ifdef __cplusplus
 }
 #endif
 
-// meshing API
+//////////////////////////////////////////////////////////////////////////////
+//
+// INPUT TO MESHING
+//
 
+// Shapes of blocks that aren't always cubes
 enum
 {
    STBVOX_GEOM_empty,
@@ -300,16 +441,16 @@ enum
    STBVOX_GEOM_solid,
    STBVOX_GEOM_transp,    // solid geometry, but transparent contents so neighbors generate normally, unless same blocktype
 
-   // following 4 are redundant to vheight, but allowing them as well makes shared vheight more effective
+   // following 4 can be represented by vheight as well
    STBVOX_GEOM_slab_upper,
    STBVOX_GEOM_slab_lower,
    STBVOX_GEOM_floor_slope_north_is_top,
    STBVOX_GEOM_ceil_slope_north_is_bottom,
 
-   STBVOX_GEOM_floor_slope_north_is_top_as_wall_UNIMPLEMENTED,   // same as floor_slope below, but uses wall's texture & texture projection
+   STBVOX_GEOM_floor_slope_north_is_top_as_wall_UNIMPLEMENTED,   // same as floor_slope above, but uses wall's texture & texture projection
    STBVOX_GEOM_ceil_slope_north_is_bottom_as_wall_UNIMPLEMENTED,
-   STBVOX_GEOM_crossed_pair,                       // corner-to-corner pairs, with normal vector bumped upwards
-   STBVOX_GEOM_force,                              // all faces always visible, e.g. minecraft fancy leaves
+   STBVOX_GEOM_crossed_pair,    // corner-to-corner pairs, with normal vector bumped upwards
+   STBVOX_GEOM_force,           // like GEOM_transp, but faces visible even if neighbor is same type, e.g. minecraft fancy leaves
 
    // these access vheight input
    STBVOX_GEOM_floor_vheight_03 = 12,  // diagonal is SW-NE
@@ -319,10 +460,157 @@ enum
 
    STBVOX_GEOM_count, // number of geom cases
 };
-// TODO: could possibly add stairs, fences, etc, but they don't obey
-// the "1 quad per face" rule and they need more precision, so they'd
-// have to be built very differently; so I don't plan on doing anything
-// like that.
+
+enum
+{
+   STBVOX_FACE_east,
+   STBVOX_FACE_north,
+   STBVOX_FACE_west,
+   STBVOX_FACE_south,
+   STBVOX_FACE_up,
+   STBVOX_FACE_down,
+
+   STBVOX_FACE_count,
+};
+
+// 24-bit color
+typedef struct
+{
+   unsigned char r,g,b;
+} stbvox_rgb;
+
+#ifdef STBVOX_CONFIG_BLOCKTYPE_SHORT
+typedef unsigned short stbvox_block_type;
+#else
+typedef unsigned char stbvox_block_type;
+#endif
+
+#define STBVOX_COLOR_TEX1_ENABLE   64
+#define STBVOX_COLOR_TEX2_ENABLE  128
+
+// This is the data structure you fill out
+struct stbvox_input_description
+{
+   unsigned char lighting_at_vertices;
+   // The default is lighting values (i.e. ambient occlusion) are at block
+   // center, and the vertex light is gathered from the adjacent block
+   // centers the vertex faces. This makes smooth lighting consistent
+   // on adjacent faces with the same orientation.
+   //
+   // Setting this flag to non-zero gives you explicit control
+   // of light at each vertex; now the lighting/ao will be shared by
+   // all vertices at the same point, even if they have different normals.
+
+   // these are 3D maps you use to define your voxel world, using x_stride and y_stride
+   // note that for cache efficiency, you want to use the block_foo palettes as much as possible instead
+
+   stbvox_rgb *rgb;
+   // 24-bit voxel color for STBVOX_CONFIG_MODE = 20 or 21 only
+
+   stbvox_block_type *blocktype;           // index into palettes listed below
+   // This is a core "block type" value, which is used to index into
+   // other arrays.
+   //
+   // If a voxel's blocktype is 0, it is assumed to be empty (STBVOX_GEOM_empty),
+   // and no other blocktypes should be STBVOX_GEOM_empty. (Only if you do not
+   // have blocktypes should STBVOX_GEOM_empty ever used.)
+   //
+   // Normally it is an unsigned byte, but you can override it to be
+   // a short if you have too many blocktypes.
+
+   unsigned char *block_geometry;
+   // Array indexed by blocktype containing the geometry for this block, plus
+   // a 2-bit "simple rotation". Note rotation has limited use since it's not
+   // independent of blocktype.
+   //
+   // Encode with STBVOX_MAKE_GEOMETRY(geom,simple_rot,0)
+
+   unsigned char *block_tex1;
+   // Array indexed by blocktype containing the texture id for texture #1.
+
+   unsigned char (*block_tex1_face)[6];
+   // Array indexed by blocktype and face containing the texture id for texture #1.
+   // The N/E/S/W face choices can be rotated by one of the rotation selectors;
+   // The top & bottom face textures will rotate to match.
+
+   unsigned char *block_tex2;
+   // Array indexed by blocktype containing the texture id for texture #2.
+
+   unsigned char (*block_tex2_face)[6];
+   // Array indexed by blocktype and face containing the texture id for texture #2.
+   // The N/E/S/W face choices can be rotated by one of the rotation selectors;
+   // The top & bottom face textures will rotate to match.
+
+   unsigned char *block_color;
+   // Array indexed by blocktype containing the color value to apply to the faces.
+   // The core color value is 0..63.
+   // Encode with STBVOX_MAKE_COLOR(color_number, tex1_enable, tex2_enable)
+
+   unsigned char (*block_color_face)[6];
+   // Array indexed by blocktype and face containing the color value to apply to that face.
+   // The core color value is 0..63.
+   // Encode with STBVOX_MAKE_COLOR(color_number, tex1_enable, tex2_enable)
+
+   unsigned char *block_texlerp;
+   // Array indexed by blocktype containing 3-bit scalar for texture #2 alpha
+   // (known throughout as 'texlerp'). This is constant over every face even
+   // though the property is potentially per-vertex.
+
+   unsigned char (*block_texlerp_face)[6];
+   // Array indexed by blocktype and face containing 3-bit scalar for texture #2 alpha.
+   // This is constant over the face even though the property is potentially per-vertex.
+
+   unsigned char *block_vheight;
+   // Array indexed by blocktype containing the vheight values for the
+   // top or bottom face of this block. These will rotate properly if the
+   // block is rotated.
+   // Encode with STBVOX_MAKE_VHEIGHT(sw_height, se_height, nw_height, ne_height)
+
+   unsigned char *block_selector;
+   // Array indexed by blocktype indicating which output mesh to select.
+
+   unsigned char *block_side_texrot;
+   // Array indexed by blocktype encoding 2-bin texture rotations for the faces
+   // on the E/N/W/S sides of the block.
+   // Encode with STBVOX_MAKE_SIDE_TEXROT(rot_e, rot_n, rot_w, rot_s)
+
+   unsigned char *overlay;                 // index into palettes listed below
+   unsigned char *selector;                // raw selector (chooses which mesh to write to)
+   unsigned char *geometry;                // STBVOX_MAKE_GEOMETRY   -- geom:4, rot:2, vheight:2
+   unsigned char *rotate;                  // STBVOX_MAKE_MATROT     -- block:2, overlay:2, tex2:2, color:2
+   unsigned char *tex2;                    // raw tex2 value to use on all sides of block
+   unsigned char *tex2_replace;            // STBVOX_MAKE_TEX2_REPLACE --  tex2:6, face_1:2
+   unsigned char *tex2_facemask;           // facemask:6 (use all bits of tex2_replace as texture)
+   unsigned char *side_texrot;             // e:2,n:2,w:2,s:2 texture rotation
+   unsigned char *vheight;                 // STBVOX_MAKE_VHEIGHT   -- sw:2, se:2, nw:2, ne:2, doesn't rotate
+   unsigned char *texlerp;                 // STBVOX_MAKE_TEXLERP   -- vert:2, ud:2, ew:2, ns:2
+   unsigned char *texlerp2;                // STBVOX_MAKE_TEXLERP2 (and use STBVOX_MAKE_TEXLERP1 for 'texlerp' -- e:2, n:2, u:3, unused:1
+   unsigned char *texlerp_simple;          // STBVOX_MAKE_TEXLERP_SIMPLE -- baselerp:2, vert_lerp:3, face_to_use_vert_lerp:3
+   unsigned short *texlerp_vert3;          // e:3,n:3,w:3,s:3,u:3 (down comes from 'texlerp')
+   unsigned short *texlerp_face3;          // e:3,n:3,w:3,s:3,u:2,d:2
+   unsigned char *lighting;                // lighting:8
+   unsigned char *color;                   // color for entire block
+   unsigned char *extended_color;          // index into ecolor palettes
+   unsigned char *color2, *color2_facemask;// additional override colors with face bitmask
+   unsigned char *color3, *color3_facemask;// additional override colors with face bitmask
+
+   // indexed by tex1, used to determine tex2 if not otherwise specified
+   unsigned char *tex2_for_tex1;   // 256
+
+   // @TODO: when specializing, build a single struct with all of the
+   // below values, so it's AoS instead of SoA for better cache efficiency
+
+   // indexed by overlay*6+side; in all cases 0 means 'nochange'
+   unsigned char (*overlay_tex1)[6];
+   unsigned char (*overlay_tex2)[6];
+   unsigned char (*overlay_color)[6];
+   unsigned char *overlay_side_texrot;
+
+   // indexed by extended_color
+   unsigned char *ecolor_color;    // 256
+   unsigned char *ecolor_facemask; // 256
+};
+
 
 enum
 {
@@ -359,18 +647,6 @@ enum
    STBVOX_TEXLERP3_7_8,
 };
 
-enum
-{
-   STBVOX_FACE_east,
-   STBVOX_FACE_north,
-   STBVOX_FACE_west,
-   STBVOX_FACE_south,
-   STBVOX_FACE_up,
-   STBVOX_FACE_down,
-
-   STBVOX_FACE__count,
-};
-
 #define STBVOX_FACE_NONE  7
 
 #define STBVOX_BLOCKTYPE_EMPTY    0
@@ -391,6 +667,7 @@ enum
 #define STBVOX_MAKE_TEXLERP2(vert,e2,n2,w2,s2,u4,d2) ((u2)*16 + (n2)*4 + (s2))
 #define STBVOX_MAKE_FACE_MASK(e,n,w,s,u,d)  ((e)+(n)*2+(w)*4+(s)*8+(u)*16+(d)*32)
 #define STBVOX_MAKE_SIDE_TEXROT(e,n,w,s) ((e)+(n)*4+(w)*16+(s)*64)
+#define STBVOX_MAKE_COLOR(color,t1,t2) ((color)+(t1)*64+(t2)*128)
 
 #ifdef STBVOX_ROTATION_IN_LIGHTING
 #define STBVOX_MAKE_LIGHTING(lighting, rot)  (((lighting)&~3)+(rot))
@@ -403,74 +680,6 @@ enum
 #endif
 
 #define STBVOX_MAX_MESH_SLOTS  3           // one vertex & two faces, or two vertex and one face
-
-typedef struct
-{
-   unsigned char r,g,b;
-} stbvox_rgb;
-
-struct stbvox_input_description
-{
-   unsigned char lighting_at_vertices;     // default is lighting values at block center
-
-   // these are 3D maps you use to define your voxel world, using x_stride and y_stride
-   // note that for cache efficiency, you want to use the block_foo palettes as much as possible instead
-   stbvox_block_type *blocktype;           // index into palettes listed below
-   unsigned char *overlay;                 // index into palettes listed below
-   unsigned char *selector;                // raw selector (chooses which mesh to write to)
-   unsigned char *geometry;                // STBVOX_MAKE_GEOMETRY   -- geom:4, rot:2, vheight:2
-   unsigned char *rotate;                  // STBVOX_MAKE_MATROT     -- block:2, overlay:2, tex2:2, color:2
-   unsigned char *tex2;                    // raw tex2 value to use on all sides of block
-   unsigned char *tex2_replace;            // STBVOX_MAKE_TEX2_REPLACE --  tex2:6, face_1:2
-   unsigned char *tex2_facemask;           // facemask:6 (use all bits of tex2_replace as texture)
-   unsigned char *side_texrot;             // e:2,n:2,w:2,s:2 texture rotation
-   unsigned char *vheight;                 // STBVOX_MAKE_VHEIGHT   -- sw:2, se:2, nw:2, ne:2, doesn't rotate
-   unsigned char *texlerp;                 // STBVOX_MAKE_TEXLERP   -- vert:2, ud:2, ew:2, ns:2
-   unsigned char *texlerp2;                // STBVOX_MAKE_TEXLERP2 (and use STBVOX_MAKE_TEXLERP1 for 'texlerp' -- e:2, n:2, u:3, unused:1
-   unsigned char *texlerp_simple;          // STBVOX_MAKE_TEXLERP_SIMPLE -- baselerp:2, vert_lerp:3, face_to_use_vert_lerp:3
-   unsigned short *texlerp_vert3;          // e:3,n:3,w:3,s:3,u:3 (down comes from 'texlerp')
-   unsigned short *texlerp_face3;          // e:3,n:3,w:3,s:3,u:2,d:2
-   unsigned char *lighting;                // lighting:8
-   unsigned char *color;                   // color for entire block
-   unsigned char *extended_color;          // index into ecolor palettes
-   unsigned char *color2, *color2_facemask;// additional override colors with face bitmask
-   unsigned char *color3, *color3_facemask;// additional override colors with face bitmask
-
-   stbvox_rgb *rgb; // MODE 20 only
-
-   // indexed by tex1, used to determine tex2 if not otherwise specified
-   unsigned char *tex2_for_tex1;   // 256
-
-   // @TODO: when specializing, build a single struct with all of the
-   // below values, so it's AoS instead of SoA for better cache efficiency
-
-   // these are "palettes" you use to define properties indexed by 'blocktype'
-   // indexed by blocktype*6+side
-   unsigned char (*block_tex1_face)[6];
-   unsigned char (*block_tex2_face)[6];
-   unsigned char (*block_color_face)[6];
-   unsigned char (*block_texlerp_face)[6];
-
-   // indexed by blocktype
-   unsigned char *block_geometry; // STBVOX_MAKE_GEOMETRY(geom,rot,0) -- use selector to encode independent rotation
-   unsigned char *block_vheight;  // defines slopes and such; this vheight DOES get rotated
-   unsigned char *block_tex1;
-   unsigned char *block_tex2;
-   unsigned char *block_color;
-   unsigned char *block_texlerp;
-   unsigned char *block_selector;
-   unsigned char *block_side_texrot;
-
-   // indexed by overlay*6+side; in all cases 0 means 'nochange'
-   unsigned char (*overlay_tex1)[6];
-   unsigned char (*overlay_tex2)[6];
-   unsigned char (*overlay_color)[6];
-   unsigned char *overlay_side_texrot;
-
-   // indexed by extended_color
-   unsigned char *ecolor_color;    // 256
-   unsigned char *ecolor_facemask; // 256
-};
 
 
 // don't mess with this directly, it's just here so you can
@@ -543,54 +752,48 @@ struct stbvox_mesh_maker
 //
 //        
 //                      -----------  Two textures -----------       -- One texture --     ---- Color only ----
-//            Mode:     0     1     2     3     4     5     6        10    11    12       20    21    22    23
+//            Mode:     0     1     2     3     4     5     6        10    11    12      20    21    22    23    24
 // ============================================================================================================
-//  uses Tex Buffer     n     Y     Y     Y     Y     Y     Y         Y     Y     Y        Y     Y     Y     Y
-//   bytes per quad    32    20    14    12    10     6     6         8     8     4       20    10     6     4
-//       non-blocks   all   all   some  some  some slabs stairs     some  some  none     all  slabs slabs  none
-//             tex1   256   256   256   256   256   256   256       256   256   256        n     n     n     n
-//             tex2   256   256   256   256   256   256   128         n     n     n        n     n     n     n
-//           colors    64    64    64    64    64    64    64         8     n     n      2^24  2^24  2^24  256
-//        vertex ao     Y     Y     Y     Y     Y     n     n         Y     Y     n        Y     Y     n     n
-//   vertex texlerp     Y     Y     Y     n     n     n     n         -     -     -        -     -     -     -
-//      x&y extents   127   127   128    64    64   128    64        64   128   128      127   128   128   128
-//        z extents   255   255   128    64?   64?   64    64        32    64   128      255   128    64   128
+//  uses Tex Buffer     n     Y     Y     Y     Y     Y     Y         Y     Y     Y       n     Y     Y     Y     Y
+//   bytes per quad    32    20    14    12    10     6     6         8     8     4      32    20    10     6     4
+//       non-blocks   all   all   some  some  some slabs stairs     some  some  none    all   all  slabs slabs  none
+//             tex1   256   256   256   256   256   256   256       256   256   256       n     n     n     n     n
+//             tex2   256   256   256   256   256   256   128         n     n     n       n     n     n     n     n
+//           colors    64    64    64    64    64    64    64         8     n     n     2^24  2^24  2^24  2^24  256
+//        vertex ao     Y     Y     Y     Y     Y     n     n         Y     Y     n       Y     Y     Y     n     n
+//   vertex texlerp     Y     Y     Y     n     n     n     n         -     -     -       -     -     -     -     -
+//      x&y extents   127   127   128    64    64   128    64        64   128   128     127   127   128   128   128
+//        z extents   255   255   128    64?   64?   64    64        32    64   128     255   255   128    64   128
 
 // not sure why I only wrote down the above "result data" and didn't preserve
 // the vertex formats, but here I've tried to reconstruct the designs...
 //     mode # 3 is wrong, one byte too large
 
-//            Mode:     0     1     2     3     4     5     6        10    11    12       20    21    22    23
+//            Mode:     0     1     2     3     4     5     6        10    11    12      20    21    22    23    24
 // =============================================================================================================
-//   bytes per quad    32    20    14    12    10     6     6         8     8     4       20    10     6     4
+//   bytes per quad    32    20    14    12    10     6     6         8     8     4            20    10     6     4
 //                                                                 
-//    vertex x bits     7     7     0     6     0     0     0         0     0     0        7     0     0     0
-//    vertex y bits     7     7     0     0     0     0     0         0     0     0        7     0     0     0
-//    vertex z bits     9     9     7     4     2     0     0         2     2     0        9     2     0     0
-//   vertex ao bits     6     6     6     6     6     0     0         6     6     0        6     6     0     0
-//  vertex txl bits     3     3     3     0     0     0     0         0     0     0       (3)    0     0     0
+//    vertex x bits     7     7     0     6     0     0     0         0     0     0             7     0     0     0
+//    vertex y bits     7     7     0     0     0     0     0         0     0     0             7     0     0     0
+//    vertex z bits     9     9     7     4     2     0     0         2     2     0             9     2     0     0
+//   vertex ao bits     6     6     6     6     6     0     0         6     6     0             6     6     0     0
+//  vertex txl bits     3     3     3     0     0     0     0         0     0     0            (3)    0     0     0
 //
 //   face tex1 bits    (8)    8     8     8     8     8     8         8     8     8                    
 //   face tex2 bits    (8)    8     8     8     8     8     7         -     -     -         
-//  face color bits    (8)    8     8     8     8     8     8         3     0     0       24    24    24     8
-// face normal bits    (8)    8     8     8     6     4     7         4     4     3        8     3     4     3
-//      face x bits                 7     0     6     7     6         6     7     7        0     7     7     7
-//      face y bits                 7     6     6     7     6         6     7     7        0     7     7     7
-//      face z bits                 2     2     6     6     6         5     6     7        0     7     6     7
+//  face color bits    (8)    8     8     8     8     8     8         3     0     0            24    24    24     8
+// face normal bits    (8)    8     8     8     6     4     7         4     4     3             8     3     4     3
+//      face x bits                 7     0     6     7     6         6     7     7             0     7     7     7
+//      face y bits                 7     6     6     7     6         6     7     7             0     7     7     7
+//      face z bits                 2     2     6     6     6         5     6     7             0     7     6     7
 
 
 #if STBVOX_CONFIG_MODE==0 || STBVOX_CONFIG_MODE==1
 
-   // the only difference between 0 & 1:
-   #if STBVOX_CONFIG_MODE==0
-   #define STBVOX_ICONFIG_FACE_ATTRIBUTE
-   #endif
-
-   // the shared properties of 0 & 1:
    #define STBVOX_ICONFIG_VERTEX_32
    #define STBVOX_ICONFIG_FACE1_1
 
-#elif STBVOX_CONFIG_MODE==20
+#elif STBVOX_CONFIG_MODE==20 || STBVOX_CONFIG_MODE==21
 
    #define STBVOX_ICONFIG_VERTEX_32
    #define STBVOX_ICONFIG_FACE1_1
@@ -600,7 +803,12 @@ struct stbvox_mesh_maker
 #error "Selected value of STBVOX_CONFIG_MODE is not supported"
 #endif
 
+#if STBVOX_CONFIG_MODE==0 || STBVOX_CONFIG_MODE==20
+#define STBVOX_ICONFIG_FACE_ATTRIBUTE
+#endif
+
 #ifndef STBVOX_CONFIG_HLSL
+// the fallback if all others are exhausted is GLSL
 #define STBVOX_ICONFIG_GLSL
 #endif
 
@@ -658,7 +866,7 @@ struct stbvox_mesh_maker
 
 // Faces:
 //
-// Faces use the bottom bits to choose the texgen
+// Faces use the bottom 3 bits to choose the texgen
 // mode, and all the bits to choose the normal.
 // Thus the bottom 3 bits have to be:
 //      e, n, w, s, u, d, u, d
@@ -716,6 +924,13 @@ static unsigned char stbvox_reverse_face[STBVF_count];
 static float stbvox_default_texgen[2][32][3];
 static float stbvox_default_normals[32][3];
 static float stbvox_default_texscale[128][4];
+static float stbvox_default_ambient[4][4] =
+{
+   { 0,0,1      ,0 }, // reversed lighting direction
+   { 0.5,0.5,0.5,0 }, // directional color
+   { 0.5,0.5,0.5,0 }, // constant color
+   { 0.5,0.5,0.5,1.0f/1000.0f }, // fog data for simple_fog
+};
 
 static unsigned char stbvox_default_palette_compact[64][3];
 static float stbvox_default_palette[64][4];
@@ -746,7 +961,7 @@ static void stbvox_build_default_palette(void)
    #define STBVOX_SHADER_VERSION ""
 #endif
 
-static char *stbvox_vertex_encoderogram =
+static char *stbvox_vertex_program =
 {
       STBVOX_SHADER_VERSION
 
@@ -1148,7 +1363,7 @@ static char *stbvox_fragment_program_alpha_only =
 
 STBVXDEC char *stbvox_get_vertex_shader(void)
 {
-   return stbvox_vertex_encoderogram;
+   return stbvox_vertex_program;
 }
 
 STBVXDEC char *stbvox_get_fragment_shader(void)
@@ -1178,7 +1393,7 @@ static stbvox_uniform_info stbvox_uniforms[] =
    { STBVOX_UNIFORM_TYPE_vec4     , 16,  64, "color_table"  , stbvox_default_palette[0]  , STBVOX_TEXBUF },
    { STBVOX_UNIFORM_TYPE_vec3     , 12,  32, "normal_table" , stbvox_default_normals[0]   },
    { STBVOX_UNIFORM_TYPE_vec3     , 12,  64, "texgen"       , stbvox_default_texgen[0][0], STBVOX_TEXBUF },
-   { STBVOX_UNIFORM_TYPE_vec4     , 16,   4, "ambient"      , 0                           },
+   { STBVOX_UNIFORM_TYPE_vec4     , 16,   4, "ambient"      , stbvox_default_ambient[0]   },
    { STBVOX_UNIFORM_TYPE_vec4     , 16,   1, "camera_pos"   , stbvox_dummy_transform[0]   },
 };
 
@@ -2961,5 +3176,65 @@ int main(int argc, char **argv)
    return 0;
 }
 #endif
+
+// @TODO
+//
+//   - test API for texture rotation on side faces
+//   - API for texture rotation on top & bottom
+//   - better culling of vheight faces with vheight neighbors
+//   - better culling of non-vheight faces with fheight neighbors
+//   - gather vertex lighting from slopes correctly
+//   - better support texture edge_clamp: currently if you fall
+//     exactly on 1.0 you get wrapped incorrectly; this is rare, but
+//     can avoid: compute texcoords in vertex shader, offset towards
+//     center before modding, need 2 bits per vertex to know offset direction)
+//   - other mesh modes (10,6,4-byte quads)
+//
+//
+// With TexBuffer for the fixed vertex data, we can actually do
+// minecrafty non-blocks like stairs -- we still probably only
+// want 256 or so, so we can't do the equivalent of all the vheight
+// combos, but that's ok. The 256 includes baked rotations, but only
+// some of them need it, and lots of block types share some faces.
+//
+// mode 5 (6 bytes):   mode 6 (6 bytes)
+//   x:7                x:6
+//   y:7                y:6
+//   z:6                z:6
+//   tex1:8             tex1:8
+//   tex2:8             tex2:7
+//   color:8            color:8
+//   face:4             face:7
+//
+//
+//  side faces (all x4)        top&bottom faces (2x)    internal faces (1x)
+//     1  regular                1 regular
+//     2  slabs                                             2
+//     8  stairs                 4 stairs                  16
+//     4  diag side                                         8
+//     4  upper diag side                                   8
+//     4  lower diag side                                   8
+//                                                          4 crossed pairs
+//
+//    23*4                   +   5*4                    +  46
+//  == 92 + 20 + 46 = 158
+//
+//   Must drop 30 of them to fit in 7 bits:
+//       ceiling half diagonals: 16+8 = 24
+//   Need to get rid of 6 more.
+//       ceiling diagonals: 8+4 = 12
+//   This brings it to 122, so can add a crossed-pair variant.
+//       (diagonal and non-diagonal, or randomly offset)
+//   Or carpet, which would be 5 more.
+//
+//
+// Mode 4 (10 bytes):
+//  v:  z:2,light:6
+//  f:  x:6,y:6,z:7, t1:8,t2:8,c:8,f:5
+//
+// Mode ? (10 bytes)
+//  v:  xyz:5 (27 values), light:3
+//  f:  x:7,y:7,z:6, t1:8,t2:8,c:8,f:4
+// (v:  x:2,y:2,z:2,light:2)
 
 #endif // STB_VOXEL_RENDER_IMPLEMENTATION

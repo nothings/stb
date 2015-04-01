@@ -1,5 +1,11 @@
 # FAQ
 
+### How to run it?
+
+There's no GUI. Find a directory with Minecraft Anvil files (.mca).
+Copy a Minecraft "terrain.png" into that directory. Run from that
+directory.
+
 ### How accurate is this as a Minecraft viewer?
 
 Not very. Many Minecraft blocks are not handled correctly:
@@ -21,6 +27,7 @@ Not very. Many Minecraft blocks are not handled correctly:
 *         Torches are drawn hackily, do not attach to walls
 *         Incorrect textures for blocks that postdate terrain.png
 *         Transparent textures have black fringes due to non-premultiplied-alpha
+*         Skylight and block light are combined in a single value
 *         Only blocks at y=1..255 are shown (not y=0)
 *         If a 32x32x256 "quad-chunk" needs more than 800K quads, isn't handled (very unlikely)
 
@@ -66,7 +73,7 @@ Partly because converting from minecraft data is expensive.
 Here is the approximate breakdown of an older version
 of this executable and lib that did the building single-threaded.
 
-*       25%   loading & parsing minecraft files (4/5ths of this is my zlib)
+*       25%   loading & parsing minecraft files (4/5ths of this is my crappy zlib)
 *       18%   converting from minecraft blockids & lighting to stb blockids & lighting
 *       10%   reordering from data[z][y]\[x] (minecraft-style) to data[y][x]\[z] (stb-style)
 *       40%   building mesh data
