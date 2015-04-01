@@ -143,11 +143,14 @@
 //     or more properties of some particular voxel property.
 //
 //     Because there is so much per-vertex and per-face data possible
-//     in the output, and each voxel can have 6 faces and 8 faces, it
-//     would require an impossible large data structure to describe all
+//     in the output, and each voxel can have 6 faces and 8 vertices, it
+//     would require an impossibly large data structure to describe all
 //     of the possibilities. Instead, the API provides multiple ways
 //     to express each property; each such way has some limitations on
 //     what it can express.
+//
+//     Note that there are so many paths and combinations, not all of them
+//     have been tested. Just report bugs and I'll fix 'em.
 //
 //   Details
 //
@@ -169,6 +172,7 @@
 //
 // VERSION HISTORY
 //
+//   0.77   documentation tweaks
 //   0.76   typos, signed/unsigned shader issue, more documentation
 //   0.75   initial release
 //
