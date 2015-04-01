@@ -60,10 +60,12 @@ environments.
 And I'm sure there are other possible benefits to using voxels/blocks.
 Hopefully this will make it easier for people to explore the space.
 
-Also, the library has a pretty wide range of features to allow
+The library has a pretty wide range of features to allow
 people to come up with some distinctive looks. For example,
-the art style of Continue?9876543210. I'm terrible at art,
-so this isn't really my thing, but I tried to put in flexible
+the art style of Continue?9876543210 was one of the inspirations
+for trying to make the multitexturing capabilities flexible.
+I'm terrible at art, so this isn't really something I can
+come up with myself, but I tried to put in flexible
 technology that could be used multiple ways.
 
 One thing I did intentionally was try to make it possible to
@@ -80,6 +82,35 @@ this. But this way, you can seamlessly integrate everything
 else with it. E.g. in your authoring tool (or procedural
 generation) you can make smooth ground and then cut a
 sharp-edged hole in it for a building's basement or whatever.
+
+Another thing you can do is work at a very different scale.
+In Minecraft, a person is just under 2 blocks tall. In
+Ace of Spades, a person is just under 3 blocks tall. Why
+not 4 or 6? Well, partly because you just need a lot more
+voxels; if a meter is 2 voxels in Mineraft and 4 voxels in
+your game, and you draw the same number of voxels due to
+hardware limits, then your game has half the view distance
+of Minecraft. Since stb_voxel_render is designed to keep
+the meshes small and render efficiently, you can push the
+view distance out further than Minecraft--or use a similar
+view distance and a higher voxel resolution. You could also
+stop making infinite worlds and work at entirely different
+scales; where Minecraft is 1 voxel per meter, you could
+have 20 voxels per meter and make a small arena that's
+50 meters wide and 5 meters tall.
+
+Back when the voxel game Voxatron was announced, the weekend
+after the trailer came out I wrote my own little GPU-accelerated
+version of the engine and thought that was pretty cool. I've
+been tempted many times to extract that and release it, but
+I don't want to steal Voxatron's thunder so I've avoided
+it. You could use this engine to do the same kind of thing,
+although it won't be as efficient as an engine dedicated to
+that style of thing would be. (For example, if you're building
+the whole mesh from scratch every frame--which you should do
+because you want to enable that worst case--you can skip
+creating voxel faces that face away from the camera, since
+they can never be seen.)
 
 **Q:**
 What one thing would you really like to see somebody do?
@@ -99,7 +130,10 @@ and all of that stuff.
 So what I'd really like to see is someone build some kind
 of voxel-game-construction-set. Start with stb_voxel_render,
 maybe expose all the flexibility of stb_voxel_render (so
-people 
+people can do different things). Thrown in lua or something
+else for scripting, make some kind of editor that feels
+at least as good as Minecraft and Infinifactory, and see
+where that gets you.
 
 **Q:**
 Why'd you make this library?
@@ -130,9 +164,10 @@ About the release video... how long did that take to edit?
 
 **A:**
 About seven or eight hours. I had the first version done in
-maybe six or sevent hours, but then I realized I'd left out
+maybe six or seven hours, but then I realized I'd left out
 one clip, and when I went back to add it I also gussied up
-a couple other moments in the video.
+a couple other moments in the video. But there was something
+basically identical to it that was done in around six.
 
 **Q:** 
 Ok, that's it. Thanks, me.

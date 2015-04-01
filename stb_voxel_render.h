@@ -4,11 +4,11 @@
 // in this case, one with blocks that can have textures and that
 // can also be a few shapes other than cubes.
 //
-// Video introduction:
-//     http://www.youtube.com/watch?v=2vnTtiLrV1w
+//    Video introduction:
+//       http://www.youtube.com/watch?v=2vnTtiLrV1w
 //
-// Minecraft-viewer sample app:
-//     http://github.com/nothings/stb/tree/master/tests/caveview
+//    Minecraft-viewer sample app (not very simple though):
+//       http://github.com/nothings/stb/tree/master/tests/caveview
 //
 // It works by creating triangle meshes. The library includes
 //
@@ -552,7 +552,7 @@ struct stbvox_uniform_info
 
 #if 0
 // Run this once per frame before drawing all the meshes.
-// You still need to set the 'transform' uniform for every mesh, etc.
+// You still need to separately set the 'transform' uniform for every mesh.
 void setup_uniforms(GLuint shader, float camera_pos[4], GLuint tex1, GLuint tex2)
 {
    int i;
@@ -938,8 +938,9 @@ struct stbvox_input_description
    // vheight values to use if the geometry is STBVOX_GEOM_vheight*.
    // See the vheight discussion.
 };
-// @OPTIMIZE when specializing, build a single struct with all of the
-// 3D-indexed so it's AoS instead of SoA for better cache efficiency
+// @OPTIMIZE allow specializing; build a single struct with all of the
+// 3D-indexed arrays combined so it's AoS instead of SoA for better
+// cache efficiency
 
 
 enum
