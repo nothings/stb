@@ -3,8 +3,8 @@
 ### How to run it?
 
 There's no GUI. Find a directory with Minecraft Anvil files (.mca).
-Copy a Minecraft "terrain.png" into that directory. Run from that
-directory.
+Copy a Minecraft "terrain.png" into that directory (do a google
+image search). Run from that directory.
 
 ### How accurate is this as a Minecraft viewer?
 

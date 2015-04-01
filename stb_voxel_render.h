@@ -200,7 +200,7 @@ extern "C" {
 //
 // CONFIGURATION MACROS
 //
-//  #define STBVOX_CONFIG_MODE <integer>
+//  #define STBVOX_CONFIG_MODE <integer>           // REQUIRED
 //     Configures the overall behavior of stb_voxel_render. This
 //     can affect the shaders, the uniform info, and other things.
 //     (If you need more than one mode in the same app, you can
@@ -214,15 +214,14 @@ extern "C" {
 //            21               Untextured blocks, 20-byte quads
 //
 //
-//  #define STBVOX_CONFIG_PRECISION_Z  <integer>
+//  #define STBVOX_CONFIG_PRECISION_Z  <integer>   // OPTIONAL
 //     Defines the number of bits of fractional position for Z.
-//     Only 0 or 1 are valid. If 0, then a single mesh has
-//     twice the legal Z range; e.g. in modes 0,1,20,21,
-//     Z in the mesh can extend to 511 instead of 255.
-//     However, half-height blocks cannot be used.
+//     Only 0 or 1 are valid. 1 is the default. If 0, then a
+//     single mesh has twice the legal Z range; e.g. in
+//     modes 0,1,20,21, Z in the mesh can extend to 511 instead
+//     of 255. However, half-height blocks cannot be used.
 //
-//
-// All of the following just #ifdef tested so need no values.
+// All of the following just #ifdef tested so need no values, and are optional.
 //
 //    STBVOX_CONFIG_BLOCKTYPE_SHORT
 //        use unsigned 16-bit values for 'blocktype' in the input instead of 8-bit values
@@ -245,11 +244,11 @@ extern "C" {
 //        Declares a lighting function hook; you must append a lighting function
 //        to the shader before compiling it:
 //            vec3 compute_lighting(vec3 pos, vec3 norm, vec3 albedo, vec3 ambient);
-//        'ambient' is the half-lambert ambient light with vertex ao applied
+//        'ambient' is the half-lambert ambient light with vertex ambient-occlusion applied
 //
 //    STBVOX_CONFIG_FOG_SMOOTHSTEP
 //        Defines a simple unrealistic fog system designed to maximize
-//        unobscured view distance while not looking to weird when things
+//        unobscured view distance while not looking too weird when things
 //        emerge from the fog. Configured using an extra array element
 //        in the STBVOX_UNIFORM_ambient uniform.
 //
