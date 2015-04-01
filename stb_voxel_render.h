@@ -576,6 +576,22 @@ struct stbvox_input_description
    // on the E/N/W/S sides of the block.
    // Encode with STBVOX_MAKE_SIDE_TEXROT(rot_e, rot_n, rot_w, rot_s)
 
+
+//////////////////////////////////////////////////////////////////////////////
+// X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X//
+//X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X //
+// X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X//
+//X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X //
+// X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X//
+//X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X //
+// X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X//
+//X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X //
+//////////////////////////////////////////////////////////////////////////////
+
+   // Note the detailed documentation runs out here, I still have to finish this
+   // and document all the #define STBVOX_CONFIGs as well
+
+
    unsigned char *overlay;                 // index into palettes listed below
    unsigned char *selector;                // raw selector (chooses which mesh to write to)
    unsigned char *geometry;                // STBVOX_MAKE_GEOMETRY   -- geom:4, rot:2, vheight:2
