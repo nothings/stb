@@ -24,7 +24,7 @@
 // USAGE
 //
 //   #define the symbol STB_VOXEL_RENDER_IMPLEMENTATION in *one*
-//   C/C++ file before the #include of this file; the impleemtnation
+//   C/C++ file before the #include of this file; the implementation
 //   will be generated in that file.
 //
 //   If you define the symbols STB_VOXEL_RENDER_STATIC, then the
@@ -161,7 +161,7 @@
 typedef struct stbvox_mesh_maker stbvox_mesh_maker;
 typedef struct stbvox_input_description stbvox_input_description;
 
-#ifdef STBVOX_STATIC_IMPLEMENATION
+#ifdef STBVOX_STATIC_IMPLEMENTATION
 #define STBVXDEC static
 #else
 #define STBVXDEC extern
