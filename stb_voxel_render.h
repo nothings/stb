@@ -1,10 +1,14 @@
-// stb_voxel_render.h - v0.75 - Sean Barrett, 2015 - public domain
+// stb_voxel_render.h - v0.76 - Sean Barrett, 2015 - public domain
 //
 // This library helps render large-scale "voxel" worlds for games,
 // in this case, one with blocks that can have textures and that
 // can also be a few shapes other than cubes.
 //
-// Video introduction: https://www.youtube.com/watch?v=2vnTtiLrV1w
+// Video introduction:
+//     http://www.youtube.com/watch?v=2vnTtiLrV1w
+//
+// Minecraft-viewer sample app:
+//     http://github.com/nothings/stb/tree/master/tests/caveview
 //
 // It works by creating triangle meshes. The library includes
 //
@@ -16,9 +20,12 @@
 // the 3D graphics API. (At the moment, it's not actually portable
 // since the shaders are GLSL only, but patches are welcome.)
 //
-// Currently the preferred vertex format is 20 bytes per quad.
-// There are plans to allow more compact formats with a slight
-// reduction in features.
+// You have to do all the caching and tracking of vertex buffers
+// yourself. However, you could also try making a game with
+// a small enough world that it's fully loaded rather than
+// streaming. Currently the preferred vertex format is 20 bytes
+// per quad. There are plans to allow much more compact formats
+// with a slight reduction in shader features.
 //
 //
 // USAGE
@@ -152,6 +159,20 @@
 //   zmc engine         96-byte quads   2011/10
 //   zmc engine         32-byte quads   2013/12
 //   stb_voxel_render   20-byte quads   2015/01
+//
+//
+// CONTRIBUTORS
+//
+//   Features             Porting            Bugfixes & Warnings
+//  Sean Barrett                          github:r-leyh   Jesus Fernandez
+//                                        Miguel Lechon
+//
+// VERSION HISTORY
+//
+//   0.76   typos, signed/unsigned shader issue, more documentation
+//   0.75   initial release
+//
+//
 
 #ifndef INCLUDE_STB_VOXEL_RENDER_H
 #define INCLUDE_STB_VOXEL_RENDER_H
@@ -173,9 +194,104 @@ extern "C" {
 
 //////////////////////////////////////////////////////////////////////////////
 //
+// CONFIGURATION MACROS
+//
+//  #define STBVOX_CONFIG_MODE <integer>
+//     Configures the overall behavior of stb_voxel_render. This
+//     can affect the shaders, the uniform info, and other things.
+//     (If you need more than one mode in the same app, you can
+//     use STBVOX_STATIC_IMPLEMENTATION to create multiple versions
+//     in separate files, and then wrap them.)
+//
+//         Mode value       Meaning
+//             0               Textured blocks, 32-byte quads
+//             1               Textured blocks, 20-byte quads
+//            20               Untextured blocks, 32-byte quads
+//            21               Untextured blocks, 20-byte quads
+//
+//
+//  #define STBVOX_CONFIG_PRECISION_Z  <integer>
+//     Defines the number of bits of fractional position for Z.
+//     Only 0 or 1 are valid. If 0, then a single mesh has
+//     twice the legal Z range; e.g. in modes 0,1,20,21,
+//     Z in the mesh can extend to 511 instead of 255.
+//     However, half-height blocks cannot be used.
+//
+//
+// All of the following just #ifdef tested so need no values.
+//
+//    STBVOX_CONFIG_BLOCKTYPE_SHORT
+//        use unsigned 16-bit values for 'blocktype' in the input instead of 8-bit values
+//
+//    STBVOX_CONFIG_OPENGL_MODELVIEW
+//        use the gl_ModelView matrix rather than the explicit uniform
+//
+//    STBVOX_CONFIG_HLSL
+//        NOT IMPLEMENTED! Define HLSL shaders instead of GLSL shaders
+//
+//    STBVOX_CONFIG_PREFER_TEXBUFFER
+//        Stores many of the uniform arrays in texture buffers intead,
+//        so they can be larger and may be more efficient on some hardware.
+//
+//    STBVOX_CONFIG_LIGHTING_SIMPLE
+//        Creates a simple lighting engine with a single point light source
+//        in addition to the default half-lambert ambient light.
+//
+//    STBVOX_CONFIG_LIGHTING
+//        Declares a lighting function hook; you must append a lighting function
+//        to the shader before compiling it:
+//            vec3 compute_lighting(vec3 pos, vec3 norm, vec3 albedo, vec3 ambient);
+//        'ambient' is the half-lambert ambient light with vertex ao applied
+//
+//    STBVOX_CONFIG_FOG_SMOOTHSTEP
+//        Defines a simple unrealistic fog system designed to maximize
+//        unobscured view distance while not looking to weird when things
+//        emerge from the fog. Configured using an extra array element
+//        in the STBVOX_UNIFORM_ambient uniform.
+//
+//    STBVOX_CONFIG_FOG
+//        Defines a fog function hook; you must append a fog function to
+//        the shader before compiling it:
+//            vec3 compute_fog(vec3 color, vec3 relative_pos, float fragment_alpha);
+//        "color" is the incoming pre-fogged color, fragment_alpha is the alpha value,
+//        and relative_pos is the vector from the point to the camera in worldspace
+//
+//    STBVOX_CONFIG_DISABLE_TEX2
+//        This disables all processing of texture 2 in the shader in case
+//        you don't use it. Eventually this will be replaced with a mode
+//        that omits the unused data entirely.
+//
+//    STBVOX_CONFIG_TEX1_EDGE_CLAMP
+//    STBVOX_CONFIG_TEX2_EDGE_CLAMP
+//        If you want to edge clamp the textures, instead of letting them wrap,
+//        set this flag. By default stb_voxel_render relies on texture wrapping
+//        to simplify texture coordinate generation. This flag forces it to do
+//        it correctly, although there can still be minor artifacts.
+//
+//    STBVOX_CONFIG_ROTATION_IN_LIGHTING
+//        Changes the meaning of the 'lighting' mesher input variable to also
+//        store the rotation; see later discussion.
+//
+//    STBVOX_CONFIG_PREMULTIPLIED_ALPHA
+//        Adjusts the shader calculations on the assumption that tex1.rgba,
+//        tex2.rgba, and color.rgba all use premultiplied values, and that
+//        the output of the fragment shader should be premultiplied.
+//
+//    STBVOX_CONFIG_UNPREMULTIPLY
+//        Only meaningful if STBVOX_CONFIG_PREMULTIPLIED_ALPHA is defined.
+//        Changes the behavior described above so that the inputs are
+//        still premultiplied alpha, but the output of the fragment
+//        shader is not premultiplied alpha. This is needed when allowing
+//        non-unit alpha values but not doing alpha-blending (for example
+//        when alpha testing).
+//
+
+
+//////////////////////////////////////////////////////////////////////////////
+//
 // MESHING
 //
-// A mesh represents a (typically) small chunk of a larger level.
+// A mesh represents a (typically) small chunk of a larger world.
 // Meshes encode coordinates using small integers, so those
 // coordinates must be relative to some base location.
 // All of the coordinates in the functions below use
@@ -218,8 +334,10 @@ STBVXDEC int stbvox_get_buffer_count(stbvox_mesh_maker *mm);
 // Returns the number of buffers needed per mesh as described above.
 
 STBVXDEC int stbvox_get_buffer_size_per_quad(stbvox_mesh_maker *mm, int slot);
-// Returns how much of a given buffer will get used per quad.
-// This allows you to choose correct relative sizes for each buffer.
+// Returns how much of a given buffer will get used per quad. This
+// allows you to choose correct relative sizes for each buffer, although
+// the values are fixed based on the configuration you've selected at
+// compile time, and the details are described in stbvox_set_buffer.
 
 STBVXDEC void stbvox_set_default_mesh(stbvox_mesh_maker *mm, int mesh);
 // Selects which mesh the mesher will output to (see previous function)
@@ -359,15 +477,14 @@ typedef struct stbvox_uniform_info stbvox_uniform_info;
 STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform);
 // Gets the information about a uniform necessary for you to
 // set up each uniform with a minimal amount of explicit code.
-// See the sample code for examples.
+// See the sample code after the structure definition for stbvox_uniform_info,
+// further down in this header section.
 //
 // "uniform" is from the list immediately following. For many
 // of these, default values are provided which you can set.
 // Most values are shared for most draw calls; e.g. for stateful
 // APIs you can set most of the state only once. Only
 // STBVOX_UNIFORM_transform needs to change per draw call.
-//
-// The info from this function allows you to cal
 //
 // STBVOX_UNIFORM_texscale
 //    64- or 128-long vec4 array. (128 only if STBVOX_CONFIG_PREFER_TEXBUFFER)
@@ -378,7 +495,9 @@ STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform);
 //
 //    Texscale is indexed by the bottom 6 or 7 bits of the texture id; thus for
 //    example the texture at index 0 in the array and the texture in index 128 of
-//    the array must be scaled the same.
+//    the array must be scaled the same. This means that if you only have 64 or 128
+//    unique textures, they all get distinct values anyway; otherwise you have
+//    to group them in pairs or sets of four.
 //
 // STBVOX_UNIFORM_ambient
 //    4-long vec4 array:
@@ -390,19 +509,19 @@ STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform);
 //      ambient[3].a     - reciprocal of squared distance of farthest fog point (viewing distance)
 
 
-                               // +----- has a default value
-                               // |  +-- always use the default value
-enum                           // V  V
-{                              // ------------------------------------------------
-   STBVOX_UNIFORM_face_data,   // n      the sampler with the face texture buffer
-   STBVOX_UNIFORM_transform,   // n      the transform data from stbvox_get_transform
-   STBVOX_UNIFORM_tex_array,   // n      an array of two texture samplers containing the two texture arrays
-   STBVOX_UNIFORM_texscale,    // Y      a table of texture properties, see above
-   STBVOX_UNIFORM_color_table, // Y      64 vec4 RGBA values; a default palette is provided
-   STBVOX_UNIFORM_normals,     // Y  Y   table of normals, internal-only
-   STBVOX_UNIFORM_texgen,      // Y  Y   table of texgen vectors, internal-only
-   STBVOX_UNIFORM_ambient,     // n      lighting & fog info, see above
-   STBVOX_UNIFORM_camera_pos,  // Y      camera position in global voxel space (for lighting & fog)
+                               //  +----- has a default value
+                               //  |  +-- you should always use the default value
+enum                           //  V  V
+{                              //  ------------------------------------------------
+   STBVOX_UNIFORM_face_data,   //  n      the sampler with the face texture buffer
+   STBVOX_UNIFORM_transform,   //  n      the transform data from stbvox_get_transform
+   STBVOX_UNIFORM_tex_array,   //  n      an array of two texture samplers containing the two texture arrays
+   STBVOX_UNIFORM_texscale,    //  Y      a table of texture properties, see above
+   STBVOX_UNIFORM_color_table, //  Y      64 vec4 RGBA values; a default palette is provided; if A > 1.0, fullbright
+   STBVOX_UNIFORM_normals,     //  Y  Y   table of normals, internal-only
+   STBVOX_UNIFORM_texgen,      //  Y  Y   table of texgen vectors, internal-only
+   STBVOX_UNIFORM_ambient,     //  n      lighting & fog info, see above
+   STBVOX_UNIFORM_camera_pos,  //  Y      camera position in global voxel space (for lighting & fog)
 
    STBVOX_UNIFORM_count,
 };
@@ -425,6 +544,59 @@ struct stbvox_uniform_info
    float *default_value;        // if not NULL, you can use this as the uniform pointer
    int use_tex_buffer;          // if true, then the uniform is a sampler but the data can come from default_value
 };
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// Uniform sample code
+//
+
+#if 0
+// Run this once per frame before drawing all the meshes.
+// You still need to set the 'transform' uniform for every mesh, etc.
+void setup_uniforms(GLuint shader, float camera_pos[4], GLuint tex1, GLuint tex2)
+{
+   int i;
+   glUseProgram(shader); // so uniform binding works
+   for (i=0; i < STBVOX_UNIFORM_count; ++i) {
+      stbvox_uniform_info sui;
+      if (stbvox_get_uniform_info(&sui, i)) {
+         GLint loc = glGetUniformLocation(shader, sui.name);
+         if (loc != 0) {
+            switch (i) {
+               case STBVOX_UNIFORM_camera_pos: // only needed for fog
+                  glUniform4fv(loc, sui.array_length, camera_pos);
+                  break;
+
+               case STBVOX_UNIFORM_tex_array: {
+                  GLuint tex_unit[2] = { 0, 1 }; // your choice of samplers
+                  glUniform1iv(loc, 2, tex_unit);
+
+                  glActiveTexture(GL_TEXTURE0 + tex_unit[0]); glBindTexture(GL_TEXTURE_2D_ARRAY, tex1);
+                  glActiveTexture(GL_TEXTURE0 + tex_unit[1]); glBindTexture(GL_TEXTURE_2D_ARRAY, tex2);
+                  glActiveTexture(GL_TEXTURE0); // reset to default
+                  break;
+               }
+
+               case STBVOX_UNIFORM_face_data:
+                  glUniform1i(loc, SAMPLER_YOU_WILL_BIND_PER_MESH_FACE_DATA_TO);
+                  break;
+
+               case STBVOX_UNIFORM_ambient:     // you definitely want to override this
+               case STBVOX_UNIFORM_color_table: // you might want to override this
+               case STBVOX_UNIFORM_texscale:    // you may want to override this
+                  glUniform4fv(loc, sui.array_length, sui.default_value);
+                  break;
+
+               case STBVOX_UNIFORM_normals:     // you never want to override this
+               case STBVOX_UNIFORM_texgen:      // you never want to override this
+                  glUniform3fv(loc, sui.array_length, sui.default_value);
+                  break;
+            }
+         }
+      }
+   }
+}
+#endif
 
 #ifdef __cplusplus
 }
@@ -475,43 +647,68 @@ enum
    STBVOX_FACE_count,
 };
 
-// 24-bit color
-typedef struct
-{
-   unsigned char r,g,b;
-} stbvox_rgb;
-
 #ifdef STBVOX_CONFIG_BLOCKTYPE_SHORT
 typedef unsigned short stbvox_block_type;
 #else
 typedef unsigned char stbvox_block_type;
 #endif
 
+// 24-bit color
+typedef struct
+{
+   unsigned char r,g,b;
+} stbvox_rgb;
+
 #define STBVOX_COLOR_TEX1_ENABLE   64
 #define STBVOX_COLOR_TEX2_ENABLE  128
 
-// This is the data structure you fill out
+// This is the data structure you fill out. Most of the arrays can be
+// NULL, except when one is required to get the value to index another.
 struct stbvox_input_description
 {
    unsigned char lighting_at_vertices;
    // The default is lighting values (i.e. ambient occlusion) are at block
-   // center, and the vertex light is gathered from the adjacent block
-   // centers the vertex faces. This makes smooth lighting consistent
-   // on adjacent faces with the same orientation.
+   // center, and the vertex light is gathered from those adjacent block
+   // centers that the vertex is facing. This makes smooth lighting
+   // consistent across adjacent faces with the same orientation.
    //
    // Setting this flag to non-zero gives you explicit control
-   // of light at each vertex; now the lighting/ao will be shared by
-   // all vertices at the same point, even if they have different normals.
+   // of light at each vertex, but now the lighting/ao will be
+   // shared by all vertices at the same point, even if they
+   // have different normals.
 
-   // these are 3D maps you use to define your voxel world, using x_stride and y_stride
+   // these are mostly 3D maps you use to define your voxel world, using x_stride and y_stride
    // note that for cache efficiency, you want to use the block_foo palettes as much as possible instead
 
    stbvox_rgb *rgb;
+   // Indexed by 3D coordinate.
    // 24-bit voxel color for STBVOX_CONFIG_MODE = 20 or 21 only
 
-   stbvox_block_type *blocktype;           // index into palettes listed below
-   // This is a core "block type" value, which is used to index into
-   // other arrays.
+   unsigned char *lighting;
+   // Indexed by 3D coordinate. The lighting value / ambient occlusion
+   // value that is used to define the vertex lighting values.
+   // The raw lighting values are defined at the center of blocks
+   // (or at vertex if 'lighting_at_vertices' is true).
+   //
+   // If the macro STBVOX_ROTATION_IN_LIGHTING is defined,
+   // then an additional 2-bit block rotation value is stored
+   // in this field as well.
+   //
+   // Encode with STBVOX_MAKE_LIGHTING(lighting,rot)--here
+   // 'lighting' should still be 8 bits, as the macro will
+   // discard the bottom bits automatically.
+   //
+   // (Rationale: rotation needs to
+   // be independent of blocktype, but is only 2 bits so
+   // doesn't want to be its own array. Lighting is the one
+   // thing that was likely to already be in use and that
+   // I could easily steal 2 bits from.)
+
+   stbvox_block_type *blocktype;
+   // Indexed by 3D coordinate. This is a core "block type" value, which is used
+   // to index into other arrays; essentially a "palette". This is much more
+   // memory-efficient and performance-friendly than storing the values explicitly,
+   // but only makes sense if the values are always synchronized.
    //
    // If a voxel's blocktype is 0, it is assumed to be empty (STBVOX_GEOM_empty),
    // and no other blocktypes should be STBVOX_GEOM_empty. (Only if you do not
@@ -519,6 +716,13 @@ struct stbvox_input_description
    //
    // Normally it is an unsigned byte, but you can override it to be
    // a short if you have too many blocktypes.
+
+   unsigned char *geometry;
+   // Indexed by 3D coordinate. Contains the geometry type for the block.
+   // Also contains a 2-bit rotation for how the whole block is rotated.
+   // Also includes a 2-bit vheight value when using shared vheight values.
+   // See the separate vheight documentation.
+   // Encode with STBVOX_MAKE_GEOMETRY(geom, rot, vheight)
 
    unsigned char *block_geometry;
    // Array indexed by blocktype containing the geometry for this block, plus
@@ -534,6 +738,12 @@ struct stbvox_input_description
    // Array indexed by blocktype and face containing the texture id for texture #1.
    // The N/E/S/W face choices can be rotated by one of the rotation selectors;
    // The top & bottom face textures will rotate to match.
+   // Note that it only makes sense to use one of block_tex1 or block_tex1_face;
+   // this pattern repeats throughout and this notice is not repeated.
+
+   unsigned char *tex2;
+   // Indexed by 3D coordinate. Contains the texture id for texture #2
+   // to use on all faces of the block.
 
    unsigned char *block_tex2;
    // Array indexed by blocktype containing the texture id for texture #2.
@@ -543,6 +753,11 @@ struct stbvox_input_description
    // The N/E/S/W face choices can be rotated by one of the rotation selectors;
    // The top & bottom face textures will rotate to match.
 
+   unsigned char *color;
+   // Indexed by 3D coordinate. Contains the color for all faces of the block.
+   // The core color value is 0..63.
+   // Encode with STBVOX_MAKE_COLOR(color_number, tex1_enable, tex2_enable)
+   
    unsigned char *block_color;
    // Array indexed by blocktype containing the color value to apply to the faces.
    // The core color value is 0..63.
@@ -565,69 +780,166 @@ struct stbvox_input_description
    unsigned char *block_vheight;
    // Array indexed by blocktype containing the vheight values for the
    // top or bottom face of this block. These will rotate properly if the
-   // block is rotated.
+   // block is rotated. See discussion of vheight.
    // Encode with STBVOX_MAKE_VHEIGHT(sw_height, se_height, nw_height, ne_height)
+
+   unsigned char *selector;
+   // Array indexed by 3D coordinates indicating which output mesh to select.
 
    unsigned char *block_selector;
    // Array indexed by blocktype indicating which output mesh to select.
 
+   unsigned char *side_texrot;
+   // Array indexed by 3D coordinates encoding 2-bit texture rotations for the
+   // faces on the E/N/W/S sides of the block.
+   // Encode with STBVOX_MAKE_SIDE_TEXROT(rot_e, rot_n, rot_w, rot_s)
+
    unsigned char *block_side_texrot;
-   // Array indexed by blocktype encoding 2-bin texture rotations for the faces
+   // Array indexed by blocktype encoding 2-bit texture rotations for the faces
    // on the E/N/W/S sides of the block.
    // Encode with STBVOX_MAKE_SIDE_TEXROT(rot_e, rot_n, rot_w, rot_s)
 
-
-//////////////////////////////////////////////////////////////////////////////
-// X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X//
-//X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X //
-// X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X//
-//X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X //
-// X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X//
-//X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X //
-// X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X//
-//X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X X //
-//////////////////////////////////////////////////////////////////////////////
-
-   // Note the detailed documentation runs out here, I still have to finish this
-   // and document all the #define STBVOX_CONFIGs as well
-
-
    unsigned char *overlay;                 // index into palettes listed below
-   unsigned char *selector;                // raw selector (chooses which mesh to write to)
-   unsigned char *geometry;                // STBVOX_MAKE_GEOMETRY   -- geom:4, rot:2, vheight:2
-   unsigned char *rotate;                  // STBVOX_MAKE_MATROT     -- block:2, overlay:2, tex2:2, color:2
-   unsigned char *tex2;                    // raw tex2 value to use on all sides of block
-   unsigned char *tex2_replace;            // STBVOX_MAKE_TEX2_REPLACE --  tex2:6, face_1:2
-   unsigned char *tex2_facemask;           // facemask:6 (use all bits of tex2_replace as texture)
-   unsigned char *side_texrot;             // e:2,n:2,w:2,s:2 texture rotation
-   unsigned char *vheight;                 // STBVOX_MAKE_VHEIGHT   -- sw:2, se:2, nw:2, ne:2, doesn't rotate
-   unsigned char *texlerp;                 // STBVOX_MAKE_TEXLERP   -- vert:2, ud:2, ew:2, ns:2
-   unsigned char *texlerp2;                // STBVOX_MAKE_TEXLERP2 (and use STBVOX_MAKE_TEXLERP1 for 'texlerp' -- e:2, n:2, u:3, unused:1
-   unsigned char *texlerp_simple;          // STBVOX_MAKE_TEXLERP_SIMPLE -- baselerp:2, vert_lerp:3, face_to_use_vert_lerp:3
-   unsigned short *texlerp_vert3;          // e:3,n:3,w:3,s:3,u:3 (down comes from 'texlerp')
-   unsigned short *texlerp_face3;          // e:3,n:3,w:3,s:3,u:2,d:2
-   unsigned char *lighting;                // lighting:8
-   unsigned char *color;                   // color for entire block
-   unsigned char *extended_color;          // index into ecolor palettes
-   unsigned char *color2, *color2_facemask;// additional override colors with face bitmask
-   unsigned char *color3, *color3_facemask;// additional override colors with face bitmask
+   // Indexed by 3D coordinate. If 0, there is no overlay. If non-zero,
+   // it indexes into to the below arrays and overrides the values
+   // defined by the blocktype.
 
-   // indexed by tex1, used to determine tex2 if not otherwise specified
-   unsigned char *tex2_for_tex1;   // 256
-
-   // @TODO: when specializing, build a single struct with all of the
-   // below values, so it's AoS instead of SoA for better cache efficiency
-
-   // indexed by overlay*6+side; in all cases 0 means 'nochange'
    unsigned char (*overlay_tex1)[6];
-   unsigned char (*overlay_tex2)[6];
-   unsigned char (*overlay_color)[6];
-   unsigned char *overlay_side_texrot;
+   // Array indexed by overlay value and face, containing an override value
+   // for the texture id for texture #1. If 0, the value defined by blocktype
+   // is used.
 
-   // indexed by extended_color
-   unsigned char *ecolor_color;    // 256
-   unsigned char *ecolor_facemask; // 256
+   unsigned char (*overlay_tex2)[6];
+   // Array indexed by overlay value and face, containing an override value
+   // for the texture id for texture #2. If 0, the value defined by blocktype
+   // is used.
+
+   unsigned char (*overlay_color)[6];
+   // Array indexed by overlay value and face, containing an override value
+   // for the face color. If 0, the value defined by blocktype is used.
+
+   unsigned char *overlay_side_texrot;
+   // Array indexed by overlay value, encoding 2-bit texture rotations for the faces
+   // on the E/N/W/S sides of the block.
+   // Encode with STBVOX_MAKE_SIDE_TEXROT(rot_e, rot_n, rot_w, rot_s)
+
+   unsigned char *rotate;
+   // Indexed by 3D coordinate. Allows independent rotation of several
+   // parts of the voxel, where by rotation I mean swapping textures
+   // and colors between E/N/S/W faces.
+   //    Block: rotates anything indexed by blocktype
+   //    Overlay: rotates anything indexed by overlay
+   //    EColor: rotates faces defined in ecolor_facemask
+   // Encode with STBVOX_MAKE_MATROT(block,overlay,ecolor)
+
+   unsigned char *tex2_for_tex1;
+   // Array indexed by tex1 containing the texture id for texture #2.
+   // You can use this if the two are always/almost-always strictly
+   // correlated (e.g. if tex2 is a detail texture for tex1), as it
+   // will be more efficient (touching fewer cache lines) than using
+   // e.g. block_tex2_face.
+
+   unsigned char *tex2_replace;
+   // Indexed by 3D coordinate. Specifies the texture id for texture #2
+   // to use on a single face of the voxel, which must be E/N/W/S (not U/D).
+   // The texture id is limited to 6 bits unless tex2_facemask is also
+   // defined (see below).
+   // Encode with STBVOX_MAKE_TEX2_REPLACE(tex2, face)
+
+   unsigned char *tex2_facemask;
+   // Indexed by 3D coordinate. Specifies which of the six faces should
+   // have their tex2 replaced by the value of tex2_replace. In this
+   // case, all 8 bits of tex2_replace are used as the texture id.
+   // Encode with STBVOX_MAKE_FACE_MASK(east,north,west,south,up,down)
+
+   unsigned char *extended_color;
+   // Indexed by 3D coordinate. Specifies a value that indexes into
+   // the ecolor arrays below (both of which must be defined).
+
+   unsigned char *ecolor_color;
+   // Indexed by extended_color value, specifies an optional override
+   // for the color value on some faces.
+   // Encode with STBVOX_MAKE_COLOR(color_number, tex1_enable, tex2_enable)
+
+   unsigned char *ecolor_facemask;
+   // Indexed by extended_color value, this specifies which faces the
+   // color in ecolor_color should be applied to. The faces can be
+   // independently rotated by the ecolor value of 'rotate', if it exists.
+   // Encode with STBVOX_MAKE_FACE_MASK(e,n,w,s,u,d)
+
+   unsigned char *color2;
+   // Indexed by 3D coordinates, specifies an alternative color to apply
+   // to some of the faces of the block.
+   // Encode with STBVOX_MAKE_COLOR(color_number, tex1_enable, tex2_enable)
+
+   unsigned char *color2_facemask;
+   // Indexed by 3D coordinates, specifies which faces should use the
+   // color defined in color2. No rotation value is applied.
+   // Encode with STBVOX_MAKE_FACE_MASK(e,n,w,s,u,d)
+   
+   unsigned char *color3;
+   // Indexed by 3D coordinates, specifies an alternative color to apply
+   // to some of the faces of the block.
+   // Encode with STBVOX_MAKE_COLOR(color_number, tex1_enable, tex2_enable)
+
+   unsigned char *color3_facemask;
+   // Indexed by 3D coordinates, specifies which faces should use the
+   // color defined in color3. No rotation value is applied. 
+   // Encode with STBVOX_MAKE_FACE_MASK(e,n,w,s,u,d)
+   
+   unsigned char *texlerp_simple;
+   // Indexed by 3D coordinates, this is the smallest texlerp encoding
+   // that can do useful work. It consits of three values: baselerp,
+   // vertlerp, and face_vertlerp. Baselerp defines the value
+   // to use on all of the faces but one, from the STBVOX_TEXLERP_BASE
+   // values. face_vertlerp is one of the 6 face values (or STBVOX_FACE_NONE)
+   // which specifies the face should use the vertlerp values.
+   // Vertlerp defines a lerp value at every vertex of the mesh.
+   // Thus, one face can have per-vertex texlerp values, and those
+   // values are encoded in the space so that they will be shared
+   // by adjacent faces that also use vertlerp, allowing continuity
+   // (this is used for the "texture crossfade" bit of the release video).
+   // Encode with STBVOX_MAKE_TEXLERP_SIMPLE(baselerp, vertlerp, face_vertlerp)
+
+   // The following texlerp encodings are experimental and maybe not
+   // that useful. 
+
+   unsigned char *texlerp;
+   // Indexed by 3D coordinates, this defines four values:
+   //   vertlerp is a lerp value at every vertex of the mesh (using STBVOX_TEXLERP_BASE values).
+   //   ud is the value to use on up and down faces, from STBVOX_TEXLERP_FACE values
+   //   ew is the value to use on east and west faces, from STBVOX_TEXLERP_FACE values
+   //   ns is the value to use on north and south faces, from STBVOX_TEXLERP_FACE values
+   // If any of ud, ew, or ns is STBVOX_TEXLERP_FACE_use_vert, then the
+   // vertlerp values for the vertices are gathered and used for those faces.
+   // Encode with STBVOX_MAKE_TEXLERP(vertlerp,ud,ew,sw)
+
+   unsigned short *texlerp_vert3;
+   // Indexed by 3D coordinates, this works with texlerp and
+   // provides a unique texlerp value for every direction at
+   // every vertex. The same rules of whether faces share values
+   // applies. The STBVOX_TEXLERP_FACE vertlerp value defined in
+   // texlerp is only used for the down direction. The values at
+   // each vertex in other directions are defined in this array,
+   // and each uses the STBVOX_TEXLERP3 values (i.e. full precision
+   // 3-bit texlerp values).
+   // Encode with STBVOX_MAKE_VERT3(vertlerp_e,vertlerp_n,vertlerp_w,vertlerp_s,vertlerp_u)
+
+   unsigned short *texlerp_face3;          // e:3,n:3,w:3,s:3,u:2,d:2
+   // Indexed by 3D coordinates, this provides a compact way to
+   // fully specify the texlerp value indepenendly for every face,
+   // but doesn't allow per-vertex variation. E/N/W/S values are
+   // encoded using STBVOX_TEXLERP3 values, whereas up and down
+   // use STBVOX_TEXLERP_SIMPLE values.
+   // Encode with STBVOX_MAKE_FACE3(face_e,face_n,face_w,face_s,face_u,face_d)
+
+   unsigned char *vheight;                 // STBVOX_MAKE_VHEIGHT   -- sw:2, se:2, nw:2, ne:2, doesn't rotate
+   // Indexed by 3D coordinates, this defines the four
+   // vheight values to use if the geometry is STBVOX_GEOM_vheight*.
+   // See the vheight discussion.
 };
+// @OPTIMIZE when specializing, build a single struct with all of the
+// 3D-indexed so it's AoS instead of SoA for better cache efficiency
 
 
 enum
@@ -639,10 +951,10 @@ enum
 
 enum
 {
-   STBVOX_TEXLERP_0,
-   STBVOX_TEXLERP_half,
-   STBVOX_TEXLERP_1,
-   STBVOX_TEXLERP_use_vert,
+   STBVOX_TEXLERP_FACE_0,
+   STBVOX_TEXLERP_FACE_half,
+   STBVOX_TEXLERP_FACE_1,
+   STBVOX_TEXLERP_FACE_use_vert,
 };
 
 enum
@@ -677,7 +989,7 @@ enum
 
 #define STBVOX_MAKE_GEOMETRY(geom, rotate, vheight) ((geom) + (rotate)*16 + (vheight)*64)
 #define STBVOX_MAKE_VHEIGHT(v_sw, v_se, v_nw, v_ne) ((v_sw) + (v_se)*4 + (v_nw)*16 + (v_ne)*64)
-#define STBVOX_MAKE_MATROT(block, overlay, tex2, color)  ((block) + (overlay)*4 + (tex2)*16 + (color)*64)
+#define STBVOX_MAKE_MATROT(block, overlay, color)  ((block) + (overlay)*4 + (color)*64)
 #define STBVOX_MAKE_TEX2_REPLACE(tex2, tex2_replace_face) ((tex2) + ((tex2_replace_face) & 3)*64)
 #define STBVOX_MAKE_TEXLERP(ns2, ew2, ud2, vert)  ((ew2) + (ns2)*4 + (ud2)*16 + (vert)*64)
 #define STBVOX_MAKE_TEXLERP_SIMPLE(baselerp,vert,face)   ((vert)*32 + (face)*4 + (baselerp))
@@ -686,6 +998,8 @@ enum
 #define STBVOX_MAKE_FACE_MASK(e,n,w,s,u,d)  ((e)+(n)*2+(w)*4+(s)*8+(u)*16+(d)*32)
 #define STBVOX_MAKE_SIDE_TEXROT(e,n,w,s) ((e)+(n)*4+(w)*16+(s)*64)
 #define STBVOX_MAKE_COLOR(color,t1,t2) ((color)+(t1)*64+(t2)*128)
+#define STBVOX_MAKE_TEXLERP_VERT3(e,n,w,s,u)   ((e)+(n)*8+(w)*64+(s)*512+(u)*4096)
+#define STBVOX_MAKE_TEXLERP_FACE3(e,n,w,s,u,d) ((e)+(n)*8+(w)*64+(s)*512+(u)*4096+(d)*16384)
 
 #ifdef STBVOX_ROTATION_IN_LIGHTING
 #define STBVOX_MAKE_LIGHTING(lighting, rot)  (((lighting)&~3)+(rot))
@@ -947,7 +1261,7 @@ static float stbvox_default_ambient[4][4] =
    { 0,0,1      ,0 }, // reversed lighting direction
    { 0.5,0.5,0.5,0 }, // directional color
    { 0.5,0.5,0.5,0 }, // constant color
-   { 0.5,0.5,0.5,1.0f/1000.0f }, // fog data for simple_fog
+   { 0.5,0.5,0.5,1.0f/1000.0f/1000.0f }, // fog data for simple_fog
 };
 
 static unsigned char stbvox_default_palette_compact[64][3];
@@ -1036,7 +1350,7 @@ static char *stbvox_vertex_program =
       "   amb_occ  = float( (attr_vertex >> 23u) &  63u ) / 63.0;\n"      // a[23..28]
       "   texlerp  = float( (attr_vertex >> 29u)        ) /  7.0;\n"      // a[29..31]
 
-      "   vnormal = normal_table[(facedata.w>>2) & 31u];\n"
+      "   vnormal = normal_table[(facedata.w>>2u) & 31u];\n"
       "   voxelspace_pos = offset * transform[0];\n"  // mesh-to-object scale
       "   vec3 position  = voxelspace_pos + transform[1];\n"  // mesh-to-object translate
 
@@ -1428,11 +1742,10 @@ STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform)
 
 typedef struct
 {
-   unsigned char block;
-   unsigned char overlay;
-   unsigned char facerot:4;
-   unsigned char ecolor:4;
-   unsigned char tex2;
+   unsigned char block:2;
+   unsigned char overlay:2;
+   unsigned char facerot:2;
+   unsigned char ecolor:2;
 } stbvox_rotate;
 
 typedef struct
@@ -1505,24 +1818,26 @@ stbvox_mesh_face stbvox_compute_mesh_face_value(stbvox_mesh_maker *mm, stbvox_ro
    if (mm->input.overlay) {
       int over_face = STBVOX_ROTATE(face, rot.overlay);
       unsigned char over = mm->input.overlay[v_off];
-      if (mm->input.overlay_tex1) {
-         unsigned char rep1 = mm->input.overlay_tex1[over][over_face];
-         if (rep1)
-            face_data.tex1 = rep1;
-      }
-      if (mm->input.overlay_tex2) {
-         unsigned char rep2 = mm->input.overlay_tex1[over][over_face];
-         if (rep2)
-            face_data.tex2 = rep2;
-      }
-      if (mm->input.overlay_color) {
-         unsigned char rep3 = mm->input.overlay_color[over][over_face];
-         if (rep3)
-            face_data.color = rep3;
-      }
+      if (over) {
+         if (mm->input.overlay_tex1) {
+            unsigned char rep1 = mm->input.overlay_tex1[over][over_face];
+            if (rep1)
+               face_data.tex1 = rep1;
+         }
+         if (mm->input.overlay_tex2) {
+            unsigned char rep2 = mm->input.overlay_tex1[over][over_face];
+            if (rep2)
+               face_data.tex2 = rep2;
+         }
+         if (mm->input.overlay_color) {
+            unsigned char rep3 = mm->input.overlay_color[over][over_face];
+            if (rep3)
+               face_data.color = rep3;
+         }
 
-      if (face <= STBVOX_FACE_south)
-         facerot = mm->input.overlay_side_texrot[over] >> (2*over_face);
+         if (mm->input.overlay_side_texrot && face <= STBVOX_FACE_south)
+            facerot = mm->input.overlay_side_texrot[over] >> (2*over_face);
+      }
    }
 
    if (mm->input.tex2_for_tex1)
@@ -1530,8 +1845,7 @@ stbvox_mesh_face stbvox_compute_mesh_face_value(stbvox_mesh_maker *mm, stbvox_ro
    if (mm->input.tex2)
       face_data.tex2 = mm->input.tex2[v_off];
    if (mm->input.tex2_replace) {
-      int tex2_face = STBVOX_ROTATE(face, rot.tex2);
-      if (mm->input.tex2_facemask[v_off] & (1 << tex2_face))
+      if (mm->input.tex2_facemask[v_off] & (1 << face))
          face_data.tex2 = mm->input.tex2_replace[v_off];
    }
 
@@ -1555,11 +1869,11 @@ stbvox_mesh_face stbvox_compute_mesh_face_value(stbvox_mesh_maker *mm, stbvox_ro
 }
 
 static unsigned char stbvox_face_lerp[6] = { 0,2,0,2,4,4 };
-static unsigned char stbvox_vert3_lerp[6] = { 0,3,6,9,12,12 };
+static unsigned char stbvox_vert3_lerp[5] = { 0,3,6,9,12 };
 static unsigned char stbvox_vert_lerp_for_face_lerp[4] = { 0, 4, 7, 7 };
 static unsigned char stbvox_face3_lerp[6] = { 0,3,6,9,12,14 };
-static unsigned char stbvox_face3_updown[8] = { 0,2,4,7,0,2,4,7 };
 static unsigned char stbvox_vert_lerp_for_simple[4] = { 0,2,5,7 };
+static unsigned char stbvox_face3_updown[8] = { 0,2,5,7,0,2,5,7 }; // ignore top bit
 // vertex offsets for face vertices
 static unsigned char stbvox_vertex_vector[6][4][3];
 static stbvox_mesh_vertex stbvox_vmesh_delta_normal[6][4];
@@ -1615,7 +1929,7 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
       p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_encode(0,0,0,0,val);
    } else if (mm->input.texlerp_face3) {
       unsigned char val = (mm->input.texlerp_face3[v_off] >> stbvox_face3_lerp[face]) & 7;
-      if (face >= 4)
+      if (face >= STBVOX_FACE_up)
          val = stbvox_face3_updown[val];
       p1[0] = p1[1] = p1[2] = p1[3] = stbvox_vertex_encode(0,0,0,0,val);
    } else if (mm->input.texlerp_simple) {
@@ -1636,7 +1950,7 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
       }
    } else if (mm->input.texlerp) {
       unsigned char facelerp = (mm->input.texlerp[v_off] >> stbvox_face_lerp[face]) & 3;
-      if (facelerp == STBVOX_TEXLERP_use_vert) {
+      if (facelerp == STBVOX_TEXLERP_FACE_use_vert) {
          if (mm->input.texlerp_vert3 && face != STBVOX_FACE_down) {
             unsigned char shift = stbvox_vert3_lerp[face];
             p1[0] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][0]] >> shift) & 7;
@@ -1644,10 +1958,10 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
             p1[2] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][2]] >> shift) & 7;
             p1[3] = (mm->input.texlerp_vert3[mm->cube_vertex_offset[face][3]] >> shift) & 7;
          } else {
-            p1[0] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][0]]>>6];
-            p1[1] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][1]]>>6];
-            p1[2] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][2]]>>6];
-            p1[3] = stbvox_vert_lerp_for_face_lerp[mm->input.texlerp[mm->cube_vertex_offset[face][3]]>>6];
+            p1[0] = stbvox_vert_lerp_for_simple[mm->input.texlerp[mm->cube_vertex_offset[face][0]]>>6];
+            p1[1] = stbvox_vert_lerp_for_simple[mm->input.texlerp[mm->cube_vertex_offset[face][1]]>>6];
+            p1[2] = stbvox_vert_lerp_for_simple[mm->input.texlerp[mm->cube_vertex_offset[face][2]]>>6];
+            p1[3] = stbvox_vert_lerp_for_simple[mm->input.texlerp[mm->cube_vertex_offset[face][3]]>>6];
          }
          p1[0] = stbvox_vertex_encode(0,0,0,0,p1[0]);
          p1[1] = stbvox_vertex_encode(0,0,0,0,p1[1]);
@@ -1785,7 +2099,7 @@ static void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, in
    unsigned char *blockptr = &mm->input.blocktype[v_off];
    stbvox_mesh_vertex basevert = stbvox_vertex_encode(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z , 0,0);
 
-   stbvox_rotate rot = { 0,0,0,0,0 };
+   stbvox_rotate rot = { 0,0,0,0 };
    unsigned char simple_rot = 0;
 
    unsigned char mesh = mm->default_mesh;
@@ -1816,10 +2130,10 @@ static void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, in
       unsigned char val = mm->input.rotate[v_off];
       rot.block   = (val >> 0) & 3;
       rot.overlay = (val >> 2) & 3;
-      rot.tex2    = (val >> 4) & 3;
+      //rot.tex2    = (val >> 4) & 3;
       rot.ecolor  = (val >> 6) & 3;
    } else {
-      rot.block = rot.overlay = rot.tex2 = rot.ecolor = simple_rot;
+      rot.block = rot.overlay = rot.ecolor = simple_rot;
    }
    rot.facerot = 0;
 
@@ -2044,7 +2358,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       // this is the simple case, we can just use regular block gen with special vmesh calculated with vheight
       stbvox_mesh_vertex basevert;
       stbvox_mesh_vertex vmesh[6][4];
-      stbvox_rotate rotate = { 0,0,0,0,0 };
+      stbvox_rotate rotate = { 0,0,0,0 };
       unsigned char simple_rot = rot;
       int i;
       // we only need to do this for the displayed faces, but it's easier
@@ -2094,10 +2408,10 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          unsigned char val = mm->input.rotate[v_off];
          rotate.block   = (val >> 0) & 3;
          rotate.overlay = (val >> 2) & 3;
-         rotate.tex2    = (val >> 4) & 3;
+         //rotate.tex2    = (val >> 4) & 3;
          rotate.ecolor  = (val >> 6) & 3;
       } else {
-         rotate.block = rotate.overlay = rotate.tex2 = rotate.ecolor = simple_rot;
+         rotate.block = rotate.overlay = rotate.ecolor = simple_rot;
       }
 
       rotate.facerot = 0;
@@ -2119,7 +2433,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       stbvox_mesh_vertex vmesh[6][4];
       stbvox_mesh_vertex cube[8];
       stbvox_mesh_vertex basevert;
-      stbvox_rotate rotate = { 0,0,0,0,0 };
+      stbvox_rotate rotate = { 0,0,0,0 };
       unsigned char simple_rot = rot;
       unsigned char ht[4];
       int extreme;
@@ -2237,10 +2551,10 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          unsigned char val = mm->input.rotate[v_off];
          rotate.block   = (val >> 0) & 3;
          rotate.overlay = (val >> 2) & 3;
-         rotate.tex2    = (val >> 4) & 3;
+         //rotate.tex2    = (val >> 4) & 3;
          rotate.ecolor  = (val >> 6) & 3;
       } else if (mm->input.selector) {
-         rotate.block = rotate.overlay = rotate.tex2 = rotate.ecolor = simple_rot;
+         rotate.block = rotate.overlay = rotate.ecolor = simple_rot;
       }
 
       if ((visible_faces & (1 << STBVOX_FACE_north)) || (extreme && (ht[2] == 3 || ht[3] == 3)))
@@ -2257,7 +2571,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       // this can be generated with a special vmesh
       stbvox_mesh_vertex basevert = stbvox_vertex_encode(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z , 0,0);
       unsigned char simple_rot=0;
-      stbvox_rotate rot = { 0,0,0,0,0 };
+      stbvox_rotate rot = { 0,0,0,0 };
       unsigned char mesh = mm->default_mesh;
       if (mm->input.selector) {
          mesh = mm->input.selector[v_off];
@@ -2275,10 +2589,10 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          unsigned char val = mm->input.rotate[v_off];
          rot.block   = (val >> 0) & 3;
          rot.overlay = (val >> 2) & 3;
-         rot.tex2    = (val >> 4) & 3;
+         //rot.tex2    = (val >> 4) & 3;
          rot.ecolor  = (val >> 6) & 3;
       } else if (mm->input.selector) {
-         rot.block = rot.overlay = rot.tex2 = rot.ecolor = simple_rot;
+         rot.block = rot.overlay = rot.ecolor = simple_rot;
       }
       rot.facerot = 0;
 
