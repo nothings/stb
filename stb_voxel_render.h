@@ -186,7 +186,7 @@
 typedef struct stbvox_mesh_maker stbvox_mesh_maker;
 typedef struct stbvox_input_description stbvox_input_description;
 
-#ifdef STBVOX_STATIC_IMPLEMENTATION
+#ifdef STB_VOXEL_RENDER_STATIC
 #define STBVXDEC static
 #else
 #define STBVXDEC extern
@@ -204,7 +204,7 @@ extern "C" {
 //     Configures the overall behavior of stb_voxel_render. This
 //     can affect the shaders, the uniform info, and other things.
 //     (If you need more than one mode in the same app, you can
-//     use STBVOX_STATIC_IMPLEMENTATION to create multiple versions
+//     use STB_VOXEL_RENDER_STATIC to create multiple versions
 //     in separate files, and then wrap them.)
 //
 //         Mode value       Meaning
