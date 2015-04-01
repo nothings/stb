@@ -3164,7 +3164,7 @@ static char *find_best_normal(float x, float y, float z)
    int i;
    for (i=0; i < 32; ++i) {
       if (normal_names[i]) {
-         float dot = x * stbvox_default_normals[i].x + y * stbvox_default_normals[i].y + z * stbvox_default_normals[i].z;
+         float dot = x * stbvox_default_normals[i][0] + y * stbvox_default_normals[i][1] + z * stbvox_default_normals[i][2];
          if (dot > best_dot) {
             best_dot = dot;
             best_slot = i;
