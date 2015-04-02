@@ -106,11 +106,7 @@ been tempted many times to extract that and release it, but
 I don't want to steal Voxatron's thunder so I've avoided
 it. You could use this engine to do the same kind of thing,
 although it won't be as efficient as an engine dedicated to
-that style of thing would be. (For example, if you're building
-the whole mesh from scratch every frame--which you should do
-because you want to enable that worst case--you can skip
-creating voxel faces that face away from the camera, since
-they can never be seen.)
+that style of thing would be.
 
 **Q:**
 What one thing would you really like to see somebody do?
