@@ -102,9 +102,10 @@ have 20 voxels per meter and make a small arena that's
 Back when the voxel game Voxatron was announced, the weekend
 after the trailer came out I wrote my own little GPU-accelerated
 version of the engine and thought that was pretty cool. I've
-been tempted many times to extract that and release it, but
+been tempted many times to extract that and release it
+as a library, but
 I don't want to steal Voxatron's thunder so I've avoided
-it as a library. You could use this engine to do the same kind of thing,
+it. You could use this engine to do the same kind of thing,
 although it won't be as efficient as an engine dedicated to
 that style of thing would be.
 
