@@ -1,4 +1,4 @@
-// stb_voxel_render.h - v0.78 - Sean Barrett, 2015 - public domain
+// stb_voxel_render.h - v0.79 - Sean Barrett, 2015 - public domain
 //
 // This library helps render large-scale "voxel" worlds for games,
 // in this case, one with blocks that can have textures and that
@@ -174,6 +174,7 @@
 //
 // VERSION HISTORY
 //
+//   0.79   fix the compiler-as-C++ to compile on more C++ compilers
 //   0.78   bad "#else", compile as C++
 //   0.77   documentation tweaks, rename config var to STB_VOXEL_RENDER_STATIC
 //   0.76   typos, signed/unsigned shader issue, more documentation
@@ -2262,7 +2263,7 @@ static unsigned char stbvox_rotate_vertex[8][4] =
 
 #ifdef STBVOX_OPTIMIZED_VHEIGHT
 // optimized vheight generates a single normal over the entire face, even if it's not planar
-static stbvox_optimized_face_up_normal[4][4][4][4] =
+static unsigned char stbvox_optimized_face_up_normal[4][4][4][4] =
 {
    {
       {
@@ -2358,7 +2359,7 @@ static stbvox_optimized_face_up_normal[4][4][4][4] =
 // which normal to use for a given vheight that's planar
 // @TODO: this table was constructed by hand and may have bugs
 //                                 nw se sw
-static stbvox_planar_face_up_normal[4][4][4] =
+static unsigned char stbvox_planar_face_up_normal[4][4][4] =
 {   
    {                                                      // sw,se,nw,ne;  ne = se+nw-sw
       { STBVF_u   , 0         , 0         , 0          }, //  0,0,0,0; 1,0,0,-1; 2,0,0,-2; 3,0,0,-3;
@@ -2385,7 +2386,7 @@ static stbvox_planar_face_up_normal[4][4][4] =
 
 // these tables were constructed automatically using a variant of the code
 // below; however, they seem wrong, so who knows
-static stbvox_face_up_normal_012[4][4][4] =
+static unsigned char stbvox_face_up_normal_012[4][4][4] =
 {
    {
       { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
@@ -2410,7 +2411,7 @@ static stbvox_face_up_normal_012[4][4][4] =
    }
 };
 
-static stbvox_face_up_normal_013[4][4][4] =
+static unsigned char stbvox_face_up_normal_013[4][4][4] =
 {
    {
       { STBVF_u   , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
@@ -2435,7 +2436,7 @@ static stbvox_face_up_normal_013[4][4][4] =
    }
 };
 
-static stbvox_face_up_normal_023[4][4][4] =
+static unsigned char stbvox_face_up_normal_023[4][4][4] =
 {
    {
       { STBVF_u   , STBVF_nu  , STBVF_nu  , STBVF_nu  , },
@@ -2460,7 +2461,7 @@ static stbvox_face_up_normal_023[4][4][4] =
    }
 };
 
-static stbvox_face_up_normal_123[4][4][4] =
+static unsigned char stbvox_face_up_normal_123[4][4][4] =
 {
    {
       { STBVF_u   , STBVF_nu  , STBVF_nu  , STBVF_nu  , },
