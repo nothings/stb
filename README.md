@@ -13,7 +13,7 @@ library    | lastest version | category | description
 **stb_rect_pack.h** | 0.05 | graphics | simple 2D rectangle packer with decent quality
 **stretchy_buffer.h** | 1.01 | utility | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **stb_textedit.h** | 1.5 | UI | guts of a text editor for games etc implementing them from scratch
-**stb_voxel_render.h** | 0.77 | 3D&nbsp;graphics | Minecraft-esque voxel rendering "engine" with many more features
+**stb_voxel_render.h** | 0.78 | 3D&nbsp;graphics | Minecraft-esque voxel rendering "engine" with many more features
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h** | 0.2 | 3D&nbsp;graphics | revised Perlin noise (3D input, 1D output)
 **stb_easy_font.h** | 0.5 | 3D&nbsp;graphics | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc

@@ -7,6 +7,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_HERRINGBONE_WANG_TILE_IMPLEMENTATION
 #define STB_RECT_PACK_IMPLEMENTATION
+#define STB_VOXEL_RENDER_IMPLEMENTATION
+#define STBVOX_CONFIG_MODE 1
 
 #define STBI_MALLOC     my_malloc
 #define STBI_FREE       my_free
@@ -25,6 +27,7 @@ void my_free(void *) { }
 #include "stb_c_lexer.h"
 #include "stb_divide.h"
 #include "stb_herringbone_wang_tile.h"
+#include "stb_voxel_render.h"
 
 #define STBTE_DRAW_RECT(x0,y0,x1,y1,color)      do ; while(0)
 #define STBTE_DRAW_TILE(x,y,id,highlight,data)  do ; while(0)

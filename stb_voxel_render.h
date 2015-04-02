@@ -1,4 +1,4 @@
-// stb_voxel_render.h - v0.77 - Sean Barrett, 2015 - public domain
+// stb_voxel_render.h - v0.78 - Sean Barrett, 2015 - public domain
 //
 // This library helps render large-scale "voxel" worlds for games,
 // in this case, one with blocks that can have textures and that
@@ -72,7 +72,9 @@
 //   - indexed-by-texture-#2-id blend mode (alpha composite or modulate/multiply);
 //     the first is good for decals, the second for detail textures, "light maps",
 //     etc; both modes are controlled by texture #2's alpha, scaled by the
-//     per-vertex texture crossfade and the per-face color (if enabled on texture #2)
+//     per-vertex texture crossfade and the per-face color (if enabled on texture #2);
+//     modulate/multiply multiplies by an extra factor of 2.0 so that if you
+//     make detail maps whose average brightness is 0.5 everything works nicely.
 //
 //   - ambient lighting: half-lambert directional plus constant, all scaled by vertex ao
 //   - face can be fullbright (emissive), controlled by per-face color
@@ -168,10 +170,11 @@
 //
 //   Features             Porting            Bugfixes & Warnings
 //  Sean Barrett                          github:r-leyh   Jesus Fernandez
-//                                        Miguel Lechon
+//                                        Miguel Lechon   github:Arbeiterunfallversicherungsgesetz
 //
 // VERSION HISTORY
 //
+//   0.78   bad "#else", compile as C++
 //   0.77   documentation tweaks, rename config var to STB_VOXEL_RENDER_STATIC
 //   0.76   typos, signed/unsigned shader issue, more documentation
 //   0.75   initial release
@@ -1164,7 +1167,7 @@ struct stbvox_mesh_maker
    typedef stbvox_uint16 stbvox_mesh_vertex;
    #define stbvox_vertex_encode(x,y,z,ao,texlerp) \
       ((stbvox_uint16) ((x)+((z)<<6))+((ao)<<10))
-#else defined(STBVOX_ICONFIG_VERTEX_8)
+#elif defined(STBVOX_ICONFIG_VERTEX_8)
    typedef stbvox_uint8 stbvox_mesh_vertex;
    #define stbvox_vertex_encode(x,y,z,ao,texlerp) \
       ((stbvox_uint8) ((z)+((ao)<<6))
@@ -1255,11 +1258,117 @@ enum
    STBVF_count,
 };
 
-// get opposite-facing normal & texgen for opposite face, used to map up-facing vheight data to down-facing data
-static unsigned char stbvox_reverse_face[STBVF_count];
-static float stbvox_default_texgen[2][32][3];
-static float stbvox_default_normals[32][3];
-static float stbvox_default_texscale[128][4];
+/////////////////////////////////////////////////////////////////////////////
+//
+//    tables -- i'd prefer if these were at the end of the file, but: C++
+//
+
+static float stbvox_default_texgen[2][32][3] =
+{
+   { {  0, 1,0 }, { 0, 0, 1 }, {  0,-1,0 }, { 0, 0,-1 },
+     { -1, 0,0 }, { 0, 0, 1 }, {  1, 0,0 }, { 0, 0,-1 },
+     {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 }, { 0, 0,-1 },
+     {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 }, { 0, 0,-1 },
+
+     {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 },
+     { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 },
+     {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 },
+     { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 },
+   },
+   { { 0, 0,-1 }, {  0, 1,0 }, { 0, 0, 1 }, {  0,-1,0 },
+     { 0, 0,-1 }, { -1, 0,0 }, { 0, 0, 1 }, {  1, 0,0 },
+     { 0, 0,-1 }, {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 },
+     { 0, 0,-1 }, {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 },
+
+     { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 },
+     { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 },
+     { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 },
+     { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 },
+   },
+};
+
+#define STBVOX_RSQRT2   0.7071067811865f
+#define STBVOX_RSQRT3   0.5773502691896f
+
+static float stbvox_default_normals[32][3] =
+{
+   { 1,0,0 },  // east
+   { 0,1,0 },  // north
+   { -1,0,0 }, // west
+   { 0,-1,0 }, // south
+   { 0,0,1 },  // up
+   { 0,0,-1 }, // down
+   {  STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // east & up
+   {  STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // east & down
+
+   {  STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // east & up
+   { 0, STBVOX_RSQRT2, STBVOX_RSQRT2 }, // north & up
+   { -STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // west & up
+   { 0,-STBVOX_RSQRT2, STBVOX_RSQRT2 }, // south & up
+   {  STBVOX_RSQRT3, STBVOX_RSQRT3, STBVOX_RSQRT3 }, // ne & up
+   {  STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // ne & down
+   { 0, STBVOX_RSQRT2, STBVOX_RSQRT2 }, // north & up
+   { 0, STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // north & down
+
+   {  STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // east & down
+   { 0, STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // north & down
+   { -STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // west & down
+   { 0,-STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // south & down
+   { -STBVOX_RSQRT3, STBVOX_RSQRT3, STBVOX_RSQRT3 }, // NW & up
+   { -STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // NW & down
+   { -STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // west & up
+   { -STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // west & down
+
+   {  STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NE & up crossed
+   { -STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NW & up crossed
+   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SW & up crossed
+   {  STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SE & up crossed
+   { -STBVOX_RSQRT3,-STBVOX_RSQRT3, STBVOX_RSQRT3 }, // SW & up
+   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // SW & up
+   { 0,-STBVOX_RSQRT2, STBVOX_RSQRT2 }, // south & up
+   { 0,-STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // south & down
+};
+
+static float stbvox_default_texscale[128][4] =
+{
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
+};
+
+static unsigned char stbvox_default_palette_compact[64][3] =
+{
+   { 255,255,255 }, { 238,238,238 }, { 221,221,221 }, { 204,204,204 },
+   { 187,187,187 }, { 170,170,170 }, { 153,153,153 }, { 136,136,136 },
+   { 119,119,119 }, { 102,102,102 }, {  85, 85, 85 }, {  68, 68, 68 },
+   {  51, 51, 51 }, {  34, 34, 34 }, {  17, 17, 17 }, {   0,  0,  0 },
+   { 255,240,240 }, { 255,220,220 }, { 255,160,160 }, { 255, 32, 32 },
+   { 200,120,160 }, { 200, 60,150 }, { 220,100,130 }, { 255,  0,128 },
+   { 240,240,255 }, { 220,220,255 }, { 160,160,255 }, {  32, 32,255 },
+   { 120,160,200 }, {  60,150,200 }, { 100,130,220 }, {   0,128,255 },
+   { 240,255,240 }, { 220,255,220 }, { 160,255,160 }, {  32,255, 32 },
+   { 160,200,120 }, { 150,200, 60 }, { 130,220,100 }, { 128,255,  0 },
+   { 255,255,240 }, { 255,255,220 }, { 220,220,180 }, { 255,255, 32 },
+   { 200,160,120 }, { 200,150, 60 }, { 220,130,100 }, { 255,128,  0 },
+   { 255,240,255 }, { 255,220,255 }, { 220,180,220 }, { 255, 32,255 },
+   { 160,120,200 }, { 150, 60,200 }, { 130,100,220 }, { 128,  0,255 },
+   { 240,255,255 }, { 220,255,255 }, { 180,220,220 }, {  32,255,255 },
+   { 120,200,160 }, {  60,200,150 }, { 100,220,130 }, {   0,255,128 },
+};
+
 static float stbvox_default_ambient[4][4] =
 {
    { 0,0,1      ,0 }, // reversed lighting direction
@@ -1268,7 +1377,6 @@ static float stbvox_default_ambient[4][4] =
    { 0.5,0.5,0.5,1.0f/1000.0f/1000.0f }, // fog data for simple_fog
 };
 
-static unsigned char stbvox_default_palette_compact[64][3];
 static float stbvox_default_palette[64][4];
 
 static void stbvox_build_default_palette(void)
@@ -1381,7 +1489,7 @@ static char *stbvox_fragment_program =
       #if defined(STBVOX_ICONFIG_GLSL)
          "#define rlerp(t,x,y) mix(x,y,t)\n"
       #elif defined(STBVOX_CONFIG_HLSL)
-         "#define rlerp(t,x,y) lerp(x,t,y)\n"
+         "#define rlerp(t,x,y) lerp(x,y,t)\n"
       #else
          #error "need definition of rlerp()"
       #endif
@@ -1872,21 +1980,511 @@ stbvox_mesh_face stbvox_compute_mesh_face_value(stbvox_mesh_maker *mm, stbvox_ro
    return face_data;
 }
 
+// these are the types of faces each block can have
+enum
+{
+   STBVOX_FT_none    ,
+   STBVOX_FT_upper   ,
+   STBVOX_FT_lower   ,
+   STBVOX_FT_solid   ,
+   STBVOX_FT_diag_012,
+   STBVOX_FT_diag_023,
+   STBVOX_FT_diag_013,
+   STBVOX_FT_diag_123,
+   STBVOX_FT_force   , // can't be covered up, used for internal faces, also hides nothing
+   STBVOX_FT_partial , // only covered by solid, never covers anything else
+
+   STBVOX_FT_count
+};
+
 static unsigned char stbvox_face_lerp[6] = { 0,2,0,2,4,4 };
 static unsigned char stbvox_vert3_lerp[5] = { 0,3,6,9,12 };
 static unsigned char stbvox_vert_lerp_for_face_lerp[4] = { 0, 4, 7, 7 };
 static unsigned char stbvox_face3_lerp[6] = { 0,3,6,9,12,14 };
 static unsigned char stbvox_vert_lerp_for_simple[4] = { 0,2,5,7 };
 static unsigned char stbvox_face3_updown[8] = { 0,2,5,7,0,2,5,7 }; // ignore top bit
+
 // vertex offsets for face vertices
-static unsigned char stbvox_vertex_vector[6][4][3];
-static stbvox_mesh_vertex stbvox_vmesh_delta_normal[6][4];
-static stbvox_mesh_vertex stbvox_vmesh_pre_vheight[6][4];
-static stbvox_mesh_vertex stbvox_vmesh_delta_half_z[6][4];
-static stbvox_mesh_vertex stbvox_vmesh_crossed_pair[6][4];
+static unsigned char stbvox_vertex_vector[6][4][3] =
+{
+   { { 1,0,1 }, { 1,1,1 }, { 1,1,0 }, { 1,0,0 } }, // east
+   { { 1,1,1 }, { 0,1,1 }, { 0,1,0 }, { 1,1,0 } }, // north
+   { { 0,1,1 }, { 0,0,1 }, { 0,0,0 }, { 0,1,0 } }, // west
+   { { 0,0,1 }, { 1,0,1 }, { 1,0,0 }, { 0,0,0 } }, // south
+   { { 0,1,1 }, { 1,1,1 }, { 1,0,1 }, { 0,0,1 } }, // up
+   { { 0,0,0 }, { 1,0,0 }, { 1,1,0 }, { 0,1,0 } }, // down
+};
 
 // stbvox_vertex_vector, but read coordinates as binary numbers, zyx
-static unsigned char stbvox_vertex_selector[6][4];
+static unsigned char stbvox_vertex_selector[6][4] =
+{
+   { 5,7,3,1 },
+   { 7,6,2,3 },
+   { 6,4,0,2 },
+   { 4,5,1,0 },
+   { 6,7,5,4 },
+   { 0,1,3,2 },
+};
+
+static stbvox_mesh_vertex stbvox_vmesh_delta_normal[6][4] =
+{
+   {  stbvox_vertex_encode(1,0,1,0,0) , 
+      stbvox_vertex_encode(1,1,1,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0)  },
+   {  stbvox_vertex_encode(1,1,1,0,0) ,
+      stbvox_vertex_encode(0,1,1,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0)  },
+   {  stbvox_vertex_encode(0,1,1,0,0) ,
+      stbvox_vertex_encode(0,0,1,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0)  },
+   {  stbvox_vertex_encode(0,0,1,0,0) ,
+      stbvox_vertex_encode(1,0,1,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0)  },
+   {  stbvox_vertex_encode(0,1,1,0,0) ,
+      stbvox_vertex_encode(1,1,1,0,0) ,
+      stbvox_vertex_encode(1,0,1,0,0) ,
+      stbvox_vertex_encode(0,0,1,0,0)  },
+   {  stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0)  }
+};
+
+static stbvox_mesh_vertex stbvox_vmesh_pre_vheight[6][4] =
+{
+   {  stbvox_vertex_encode(1,0,0,0,0) , 
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0)  },
+   {  stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0)  },
+   {  stbvox_vertex_encode(0,1,0,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0)  },
+   {  stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0)  },
+   {  stbvox_vertex_encode(0,1,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(0,0,0,0,0)  },
+   {  stbvox_vertex_encode(0,0,0,0,0) ,
+      stbvox_vertex_encode(1,0,0,0,0) ,
+      stbvox_vertex_encode(1,1,0,0,0) ,
+      stbvox_vertex_encode(0,1,0,0,0)  }
+};
+
+static stbvox_mesh_vertex stbvox_vmesh_delta_half_z[6][4] =
+{
+   { stbvox_vertex_encode(1,0,2,0,0) , 
+     stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0)  },
+   { stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0)  },
+   { stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(0,0,2,0,0) ,
+     stbvox_vertex_encode(0,0,0,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0)  },
+   { stbvox_vertex_encode(0,0,2,0,0) ,
+     stbvox_vertex_encode(1,0,2,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0) ,
+     stbvox_vertex_encode(0,0,0,0,0)  },
+   { stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(1,0,2,0,0) ,
+     stbvox_vertex_encode(0,0,2,0,0)  },
+   { stbvox_vertex_encode(0,0,0,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0)  }
+};
+
+static stbvox_mesh_vertex stbvox_vmesh_crossed_pair[6][4] =
+{
+   { stbvox_vertex_encode(1,0,2,0,0) , 
+     stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0)  },
+   { stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(0,0,2,0,0) ,
+     stbvox_vertex_encode(0,0,0,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0)  },
+   { stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(1,0,2,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0)  },
+   { stbvox_vertex_encode(0,0,2,0,0) ,
+     stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0) ,
+     stbvox_vertex_encode(0,0,0,0,0)  },
+   // not used, so we leave it non-degenerate to make sure it doesn't get gen'd accidentally
+   { stbvox_vertex_encode(0,1,2,0,0) ,
+     stbvox_vertex_encode(1,1,2,0,0) ,
+     stbvox_vertex_encode(1,0,2,0,0) ,
+     stbvox_vertex_encode(0,0,2,0,0)  },
+   { stbvox_vertex_encode(0,0,0,0,0) ,
+     stbvox_vertex_encode(1,0,0,0,0) ,
+     stbvox_vertex_encode(1,1,0,0,0) ,
+     stbvox_vertex_encode(0,1,0,0,0)  }
+};
+
+#define STBVOX_MAX_GEOM     16
+#define STBVOX_NUM_ROTATION  4
+
+// this is used to determine if a face is ever generated at all
+static unsigned char stbvox_hasface[STBVOX_MAX_GEOM][STBVOX_NUM_ROTATION] =
+{
+   { 0,0,0,0 }, // empty
+   { 0,0,0,0 }, // knockout
+   { 63,63,63,63 }, // solid
+   { 63,63,63,63 }, // transp
+   { 63,63,63,63 }, // slab
+   { 63,63,63,63 }, // slab
+   { 1|2|4|48, 8|1|2|48, 4|8|1|48, 2|4|8|48, }, // floor slopes
+   { 1|2|4|48, 8|1|2|48, 4|8|1|48, 2|4|8|48, }, // ceil slopes
+   { 47,47,47,47 }, // wall-projected diagonal with down face
+   { 31,31,31,31 }, // wall-projected diagonal with up face
+   { 63,63,63,63 }, // crossed-pair has special handling, but avoid early-out
+   { 63,63,63,63 }, // force
+   { 63,63,63,63 },
+   { 63,63,63,63 },
+   { 63,63,63,63 },
+   { 63,63,63,63 },
+};
+
+// this determines which face type above is visible on each side of the geometry
+static unsigned char stbvox_facetype[STBVOX_GEOM_count][6] =
+{
+   { 0, },  // STBVOX_GEOM_empty
+   { STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid }, // knockout
+   { STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid }, // solid
+   { STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force }, // transp
+
+   { STBVOX_FT_upper, STBVOX_FT_upper, STBVOX_FT_upper, STBVOX_FT_upper, STBVOX_FT_solid, STBVOX_FT_force },
+   { STBVOX_FT_lower, STBVOX_FT_lower, STBVOX_FT_lower, STBVOX_FT_lower, STBVOX_FT_force, STBVOX_FT_solid },
+   { STBVOX_FT_diag_123, STBVOX_FT_solid, STBVOX_FT_diag_023, STBVOX_FT_none, STBVOX_FT_force, STBVOX_FT_solid },
+   { STBVOX_FT_diag_012, STBVOX_FT_solid, STBVOX_FT_diag_013, STBVOX_FT_none, STBVOX_FT_solid, STBVOX_FT_force },
+
+   { STBVOX_FT_diag_123, STBVOX_FT_solid, STBVOX_FT_diag_023, STBVOX_FT_force, STBVOX_FT_none, STBVOX_FT_solid },
+   { STBVOX_FT_diag_012, STBVOX_FT_solid, STBVOX_FT_diag_013, STBVOX_FT_force, STBVOX_FT_solid, STBVOX_FT_none },
+   { STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, 0,0 }, // crossed pair
+   { STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force }, // GEOM_force
+
+   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_force, STBVOX_FT_solid }, // floor vheight, all neighbors forced
+   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_force, STBVOX_FT_solid }, // floor vheight, all neighbors forced
+   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_solid, STBVOX_FT_force }, // ceil vheight, all neighbors forced
+   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_solid, STBVOX_FT_force }, // ceil vheight, all neighbors forced
+};
+
+// This table indicates what normal to use for the "up" face of a sloped geom
+// @TODO this could be done with math given the current arrangement of the enum, but let's not require it
+static unsigned char stbvox_floor_slope_for_rot[4] =
+{
+   STBVF_su,
+   STBVF_wu, // @TODO: why is this reversed from what it should be? this is a north-is-up face, so slope should be south&up
+   STBVF_nu,
+   STBVF_eu,
+};
+
+static unsigned char stbvox_ceil_slope_for_rot[4] =
+{
+   STBVF_sd,
+   STBVF_ed,
+   STBVF_nd,
+   STBVF_wd,
+};
+
+// this table indicates whether, for each pair of types above, a face is visible.
+// each value indicates whether a given type is visible for all neighbor types
+static unsigned short stbvox_face_visible[STBVOX_FT_count] =
+{
+   // we encode the table by listing which cases cause *obscuration*, and bitwise inverting that
+   // table is pre-shifted by 5 to save a shift when it's accessed
+   (unsigned short) ((~0x07ff                                          )<<5),  // none is completely obscured by everything
+   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_upper)   ))<<5),  // upper
+   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_lower)   ))<<5),  // lower
+   (unsigned short) ((~((1<<STBVOX_FT_solid)                          ))<<5),  // solid is only completely obscured only by solid
+   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_013)))<<5),  // diag012 matches diag013
+   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_123)))<<5),  // diag023 matches diag123
+   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_012)))<<5),  // diag013 matches diag012
+   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_023)))<<5),  // diag123 matches diag023
+   (unsigned short) ((~0                                               )<<5),  // force is always rendered regardless, always forces neighbor
+   (unsigned short) ((~((1<<STBVOX_FT_solid)                          ))<<5),  // partial is only completely obscured only by solid
+};
+
+// the vertex heights of the block types, in binary vertex order (zyx):
+// lower: SW, SE, NW, NE; upper: SW, SE, NW, NE
+static stbvox_mesh_vertex stbvox_geometry_vheight[8][8] =
+{
+   #define STBVOX_HEIGHTS(a,b,c,d,e,f,g,h) \
+     { stbvox_vertex_encode(0,0,a,0,0),  \
+       stbvox_vertex_encode(0,0,b,0,0),  \
+       stbvox_vertex_encode(0,0,c,0,0),  \
+       stbvox_vertex_encode(0,0,d,0,0),  \
+       stbvox_vertex_encode(0,0,e,0,0),  \
+       stbvox_vertex_encode(0,0,f,0,0),  \
+       stbvox_vertex_encode(0,0,g,0,0),  \
+       stbvox_vertex_encode(0,0,h,0,0) }
+
+   STBVOX_HEIGHTS(0,0,0,0, 2,2,2,2),
+   STBVOX_HEIGHTS(0,0,0,0, 2,2,2,2),
+   STBVOX_HEIGHTS(0,0,0,0, 2,2,2,2),
+   STBVOX_HEIGHTS(0,0,0,0, 2,2,2,2),
+   STBVOX_HEIGHTS(1,1,1,1, 2,2,2,2),
+   STBVOX_HEIGHTS(0,0,0,0, 1,1,1,1),
+   STBVOX_HEIGHTS(0,0,0,0, 0,0,2,2),
+   STBVOX_HEIGHTS(2,2,0,0, 2,2,2,2),
+};
+
+// rotate vertices defined as [z][y][x] coords
+static unsigned char stbvox_rotate_vertex[8][4] =
+{
+   { 0,1,3,2 }, // zyx=000
+   { 1,3,2,0 }, // zyx=001
+   { 2,0,1,3 }, // zyx=010
+   { 3,2,0,1 }, // zyx=011
+   { 4,5,7,6 }, // zyx=100
+   { 5,7,6,4 }, // zyx=101
+   { 6,4,5,7 }, // zyx=110
+   { 7,6,4,5 }, // zyx=111
+};
+
+#ifdef STBVOX_OPTIMIZED_VHEIGHT
+// optimized vheight generates a single normal over the entire face, even if it's not planar
+static stbvox_optimized_face_up_normal[4][4][4][4] =
+{
+   {
+      {
+         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_ne_u, },
+         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_nu  , },
+         { STBVF_nw_u, STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_ne_u, },
+         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_nu  , },
+      },{
+         { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_ne_u, },
+      },{
+         { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+      },
+   },{
+      {
+         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+         { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
+      },
+   },{
+      {
+         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+         { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
+      },
+   },{
+      {
+         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
+         { STBVF_sw_u, STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
+      },{
+         { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
+         { STBVF_sw_u, STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
+         { STBVF_wu  , STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
+         { STBVF_sw_u, STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
+      },{
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+         { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
+         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
+      },
+   },
+};
+#else
+// which normal to use for a given vheight that's planar
+// @TODO: this table was constructed by hand and may have bugs
+//                                 nw se sw
+static stbvox_planar_face_up_normal[4][4][4] =
+{   
+   {                                                      // sw,se,nw,ne;  ne = se+nw-sw
+      { STBVF_u   , 0         , 0         , 0          }, //  0,0,0,0; 1,0,0,-1; 2,0,0,-2; 3,0,0,-3;
+      { STBVF_u   , STBVF_u   , 0         , 0          }, //  0,1,0,1; 1,1,0, 0; 2,1,0,-1; 3,1,0,-2;
+      { STBVF_wu  , STBVF_nw_u, STBVF_nu  , 0          }, //  0,2,0,2; 1,2,0, 1; 2,2,0, 0; 3,2,0,-1;
+      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nu   }, //  0,3,0,3; 1,3,0, 2; 2,3,0, 1; 3,3,0, 0;
+   },{
+      { STBVF_u   , STBVF_u   , 0         , 0          }, //  0,0,1,1; 1,0,1, 0; 2,0,1,-1; 3,0,1,-2;
+      { STBVF_sw_u, STBVF_u   , STBVF_ne_u, 0          }, //  0,1,1,2; 1,1,1, 1; 2,1,1, 0; 3,1,1,-1;
+      { STBVF_sw_u, STBVF_u   , STBVF_u   , STBVF_ne_u }, //  0,2,1,3; 1,2,1, 2; 2,2,1, 1; 3,2,1, 0;
+      { 0         , STBVF_wu  , STBVF_nw_u, STBVF_nu   }, //  0,3,1,4; 1,3,1, 3; 2,3,1, 2; 3,3,1, 1;
+   },{
+      { STBVF_su  , STBVF_se_u, STBVF_eu  , 0          }, //  0,0,2,2; 1,0,2, 1; 2,0,2, 0; 3,0,2,-1;
+      { STBVF_sw_u, STBVF_u   , STBVF_u   , STBVF_ne_u }, //  0,1,2,3; 1,1,2, 2; 2,1,2, 1; 3,1,2, 0;
+      { 0         , STBVF_sw_u, STBVF_u   , STBVF_ne_u }, //  0,2,2,4; 1,2,2, 3; 2,2,2, 2; 3,2,2, 1;
+      { 0         , 0         , STBVF_u   , STBVF_u    }, //  0,3,2,5; 1,3,2, 4; 2,3,2, 3; 3,3,2, 2;
+   },{
+      { STBVF_su  , STBVF_se_u, STBVF_se_u, STBVF_eu   }, //  0,0,3,3; 1,0,3, 2; 2,0,3, 1; 3,0,3, 0;
+      { 0         , STBVF_su  , STBVF_se_u, STBVF_eu   }, //  0,1,3,4; 1,1,3, 3; 2,1,3, 2; 3,1,3, 1;
+      { 0         , 0         , STBVF_u   , STBVF_u    }, //  0,2,3,5; 1,2,3, 4; 2,2,3, 3; 3,2,3, 2;
+      { 0         , 0         , 0         , STBVF_u    }, //  0,3,3,6; 1,3,3, 5; 2,3,3, 4; 3,3,3, 3;
+   }
+};
+
+// these tables were constructed automatically using a variant of the code
+// below; however, they seem wrong, so who knows
+static stbvox_face_up_normal_012[4][4][4] =
+{
+   {
+      { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_wu  , STBVF_nu  , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_ne_u, },
+      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_wu  , STBVF_nu  , STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_su  , STBVF_eu  , STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+      { STBVF_sw_u, STBVF_su  , STBVF_eu  , STBVF_eu  , },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_su  , STBVF_eu  , },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
+   }
+};
+
+static stbvox_face_up_normal_013[4][4][4] =
+{
+   {
+      { STBVF_u   , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+      { STBVF_nw_u, STBVF_nu  , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_nw_u, STBVF_nw_u, STBVF_nu  , STBVF_ne_u, },
+      { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+      { STBVF_wu  , STBVF_u   , STBVF_eu  , STBVF_eu  , },
+      { STBVF_nw_u, STBVF_nw_u, STBVF_nu  , STBVF_ne_u, },
+      { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+      { STBVF_sw_u, STBVF_su  , STBVF_eu  , STBVF_eu  , },
+      { STBVF_wu  , STBVF_wu  , STBVF_u   , STBVF_eu  , },
+      { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
+   },{
+      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
+      { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_su  , STBVF_eu  , },
+      { STBVF_wu  , STBVF_wu  , STBVF_wu  , STBVF_u   , },
+   }
+};
+
+static stbvox_face_up_normal_023[4][4][4] =
+{
+   {
+      { STBVF_u   , STBVF_nu  , STBVF_nu  , STBVF_nu  , },
+      { STBVF_eu  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+      { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
+   },{
+      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_su  , STBVF_u   , STBVF_nu  , STBVF_nu  , },
+      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+      { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+   },{
+      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_su  , STBVF_su  , STBVF_u   , STBVF_nu  , },
+      { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
+   },{
+      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nw_u, },
+      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_u   , },
+   }
+};
+
+static stbvox_face_up_normal_123[4][4][4] =
+{
+   {
+      { STBVF_u   , STBVF_nu  , STBVF_nu  , STBVF_nu  , },
+      { STBVF_eu  , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_eu  , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_eu  , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
+   },{
+      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
+      { STBVF_su  , STBVF_u   , STBVF_nu  , STBVF_nu  , },
+      { STBVF_eu  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
+      { STBVF_eu  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
+   },{
+      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nw_u, },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nw_u, },
+      { STBVF_su  , STBVF_su  , STBVF_u   , STBVF_nu  , },
+      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
+   },{
+      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_wu  , },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_wu  , },
+      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_wu  , },
+      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_u   , },
+   }
+};
+#endif
 
 void stbvox_get_quad_vertex_pointer(stbvox_mesh_maker *mm, int mesh, stbvox_mesh_vertex **vertices, stbvox_mesh_face face)
 {
@@ -2038,10 +2636,15 @@ void stbvox_make_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int fac
 }
 
 #ifndef STBVOX_OPTIMIZED_VHEIGHT
-static stbvox_face_up_normal_012[4][4][4];
-static stbvox_face_up_normal_013[4][4][4];
-static stbvox_face_up_normal_023[4][4][4];
-static stbvox_face_up_normal_123[4][4][4];
+// get opposite-facing normal & texgen for opposite face, used to map up-facing vheight data to down-facing data
+static unsigned char stbvox_reverse_face[STBVF_count] =
+{
+   STBVF_w, STBVF_s, STBVF_e, STBVF_n, STBVF_d   , STBVF_u   , STBVF_wd, STBVF_wu,
+         0,       0,       0,       0, STBVF_sw_d, STBVF_sw_u, STBVF_sd, STBVF_su,
+         0,       0,       0,       0, STBVF_se_d, STBVF_se_u, STBVF_ed, STBVF_eu,
+         0,       0,       0,       0, STBVF_ne_d, STBVF_ne_d, STBVF_nd, STBVF_nu
+};
+
 
 // render non-planar quads by splitting into two triangles, rendering each as a degenerate quad
 static void stbvox_make_12_split_mesh_for_face(stbvox_mesh_maker *mm, stbvox_rotate rot, int face, int v_off, stbvox_pos pos, stbvox_mesh_vertex vertbase, stbvox_mesh_vertex *face_coord, unsigned char mesh, unsigned char *ht)
@@ -2163,53 +2766,6 @@ static void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, in
 // geometry, and then a table that tells us whether that type
 // is hidden by a neighbor.
 
-
-#define STBVOX_MAX_GEOM     16
-#define STBVOX_NUM_ROTATION  4
-
-// this is used to determine if a face is ever generated at all
-static unsigned char stbvox_hasface[STBVOX_MAX_GEOM][STBVOX_NUM_ROTATION];
-
-// this determines which face type above is visible on each side of the geometry
-static unsigned char stbvox_facetype[STBVOX_GEOM_count][6];
-
-// This table indicates what normal to use for the "up" face of a sloped geom
-static unsigned char stbvox_floor_slope_for_rot[4];
-static unsigned char stbvox_ceil_slope_for_rot[4];
-
-// these are the types of faces each block can have
-enum
-{
-   STBVOX_FT_none    ,
-   STBVOX_FT_upper   ,
-   STBVOX_FT_lower   ,
-   STBVOX_FT_solid   ,
-   STBVOX_FT_diag_012,
-   STBVOX_FT_diag_023,
-   STBVOX_FT_diag_013,
-   STBVOX_FT_diag_123,
-   STBVOX_FT_force   , // can't be covered up, used for internal faces, also hides nothing
-   STBVOX_FT_partial , // only covered by solid, never covers anything else
-
-   STBVOX_FT_count
-};
-
-// this table indicates whether, for each pair of types above, a face is visible.
-// each value indicates whether a given type is visible for each neighbor type
-static unsigned short stbvox_face_visible[STBVOX_FT_count];
-
-// the vertex heights of the block types, in binary vertex order (zyx):
-// lower: SW, SE, NW, NE; upper: SW, SE, NW, NE
-static stbvox_mesh_vertex stbvox_geometry_vheight[8][8];
-
-// rotate vertices defined as [z][y][x] coords
-static unsigned char stbvox_rotate_vertex[8][4];
-
-#ifdef STBVOX_OPTIMIZED_VHEIGHT
-static stbvox_optimized_face_up_normal[4][4][4][4];
-#else
-static stbvox_planar_face_up_normal[4][4][4];
-#endif
 
 static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_pos pos, int v_off)
 {
@@ -2860,605 +3416,6 @@ void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_bytes, int y
       }
    }
 }
-
-/////////////////////////////////////////////////////////////////////////////
-//
-//    tables
-//
-
-// get opposite-facing normal & texgen for opposite face, used to map up-facing vheight data to down-facing data
-static unsigned char stbvox_reverse_face[STBVF_count] =
-{
-   STBVF_w, STBVF_s, STBVF_e, STBVF_n, STBVF_d   , STBVF_u   , STBVF_wd, STBVF_wu,
-         0,       0,       0,       0, STBVF_sw_d, STBVF_sw_u, STBVF_sd, STBVF_su,
-         0,       0,       0,       0, STBVF_se_d, STBVF_se_u, STBVF_ed, STBVF_eu,
-         0,       0,       0,       0, STBVF_ne_d, STBVF_ne_d, STBVF_nd, STBVF_nu
-};
-
-static float stbvox_default_texgen[2][32][3] =
-{
-   { {  0, 1,0 }, { 0, 0, 1 }, {  0,-1,0 }, { 0, 0,-1 },
-     { -1, 0,0 }, { 0, 0, 1 }, {  1, 0,0 }, { 0, 0,-1 },
-     {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 }, { 0, 0,-1 },
-     {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 }, { 0, 0,-1 },
-
-     {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 },
-     { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 },
-     {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 },
-     { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 },
-   },
-   { { 0, 0,-1 }, {  0, 1,0 }, { 0, 0, 1 }, {  0,-1,0 },
-     { 0, 0,-1 }, { -1, 0,0 }, { 0, 0, 1 }, {  1, 0,0 },
-     { 0, 0,-1 }, {  0,-1,0 }, { 0, 0, 1 }, {  0, 1,0 },
-     { 0, 0,-1 }, {  1, 0,0 }, { 0, 0, 1 }, { -1, 0,0 },
-
-     { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 },
-     { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 },
-     { 0,-1, 0 }, {  1, 0,0 }, { 0, 1, 0 }, { -1, 0,0 },
-     { 0, 1, 0 }, { -1, 0,0 }, { 0,-1, 0 }, {  1, 0,0 },
-   },
-};
-
-#define STBVOX_RSQRT2   0.7071067811865f
-#define STBVOX_RSQRT3   0.5773502691896f
-
-static float stbvox_default_normals[32][3] =
-{
-   { 1,0,0 },  // east
-   { 0,1,0 },  // north
-   { -1,0,0 }, // west
-   { 0,-1,0 }, // south
-   { 0,0,1 },  // up
-   { 0,0,-1 }, // down
-   {  STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // east & up
-   {  STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // east & down
-
-   {  STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // east & up
-   { 0, STBVOX_RSQRT2, STBVOX_RSQRT2 }, // north & up
-   { -STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // west & up
-   { 0,-STBVOX_RSQRT2, STBVOX_RSQRT2 }, // south & up
-   {  STBVOX_RSQRT3, STBVOX_RSQRT3, STBVOX_RSQRT3 }, // ne & up
-   {  STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // ne & down
-   { 0, STBVOX_RSQRT2, STBVOX_RSQRT2 }, // north & up
-   { 0, STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // north & down
-
-   {  STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // east & down
-   { 0, STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // north & down
-   { -STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // west & down
-   { 0,-STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // south & down
-   { -STBVOX_RSQRT3, STBVOX_RSQRT3, STBVOX_RSQRT3 }, // NW & up
-   { -STBVOX_RSQRT3, STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // NW & down
-   { -STBVOX_RSQRT2,0, STBVOX_RSQRT2 }, // west & up
-   { -STBVOX_RSQRT2,0, -STBVOX_RSQRT2 }, // west & down
-
-   {  STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NE & up crossed
-   { -STBVOX_RSQRT3, STBVOX_RSQRT3,STBVOX_RSQRT3 }, // NW & up crossed
-   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SW & up crossed
-   {  STBVOX_RSQRT3,-STBVOX_RSQRT3,STBVOX_RSQRT3 }, // SE & up crossed
-   { -STBVOX_RSQRT3,-STBVOX_RSQRT3, STBVOX_RSQRT3 }, // SW & up
-   { -STBVOX_RSQRT3,-STBVOX_RSQRT3,-STBVOX_RSQRT3 }, // SW & up
-   { 0,-STBVOX_RSQRT2, STBVOX_RSQRT2 }, // south & up
-   { 0,-STBVOX_RSQRT2, -STBVOX_RSQRT2 }, // south & down
-};
-
-static float stbvox_default_texscale[128][4] =
-{
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-   {1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},{1,1,0,0},
-};
-
-static unsigned char stbvox_default_palette_compact[64][3] =
-{
-   { 255,255,255 }, { 238,238,238 }, { 221,221,221 }, { 204,204,204 },
-   { 187,187,187 }, { 170,170,170 }, { 153,153,153 }, { 136,136,136 },
-   { 119,119,119 }, { 102,102,102 }, {  85, 85, 85 }, {  68, 68, 68 },
-   {  51, 51, 51 }, {  34, 34, 34 }, {  17, 17, 17 }, {   0,  0,  0 },
-   { 255,240,240 }, { 255,220,220 }, { 255,160,160 }, { 255, 32, 32 },
-   { 200,120,160 }, { 200, 60,150 }, { 220,100,130 }, { 255,  0,128 },
-   { 240,240,255 }, { 220,220,255 }, { 160,160,255 }, {  32, 32,255 },
-   { 120,160,200 }, {  60,150,200 }, { 100,130,220 }, {   0,128,255 },
-   { 240,255,240 }, { 220,255,220 }, { 160,255,160 }, {  32,255, 32 },
-   { 160,200,120 }, { 150,200, 60 }, { 130,220,100 }, { 128,255,  0 },
-   { 255,255,240 }, { 255,255,220 }, { 220,220,180 }, { 255,255, 32 },
-   { 200,160,120 }, { 200,150, 60 }, { 220,130,100 }, { 255,128,  0 },
-   { 255,240,255 }, { 255,220,255 }, { 220,180,220 }, { 255, 32,255 },
-   { 160,120,200 }, { 150, 60,200 }, { 130,100,220 }, { 128,  0,255 },
-   { 240,255,255 }, { 220,255,255 }, { 180,220,220 }, {  32,255,255 },
-   { 120,200,160 }, {  60,200,150 }, { 100,220,130 }, {   0,255,128 },
-};
-
-static unsigned char stbvox_vertex_vector[6][4][3] =
-{
-   { { 1,0,1 }, { 1,1,1 }, { 1,1,0 }, { 1,0,0 } }, // east
-   { { 1,1,1 }, { 0,1,1 }, { 0,1,0 }, { 1,1,0 } }, // north
-   { { 0,1,1 }, { 0,0,1 }, { 0,0,0 }, { 0,1,0 } }, // west
-   { { 0,0,1 }, { 1,0,1 }, { 1,0,0 }, { 0,0,0 } }, // south
-   { { 0,1,1 }, { 1,1,1 }, { 1,0,1 }, { 0,0,1 } }, // up
-   { { 0,0,0 }, { 1,0,0 }, { 1,1,0 }, { 0,1,0 } }, // down
-};
-
-// stbvox_vertex_vector, but read coordinates as binary numbers, zyx
-static unsigned char stbvox_vertex_selector[6][4] =
-{
-   { 5,7,3,1 },
-   { 7,6,2,3 },
-   { 6,4,0,2 },
-   { 4,5,1,0 },
-   { 6,7,5,4 },
-   { 0,1,3,2 },
-};
-
-static stbvox_mesh_vertex stbvox_vmesh_delta_normal[6][4] =
-{
-   {  stbvox_vertex_encode(1,0,1,0,0) , 
-      stbvox_vertex_encode(1,1,1,0,0) ,
-      stbvox_vertex_encode(1,1,0,0,0) ,
-      stbvox_vertex_encode(1,0,0,0,0)  },
-   {  stbvox_vertex_encode(1,1,1,0,0) ,
-      stbvox_vertex_encode(0,1,1,0,0) ,
-      stbvox_vertex_encode(0,1,0,0,0) ,
-      stbvox_vertex_encode(1,1,0,0,0)  },
-   {  stbvox_vertex_encode(0,1,1,0,0) ,
-      stbvox_vertex_encode(0,0,1,0,0) ,
-      stbvox_vertex_encode(0,0,0,0,0) ,
-      stbvox_vertex_encode(0,1,0,0,0)  },
-   {  stbvox_vertex_encode(0,0,1,0,0) ,
-      stbvox_vertex_encode(1,0,1,0,0) ,
-      stbvox_vertex_encode(1,0,0,0,0) ,
-      stbvox_vertex_encode(0,0,0,0,0)  },
-   {  stbvox_vertex_encode(0,1,1,0,0) ,
-      stbvox_vertex_encode(1,1,1,0,0) ,
-      stbvox_vertex_encode(1,0,1,0,0) ,
-      stbvox_vertex_encode(0,0,1,0,0)  },
-   {  stbvox_vertex_encode(0,0,0,0,0) ,
-      stbvox_vertex_encode(1,0,0,0,0) ,
-      stbvox_vertex_encode(1,1,0,0,0) ,
-      stbvox_vertex_encode(0,1,0,0,0)  }
-};
-
-static stbvox_mesh_vertex stbvox_vmesh_pre_vheight[6][4] =
-{
-   {  stbvox_vertex_encode(1,0,0,0,0) , 
-      stbvox_vertex_encode(1,1,0,0,0) ,
-      stbvox_vertex_encode(1,1,0,0,0) ,
-      stbvox_vertex_encode(1,0,0,0,0)  },
-   {  stbvox_vertex_encode(1,1,0,0,0) ,
-      stbvox_vertex_encode(0,1,0,0,0) ,
-      stbvox_vertex_encode(0,1,0,0,0) ,
-      stbvox_vertex_encode(1,1,0,0,0)  },
-   {  stbvox_vertex_encode(0,1,0,0,0) ,
-      stbvox_vertex_encode(0,0,0,0,0) ,
-      stbvox_vertex_encode(0,0,0,0,0) ,
-      stbvox_vertex_encode(0,1,0,0,0)  },
-   {  stbvox_vertex_encode(0,0,0,0,0) ,
-      stbvox_vertex_encode(1,0,0,0,0) ,
-      stbvox_vertex_encode(1,0,0,0,0) ,
-      stbvox_vertex_encode(0,0,0,0,0)  },
-   {  stbvox_vertex_encode(0,1,0,0,0) ,
-      stbvox_vertex_encode(1,1,0,0,0) ,
-      stbvox_vertex_encode(1,0,0,0,0) ,
-      stbvox_vertex_encode(0,0,0,0,0)  },
-   {  stbvox_vertex_encode(0,0,0,0,0) ,
-      stbvox_vertex_encode(1,0,0,0,0) ,
-      stbvox_vertex_encode(1,1,0,0,0) ,
-      stbvox_vertex_encode(0,1,0,0,0)  }
-};
-
-static stbvox_mesh_vertex stbvox_vmesh_delta_half_z[6][4] =
-{
-   { stbvox_vertex_encode(1,0,2,0,0) , 
-     stbvox_vertex_encode(1,1,2,0,0) ,
-     stbvox_vertex_encode(1,1,0,0,0) ,
-     stbvox_vertex_encode(1,0,0,0,0)  },
-   { stbvox_vertex_encode(1,1,2,0,0) ,
-     stbvox_vertex_encode(0,1,2,0,0) ,
-     stbvox_vertex_encode(0,1,0,0,0) ,
-     stbvox_vertex_encode(1,1,0,0,0)  },
-   { stbvox_vertex_encode(0,1,2,0,0) ,
-     stbvox_vertex_encode(0,0,2,0,0) ,
-     stbvox_vertex_encode(0,0,0,0,0) ,
-     stbvox_vertex_encode(0,1,0,0,0)  },
-   { stbvox_vertex_encode(0,0,2,0,0) ,
-     stbvox_vertex_encode(1,0,2,0,0) ,
-     stbvox_vertex_encode(1,0,0,0,0) ,
-     stbvox_vertex_encode(0,0,0,0,0)  },
-   { stbvox_vertex_encode(0,1,2,0,0) ,
-     stbvox_vertex_encode(1,1,2,0,0) ,
-     stbvox_vertex_encode(1,0,2,0,0) ,
-     stbvox_vertex_encode(0,0,2,0,0)  },
-   { stbvox_vertex_encode(0,0,0,0,0) ,
-     stbvox_vertex_encode(1,0,0,0,0) ,
-     stbvox_vertex_encode(1,1,0,0,0) ,
-     stbvox_vertex_encode(0,1,0,0,0)  }
-};
-
-static stbvox_mesh_vertex stbvox_vmesh_crossed_pair[6][4] =
-{
-   { stbvox_vertex_encode(1,0,2,0,0) , 
-     stbvox_vertex_encode(0,1,2,0,0) ,
-     stbvox_vertex_encode(0,1,0,0,0) ,
-     stbvox_vertex_encode(1,0,0,0,0)  },
-   { stbvox_vertex_encode(1,1,2,0,0) ,
-     stbvox_vertex_encode(0,0,2,0,0) ,
-     stbvox_vertex_encode(0,0,0,0,0) ,
-     stbvox_vertex_encode(1,1,0,0,0)  },
-   { stbvox_vertex_encode(0,1,2,0,0) ,
-     stbvox_vertex_encode(1,0,2,0,0) ,
-     stbvox_vertex_encode(1,0,0,0,0) ,
-     stbvox_vertex_encode(0,1,0,0,0)  },
-   { stbvox_vertex_encode(0,0,2,0,0) ,
-     stbvox_vertex_encode(1,1,2,0,0) ,
-     stbvox_vertex_encode(1,1,0,0,0) ,
-     stbvox_vertex_encode(0,0,0,0,0)  },
-   // not used, so we leave it non-degenerate to make sure it doesn't get gen'd accidentally
-   { stbvox_vertex_encode(0,1,2,0,0) ,
-     stbvox_vertex_encode(1,1,2,0,0) ,
-     stbvox_vertex_encode(1,0,2,0,0) ,
-     stbvox_vertex_encode(0,0,2,0,0)  },
-   { stbvox_vertex_encode(0,0,0,0,0) ,
-     stbvox_vertex_encode(1,0,0,0,0) ,
-     stbvox_vertex_encode(1,1,0,0,0) ,
-     stbvox_vertex_encode(0,1,0,0,0)  }
-};
-
-
-// this is used to determine if a face is ever generated at all
-static unsigned char stbvox_hasface[STBVOX_MAX_GEOM][STBVOX_NUM_ROTATION] =
-{
-   { 0,0,0,0 }, // empty
-   { 0,0,0,0 }, // knockout
-   { 63,63,63,63 }, // solid
-   { 63,63,63,63 }, // transp
-   { 63,63,63,63 }, // slab
-   { 63,63,63,63 }, // slab
-   { 1|2|4|48, 8|1|2|48, 4|8|1|48, 2|4|8|48, }, // floor slopes
-   { 1|2|4|48, 8|1|2|48, 4|8|1|48, 2|4|8|48, }, // ceil slopes
-   { 47,47,47,47 }, // wall-projected diagonal with down face
-   { 31,31,31,31 }, // wall-projected diagonal with up face
-   { 63,63,63,63 }, // crossed-pair has special handling, but avoid early-out
-   { 63,63,63,63 }, // force
-   { 63,63,63,63 },
-   { 63,63,63,63 },
-   { 63,63,63,63 },
-   { 63,63,63,63 },
-};
-
-// this determines which face type above is visible on each side of the geometry
-static unsigned char stbvox_facetype[STBVOX_GEOM_count][6] =
-{
-   { 0, },  // STBVOX_GEOM_empty
-   { STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid }, // knockout
-   { STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid, STBVOX_FT_solid }, // solid
-   { STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force }, // transp
-
-   { STBVOX_FT_upper, STBVOX_FT_upper, STBVOX_FT_upper, STBVOX_FT_upper, STBVOX_FT_solid, STBVOX_FT_force },
-   { STBVOX_FT_lower, STBVOX_FT_lower, STBVOX_FT_lower, STBVOX_FT_lower, STBVOX_FT_force, STBVOX_FT_solid },
-   { STBVOX_FT_diag_123, STBVOX_FT_solid, STBVOX_FT_diag_023, STBVOX_FT_none, STBVOX_FT_force, STBVOX_FT_solid },
-   { STBVOX_FT_diag_012, STBVOX_FT_solid, STBVOX_FT_diag_013, STBVOX_FT_none, STBVOX_FT_solid, STBVOX_FT_force },
-
-   { STBVOX_FT_diag_123, STBVOX_FT_solid, STBVOX_FT_diag_023, STBVOX_FT_force, STBVOX_FT_none, STBVOX_FT_solid },
-   { STBVOX_FT_diag_012, STBVOX_FT_solid, STBVOX_FT_diag_013, STBVOX_FT_force, STBVOX_FT_solid, STBVOX_FT_none },
-   { STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, 0,0 }, // crossed pair
-   { STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force, STBVOX_FT_force }, // GEOM_force
-
-   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_force, STBVOX_FT_solid }, // floor vheight, all neighbors forced
-   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_force, STBVOX_FT_solid }, // floor vheight, all neighbors forced
-   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_solid, STBVOX_FT_force }, // ceil vheight, all neighbors forced
-   { STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial,STBVOX_FT_partial, STBVOX_FT_solid, STBVOX_FT_force }, // ceil vheight, all neighbors forced
-};
-
-// This table indicates what normal to use for the "up" face of a sloped geom
-// @TODO this could be done with math given the current arrangement of the enum, but let's not require it
-static unsigned char stbvox_floor_slope_for_rot[4] =
-{
-   STBVF_su,
-   STBVF_wu, // @TODO: why is this reversed from what it should be? this is a north-is-up face, so slope should be south&up
-   STBVF_nu,
-   STBVF_eu,
-};
-
-static unsigned char stbvox_ceil_slope_for_rot[4] =
-{
-   STBVF_sd,
-   STBVF_ed,
-   STBVF_nd,
-   STBVF_wd,
-};
-
-// this table indicates whether, for each pair of types above, a face is visible.
-// each value indicates whether a given type is visible for all neighbor types
-static unsigned short stbvox_face_visible[STBVOX_FT_count] =
-{
-   // we encode the table by listing which cases cause *obscuration*, and bitwise inverting that
-   // table is pre-shifted by 5 to save a shift when it's accessed
-   (unsigned short) ((~0x07ff                                          )<<5),  // none is completely obscured by everything
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_upper)   ))<<5),  // upper
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_lower)   ))<<5),  // lower
-   (unsigned short) ((~((1<<STBVOX_FT_solid)                          ))<<5),  // solid is only completely obscured only by solid
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_013)))<<5),  // diag012 matches diag013
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_123)))<<5),  // diag023 matches diag123
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_012)))<<5),  // diag013 matches diag012
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_023)))<<5),  // diag123 matches diag023
-   (unsigned short) ((~0                                               )<<5),  // force is always rendered regardless, always forces neighbor
-   (unsigned short) ((~((1<<STBVOX_FT_solid)                          ))<<5),  // partial is only completely obscured only by solid
-};
-
-// the vertex heights of the block types, in binary vertex order (zyx):
-// lower: SW, SE, NW, NE; upper: SW, SE, NW, NE
-static stbvox_mesh_vertex stbvox_geometry_vheight[8][8] =
-{
-   #define STBVOX_HEIGHTS(a,b,c,d,e,f,g,h) \
-     { stbvox_vertex_encode(0,0,a,0,0),  \
-       stbvox_vertex_encode(0,0,b,0,0),  \
-       stbvox_vertex_encode(0,0,c,0,0),  \
-       stbvox_vertex_encode(0,0,d,0,0),  \
-       stbvox_vertex_encode(0,0,e,0,0),  \
-       stbvox_vertex_encode(0,0,f,0,0),  \
-       stbvox_vertex_encode(0,0,g,0,0),  \
-       stbvox_vertex_encode(0,0,h,0,0) }
-
-   STBVOX_HEIGHTS(0,0,0,0, 2,2,2,2),
-   STBVOX_HEIGHTS(0,0,0,0, 2,2,2,2),
-   STBVOX_HEIGHTS(0,0,0,0, 2,2,2,2),
-   STBVOX_HEIGHTS(0,0,0,0, 2,2,2,2),
-   STBVOX_HEIGHTS(1,1,1,1, 2,2,2,2),
-   STBVOX_HEIGHTS(0,0,0,0, 1,1,1,1),
-   STBVOX_HEIGHTS(0,0,0,0, 0,0,2,2),
-   STBVOX_HEIGHTS(2,2,0,0, 2,2,2,2),
-};
-
-// rotate vertices defined as [z][y][x] coords
-static unsigned char stbvox_rotate_vertex[8][4] =
-{
-   { 0,1,3,2 }, // zyx=000
-   { 1,3,2,0 }, // zyx=001
-   { 2,0,1,3 }, // zyx=010
-   { 3,2,0,1 }, // zyx=011
-   { 4,5,7,6 }, // zyx=100
-   { 5,7,6,4 }, // zyx=101
-   { 6,4,5,7 }, // zyx=110
-   { 7,6,4,5 }, // zyx=111
-};
-
-#ifdef STBVOX_OPTIMIZED_VHEIGHT
-// optimized vheight generates a single normal over the entire face, even if it's not planar
-static stbvox_optimized_face_up_normal[4][4][4][4] =
-{
-   {
-      {
-         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
-         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_ne_u, },
-         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_nu  , },
-         { STBVF_nw_u, STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
-      },{
-         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
-         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
-         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_ne_u, },
-         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_nu  , },
-      },{
-         { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
-         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
-         { STBVF_nw_u, STBVF_nu  , STBVF_nu  , STBVF_ne_u, },
-      },{
-         { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
-         { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
-      },
-   },{
-      {
-         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
-         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
-         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
-         { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
-      },{
-         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
-         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
-         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
-      },{
-         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
-         { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_nu  , },
-      },{
-         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
-      },
-   },{
-      {
-         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
-         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
-         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
-         { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
-      },{
-         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
-         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
-         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
-         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
-      },{
-         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
-         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
-         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
-      },{
-         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
-         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
-         { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
-      },
-   },{
-      {
-         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
-         { STBVF_sw_u, STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
-         { STBVF_wu  , STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
-         { STBVF_wu  , STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
-      },{
-         { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
-         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
-         { STBVF_sw_u, STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
-         { STBVF_wu  , STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
-      },{
-         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
-         { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
-         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
-         { STBVF_sw_u, STBVF_wu  , STBVF_wu  , STBVF_nw_u, },
-      },{
-         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
-         { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
-         { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
-         { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
-      },
-   },
-};
-#else
-// which normal to use for a given vheight that's planar
-// @TODO: this table was constructed by hand and may have bugs
-//                                 nw se sw
-static stbvox_planar_face_up_normal[4][4][4] =
-{   
-   {                                                      // sw,se,nw,ne;  ne = se+nw-sw
-      { STBVF_u   , 0         , 0         , 0          }, //  0,0,0,0; 1,0,0,-1; 2,0,0,-2; 3,0,0,-3;
-      { STBVF_u   , STBVF_u   , 0         , 0          }, //  0,1,0,1; 1,1,0, 0; 2,1,0,-1; 3,1,0,-2;
-      { STBVF_wu  , STBVF_nw_u, STBVF_nu  , 0          }, //  0,2,0,2; 1,2,0, 1; 2,2,0, 0; 3,2,0,-1;
-      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nu   }, //  0,3,0,3; 1,3,0, 2; 2,3,0, 1; 3,3,0, 0;
-   },{
-      { STBVF_u   , STBVF_u   , 0         , 0          }, //  0,0,1,1; 1,0,1, 0; 2,0,1,-1; 3,0,1,-2;
-      { STBVF_sw_u, STBVF_u   , STBVF_ne_u, 0          }, //  0,1,1,2; 1,1,1, 1; 2,1,1, 0; 3,1,1,-1;
-      { STBVF_sw_u, STBVF_u   , STBVF_u   , STBVF_ne_u }, //  0,2,1,3; 1,2,1, 2; 2,2,1, 1; 3,2,1, 0;
-      { 0         , STBVF_wu  , STBVF_nw_u, STBVF_nu   }, //  0,3,1,4; 1,3,1, 3; 2,3,1, 2; 3,3,1, 1;
-   },{
-      { STBVF_su  , STBVF_se_u, STBVF_eu  , 0          }, //  0,0,2,2; 1,0,2, 1; 2,0,2, 0; 3,0,2,-1;
-      { STBVF_sw_u, STBVF_u   , STBVF_u   , STBVF_ne_u }, //  0,1,2,3; 1,1,2, 2; 2,1,2, 1; 3,1,2, 0;
-      { 0         , STBVF_sw_u, STBVF_u   , STBVF_ne_u }, //  0,2,2,4; 1,2,2, 3; 2,2,2, 2; 3,2,2, 1;
-      { 0         , 0         , STBVF_u   , STBVF_u    }, //  0,3,2,5; 1,3,2, 4; 2,3,2, 3; 3,3,2, 2;
-   },{
-      { STBVF_su  , STBVF_se_u, STBVF_se_u, STBVF_eu   }, //  0,0,3,3; 1,0,3, 2; 2,0,3, 1; 3,0,3, 0;
-      { 0         , STBVF_su  , STBVF_se_u, STBVF_eu   }, //  0,1,3,4; 1,1,3, 3; 2,1,3, 2; 3,1,3, 1;
-      { 0         , 0         , STBVF_u   , STBVF_u    }, //  0,2,3,5; 1,2,3, 4; 2,2,3, 3; 3,2,3, 2;
-      { 0         , 0         , 0         , STBVF_u    }, //  0,3,3,6; 1,3,3, 5; 2,3,3, 4; 3,3,3, 3;
-   }
-};
-
-// these tables were constructed automatically using a variant of the code
-// below; however, they seem wrong, so who knows
-static stbvox_face_up_normal_012[4][4][4] =
-{
-   {
-      { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
-      { STBVF_wu  , STBVF_nu  , STBVF_ne_u, STBVF_ne_u, },
-      { STBVF_wu  , STBVF_nw_u, STBVF_nu  , STBVF_ne_u, },
-      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
-   },{
-      { STBVF_su  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
-      { STBVF_sw_u, STBVF_u   , STBVF_ne_u, STBVF_ne_u, },
-      { STBVF_sw_u, STBVF_wu  , STBVF_nu  , STBVF_ne_u, },
-      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nu  , },
-   },{
-      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
-      { STBVF_sw_u, STBVF_su  , STBVF_eu  , STBVF_ne_u, },
-      { STBVF_sw_u, STBVF_sw_u, STBVF_u   , STBVF_ne_u, },
-      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nu  , },
-   },{
-      { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
-      { STBVF_sw_u, STBVF_su  , STBVF_eu  , STBVF_eu  , },
-      { STBVF_sw_u, STBVF_sw_u, STBVF_su  , STBVF_eu  , },
-      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_u   , },
-   }
-};
-
-static stbvox_face_up_normal_013[4][4][4] =
-{
-   {
-      { STBVF_u   , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
-      { STBVF_nw_u, STBVF_nu  , STBVF_ne_u, STBVF_ne_u, },
-      { STBVF_nw_u, STBVF_nw_u, STBVF_nu  , STBVF_ne_u, },
-      { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
-   },{
-      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
-      { STBVF_wu  , STBVF_u   , STBVF_eu  , STBVF_eu  , },
-      { STBVF_nw_u, STBVF_nw_u, STBVF_nu  , STBVF_ne_u, },
-      { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
-   },{
-      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
-      { STBVF_sw_u, STBVF_su  , STBVF_eu  , STBVF_eu  , },
-      { STBVF_wu  , STBVF_wu  , STBVF_u   , STBVF_eu  , },
-      { STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, STBVF_nu  , },
-   },{
-      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_eu  , },
-      { STBVF_sw_u, STBVF_su  , STBVF_su  , STBVF_su  , },
-      { STBVF_sw_u, STBVF_sw_u, STBVF_su  , STBVF_eu  , },
-      { STBVF_wu  , STBVF_wu  , STBVF_wu  , STBVF_u   , },
-   }
-};
-
-static stbvox_face_up_normal_023[4][4][4] =
-{
-   {
-      { STBVF_u   , STBVF_nu  , STBVF_nu  , STBVF_nu  , },
-      { STBVF_eu  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
-      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
-      { STBVF_eu  , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
-   },{
-      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
-      { STBVF_su  , STBVF_u   , STBVF_nu  , STBVF_nu  , },
-      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
-      { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
-   },{
-      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
-      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
-      { STBVF_su  , STBVF_su  , STBVF_u   , STBVF_nu  , },
-      { STBVF_su  , STBVF_su  , STBVF_eu  , STBVF_eu  , },
-   },{
-      { STBVF_wu  , STBVF_nw_u, STBVF_nw_u, STBVF_nw_u, },
-      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
-      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nw_u, },
-      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_u   , },
-   }
-};
-
-static stbvox_face_up_normal_123[4][4][4] =
-{
-   {
-      { STBVF_u   , STBVF_nu  , STBVF_nu  , STBVF_nu  , },
-      { STBVF_eu  , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
-      { STBVF_eu  , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
-      { STBVF_eu  , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
-   },{
-      { STBVF_sw_u, STBVF_wu  , STBVF_nw_u, STBVF_nw_u, },
-      { STBVF_su  , STBVF_u   , STBVF_nu  , STBVF_nu  , },
-      { STBVF_eu  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
-      { STBVF_eu  , STBVF_eu  , STBVF_ne_u, STBVF_ne_u, },
-   },{
-      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nw_u, },
-      { STBVF_sw_u, STBVF_sw_u, STBVF_wu  , STBVF_nw_u, },
-      { STBVF_su  , STBVF_su  , STBVF_u   , STBVF_nu  , },
-      { STBVF_su  , STBVF_eu  , STBVF_eu  , STBVF_ne_u, },
-   },{
-      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_wu  , },
-      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_wu  , },
-      { STBVF_sw_u, STBVF_sw_u, STBVF_sw_u, STBVF_wu  , },
-      { STBVF_su  , STBVF_su  , STBVF_su  , STBVF_u   , },
-   }
-};
-#endif
 
 /////////////////////////////////////////////////////////////////////////////
 //
