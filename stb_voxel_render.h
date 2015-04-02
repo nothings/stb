@@ -174,7 +174,7 @@
 //
 // VERSION HISTORY
 //
-//   0.79   fix the compiler-as-C++ to compile on more C++ compilers
+//   0.79   fix the missing types from 0.78; fix string constants being const
 //   0.78   bad "#else", compile as C++
 //   0.77   documentation tweaks, rename config var to STB_VOXEL_RENDER_STATIC
 //   0.76   typos, signed/unsigned shader issue, more documentation
@@ -1406,7 +1406,7 @@ static void stbvox_build_default_palette(void)
    #define STBVOX_SHADER_VERSION ""
 #endif
 
-static char *stbvox_vertex_program =
+static const char *stbvox_vertex_program =
 {
       STBVOX_SHADER_VERSION
 
@@ -1482,7 +1482,7 @@ static char *stbvox_vertex_program =
 };
 
 
-static char *stbvox_fragment_program =
+static const char *stbvox_fragment_program =
 {
       STBVOX_SHADER_VERSION
 
@@ -1702,7 +1702,7 @@ static char *stbvox_fragment_program =
 
 
 // still requires full alpha lookups, including tex2 if texblend is enabled
-static char *stbvox_fragment_program_alpha_only =
+static const char *stbvox_fragment_program_alpha_only =
 {
    STBVOX_SHADER_VERSION
 
@@ -1808,17 +1808,17 @@ static char *stbvox_fragment_program_alpha_only =
 
 STBVXDEC char *stbvox_get_vertex_shader(void)
 {
-   return stbvox_vertex_program;
+   return (char *) stbvox_vertex_program;
 }
 
 STBVXDEC char *stbvox_get_fragment_shader(void)
 {
-   return stbvox_fragment_program;
+   return (char *) stbvox_fragment_program;
 }
 
 STBVXDEC char *stbvox_get_fragment_shader_alpha_only(void)
 {
-   return stbvox_fragment_program_alpha_only;
+   return (char *) stbvox_fragment_program_alpha_only;
 }
 
 static float stbvox_dummy_transform[3][3];
@@ -1831,15 +1831,15 @@ static float stbvox_dummy_transform[3][3];
 
 static stbvox_uniform_info stbvox_uniforms[] =
 {
-   { STBVOX_UNIFORM_TYPE_sampler  ,  4,   1, "facearray"    , 0                           },
-   { STBVOX_UNIFORM_TYPE_vec3     , 12,   3, "transform"    , stbvox_dummy_transform[0]   },
-   { STBVOX_UNIFORM_TYPE_sampler  ,  4,   2, "tex_array"    , 0                           },
-   { STBVOX_UNIFORM_TYPE_vec4     , 16, 128, "texscale"     , stbvox_default_texscale[0] , STBVOX_TEXBUF },
-   { STBVOX_UNIFORM_TYPE_vec4     , 16,  64, "color_table"  , stbvox_default_palette[0]  , STBVOX_TEXBUF },
-   { STBVOX_UNIFORM_TYPE_vec3     , 12,  32, "normal_table" , stbvox_default_normals[0]   },
-   { STBVOX_UNIFORM_TYPE_vec3     , 12,  64, "texgen"       , stbvox_default_texgen[0][0], STBVOX_TEXBUF },
-   { STBVOX_UNIFORM_TYPE_vec4     , 16,   4, "ambient"      , stbvox_default_ambient[0]   },
-   { STBVOX_UNIFORM_TYPE_vec4     , 16,   1, "camera_pos"   , stbvox_dummy_transform[0]   },
+   { STBVOX_UNIFORM_TYPE_sampler  ,  4,   1, (char*) "facearray"    , 0                           },
+   { STBVOX_UNIFORM_TYPE_vec3     , 12,   3, (char*) "transform"    , stbvox_dummy_transform[0]   },
+   { STBVOX_UNIFORM_TYPE_sampler  ,  4,   2, (char*) "tex_array"    , 0                           },
+   { STBVOX_UNIFORM_TYPE_vec4     , 16, 128, (char*) "texscale"     , stbvox_default_texscale[0] , STBVOX_TEXBUF },
+   { STBVOX_UNIFORM_TYPE_vec4     , 16,  64, (char*) "color_table"  , stbvox_default_palette[0]  , STBVOX_TEXBUF },
+   { STBVOX_UNIFORM_TYPE_vec3     , 12,  32, (char*) "normal_table" , stbvox_default_normals[0]   },
+   { STBVOX_UNIFORM_TYPE_vec3     , 12,  64, (char*) "texgen"       , stbvox_default_texgen[0][0], STBVOX_TEXBUF },
+   { STBVOX_UNIFORM_TYPE_vec4     , 16,   4, (char*) "ambient"      , stbvox_default_ambient[0]   },
+   { STBVOX_UNIFORM_TYPE_vec4     , 16,   1, (char*) "camera_pos"   , stbvox_dummy_transform[0]   },
 };
 
 STBVXDEC int stbvox_get_uniform_info(stbvox_uniform_info *info, int uniform)
