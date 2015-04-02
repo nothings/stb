@@ -102,15 +102,12 @@ have 20 voxels per meter and make a small arena that's
 Back when the voxel game Voxatron was announced, the weekend
 after the trailer came out I wrote my own little GPU-accelerated
 version of the engine and thought that was pretty cool. I've
-been tempted many times to extract that and release it, but
+been tempted many times to extract that and release it
+as a library, but
 I don't want to steal Voxatron's thunder so I've avoided
 it. You could use this engine to do the same kind of thing,
 although it won't be as efficient as an engine dedicated to
-that style of thing would be. (For example, if you're building
-the whole mesh from scratch every frame--which you should do
-because you want to enable that worst case--you can skip
-creating voxel faces that face away from the camera, since
-they can never be seen.)
+that style of thing would be.
 
 **Q:**
 What one thing would you really like to see somebody do?
@@ -120,8 +117,8 @@ Before Unity, 3D has seemed deeply problematic in the indie
 space. Software like GameMaker has tried to support 3D but
 it seems like little of note has been done with it.
 
-Minecraft has shown that people can build worlds with that
-toolset far more easily than we've ever seen from those
+Minecraft has shown that people can build worlds with the
+Minecraft toolset far more easily than we've ever seen from those
 other tools. Obviously people have done great things with
 Unity, but those people are much closer to professional
 developers; typically they still need real 3D modelling
