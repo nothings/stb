@@ -117,8 +117,8 @@ Before Unity, 3D has seemed deeply problematic in the indie
 space. Software like GameMaker has tried to support 3D but
 it seems like little of note has been done with it.
 
-Minecraft has shown that people can build worlds with that
-toolset far more easily than we've ever seen from those
+Minecraft has shown that people can build worlds with the
+Minecraft toolset far more easily than we've ever seen from those
 other tools. Obviously people have done great things with
 Unity, but those people are much closer to professional
 developers; typically they still need real 3D modelling
