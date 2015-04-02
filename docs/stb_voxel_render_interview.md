@@ -74,7 +74,7 @@ slopes and "weird slopes". There are Minecraft mods with
 drivable cars and they just go up these blocky slopes and,
 like, what? So I wanted you to be able to make smoother
 terrain, either just for the look, or for vehicles etc.
-Also, you can cross-fade between two ground textures for
+Also, you can spatially cross-fade between two ground textures for
 that classic bad dirt/grass transition that has shipped
 in plenty of professional games. Of course, you could
 just use a separate non-voxel ground renderer for all of
