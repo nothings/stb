@@ -464,16 +464,16 @@ STBVXDEC void stbvox_reset_buffers(stbvox_mesh_maker *mm);
 // RENDERING
 //
 
-STBVXDEC char *stbvox_get_vertex_shader(void);
+STBVXDEC const char *stbvox_get_vertex_shader(void);
 // Returns the (currently GLSL-only) vertex shader.
 
-STBVXDEC char *stbvox_get_fragment_shader(void);
+STBVXDEC const char *stbvox_get_fragment_shader(void);
 // Returns the (currently GLSL-only) fragment shader.
 // You can override the lighting and fogging calculations
 // by appending data to the end of these; see the #define
 // documentation for more information.
 
-STBVXDEC char *stbvox_get_fragment_shader_alpha_only(void);
+STBVXDEC const char *stbvox_get_fragment_shader_alpha_only(void);
 // Returns a slightly cheaper fragment shader that computes
 // alpha but not color. This is useful for e.g. a depth-only
 // pass when using alpha test.
@@ -546,7 +546,7 @@ struct stbvox_uniform_info
    int type;                    // which type of uniform
    int bytes_per_element;       // the size of each uniform array element (e.g. vec3 = 12 bytes)
    int array_length;            // length of the uniform array
-   char *name;                  // name in the shader @TODO use numeric binding
+   const char *name;            // name in the shader @TODO use numeric binding
    float *default_value;        // if not NULL, you can use this as the uniform pointer
    int use_tex_buffer;          // if true, then the uniform is a sampler but the data can come from default_value
 };
@@ -1405,7 +1405,7 @@ static void stbvox_build_default_palette(void)
    #define STBVOX_SHADER_VERSION ""
 #endif
 
-static char *stbvox_vertex_program =
+static const char *stbvox_vertex_program =
 {
       STBVOX_SHADER_VERSION
 
@@ -1481,7 +1481,7 @@ static char *stbvox_vertex_program =
 };
 
 
-static char *stbvox_fragment_program =
+static const char *stbvox_fragment_program =
 {
       STBVOX_SHADER_VERSION
 
@@ -1701,7 +1701,7 @@ static char *stbvox_fragment_program =
 
 
 // still requires full alpha lookups, including tex2 if texblend is enabled
-static char *stbvox_fragment_program_alpha_only =
+static const char *stbvox_fragment_program_alpha_only =
 {
    STBVOX_SHADER_VERSION
 
@@ -1805,17 +1805,17 @@ static char *stbvox_fragment_program_alpha_only =
 };
 
 
-STBVXDEC char *stbvox_get_vertex_shader(void)
+STBVXDEC const char *stbvox_get_vertex_shader(void)
 {
    return stbvox_vertex_program;
 }
 
-STBVXDEC char *stbvox_get_fragment_shader(void)
+STBVXDEC const char *stbvox_get_fragment_shader(void)
 {
    return stbvox_fragment_program;
 }
 
-STBVXDEC char *stbvox_get_fragment_shader_alpha_only(void)
+STBVXDEC const char *stbvox_get_fragment_shader_alpha_only(void)
 {
    return stbvox_fragment_program_alpha_only;
 }
@@ -2358,7 +2358,7 @@ static stbvox_optimized_face_up_normal[4][4][4][4] =
 // which normal to use for a given vheight that's planar
 // @TODO: this table was constructed by hand and may have bugs
 //                                 nw se sw
-static stbvox_planar_face_up_normal[4][4][4] =
+static int stbvox_planar_face_up_normal[4][4][4] =
 {   
    {                                                      // sw,se,nw,ne;  ne = se+nw-sw
       { STBVF_u   , 0         , 0         , 0          }, //  0,0,0,0; 1,0,0,-1; 2,0,0,-2; 3,0,0,-3;
@@ -2385,7 +2385,7 @@ static stbvox_planar_face_up_normal[4][4][4] =
 
 // these tables were constructed automatically using a variant of the code
 // below; however, they seem wrong, so who knows
-static stbvox_face_up_normal_012[4][4][4] =
+static int stbvox_face_up_normal_012[4][4][4] =
 {
    {
       { STBVF_u   , STBVF_ne_u, STBVF_ne_u, STBVF_ne_u, },
@@ -2410,7 +2410,7 @@ static stbvox_face_up_normal_012[4][4][4] =
    }
 };
 
-static stbvox_face_up_normal_013[4][4][4] =
+static int stbvox_face_up_normal_013[4][4][4] =
 {
    {
       { STBVF_u   , STBVF_eu  , STBVF_eu  , STBVF_eu  , },
@@ -2435,7 +2435,7 @@ static stbvox_face_up_normal_013[4][4][4] =
    }
 };
 
-static stbvox_face_up_normal_023[4][4][4] =
+static int stbvox_face_up_normal_023[4][4][4] =
 {
    {
       { STBVF_u   , STBVF_nu  , STBVF_nu  , STBVF_nu  , },
@@ -2460,7 +2460,7 @@ static stbvox_face_up_normal_023[4][4][4] =
    }
 };
 
-static stbvox_face_up_normal_123[4][4][4] =
+static int stbvox_face_up_normal_123[4][4][4] =
 {
    {
       { STBVF_u   , STBVF_nu  , STBVF_nu  , STBVF_nu  , },
