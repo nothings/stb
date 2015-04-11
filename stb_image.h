@@ -1144,6 +1144,10 @@ stbi_inline static int stbi__at_eof(stbi__context *s)
 
 static void stbi__skip(stbi__context *s, int n)
 {
+   if (n < 0) {
+      s->img_buffer = s->img_buffer_end;
+      return;
+   }
    if (s->io.read) {
       int blen = (int) (s->img_buffer_end - s->img_buffer);
       if (blen < n) {
@@ -1552,6 +1556,7 @@ stbi_inline static int stbi__extend_receive(stbi__jpeg *j, int n)
 
    sgn = (stbi__int32)j->code_buffer >> 31; // sign bit is always in MSB
    k = stbi_lrot(j->code_buffer, n);
+   STBI_ASSERT(n >= 0 && n < sizeof(stbi__bmask)/sizeof(*stbi__bmask));
    j->code_buffer = k & ~stbi__bmask[n];
    k &= stbi__bmask[n];
    j->code_bits -= n;
@@ -2700,6 +2705,10 @@ static int stbi__decode_jpeg_header(stbi__jpeg *z, int scan)
 static int stbi__decode_jpeg_image(stbi__jpeg *j)
 {
    int m;
+   for (m = 0; m < 4; m++) {
+      j->img_comp[m].raw_data = NULL;
+      j->img_comp[m].raw_coeff = NULL;
+   }
    j->restart_interval = 0;
    if (!stbi__decode_jpeg_header(j, STBI__SCAN_load)) return 0;
    m = stbi__get_marker(j);
@@ -3378,8 +3387,10 @@ static int stbi__zbuild_huffman(stbi__zhuffman *z, stbi_uc *sizelist, int num)
    for (i=0; i < num; ++i)
       ++sizes[sizelist[i]];
    sizes[0] = 0;
-   for (i=1; i < 16; ++i)
+   for (i=1; i < 16; ++i) {
       STBI_ASSERT(sizes[i] <= (1 << i));
+      if (sizes[i] > (1 << i)) return stbi__err("bad sizes", "Corrupt PNG");
+   }
    code = 0;
    for (i=1; i < 16; ++i) {
       next_code[i] = code;
@@ -3387,7 +3398,7 @@ static int stbi__zbuild_huffman(stbi__zhuffman *z, stbi_uc *sizelist, int num)
       z->firstsymbol[i] = (stbi__uint16) k;
       code = (code + sizes[i]);
       if (sizes[i])
-         if (code-1 >= (1 << i)) return stbi__err("bad codelengths","Corrupt JPEG");
+         if (code-1 >= (1 << i)) return stbi__err("bad codelengths","Corrupt PNG");
       z->maxcode[i] = code << (16-i); // preshift for inner loop
       code <<= 1;
       k += sizes[i];
@@ -3556,9 +3567,9 @@ static int stbi__parse_huffman_block(stbi__zbuf *a)
          p = (stbi_uc *) (zout - dist);
          if (dist == 1) { // run of one byte; common in images.
             stbi_uc v = *p;
-            do *zout++ = v; while (--len);
+            if (len) do *zout++ = v; while (--len);
          } else {
-            do *zout++ = *p++; while (--len);
+             if (len) do *zout++ = *p++; while (--len);
          }
       }
    }
@@ -3587,6 +3598,7 @@ static int stbi__compute_huffman_codes(stbi__zbuf *a)
    while (n < hlit + hdist) {
       int c = stbi__zhuffman_decode(a, &z_codelength);
       STBI_ASSERT(c >= 0 && c < 19);
+      if (c < 0 || c >= 19) return stbi__err("bad codelengths", "Corrupt PNG");
       if (c < 16)
          lencodes[n++] = (stbi_uc) c;
       else if (c == 16) {
@@ -4283,6 +4295,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
             if (pal_img_n && !pal_len) return stbi__err("no PLTE","Corrupt PNG");
             if (scan == STBI__SCAN_header) { s->img_n = pal_img_n; return 1; }
+            if ((int)(ioff + c.length) < (int)ioff) return 0;
             if (ioff + c.length > idata_limit) {
                stbi_uc *p;
                if (idata_limit == 0) idata_limit = c.length > 4096 ? c.length : 4096;
@@ -4799,7 +4812,7 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
    *y = tga_height;
    if (comp) *comp = tga_comp;
 
-   tga_data = (unsigned char*)stbi__malloc( tga_width * tga_height * tga_comp );
+   tga_data = (unsigned char*)stbi__malloc( (size_t)tga_width * tga_height * tga_comp );
    if (!tga_data) return stbi__errpuc("outofmem", "Out of memory");
 
    // skip to the data's starting position (offset usually = 0)
@@ -5460,6 +5473,7 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
    stbi__gif_lzw *p;
 
    lzw_cs = stbi__get8(s);
+   if (lzw_cs > 12) return NULL;
    clear = 1 << lzw_cs;
    first = 1;
    codesize = lzw_cs + 1;
