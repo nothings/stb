@@ -1019,10 +1019,10 @@ enum
 //
 // The four vertex heights can come from several places. The simplest
 // encoding is to just use the 'vheight' parameter which stores four
-// explicit vertex heights for every block. This allows total indepdence,
-// but at the cost of the most memory usage. Encode this with
-// STBVOX_MAKE_VHEIGHT(vh_sw, vh_se, vh_nw, vh_ne). These coordinates
-// are absolute, not affected by block rotations.
+// explicit vertex heights for every block. This allows total independence,
+// but at the cost of the largest memory usage, 1 byte per 3D block.
+// Encode this with STBVOX_MAKE_VHEIGHT(vh_sw, vh_se, vh_nw, vh_ne).
+// These coordinates are absolute, not affected by block rotations.
 //
 // An alternative if you just want to encode some very specific block
 // types, not all the possibilities--say you just want half-height slopes,
