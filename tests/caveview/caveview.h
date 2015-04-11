@@ -3,7 +3,6 @@
 
 #include "stb.h"
 
-#define STBVOX_CONFIG_ROTATION_IN_LIGHTING
 #include "stb_voxel_render.h"
 
 typedef struct

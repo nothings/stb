@@ -169,8 +169,10 @@
 //
 // VERSION HISTORY
 //
-//   0.80   (2015-04-11)  fix broken STBVOX_CONFIG_ROTATION_IN_LIGHTING refactoring;
-//                        add STBVOX_CONFIG_VHEIGHT_IN_LIGHTING and other vheight fixes;
+//   0.80   (2015-04-11)  fix broken STBVOX_CONFIG_ROTATION_IN_LIGHTING refactoring
+//                        change STBVOX_MAKE_LIGHTING to STBVOX_MAKE_LIGHTING_EXT so
+//                                    that header defs don't need to see config vars
+//                        add STBVOX_CONFIG_VHEIGHT_IN_LIGHTING and other vheight fixes
 //                        added documentation for vheight ("weird slopes")
 //   0.79   (2015-04-01)  fix the missing types from 0.78; fix string constants being const
 //   0.78   (2015-04-02)  bad "#else", compile as C++
@@ -713,11 +715,11 @@ struct stbvox_input_description
    // then an additional 2-bit block rotation value is stored
    // in this field as well.
    //
-   // Encode with STBVOX_MAKE_LIGHTING(lighting,rot)--here
+   // Encode with STBVOX_MAKE_LIGHTING_EXT(lighting,rot)--here
    // 'lighting' should still be 8 bits, as the macro will
    // discard the bottom bits automatically. Similarly, if
    // using STBVOX_CONFIG_VHEIGHT_IN_LIGHTING, encode with
-   // STBVOX_MAKE_LIGHTING(lighting,vheight).
+   // STBVOX_MAKE_LIGHTING_EXT(lighting,vheight).
    //
    // (Rationale: rotation needs to be independent of blocktype,
    // but is only 2 bits so doesn't want to be its own array.
@@ -1038,7 +1040,7 @@ enum
 // with the block. You can either use the "geometry" mesh variable (it's
 // a parameter to STBVOX_MAKE_GEOMETRY) or you can store it in the
 // "lighting" mesh variable if you defined STBVOX_CONFIG_VHEIGHT_IN_LIGHTING,
-// using STBVOX_MAKE_LIGHTING(lighting,vheight).
+// using STBVOX_MAKE_LIGHTING_EXT(lighting,vheight).
 //
 // Note that if you start with a 2D height map and generate vheight data from
 // it, you don't necessarily store only one value per (x,y) coordinate,
@@ -1102,11 +1104,8 @@ enum
 #define STBVOX_MAKE_TEXLERP_VERT3(e,n,w,s,u)   ((e)+(n)*8+(w)*64+(s)*512+(u)*4096)
 #define STBVOX_MAKE_TEXLERP_FACE3(e,n,w,s,u,d) ((e)+(n)*8+(w)*64+(s)*512+(u)*4096+(d)*16384)
 
-#if defined(STBVOX_CONFIG_ROTATION_IN_LIGHTING) || defined(STBVOX_CONFIG_VHEIGHT_IN_LIGHTING)
-#define STBVOX_MAKE_LIGHTING(lighting, rot)  (((lighting)&~3)+(rot))
-#else
+#define STBVOX_MAKE_LIGHTING_EXT(lighting, rot)  (((lighting)&~3)+(rot))
 #define STBVOX_MAKE_LIGHTING(lighting)       (lighting)
-#endif
 
 #ifndef STBVOX_MAX_MESHES
 #define STBVOX_MAX_MESHES      2           // opaque & transparent
