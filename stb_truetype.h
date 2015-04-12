@@ -222,11 +222,11 @@
 #define STB_TRUETYPE_IMPLEMENTATION  // force following include to generate implementation
 #include "stb_truetype.h"
 
-char ttf_buffer[1<<20];
+unsigned char ttf_buffer[1<<20];
 unsigned char temp_bitmap[512*512];
 
 stbtt_bakedchar cdata[96]; // ASCII 32..126 is 95 glyphs
-GLstbtt_uint ftex;
+GLuint ftex;
 
 void my_stbtt_initfont(void)
 {
@@ -243,6 +243,7 @@ void my_stbtt_initfont(void)
 void my_stbtt_print(float x, float y, char *text)
 {
    // assume orthographic projection with units = screen pixels, origin at top left
+   glEnable(GL_TEXTURE_2D);
    glBindTexture(GL_TEXTURE_2D, ftex);
    glBegin(GL_QUADS);
    while (*text) {
