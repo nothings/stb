@@ -2189,7 +2189,7 @@ static void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_i
    for (j=0; j < h; ++j) {
       int i;
       unsigned int total;
-      memset(buffer, 0, kernel_width);
+      STBTT_memset(buffer, 0, kernel_width);
 
       total = 0;
 
@@ -2243,7 +2243,7 @@ static void stbtt__v_prefilter(unsigned char *pixels, int w, int h, int stride_i
    for (j=0; j < w; ++j) {
       int i;
       unsigned int total;
-      memset(buffer, 0, kernel_width);
+      STBTT_memset(buffer, 0, kernel_width);
 
       total = 0;
 
