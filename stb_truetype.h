@@ -44,7 +44,7 @@
 //
 // VERSION HISTORY
 //
-//   1.03 (2015-04-12) STBTT_STATIC, various fixes
+//   1.03 (2015-04-12) STBTT_STATIC, fix memory leak in new packing, various fixes
 //   1.02 (2014-12-10) fix various warnings & compile issues w/ stb_rect_pack, C++
 //   1.01 (2014-12-08) fix subpixel position when oversampling to exactly match
 //                        non-oversampled; STBTT_POINT_SIZE for packed case only
