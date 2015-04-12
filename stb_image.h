@@ -181,7 +181,7 @@
     James "moose2000" Brown (iPhone PNG)         Roy Eltham
     Ben "Disch" Wenger (io callbacks)            Luke Graham
     Omar Cornut (1/2/4-bit PNG)                  Thomas Ruf
-                                                 John Bartholomew
+    Nicolas Guillemot (vertical flip)            John Bartholomew
                                                  Ken Hamada
  Optimizations & bugfixes                        Cort Stratton
     Fabian "ryg" Giesen                          Blazej Dariusz Roszkowski
@@ -489,8 +489,8 @@ STBIDEF void stbi_set_unpremultiply_on_load(int flag_true_if_should_unpremultipl
 // or just pass them through "as-is"
 STBIDEF void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert);
 
-// flip the image vertically. useful for opengl image loading.
-STBIDEF void stbi_vertically_flip_on_load(int flag_true_if_should_flip);
+// flip the image vertically, so the first pixel in the output array is the bottom left
+STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip);
 
 // ZLIB client - used by PNG, available for other purposes
 
@@ -891,66 +891,68 @@ static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp);
 
 static int stbi__vertically_flip_on_load = 0;
 
-STBIDEF void stbi_vertically_flip_on_load(int flag_true_if_should_flip)
+STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip)
 {
     stbi__vertically_flip_on_load = flag_true_if_should_flip;
 }
 
-static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
+static unsigned char *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
-   unsigned char *result = NULL;
-
-   if (0); // get the test chain started
    #ifndef STBI_NO_JPEG
-   else if (stbi__jpeg_test(s)) result = stbi__jpeg_load(s,x,y,comp,req_comp);
+   if (stbi__jpeg_test(s)) return stbi__jpeg_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_PNG
-   else if (stbi__png_test(s))  result = stbi__png_load(s,x,y,comp,req_comp);
+   if (stbi__png_test(s))  return stbi__png_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_BMP
-   else if (stbi__bmp_test(s))  result = stbi__bmp_load(s,x,y,comp,req_comp);
+   if (stbi__bmp_test(s))  return stbi__bmp_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_GIF
-   else if (stbi__gif_test(s))  result = stbi__gif_load(s,x,y,comp,req_comp);
+   if (stbi__gif_test(s))  return stbi__gif_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_PSD
-   else if (stbi__psd_test(s))  result = stbi__psd_load(s,x,y,comp,req_comp);
+   if (stbi__psd_test(s))  return stbi__psd_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_PIC
-   else if (stbi__pic_test(s))  result = stbi__pic_load(s,x,y,comp,req_comp);
+   if (stbi__pic_test(s))  return stbi__pic_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_PNM
-   else if (stbi__pnm_test(s))  result = stbi__pnm_load(s,x,y,comp,req_comp);
+   if (stbi__pnm_test(s))  return stbi__pnm_load(s,x,y,comp,req_comp);
    #endif
 
    #ifndef STBI_NO_HDR
-   else if (stbi__hdr_test(s)) {
+   if (stbi__hdr_test(s)) {
       float *hdr = stbi__hdr_load(s, x,y,comp,req_comp);
-      result = stbi__hdr_to_ldr(hdr, *x, *y, req_comp ? req_comp : *comp);
+      return stbi__hdr_to_ldr(hdr, *x, *y, req_comp ? req_comp : *comp);
    }
    #endif
 
    #ifndef STBI_NO_TGA
    // test tga last because it's a crappy test!
-   else if (stbi__tga_test(s))
-      result = stbi__tga_load(s,x,y,comp,req_comp);
+   if (stbi__tga_test(s))
+      return stbi__tga_load(s,x,y,comp,req_comp);
    #endif
 
-   else
-      return stbi__errpuc("unknown image type", "Image not of any known type, or corrupt");
+   return stbi__errpuc("unknown image type", "Image not of any known type, or corrupt");
+}
 
-   // post-processing
-   if (stbi__vertically_flip_on_load) {
+static unsigned char *stbi__load_flip(stbi__context *s, int *x, int *y, int *comp, int req_comp)
+{
+   unsigned char *result = stbi__load_main(s, x, y, comp, req_comp);
+
+   if (stbi__vertically_flip_on_load && result != NULL) {
+      int w = *x, h = *y;
       int depth = req_comp ? req_comp : *comp;
       int row,col,z;
       stbi_uc temp;
 
-      for (row = 0; row < *y / 2; row++) {
-         for (col = 0; col < *x; col++) {
+      // @OPTIMIZE: use a bigger temp buffer and memcpy multiple pixels at once
+      for (row = 0; row < (h>>1); row++) {
+         for (col = 0; col < w; col++) {
             for (z = 0; z < depth; z++) {
-               temp = result[(row * (*x) + col) * depth + z];
-               result[(row * (*x) + col) * depth + z] = result[((*y - row - 1) * (*x) + col) * depth + z];
-               result[((*y - row - 1) * (*x) + col) * depth + z] = temp;
+               temp = result[(row * w + col) * depth + z];
+               result[(row * w + col) * depth + z] = result[((h - row - 1) * w + col) * depth + z];
+               result[((h - row - 1) * w + col) * depth + z] = temp;
             }
          }
       }
@@ -958,6 +960,28 @@ static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp
 
    return result;
 }
+
+static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, int req_comp)
+{
+   if (stbi__vertically_flip_on_load && result != NULL) {
+      int w = *x, h = *y;
+      int depth = req_comp ? req_comp : *comp;
+      int row,col,z;
+      float temp;
+
+      // @OPTIMIZE: use a bigger temp buffer and memcpy multiple pixels at once
+      for (row = 0; row < (h>>1); row++) {
+         for (col = 0; col < w; col++) {
+            for (z = 0; z < depth; z++) {
+               temp = result[(row * w + col) * depth + z];
+               result[(row * w + col) * depth + z] = result[((h - row - 1) * w + col) * depth + z];
+               result[((h - row - 1) * w + col) * depth + z] = temp;
+            }
+         }
+      }
+   }
+}
+
 
 #ifndef STBI_NO_STDIO
 
@@ -989,7 +1013,7 @@ STBIDEF stbi_uc *stbi_load_from_file(FILE *f, int *x, int *y, int *comp, int req
    unsigned char *result;
    stbi__context s;
    stbi__start_file(&s,f);
-   result = stbi_load_main(&s,x,y,comp,req_comp);
+   result = stbi__load_flip(&s,x,y,comp,req_comp);
    if (result) {
       // need to 'unget' all the characters in the IO buffer
       fseek(f, - (int) (s.img_buffer_end - s.img_buffer), SEEK_CUR);
@@ -1002,25 +1026,29 @@ STBIDEF stbi_uc *stbi_load_from_memory(stbi_uc const *buffer, int len, int *x, i
 {
    stbi__context s;
    stbi__start_mem(&s,buffer,len);
-   return stbi_load_main(&s,x,y,comp,req_comp);
+   return stbi__load_flip(&s,x,y,comp,req_comp);
 }
 
 STBIDEF stbi_uc *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
-   return stbi_load_main(&s,x,y,comp,req_comp);
+   return stbi__load_flip(&s,x,y,comp,req_comp);
 }
 
 #ifndef STBI_NO_LINEAR
-static float *stbi_loadf_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
+static float *stbi__loadf_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    unsigned char *data;
    #ifndef STBI_NO_HDR
-   if (stbi__hdr_test(s))
-      return stbi__hdr_load(s,x,y,comp,req_comp);
+   if (stbi__hdr_test(s)) {
+      float *hdr_data = stbi__hdr_load(s,x,y,comp,req_comp);
+      if (hdr_data)
+         stbi__float_postprocess(hdr_data,x,y,comp,req_comp);
+      return hdr_data;
+   }
    #endif
-   data = stbi_load_main(s, x, y, comp, req_comp);
+   data = stbi__load_flip(s, x, y, comp, req_comp);
    if (data)
       return stbi__ldr_to_hdr(data, *x, *y, req_comp ? req_comp : *comp);
    return stbi__errpf("unknown image type", "Image not of any known type, or corrupt");
@@ -1030,14 +1058,14 @@ STBIDEF float *stbi_loadf_from_memory(stbi_uc const *buffer, int len, int *x, in
 {
    stbi__context s;
    stbi__start_mem(&s,buffer,len);
-   return stbi_loadf_main(&s,x,y,comp,req_comp);
+   return stbi__loadf_main(&s,x,y,comp,req_comp);
 }
 
 STBIDEF float *stbi_loadf_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp, int req_comp)
 {
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
-   return stbi_loadf_main(&s,x,y,comp,req_comp);
+   return stbi__loadf_main(&s,x,y,comp,req_comp);
 }
 
 #ifndef STBI_NO_STDIO
@@ -1055,7 +1083,7 @@ STBIDEF float *stbi_loadf_from_file(FILE *f, int *x, int *y, int *comp, int req_
 {
    stbi__context s;
    stbi__start_file(&s,f);
-   return stbi_loadf_main(&s,x,y,comp,req_comp);
+   return stbi__loadf_main(&s,x,y,comp,req_comp);
 }
 #endif // !STBI_NO_STDIO
 
