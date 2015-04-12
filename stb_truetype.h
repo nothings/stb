@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.02 - public domain
+// stb_truetype.h - v1.03 - public domain
 // authored from 2009-2014 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -34,12 +34,16 @@
 //       Johan Duparc
 //       Hou Qiming
 //       Fabian "ryg" Giesen
+//       Martins Mozeiko
+//       Cap Petschulat
+//       Omar Cornut
 //
 //   Misc other:
 //       Ryan Gordon
 //
 // VERSION HISTORY
 //
+//   1.03 (2015-04-12) STBTT_STATIC, various fixes
 //   1.02 (2014-12-10) fix various warnings & compile issues w/ stb_rect_pack, C++
 //   1.01 (2014-12-08) fix subpixel position when oversampling to exactly match
 //                        non-oversampled; STBTT_POINT_SIZE for packed case only
@@ -82,6 +86,9 @@
 //      #define STB_TRUETYPE_IMPLEMENTATION
 //   before the #include of this file. This expands out the actual
 //   implementation into that C/C++ file.
+//
+//   To make the implementation private to the file that generates the implementation,
+//      #define STBTT_STATIC
 //
 //   Simple 3D API (don't ship this, but it's fine for tools and quick start)
 //           stbtt_BakeFontBitmap()               -- bake a font to a bitmap for use as texture
