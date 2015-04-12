@@ -200,6 +200,7 @@
                                                  Engin Manap
                                                  Martins Mozeiko
                                                  Joseph Thomson
+                                                 Phil Jordan
 
 License:
    This software is in the public domain. Where that dedication is not
@@ -630,7 +631,11 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #define STBI_FREE(p)       free(p)
 #endif
 
-#if defined(__GNUC__) && (defined(__x86_64__) || defined(__i386)) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
+#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+#define STBI__X86
+#endif
+
+#if defined(__GNUC__) && defined(STBI__X86) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
 // gcc doesn't support sse2 intrinsics unless you compile with -msse2,
 // (but compiling with -msse2 allows the compiler to use SSE2 everywhere;
 // this is just broken and gcc are jerks for not fixing it properly
@@ -638,7 +643,7 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #define STBI_NO_SIMD
 #endif
 
-#if !defined(STBI_NO_SIMD) && (defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86))
+#if !defined(STBI_NO_SIMD) && defined(STBI__X86)
 #define STBI_SSE2
 #include <emmintrin.h>
 
