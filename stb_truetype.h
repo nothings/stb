@@ -37,6 +37,7 @@
 //       Martins Mozeiko
 //       Cap Petschulat
 //       Omar Cornut
+//       github:aloucks
 //
 //   Misc other:
 //       Ryan Gordon
@@ -1054,7 +1055,6 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
       stbtt_uint16 searchRange = ttUSHORT(data+index_map+8) >> 1;
       stbtt_uint16 entrySelector = ttUSHORT(data+index_map+10);
       stbtt_uint16 rangeShift = ttUSHORT(data+index_map+12) >> 1;
-      stbtt_uint16 item, offset, start, end;
 
       // do a binary search of the segments
       stbtt_uint32 endCount = index_map + 14;
@@ -1071,8 +1071,8 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
       // now decrement to bias correctly to find smallest
       search -= 2;
       while (entrySelector) {
+         stbtt_uint16 end;
          searchRange >>= 1;
-         start = ttUSHORT(data + search + searchRange*2 + segcount*2 + 2);
          end = ttUSHORT(data + search + searchRange*2);
          if (unicode_codepoint > end)
             search += searchRange*2;
@@ -1080,19 +1080,21 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
       }
       search += 2;
 
-      item = (stbtt_uint16) ((search - endCount) >> 1);
+      {
+         stbtt_uint16 offset, start;
+         stbtt_uint16 item = (stbtt_uint16) ((search - endCount) >> 1);
 
-      STBTT_assert(unicode_codepoint <= ttUSHORT(data + endCount + 2*item));
-      start = ttUSHORT(data + index_map + 14 + segcount*2 + 2 + 2*item);
-      end = ttUSHORT(data + index_map + 14 + 2 + 2*item);
-      if (unicode_codepoint < start)
-         return 0;
+         STBTT_assert(unicode_codepoint <= ttUSHORT(data + endCount + 2*item));
+         start = ttUSHORT(data + index_map + 14 + segcount*2 + 2 + 2*item);
+         if (unicode_codepoint < start)
+            return 0;
 
-      offset = ttUSHORT(data + index_map + 14 + segcount*6 + 2 + 2*item);
-      if (offset == 0)
-         return (stbtt_uint16) (unicode_codepoint + ttSHORT(data + index_map + 14 + segcount*4 + 2 + 2*item));
+         offset = ttUSHORT(data + index_map + 14 + segcount*6 + 2 + 2*item);
+         if (offset == 0)
+            return (stbtt_uint16) (unicode_codepoint + ttSHORT(data + index_map + 14 + segcount*4 + 2 + 2*item));
 
-      return ttUSHORT(data + offset + (unicode_codepoint-start)*2 + index_map + 14 + segcount*6 + 2 + 2*item);
+         return ttUSHORT(data + offset + (unicode_codepoint-start)*2 + index_map + 14 + segcount*6 + 2 + 2*item);
+      }
    } else if (format == 12 || format == 13) {
       stbtt_uint32 ngroups = ttULONG(data+index_map+12);
       stbtt_int32 low,high;
@@ -2421,6 +2423,7 @@ STBTT_DEF int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontd
       }
    }
 
+   STBTT_free(rects, spc->user_allocator_context);
    return return_value;
 }
 
