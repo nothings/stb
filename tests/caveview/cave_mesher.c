@@ -25,8 +25,9 @@
 //#define STBVOX_CONFIG_UNPREMULTIPLY  // slower, fixes alpha test makes windows & fancy leaves look better
 //#define STBVOX_CONFIG_TEX1_EDGE_CLAMP
 #define STBVOX_CONFIG_DISABLE_TEX2
-
+//#define STBVOX_CONFIG_DOWN_TEXLERP_PACKED
 #define STBVOX_CONFIG_ROTATION_IN_LIGHTING
+
 #define STB_VOXEL_RENDER_IMPLEMENTATION
 #include "stb_voxel_render.h"
 
