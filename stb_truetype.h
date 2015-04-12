@@ -2035,8 +2035,8 @@ void stbtt_GetBakedQuad(stbtt_bakedchar *chardata, int pw, int ph, int char_inde
    float d3d_bias = opengl_fillrule ? 0 : -0.5f;
    float ipw = 1.0f / pw, iph = 1.0f / ph;
    stbtt_bakedchar *b = chardata + char_index;
-   int round_x = STBTT_ifloor((*xpos + b->xoff) + 0.5);
-   int round_y = STBTT_ifloor((*ypos + b->yoff) + 0.5);
+   int round_x = STBTT_ifloor((*xpos + b->xoff) + 0.5f);
+   int round_y = STBTT_ifloor((*ypos + b->yoff) + 0.5f);
 
    q->x0 = round_x + d3d_bias;
    q->y0 = round_y + d3d_bias;
@@ -2427,8 +2427,8 @@ void stbtt_GetPackedQuad(stbtt_packedchar *chardata, int pw, int ph, int char_in
    stbtt_packedchar *b = chardata + char_index;
 
    if (align_to_integer) {
-      float x = (float) STBTT_ifloor((*xpos + b->xoff) + 0.5);
-      float y = (float) STBTT_ifloor((*ypos + b->yoff) + 0.5);
+      float x = (float) STBTT_ifloor((*xpos + b->xoff) + 0.5f);
+      float y = (float) STBTT_ifloor((*ypos + b->yoff) + 0.5f);
       q->x0 = x;
       q->y0 = y;
       q->x1 = x + b->xoff2 - b->xoff;
