@@ -489,6 +489,8 @@ STBIDEF void stbi_set_unpremultiply_on_load(int flag_true_if_should_unpremultipl
 // or just pass them through "as-is"
 STBIDEF void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert);
 
+// flip the image vertically. useful for opengl image loading.
+STBIDEF void stbi_vertically_flip_on_load(int flag_true_if_should_flip);
 
 // ZLIB client - used by PNG, available for other purposes
 
@@ -887,44 +889,74 @@ static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp);
 static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp);
 #endif
 
+static int stbi__vertically_flip_on_load = 0;
+
+STBIDEF void stbi_vertically_flip_on_load(int flag_true_if_should_flip)
+{
+    stbi__vertically_flip_on_load = flag_true_if_should_flip;
+}
+
 static unsigned char *stbi_load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
+   unsigned char *result = NULL;
+
+   if (0); // get the test chain started
    #ifndef STBI_NO_JPEG
-   if (stbi__jpeg_test(s)) return stbi__jpeg_load(s,x,y,comp,req_comp);
+   else if (stbi__jpeg_test(s)) result = stbi__jpeg_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_PNG
-   if (stbi__png_test(s))  return stbi__png_load(s,x,y,comp,req_comp);
+   else if (stbi__png_test(s))  result = stbi__png_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_BMP
-   if (stbi__bmp_test(s))  return stbi__bmp_load(s,x,y,comp,req_comp);
+   else if (stbi__bmp_test(s))  result = stbi__bmp_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_GIF
-   if (stbi__gif_test(s))  return stbi__gif_load(s,x,y,comp,req_comp);
+   else if (stbi__gif_test(s))  result = stbi__gif_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_PSD
-   if (stbi__psd_test(s))  return stbi__psd_load(s,x,y,comp,req_comp);
+   else if (stbi__psd_test(s))  result = stbi__psd_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_PIC
-   if (stbi__pic_test(s))  return stbi__pic_load(s,x,y,comp,req_comp);
+   else if (stbi__pic_test(s))  result = stbi__pic_load(s,x,y,comp,req_comp);
    #endif
    #ifndef STBI_NO_PNM
-   if (stbi__pnm_test(s))  return stbi__pnm_load(s,x,y,comp,req_comp);
+   else if (stbi__pnm_test(s))  result = stbi__pnm_load(s,x,y,comp,req_comp);
    #endif
 
    #ifndef STBI_NO_HDR
-   if (stbi__hdr_test(s)) {
+   else if (stbi__hdr_test(s)) {
       float *hdr = stbi__hdr_load(s, x,y,comp,req_comp);
-      return stbi__hdr_to_ldr(hdr, *x, *y, req_comp ? req_comp : *comp);
+      result = stbi__hdr_to_ldr(hdr, *x, *y, req_comp ? req_comp : *comp);
    }
    #endif
 
    #ifndef STBI_NO_TGA
    // test tga last because it's a crappy test!
-   if (stbi__tga_test(s))
-      return stbi__tga_load(s,x,y,comp,req_comp);
+   else if (stbi__tga_test(s))
+      result = stbi__tga_load(s,x,y,comp,req_comp);
    #endif
 
-   return stbi__errpuc("unknown image type", "Image not of any known type, or corrupt");
+   else
+      return stbi__errpuc("unknown image type", "Image not of any known type, or corrupt");
+
+   // post-processing
+   if (stbi__vertically_flip_on_load) {
+      int depth = req_comp ? req_comp : *comp;
+      int row,col,z;
+      stbi_uc temp;
+
+      for (row = 0; row < *y / 2; row++) {
+         for (col = 0; col < *x; col++) {
+            for (z = 0; z < depth; z++) {
+               temp = result[(row * (*x) + col) * depth + z];
+               result[(row * (*x) + col) * depth + z] = result[((*y - row - 1) * (*x) + col) * depth + z];
+               result[((*y - row - 1) * (*x) + col) * depth + z] = temp;
+            }
+         }
+      }
+   }
+
+   return result;
 }
 
 #ifndef STBI_NO_STDIO
