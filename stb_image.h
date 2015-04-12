@@ -1,4 +1,4 @@
-/* stb_image - v2.02 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.03 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -143,6 +143,7 @@
 
 
    Latest revision history:
+      2.03  (2015-04-12) additional corruption checking
       2.02  (2015-01-19) fix incorrect assert, fix warning
       2.01  (2015-01-17) fix various warnings
       2.00b (2014-12-25) fix STBI_MALLOC in progressive JPEG
@@ -196,6 +197,7 @@
                                                  Sergio Gonzalez
                                                  Cass Everitt
                                                  Engin Manap
+                                                 Martins Mozeiko
 
 License:
    This software is in the public domain. Where that dedication is not
@@ -3387,10 +3389,9 @@ static int stbi__zbuild_huffman(stbi__zhuffman *z, stbi_uc *sizelist, int num)
    for (i=0; i < num; ++i)
       ++sizes[sizelist[i]];
    sizes[0] = 0;
-   for (i=1; i < 16; ++i) {
-      STBI_ASSERT(sizes[i] <= (1 << i));
-      if (sizes[i] > (1 << i)) return stbi__err("bad sizes", "Corrupt PNG");
-   }
+   for (i=1; i < 16; ++i)
+      if (sizes[i] > (1 << i))
+         return stbi__err("bad sizes", "Corrupt PNG");
    code = 0;
    for (i=1; i < 16; ++i) {
       next_code[i] = code;
@@ -3567,9 +3568,9 @@ static int stbi__parse_huffman_block(stbi__zbuf *a)
          p = (stbi_uc *) (zout - dist);
          if (dist == 1) { // run of one byte; common in images.
             stbi_uc v = *p;
-            if (len) do *zout++ = v; while (--len);
+            if (len) { do *zout++ = v; while (--len); }
          } else {
-             if (len) do *zout++ = *p++; while (--len);
+            if (len) { do *zout++ = *p++; while (--len); }
          }
       }
    }
@@ -3597,7 +3598,6 @@ static int stbi__compute_huffman_codes(stbi__zbuf *a)
    n = 0;
    while (n < hlit + hdist) {
       int c = stbi__zhuffman_decode(a, &z_codelength);
-      STBI_ASSERT(c >= 0 && c < 19);
       if (c < 0 || c >= 19) return stbi__err("bad codelengths", "Corrupt PNG");
       if (c < 16)
          lencodes[n++] = (stbi_uc) c;
@@ -6205,6 +6205,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.03  (2015-04-12) add extra corruption checking (mmozeiko)
       2.02  (2015-01-19) fix incorrect assert, fix warning
       2.01  (2015-01-17) fix various warnings; suppress SIMD on gcc 32-bit without -msse2
       2.00b (2014-12-25) fix STBI_MALLOC in progressive JPEG
