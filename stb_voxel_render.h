@@ -1230,7 +1230,7 @@ struct stbvox_mesh_maker
 #endif
 
 
-// The following are candidate voxel modes. Only modes 0, 1, and 20 are
+// The following are candidate voxel modes. Only modes 0, 1, and 20, and 21 are
 // currently implemented. Reducing the storage-per-quad further
 // shouldn't improve performance, although obviously it allow you
 // to create larger worlds without streaming.
@@ -1252,7 +1252,7 @@ struct stbvox_mesh_maker
 
 // not sure why I only wrote down the above "result data" and didn't preserve
 // the vertex formats, but here I've tried to reconstruct the designs...
-//     mode # 3 is wrong, one byte too large
+//     mode # 3 is wrong, one byte too large, but they may have been an error originally
 
 //            Mode:     0     1     2     3     4     5     6        10    11    12      20    21    22    23    24
 // =============================================================================================================
