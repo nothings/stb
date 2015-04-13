@@ -297,7 +297,6 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
       /* RLE each component separately */
       for (c=0; c < 4; c++) {
          unsigned char *comp = &scratch[width*c];
-         int runstart = 0, head = 0, rlerun = 0;
 
          x = 0;
          while (x < width) {
