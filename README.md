@@ -24,6 +24,10 @@ library    | lastest version | category | LoC | description
 **stb.h** | 2.24 | misc | 14086 | helper functions for C, mostly redundant in C++; basically author's personal stuff
 **stb_leakcheck.h** | 0.1 | misc | 117 | quick-and-dirty malloc/free leak-checking
 
+Total libraries: 18  
+Total lines of C code: 45214
+
+
 FAQ
 ---
 

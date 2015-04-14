@@ -4,7 +4,7 @@
 int main(int argc, char  **argv)
 {
    int i;
-   int hlen, flen, listlen;
+   int hlen, flen, listlen, total_lines = 0;
    char *header = stb_file("README.header.md", &hlen);      // stb_file - read file into malloc()ed buffer
    char *footer = stb_file("README.footer.md", &flen);      // stb_file - read file into malloc()ed buffer
    char **list  = stb_stringfile("README.list", &listlen);  // stb_stringfile - read file lines into malloced array of strings
@@ -42,10 +42,15 @@ int main(int argc, char  **argv)
       fprintf(f, " | %s", s2);
       free(s2);
       fprintf(f, " | %d", num_lines);
+      total_lines += num_lines;
       for (j=2; j < num; ++j)
          fprintf(f, " | %s", tokens[j]);
       fprintf(f, "\n");
    }
+
+   fprintf(f, "\n");
+   fprintf(f, "Total libraries: %d  \n", listlen);
+   fprintf(f, "Total lines of C code: %d\n\n", total_lines);
 
    fwrite(footer, 1, flen, f);
    fclose(f);
