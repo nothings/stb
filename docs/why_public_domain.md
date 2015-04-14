@@ -48,7 +48,7 @@ in the public domain:
   you have problems it's not my fault, but also please
   report bugs so I can fix them"--so dumb!
 
-4. discussion from stb_howto.txt on what YOU should do for YOUR libs
+4. full discussion from stb_howto.txt on what YOU should do for YOUR libs
 
 ```
 EASY-TO-COMPLY LICENSE
