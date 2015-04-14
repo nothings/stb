@@ -50,16 +50,18 @@ in the public domain:
 
 4. discussion from stb_howto.txt on what YOU should do for YOUR libs
 
-EASY-TO-COMPLY LICENSE
+```EASY-TO-COMPLY LICENSE
 
 I make my libraries public domain. You don't have to.
 But my goal in releasing stb-style libraries is to
 reduce friction for potential users as much as
 possible. That means:
 
-    a. easy to build (what this file is mostly about)
-    b. easy to invoke (which requires good API design)
-    c. easy to deploy (which is about licensing)
+  a. easy to build (what this file is mostly about)
+
+  b. easy to invoke (which requires good API design)
+
+  c. easy to deploy (which is about licensing)
 
 I choose to place all my libraries in the public
 domain, abjuring copyright, rather than license
@@ -112,3 +114,4 @@ modifying one character, and then license that however
 they like. (Indeed, *adding* the zlib or BSD license
 would be such a modification!) Unfortunately, their
 lawyers reportedly didn't like that answer. :(
+```
