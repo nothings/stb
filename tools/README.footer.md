@@ -38,12 +38,21 @@ live. That makes deploying libraries in Windows a lot more
 painful than open source developers on Unix-derivates generally
 realize. (It also makes library dependencies a lot worse in Windows.)
 
+There's also a common problem in Windows where a library was built
+against a different version of the runtime library, which causes
+link conflicts and confusion. Shipping the libs as headers means
+you normally just compile them straight into your project without
+making libraries, thus sidestepping that problem.
+
 Making them a single file makes it very easy to just
 drop them into a project that needs them. (Of course you can
 still put them in a proper shared library tree if you want.)
 
+Why not two files, one a header and one an implementation?
 The difference between 10 files and 9 files is not a big deal,
 but the difference between 2 files and 1 file is a big deal.
+You don't need to zip or tar the files up, you don't have to
+remember to attach *two* files, etc.
 
 #### Why "stb"? Is this something to do with Set-Top Boxes?
 
