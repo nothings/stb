@@ -59,9 +59,7 @@ reduce friction for potential users as much as
 possible. That means:
 
   a. easy to build (what this file is mostly about)
-
   b. easy to invoke (which requires good API design)
-
   c. easy to deploy (which is about licensing)
 
 I choose to place all my libraries in the public
