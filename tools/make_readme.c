@@ -15,12 +15,10 @@ int main(int argc, char  **argv)
    for (i=0; i < listlen; ++i) {
       int num,j;
       char **tokens = stb_tokens_stripwhite(list[i], "|", &num);  // stb_tokens -- tokenize string into malloced array of strings
-      FILE *g = fopen(stb_sprintf("../%s", tokens[0]), "rb");     // stb_sprintf -- sprintf to a static temp buffer (not threadsafe or secure)
-      char buffer[256], *s1, *s2;
-      fread(buffer, 1, 256, g);
-      fclose(g);
-      buffer[255] = 0;
-      s1 = strchr(buffer, '-');
+      int num_lines;
+      char **lines = stb_stringfile(stb_sprintf("../%s", tokens[0]), &num_lines);
+      char *s1, *s2;
+      s1 = strchr(lines[0], '-');
       if (!s1) stb_fatal("Couldn't find '-' before version number in %s", tokens[0]); // stb_fatal -- print error message & exit
       s2 = strchr(s1+2, '-');
       if (!s2) stb_fatal("Couldn't find '-' after version number in %s", tokens[0]);  // stb_fatal -- print error message & exit
@@ -33,6 +31,7 @@ int main(int argc, char  **argv)
       s2 = stb_dupreplace(s1, " ", "&nbsp;");  // stb_dupreplace -- search & replace string and malloc result
       fprintf(f, " | %s", s2);
       free(s2);
+      fprintf(f, " | %d", num_lines);
       for (j=2; j < num; ++j)
          fprintf(f, " | %s", tokens[j]);
       fprintf(f, "\n");

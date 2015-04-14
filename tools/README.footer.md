@@ -20,6 +20,17 @@ attribution requirement). They may be less featureful, slower,
 and/or use more memory. If you're already using an equivalent
 library, there's probably no good reason to switch.
 
+#### Why do you list "lines of code"? It's a terrible metric.
+
+Just to give you some idea of the internal complexity of the library,
+to help you manage your expectations, or to let you know what you're
+getting into. While not all the libraries are written in the same
+style, they're certainly similar styles, and so comparisons between
+the libraries are probably still meaningful.
+
+Note though that the lines do include both the implementation, the
+part that corresponds to a header file, and the documentation.
+
 #### Why single-file headers?
 
 Windows doesn't have standard directories where libraries
