@@ -150,6 +150,10 @@ SOURCE=..\stb_vorbis.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_voxel_render.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stretchy_buffer.h
 # End Source File
 # Begin Source File
