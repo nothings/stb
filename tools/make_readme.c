@@ -41,7 +41,7 @@ int main(int argc, char  **argv)
       s2 = stb_dupreplace(s1, " ", "&nbsp;");  // stb_dupreplace -- search & replace string and malloc result
       fprintf(f, " | %s", s2);
       free(s2);
-      fprintf(f, " | %d", num_lines);
+      fprintf(f, " | <sup><sub>%d</sub></sup>", num_lines);
       for (j=2; j < num; ++j)
          fprintf(f, " | %s", tokens[j]);
       fprintf(f, "\n");

@@ -3,26 +3,26 @@ stb
 
 single-file public domain libraries for C/C++
 
-library    | lastest version | category | lines of code | description
---------------------- | ---- | -------- | ------------- | --------------------------------
-**stb_vorbis.c** | 1.04 | audio | 5443 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**stb_image.h** | 2.03 | graphics | 6426 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**stb_truetype.h** | 1.03 | graphics | 2629 | parse, decode, and rasterize characters from truetype fonts
-**stb_image_write.h** | 0.98 | graphics | 730 | image writing to disk: PNG, TGA, BMP
-**stb_image_resize.h** | 0.90 | graphics | 2585 | resize images larger/smaller with good quality
-**stb_rect_pack.h** | 0.05 | graphics | 546 | simple 2D rectangle packer with decent quality
-**stretchy_buffer.h** | 1.01 | utility | 209 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
-**stb_textedit.h** | 1.5 | UI | 1284 | guts of a text editor for games etc implementing them from scratch
-**stb_voxel_render.h** | 0.80 | 3D&nbsp;graphics | 3644 | Minecraft-esque voxel rendering "engine" with many more features
-**stb_dxt.h** | 1.04 | 3D&nbsp;graphics | 624 | Fabian "ryg" Giesen's real-time DXT compressor
-**stb_perlin.h** | 0.2 | 3D&nbsp;graphics | 175 | revised Perlin noise (3D input, 1D output)
-**stb_easy_font.h** | 0.5 | 3D&nbsp;graphics | 220 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
-**stb_tilemap_editor.h** | 0.30 | game&nbsp;dev | 4097 | embeddable tilemap editor
-**stb_herringbone_wa...** | 0.6 | game&nbsp;dev | 1217 | herringbone Wang tile map generator
-**stb_c_lexer.h** | 0.06 | parsing | 809 | simplify writing parsers for C-like languages
-**stb_divide.h** | 0.91 | math | 373 | more useful 32-bit modulus e.g. "euclidean divide"
-**stb.h** | 2.24 | misc | 14086 | helper functions for C, mostly redundant in C++; basically author's personal stuff
-**stb_leakcheck.h** | 0.1 | misc | 117 | quick-and-dirty malloc/free leak-checking
+library    | lastest version | category | <sup><sub>lines of code</sub> | description
+--------------------- | ---- | -------- | ----------------------------- | --------------------------------
+**stb_vorbis.c** | 1.04 | audio | <sup><sub>5443</sub></sup> | decode ogg vorbis files from file/memory to float/16-bit signed output
+**stb_image.h** | 2.03 | graphics | <sup><sub>6426</sub></sup> | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**stb_truetype.h** | 1.03 | graphics | <sup><sub>2629</sub></sup> | parse, decode, and rasterize characters from truetype fonts
+**stb_image_write.h** | 0.98 | graphics | <sup><sub>730</sub></sup> | image writing to disk: PNG, TGA, BMP
+**stb_image_resize.h** | 0.90 | graphics | <sup><sub>2585</sub></sup> | resize images larger/smaller with good quality
+**stb_rect_pack.h** | 0.05 | graphics | <sup><sub>546</sub></sup> | simple 2D rectangle packer with decent quality
+**stretchy_buffer.h** | 1.01 | utility | <sup><sub>209</sub></sup> | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
+**stb_textedit.h** | 1.5 | UI | <sup><sub>1284</sub></sup> | guts of a text editor for games etc implementing them from scratch
+**stb_voxel_render.h** | 0.80 | 3D&nbsp;graphics | <sup><sub>3644</sub></sup> | Minecraft-esque voxel rendering "engine" with many more features
+**stb_dxt.h** | 1.04 | 3D&nbsp;graphics | <sup><sub>624</sub></sup> | Fabian "ryg" Giesen's real-time DXT compressor
+**stb_perlin.h** | 0.2 | 3D&nbsp;graphics | <sup><sub>175</sub></sup> | revised Perlin noise (3D input, 1D output)
+**stb_easy_font.h** | 0.5 | 3D&nbsp;graphics | <sup><sub>220</sub></sup> | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
+**stb_tilemap_editor.h** | 0.30 | game&nbsp;dev | <sup><sub>4097</sub></sup> | embeddable tilemap editor
+**stb_herringbone_wa...** | 0.6 | game&nbsp;dev | <sup><sub>1217</sub></sup> | herringbone Wang tile map generator
+**stb_c_lexer.h** | 0.06 | parsing | <sup><sub>809</sub></sup> | simplify writing parsers for C-like languages
+**stb_divide.h** | 0.91 | math | <sup><sub>373</sub></sup> | more useful 32-bit modulus e.g. "euclidean divide"
+**stb.h** | 2.24 | misc | <sup><sub>14086</sub></sup> | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**stb_leakcheck.h** | 0.1 | misc | <sup><sub>117</sub></sup> | quick-and-dirty malloc/free leak-checking
 
 FAQ
 ---
