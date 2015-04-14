@@ -47,3 +47,68 @@ in the public domain:
   vorbis audio files, but it may not actually work and if
   you have problems it's not my fault, but also please
   report bugs so I can fix them"--so dumb!
+
+4. discussion from stb_howto.txt on what YOU should do for YOUR libs
+
+EASY-TO-COMPLY LICENSE
+
+I make my libraries public domain. You don't have to.
+But my goal in releasing stb-style libraries is to
+reduce friction for potential users as much as
+possible. That means:
+
+    a. easy to build (what this file is mostly about)
+    b. easy to invoke (which requires good API design)
+    c. easy to deploy (which is about licensing)
+
+I choose to place all my libraries in the public
+domain, abjuring copyright, rather than license
+the libraries. This has some benefits and some
+drawbacks.
+
+Any license which is "viral" to modifications
+causes worries for lawyers, even if their programmers
+aren't modifying it.
+
+Any license which requires crediting in documentation
+adds friction which can add up. Valve used to have
+a page with a list of all of these on their web site,
+and it was insane, and obviously nobody ever looked
+at it so why would you care whether your credit appeared
+there?
+
+Permissive licenses like zlib and BSD license are
+perfectly reasonable, but they are very wordy and
+have only two benefits over public domain: legally-mandated
+attribution and liability-control. I do not believe these
+are worth the excessive verbosity and user-unfriendliness
+these licenses induce, especially in the single-file
+case where those licenses tend to be at the top of
+the file, the first thing you see. (To the specific
+points, I have had no trouble receiving attribution
+for my libraries; liability in the face of no explicit
+disclaimer of liability is an open question.)
+
+However, public domain has frictions of its own, because
+public domain declarations aren't necessary recognized
+in the USA and some other locations. For that reason,
+I recommend a declaration along these lines:
+
+// This software is in the public domain. Where that dedication is not
+// recognized, you are granted a perpetual, irrevocable license to copy
+// and modify this file as you see fit.
+
+I typically place this declaration at the end of the initial
+comment block of the file and just say 'public domain'
+at the top.
+
+I have had people say they couldn't use one of my
+libraries because it was only "public domain" and didn't
+have the additional fallback clause, who asked if
+I could dual-license it under a traditional license.
+
+My answer: they can create a derivative work by
+modifying one character, and then license that however
+they like. (Indeed, *adding* the zlib or BSD license
+would be such a modification!) Unfortunately, their
+lawyers reportedly didn't like that answer. :(
