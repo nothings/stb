@@ -3,8 +3,8 @@ stb
 
 single-file public domain libraries for C/C++
 
-library    | lastest version | Lines Of Code | category | description
---------------------- | ---- | --------------| -------- | --------------------------------
+library    | lastest version | category | Lines Of Code | description
+--------------------- | ---- | -------- | ------------- | --------------------------------
 **stb_vorbis.c** | 1.04 | audio | 5443 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **stb_image.h** | 2.03 | graphics | 6426 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **stb_truetype.h** | 1.03 | graphics | 2629 | parse, decode, and rasterize characters from truetype fonts
