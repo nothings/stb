@@ -107,12 +107,9 @@ Yes. https://github.com/nothings/stb/blob/master/docs/stb_howto.txt
 
 #### Why public domain?
 
-Because more people will use it. Because it's not viral, people
-are not obligated to give back, so you could argue that it hurts
-the *development* of it, and then because it doesn't develop as
-well it's not as good, and then because it's not as good, in the
-long run maybe fewer people will use it. I have total respect for
-that opinion, but I just don't believe it myself for most software.
+I prefer it over GPL, LGPL, BSD, zlib, etc. for many reasons.
+Some of them are listed here:
+https://github.com/nothings/stb/blob/master/docs/why_public_domain.md
 
 #### Why C?
 
