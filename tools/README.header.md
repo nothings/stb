@@ -3,5 +3,5 @@ stb
 
 single-file public domain libraries for C/C++
 
-library    | lastest version | category | Lines Of Code | description
+library    | lastest version | category | lines of code | description
 --------------------- | ---- | -------- | ------------- | --------------------------------
