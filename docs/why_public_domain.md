@@ -50,7 +50,8 @@ in the public domain:
 
 4. discussion from stb_howto.txt on what YOU should do for YOUR libs
 
-```EASY-TO-COMPLY LICENSE
+```
+EASY-TO-COMPLY LICENSE
 
 I make my libraries public domain. You don't have to.
 But my goal in releasing stb-style libraries is to
