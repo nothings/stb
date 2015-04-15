@@ -1,4 +1,4 @@
-// stb_tilemap_editor.h - v0.30 - Sean Barrett - http://nothings.org/stb
+// stb_tilemap_editor.h - v0.31 - Sean Barrett - http://nothings.org/stb
 // placed in the public domain - not copyrighted - first released 2014-09
 //
 // Embeddable tilemap editor for C/C++
@@ -275,7 +275,9 @@
 //   either approach allows cut&pasting between levels.)
 //
 // REVISION HISTORY
-//   0.31  bugfixes
+//   0.31  layername button changes
+//          - layername buttons grow with the layer panel
+//          - fix stbte_create_map being declared as stbte_create
 //          - fix declaration of stbte_create_map
 //   0.30  properties release
 //          - properties panel for editing user-defined "object" properties
@@ -298,11 +300,11 @@
 //   Support STBTE_HITTEST_TILE above
 //  ?Cancel drags by clicking other button? - may be fixed
 //   Finish support for toolbar at side
-//   Layer name buttons grow to fill box
 //
 // CREDITS
 //
 //   Written by Sean Barrett, September & October 2014.
+//   Contributions from Josh Huelsman, January 2015.
 //
 // LICENSE
 //
@@ -940,6 +942,7 @@ struct stbte_tilemap
     int tileinfo_dirty;
     stbte__layer layerinfo[STBTE_MAX_LAYERS];
     int has_layer_names;
+    int layername_width;
     int layer_scroll;
     int propmode;
     int solo_layer;
@@ -1018,6 +1021,7 @@ stbte_tilemap *stbte_create_map(int map_x, int map_y, int map_layers, int spacin
    tm->layer_scroll = 0;
    tm->propmode = 0;
    tm->has_layer_names = 0;
+   tm->layername_width = 0;
    tm->undo_available_valid = 0;
 
    for (i=0; i < tm->num_layers; ++i) {
@@ -1090,12 +1094,16 @@ void stbte_define_tile(stbte_tilemap *tm, unsigned short id, unsigned int layerm
    tm->tileinfo_dirty = 1;
 }
 
+static int stbte__text_width(const char *str);
+
 void stbte_set_layername(stbte_tilemap *tm, int layer, const char *layername)
 {
    STBTE_ASSERT(layer >= 0 && layer < tm->num_layers);
    if (layer >= 0 && layer < tm->num_layers) {
       tm->layerinfo[layer].name = layername;
       tm->has_layer_names = 1;
+      int width = stbte__text_width(layername);
+      tm->layername_width = (width > tm->layername_width ? width : tm->layername_width);
    }
 }
 
@@ -3387,7 +3395,14 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
    int i, y, n;
    int x1 = x0+w;
    int y1 = y0+h;
-   int xoff = tm->has_layer_names ? 50 : 20;
+   int xoff = 20;
+   
+   if (tm->has_layer_names) {
+      int side = stbte__ui.panel[STBTE__panel_layers].side;
+      xoff = stbte__region[side].width - 42;
+      xoff = (xoff < tm->layername_width + 10 ? xoff : tm->layername_width + 10);
+   }
+
    static char *propmodes[3] = {
       "default", "always", "never"
    };
@@ -3429,7 +3444,7 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
    n = stbte__text_width("prop:")+2;
    stbte__draw_text(x0,y+2, "prop:", w, STBTE__TEXTCOLOR(STBTE__cpanel));
    i = w - n - 4;
-   if (i > 45) i = 45;
+   if (i > 50) i = 50;
    if (stbte__button(STBTE__clayer_button, propmodes[tm->propmode], x0+n,y,0,i, STBTE__ID(STBTE__layer,256), 0,0))
       tm->propmode = (tm->propmode+1)%3;
 #endif
