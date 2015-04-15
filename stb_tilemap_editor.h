@@ -303,8 +303,13 @@
 //
 // CREDITS
 //
-//   Written by Sean Barrett, September & October 2014.
-//   Contributions from Josh Huelsman, January 2015.
+//
+//   Main editor & features
+//      Sean Barrett
+//   Additional features:
+//      Josh Huelsman
+//   Bugfixes:
+//      [this could be you!]
 //
 // LICENSE
 //
