@@ -1,4 +1,4 @@
-// stb_tilemap_editor.h - v0.31 - Sean Barrett - http://nothings.org/stb
+// stb_tilemap_editor.h - v0.35 - Sean Barrett - http://nothings.org/stb
 // placed in the public domain - not copyrighted - first released 2014-09
 //
 // Embeddable tilemap editor for C/C++
@@ -275,7 +275,7 @@
 //   either approach allows cut&pasting between levels.)
 //
 // REVISION HISTORY
-//   0.31  layername button changes
+//   0.35  layername button changes
 //          - layername buttons grow with the layer panel
 //          - fix stbte_create_map being declared as stbte_create
 //          - fix declaration of stbte_create_map
@@ -1100,9 +1100,10 @@ void stbte_set_layername(stbte_tilemap *tm, int layer, const char *layername)
 {
    STBTE_ASSERT(layer >= 0 && layer < tm->num_layers);
    if (layer >= 0 && layer < tm->num_layers) {
+      int width;
       tm->layerinfo[layer].name = layername;
       tm->has_layer_names = 1;
-      int width = stbte__text_width(layername);
+      width = stbte__text_width(layername);
       tm->layername_width = (width > tm->layername_width ? width : tm->layername_width);
    }
 }
@@ -3392,6 +3393,10 @@ static void stbte__info(stbte_tilemap *tm, int x0, int y0, int w, int h)
 
 static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
 {
+   static char *propmodes[3] = {
+      "default", "always", "never"
+   };
+   int num_rows;
    int i, y, n;
    int x1 = x0+w;
    int y1 = y0+h;
@@ -3403,10 +3408,6 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
       xoff = (xoff < tm->layername_width + 10 ? xoff : tm->layername_width + 10);
    }
 
-   static char *propmodes[3] = {
-      "default", "always", "never"
-   };
-   int num_rows;
    x0 += 2;
    y0 += 5;
    if (!tm->has_layer_names) {
