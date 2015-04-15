@@ -275,6 +275,8 @@
 //   either approach allows cut&pasting between levels.)
 //
 // REVISION HISTORY
+//   0.31  bugfixes
+//          - fix declaration of stbte_create_map
 //   0.30  properties release
 //          - properties panel for editing user-defined "object" properties
 //          - can link each tile to one other tile
@@ -339,7 +341,7 @@ enum
 // creation
 //
 
-extern stbte_tilemap *stbte_create(int map_x, int map_y, int map_layers, int spacing_x, int spacing_y, int max_tiles);
+extern stbte_tilemap *stbte_create_map(int map_x, int map_y, int map_layers, int spacing_x, int spacing_y, int max_tiles);
 // create an editable tilemap
 //   map_x      : dimensions of map horizontally (user can change this in editor), <= STBTE_MAX_TILEMAP_X
 //   map_y      : dimensions of map vertically (user can change this in editor)    <= STBTE_MAX_TILEMAP_Y
@@ -352,7 +354,7 @@ extern stbte_tilemap *stbte_create(int map_x, int map_y, int map_layers, int spa
 
 extern void stbte_define_tile(stbte_tilemap *tm, unsigned short id, unsigned int layermask, const char * category);
 // call this repeatedly for each tile to install the tile definitions into the editable tilemap
-//   tm        : tilemap created by stbte_create
+//   tm        : tilemap created by stbte_create_map
 //   id        : unique identifier for each tile, 0 <= id < 32768
 //   layermask : bitmask of which layers tile is allowed on: 1 = layer 0, 255 = layers 0..7
 //               (note that onscreen, the editor numbers the layers from 1 not 0)
