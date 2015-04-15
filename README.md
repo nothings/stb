@@ -12,14 +12,14 @@ library    | lastest version | category | LoC | description
 **stb_truetype.h** | 1.04 | graphics | 2631 | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | 0.98 | graphics | 730 | image writing to disk: PNG, TGA, BMP
 **stb_image_resize.h** | 0.90 | graphics | 2585 | resize images larger/smaller with good quality
-**stb_rect_pack.h** | 0.05 | graphics | 546 | simple 2D rectangle packer with decent quality
+**stb_rect_pack.h** | 0.06 | graphics | 560 | simple 2D rectangle packer with decent quality
 **stretchy_buffer.h** | 1.02 | utility | 210 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
-**stb_textedit.h** | 1.5 | UI | 1284 | guts of a text editor for games etc implementing them from scratch
+**stb_textedit.h** | 1.6 | UI | 1290 | guts of a text editor for games etc implementing them from scratch
 **stb_voxel_render.h** | 0.80 | 3D&nbsp;graphics | 3644 | Minecraft-esque voxel rendering "engine" with many more features
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | 624 | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h** | 0.2 | 3D&nbsp;graphics | 175 | revised Perlin noise (3D input, 1D output)
 **stb_easy_font.h** | 0.5 | 3D&nbsp;graphics | 220 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
-**stb_tilemap_editor.h** | 0.35 | game&nbsp;dev | 4115 | embeddable tilemap editor
+**stb_tilemap_editor.h** | 0.35 | game&nbsp;dev | 4120 | embeddable tilemap editor
 **stb_herringbone_wa...** | 0.6 | game&nbsp;dev | 1217 | herringbone Wang tile map generator
 **stb_c_lexer.h** | 0.06 | parsing | 809 | simplify writing parsers for C-like languages
 **stb_divide.h** | 0.91 | math | 373 | more useful 32-bit modulus e.g. "euclidean divide"
@@ -27,7 +27,7 @@ library    | lastest version | category | LoC | description
 **stb_leakcheck.h** | 0.2 | misc | 117 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 18  
-Total lines of C code: 45242
+Total lines of C code: 45267
 
 
 FAQ
