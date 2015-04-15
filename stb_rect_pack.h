@@ -169,7 +169,10 @@ struct stbrp_context
 //
 
 #ifdef STB_RECT_PACK_IMPLEMENTATION
+#ifndef STBRP_sort
 #include <stdlib.h>
+#define STBRP_sort qsort
+#endif
 
 #ifndef STBRP_ASSERT
 #include <assert.h>
@@ -524,7 +527,7 @@ STBRP_DEF void stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int n
    }
 
    // sort according to heuristic
-   qsort(rects, num_rects, sizeof(rects[0]), rect_height_compare);
+   STBRP_sort(rects, num_rects, sizeof(rects[0]), rect_height_compare);
 
    for (i=0; i < num_rects; ++i) {
       stbrp__findresult fr = stbrp__skyline_pack_rectangle(context, rects[i].w, rects[i].h);
@@ -537,7 +540,7 @@ STBRP_DEF void stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int n
    }
 
    // unsort
-   qsort(rects, num_rects, sizeof(rects[0]), rect_original_order);
+   STBRP_sort(rects, num_rects, sizeof(rects[0]), rect_original_order);
 
    // set was_packed flags
    for (i=0; i < num_rects; ++i)
