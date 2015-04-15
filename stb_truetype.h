@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.04 - public domain
+// stb_truetype.h - v1.05 - public domain
 // authored from 2009-2014 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -45,6 +45,7 @@
 //
 // VERSION HISTORY
 //
+//   1.05 (2015-04-15) fix misplaced definitions for STBTT_STATIC
 //   1.04 (2015-04-15) typo in example
 //   1.03 (2015-04-12) STBTT_STATIC, fix memory leak in new packing, various fixes
 //   1.02 (2014-12-10) fix various warnings & compile issues w/ stb_rect_pack, C++
@@ -387,12 +388,6 @@ int main(int arg, char **argv)
    typedef char stbtt__check_size32[sizeof(stbtt_int32)==4 ? 1 : -1];
    typedef char stbtt__check_size16[sizeof(stbtt_int16)==2 ? 1 : -1];
 
-   #ifdef STBTT_STATIC
-   #define STBTT_DEF static
-   #else
-   #define STBTT_DEF extern
-   #endif
-
    // #define your own STBTT_sort() to override this to avoid qsort
    #ifndef STBTT_sort
    #include <stdlib.h>
@@ -444,6 +439,12 @@ int main(int arg, char **argv)
 
 #ifndef __STB_INCLUDE_STB_TRUETYPE_H__
 #define __STB_INCLUDE_STB_TRUETYPE_H__
+
+#ifdef STBTT_STATIC
+#define STBTT_DEF static
+#else
+#define STBTT_DEF extern
+#endif
 
 #ifdef __cplusplus
 extern "C" {
