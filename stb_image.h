@@ -1,4 +1,4 @@
-/* stb_image - v2.03 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.04 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -143,6 +143,7 @@
 
 
    Latest revision history:
+      2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
       2.03  (2015-04-12) additional corruption checking
                          stbi_set_flip_vertically_on_load
                          fix NEON support; fix mingw support
@@ -633,11 +634,14 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #endif
 
 // x86/x64 detection
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+#if defined(__x86_64__) || defined(_M_X64)
+#define STBI__X64_TARGET
+#elif defined(__i386) || defined(_M_IX86)
 #define STBI__X86_TARGET
 #endif
 
-#if defined(__GNUC__) && defined(STBI__X86_TARGET) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
+#if defined(__GNUC__) && (defined(STBI__X86_TARGET) || defined(STBI__X64_TARGET)) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
+// NOTE: not clear do we actually need this for the 64-bit path?
 // gcc doesn't support sse2 intrinsics unless you compile with -msse2,
 // (but compiling with -msse2 allows the compiler to use SSE2 everywhere;
 // this is just broken and gcc are jerks for not fixing it properly
@@ -646,6 +650,8 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #endif
 
 #if defined(__MINGW32__) && defined(STBI__X86_TARGET) && !defined(STBI_MINGW_ENABLE_SSE2) && !defined(STBI_NO_SIMD)
+// Note that __MINGW32__ doesn't actually mean 32-bit, so we have to avoid STBI__X64_TARGET
+//
 // 32-bit MinGW wants ESP to be 16-byte aligned, but this is not in the
 // Windows ABI and VC++ as well as Windows DLLs don't maintain that invariant.
 // As a result, enabling SSE2 on 32-bit MinGW is dangerous when not
@@ -6287,6 +6293,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
       2.03  (2015-04-12) extra corruption checking (mmozeiko)
                          stbi_set_flip_vertically_on_load (nguillemot)
                          fix NEON support; fix mingw support
