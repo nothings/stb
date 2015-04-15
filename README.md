@@ -17,7 +17,7 @@ library    | lastest version | category | LoC | description
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | 624 | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h** | 0.2 | 3D&nbsp;graphics | 175 | revised Perlin noise (3D input, 1D output)
 **stb_easy_font.h** | 0.5 | 3D&nbsp;graphics | 220 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
-**stb_tilemap_editor.h** | 0.30 | game&nbsp;dev | 4097 | embeddable tilemap editor
+**stb_tilemap_editor.h** | 0.35 | game&nbsp;dev | 4115 | embeddable tilemap editor
 **stb_herringbone_wa...** | 0.6 | game&nbsp;dev | 1217 | herringbone Wang tile map generator
 **stb_c_lexer.h** | 0.06 | parsing | 809 | simplify writing parsers for C-like languages
 **stb_divide.h** | 0.91 | math | 373 | more useful 32-bit modulus e.g. "euclidean divide"
@@ -25,7 +25,7 @@ library    | lastest version | category | LoC | description
 **stb_leakcheck.h** | 0.2 | misc | 117 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 18  
-Total lines of C code: 45215
+Total lines of C code: 45233
 
 
 FAQ
