@@ -7,7 +7,7 @@ single-file public domain libraries for C/C++
 
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
-**stb_vorbis.c** | 1.04 | audio | 5443 | decode ogg vorbis files from file/memory to float/16-bit signed output
+**stb_vorbis.c** | 1.05 | audio | 5445 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **stb_image.h** | 2.05 | graphics | 6433 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **stb_truetype.h** | 1.05 | graphics | 2632 | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | 0.98 | graphics | 730 | image writing to disk: PNG, TGA, BMP
@@ -27,7 +27,7 @@ library    | lastest version | category | LoC | description
 **stb_leakcheck.h** | 0.2 | misc | 117 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 18  
-Total lines of C code: 45268
+Total lines of C code: 45270
 
 
 FAQ

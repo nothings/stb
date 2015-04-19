@@ -143,7 +143,7 @@
 
 
    Latest revision history:
-      2.05  (2015-04-19) fix bug in progressive JPEG handling
+      2.05  (2015-04-19) fix bug in progressive JPEG handling, fix warning
       2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
       2.03  (2015-04-12) additional corruption checking
                          stbi_set_flip_vertically_on_load
@@ -6292,7 +6292,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
-      2.05  (2015-04-19) fix bug in progressive JPEG handling
+      2.05  (2015-04-19) fix bug in progressive JPEG handling, fix warning
       2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
       2.03  (2015-04-12) extra corruption checking (mmozeiko)
                          stbi_set_flip_vertically_on_load (nguillemot)
