@@ -553,7 +553,7 @@ enum STBVorbisError
 #define NULL 0
 #endif
 
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) && !(defined(__MINGW32__) && defined(__forceinline))
    #if __GNUC__
       #define __forceinline inline
    #else
