@@ -1852,8 +1852,8 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
                   if (r)
                      j->eob_run += stbi__jpeg_get_bits(j, r);
                   r = 64; // force end of block
-               } else
-                  r = 16; // r=15 is the code for 16 0s
+               }
+               // r=15 s=0 already does the right thing (write 16 0s)
             } else {
                if (s != 1) return stbi__err("bad huffman code", "Corrupt JPEG");
                // sign bit
@@ -1865,7 +1865,7 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
 
             // advance by r
             while (k <= j->spec_end) {
-               short *p = &data[stbi__jpeg_dezigzag[k]];
+               short *p = &data[stbi__jpeg_dezigzag[k++]];
                if (*p != 0) {
                   if (stbi__jpeg_get_bit(j))
                      if ((*p & bit)==0) {
@@ -1874,15 +1874,12 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
                         else
                            *p -= bit;
                      }
-                  ++k;
                } else {
                   if (r == 0) {
-                     if (s)
-                        data[stbi__jpeg_dezigzag[k++]] = (short) s;
+                     *p = (short) s;
                      break;
                   }
                   --r;
-                  ++k;
                }
             }
          } while (k <= j->spec_end);
