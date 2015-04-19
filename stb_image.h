@@ -1,4 +1,4 @@
-/* stb_image - v2.04 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.05 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -143,6 +143,7 @@
 
 
    Latest revision history:
+      2.05  (2015-04-19) fix bug in progressive JPEG handling
       2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
       2.03  (2015-04-12) additional corruption checking
                          stbi_set_flip_vertically_on_load
@@ -160,8 +161,6 @@
       1.47  (2014-12-14) 1/2/4-bit PNG support (both grayscale and paletted)
                          optimize PNG
                          fix bug in interlaced PNG with user-specified channel count
-      1.46  (2014-08-26) fix broken tRNS chunk in non-paletted PNG
-      1.45  (2014-08-16) workaround MSVC-ARM internal compiler error by wrapping malloc
 
    See end of file for full revision history.
 
@@ -1852,8 +1851,11 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
                   if (r)
                      j->eob_run += stbi__jpeg_get_bits(j, r);
                   r = 64; // force end of block
+               } else {
+                  // r=15 s=0 should write 16 0s, so we just do
+                  // a run of 15 0s and then write s (which is 0),
+                  // so we don't have to do anything special here
                }
-               // r=15 s=0 already does the right thing (write 16 0s)
             } else {
                if (s != 1) return stbi__err("bad huffman code", "Corrupt JPEG");
                // sign bit
@@ -6290,6 +6292,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.05  (2015-04-19) fix bug in progressive JPEG handling
       2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
       2.03  (2015-04-12) extra corruption checking (mmozeiko)
                          stbi_set_flip_vertically_on_load (nguillemot)
