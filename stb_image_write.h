@@ -84,10 +84,16 @@ CREDITS:
 extern "C" {
 #endif
 
-extern int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
-extern int stbi_write_bmp(char const *filename, int w, int h, int comp, const void  *data);
-extern int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
-extern int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
+#ifdef STB_IMAGE_WRITE_STATIC
+#define STBIWDEF static
+#else
+#define STBIWDEF extern
+#endif
+
+STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
+STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const void  *data);
+STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
+STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
 
 #ifdef __cplusplus
 }
@@ -219,7 +225,7 @@ static int outfile(char const *filename, int rgb_dir, int vdir, int x, int y, in
    return f != NULL;
 }
 
-int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *data)
+STBIWDEF int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *data)
 {
    int pad = (-x*3) & 3;
    return outfile(filename,-1,-1,x,y,comp,1,(void *) data,0,pad,
@@ -228,7 +234,7 @@ int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *dat
             40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
 }
 
-int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
+STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
 {
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
@@ -364,7 +370,7 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
    }
 }
 
-int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *data)
+STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *data)
 {
    int i;
    FILE *f;
@@ -693,7 +699,7 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
    return out;
 }
 
-int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
+STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
 {
    FILE *f;
    int len;
