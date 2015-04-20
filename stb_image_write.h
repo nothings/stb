@@ -294,8 +294,8 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
                     linear[1] = scanline[x*comp + 1];
                     linear[0] = scanline[x*comp + 0];
                     break;
-            case 2: /* fallthrough */
-            case 1: linear[0] = linear[1] = linear[2] = scanline[x*comp + 0];
+            default:
+                    linear[0] = linear[1] = linear[2] = scanline[x*comp + 0];
                     break;
          }
          stbiw__linear_to_rgbe(rgbe, linear);
@@ -311,8 +311,8 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
                     linear[1] = scanline[x*comp + 1];
                     linear[0] = scanline[x*comp + 0];
                     break;
-            case 2: /* fallthrough */
-            case 1: linear[0] = linear[1] = linear[2] = scanline[x*comp + 0];
+            default:
+                    linear[0] = linear[1] = linear[2] = scanline[x*comp + 0];
                     break;
          }
          stbiw__linear_to_rgbe(rgbe, linear);
