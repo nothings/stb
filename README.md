@@ -15,6 +15,7 @@ library    | lastest version | category | LoC | description
 **stb_rect_pack.h** | 0.06 | graphics | 560 | simple 2D rectangle packer with decent quality
 **stretchy_buffer.h** | 1.02 | utility | 210 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **stb_textedit.h** | 1.6 | UI | 1290 | guts of a text editor for games etc implementing them from scratch
+**stb_gl2d_render.h** | 0.10 | 2D&nbsp;graphics | 238 | Simplest 2D renderer based on OpenGL 1.1
 **stb_voxel_render.h** | 0.80 | 3D&nbsp;graphics | 3644 | Minecraft-esque voxel rendering "engine" with many more features
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | 624 | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h** | 0.2 | 3D&nbsp;graphics | 175 | revised Perlin noise (3D input, 1D output)
@@ -26,8 +27,8 @@ library    | lastest version | category | LoC | description
 **stb.h** | 2.24 | misc | 14086 | helper functions for C, mostly redundant in C++; basically author's personal stuff
 **stb_leakcheck.h** | 0.2 | misc | 117 | quick-and-dirty malloc/free leak-checking
 
-Total libraries: 18  
-Total lines of C code: 45270
+Total libraries: 19  
+Total lines of C code: 45508
 
 
 FAQ
