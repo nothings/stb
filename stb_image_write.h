@@ -149,6 +149,14 @@ static void writefv(FILE *f, const char *fmt, va_list v)
    }
 }
 
+static void writef(FILE *f, const char *fmt, ...)
+{
+   va_list v;
+   va_start(v, fmt);
+   writefv(f, fmt, v);
+   va_end(v);
+}
+
 static void write3(FILE *f, unsigned char a, unsigned char b, unsigned char c)
 {
    unsigned char arr[3];
@@ -156,11 +164,42 @@ static void write3(FILE *f, unsigned char a, unsigned char b, unsigned char c)
    fwrite(arr, 3, 1, f);
 }
 
-static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
+static void write_pixel(FILE *f, int rgb_dir, int comp, int write_alpha, int expand_mono, const unsigned char *d)
 {
    unsigned char bg[3] = { 255, 0, 255}, px[3];
+   int k;
+
+   if (write_alpha < 0)
+      fwrite(&d[comp - 1], 1, 1, f);
+   switch (comp) {
+   case 1: fwrite(d, 1, 1, f);
+           break;
+   case 2: if (expand_mono)
+             write3(f, d[0], d[0], d[0]); // monochrome bmp
+           else
+              fwrite(d, 1, 1, f);  // monochrome TGA
+           break;
+   case 4:
+      if (!write_alpha) {
+         // composite against pink background
+         for (k = 0; k < 3; ++k)
+            px[k] = bg[k] + ((d[k] - bg[k]) * d[3]) / 255;
+         write3(f, px[1 - rgb_dir], px[1], px[1 + rgb_dir]);
+         break;
+      }
+      /* FALLTHROUGH */
+   case 3:
+      write3(f, d[1 - rgb_dir], d[1], d[1 + rgb_dir]);
+      break;
+   }
+   if (write_alpha > 0)
+      fwrite(&d[comp - 1], 1, 1, f);
+}
+
+static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
+{
    stbiw_uint32 zero = 0;
-   int i,j,k, j_end;
+   int i,j, j_end;
 
    if (y <= 0)
       return;
@@ -173,31 +212,7 @@ static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp,
    for (; j != j_end; j += vdir) {
       for (i=0; i < x; ++i) {
          unsigned char *d = (unsigned char *) data + (j*x+i)*comp;
-         if (write_alpha < 0)
-            fwrite(&d[comp-1], 1, 1, f);
-         switch (comp) {
-            case 1: fwrite(d, 1, 1, f);
-                    break;
-            case 2: if (expand_mono)
-                       write3(f, d[0],d[0],d[0]); // monochrome bmp
-                    else
-                       fwrite(d, 1, 1, f);  // monochrome TGA
-                    break;
-            case 4:
-               if (!write_alpha) {
-                  // composite against pink background
-                  for (k=0; k < 3; ++k)
-                     px[k] = bg[k] + ((d[k] - bg[k]) * d[3])/255;
-                  write3(f, px[1-rgb_dir],px[1],px[1+rgb_dir]);
-                  break;
-               }
-               /* FALLTHROUGH */
-            case 3:
-               write3(f, d[1-rgb_dir],d[1],d[1+rgb_dir]);
-               break;
-         }
-         if (write_alpha > 0)
-            fwrite(&d[comp-1], 1, 1, f);
+         write_pixel(f, rgb_dir, comp, write_alpha, expand_mono, d);
       }
       fwrite(&zero,scanline_pad,1,f);
    }
@@ -232,9 +247,68 @@ int stbi_write_tga(char const *filename, int x, int y, int comp, const void *dat
 {
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
-   int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
-   return outfile(filename, -1,-1, x, y, comp, 0, (void *) data, has_alpha, 0,
-                  "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, (colorbytes+has_alpha)*8, has_alpha*8);
+   int format = colorbytes < 2 ? 11 : 10; // 3 color channels (RGB/RGBA) = 10, 1 color channel (Y/YA) = 11
+   FILE *f;
+
+   if (y < 0 || x < 0) return 0;
+   f = fopen(filename, "wb");
+   if (f) {
+      int i,j,k;
+
+      writef(f, "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, 24+8*has_alpha, 8*has_alpha);
+
+      for (j = y - 1; j >= 0; --j) {
+         unsigned char *line = (unsigned char *) data + j * x * comp;
+         int run;
+
+         for (i = 0; i < x; i += run) {
+            unsigned char *first = line + i * comp;
+            int diff = 1;
+            run = 1;
+
+            if (i < x - 1) {
+               ++run;
+               diff = memcmp(first, line + (i + 1) * comp, comp);
+               if (diff) {
+                  unsigned char *next = first;
+                  for (k = i + 2; k < x && run < 128; ++k) {
+                     if (memcmp(next, line + k * comp, comp)) {
+                        next += comp;
+                        ++run;
+                     } else {
+                        --run;
+                        break;
+                     }
+                  }
+               } else {
+                  for (k = i + 2; k < x && run < 128; ++k) {
+                     if (!memcmp(first, line + k * comp, comp)) {
+                        ++run;
+                     } else {
+                        break;
+                     }
+                  }
+               }
+            }
+
+            if (diff) {
+               unsigned char header = (unsigned char) (run - 1);
+               fwrite(&header, 1, 1, f);
+               for (k = 0; k < run; ++k) {
+                  write_pixel(f, -1, comp, has_alpha, 0, first + k * comp);
+               }
+            } else {
+               unsigned char header = (unsigned char) (run - 1) | 0x80;
+               fwrite(&header, 1, 1, f);
+               write_pixel(f, -1, comp, has_alpha, 0, first);
+            }
+         }
+      }
+
+      fclose(f);
+   }
+
+   return f != NULL;
 }
 
 // *************************************************************************************************
