@@ -87,6 +87,10 @@ SOURCE=.\make_readme.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\README.header.md
+# End Source File
+# Begin Source File
+
 SOURCE=.\README.list
 # End Source File
 # End Target

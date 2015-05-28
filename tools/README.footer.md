@@ -20,6 +20,40 @@ attribution requirement). They may be less featureful, slower,
 and/or use more memory. If you're already using an equivalent
 library, there's probably no good reason to switch.
 
+#### Why do you list "lines of code"? It's a terrible metric.
+
+Just to give you some idea of the internal complexity of the library,
+to help you manage your expectations, or to let you know what you're
+getting into. While not all the libraries are written in the same
+style, they're certainly similar styles, and so comparisons between
+the libraries are probably still meaningful.
+
+Note though that the lines do include both the implementation, the
+part that corresponds to a header file, and the documentation.
+
+#### Why single-file headers?
+
+Windows doesn't have standard directories where libraries
+live. That makes deploying libraries in Windows a lot more
+painful than open source developers on Unix-derivates generally
+realize. (It also makes library dependencies a lot worse in Windows.)
+
+There's also a common problem in Windows where a library was built
+against a different version of the runtime library, which causes
+link conflicts and confusion. Shipping the libs as headers means
+you normally just compile them straight into your project without
+making libraries, thus sidestepping that problem.
+
+Making them a single file makes it very easy to just
+drop them into a project that needs them. (Of course you can
+still put them in a proper shared library tree if you want.)
+
+Why not two files, one a header and one an implementation?
+The difference between 10 files and 9 files is not a big deal,
+but the difference between 2 files and 1 file is a big deal.
+You don't need to zip or tar the files up, you don't have to
+remember to attach *two* files, etc.
+
 #### Why "stb"? Is this something to do with Set-Top Boxes?
 
 No, they are just the initials for my name, Sean T. Barrett.
@@ -44,12 +78,9 @@ Yes. https://github.com/nothings/stb/blob/master/docs/stb_howto.txt
 
 #### Why public domain?
 
-Because more people will use it. Because it's not viral, people
-are not obligated to give back, so you could argue that it hurts
-the *development* of it, and then because it doesn't develop as
-well it's not as good, and then because it's not as good, in the
-long run maybe fewer people will use it. I have total respect for
-that opinion, but I just don't believe it myself for most software.
+I prefer it over GPL, LGPL, BSD, zlib, etc. for many reasons.
+Some of them are listed here:
+https://github.com/nothings/stb/blob/master/docs/why_public_domain.md
 
 #### Why C?
 

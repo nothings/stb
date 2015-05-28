@@ -1,4 +1,4 @@
-/* stb_image_write - v0.96 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v0.98 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010
                             no warranty implied; use at your own risk
 
@@ -8,7 +8,6 @@
        #define STB_IMAGE_WRITE_IMPLEMENTATION
 
    in the file that you want to have the implementation.
-
 
    Will probably not work correctly with strict-aliasing optimizations.
 
@@ -22,6 +21,13 @@ ABOUT:
    for source code compactness and simplicitly, not optimal image file size
    or run-time performance.
 
+BUILDING:
+
+   You can #define STBIW_ASSERT(x) before the #include to avoid using assert.h.
+   You can #define STBIW_MALLOC(), STBIW_REALLOC(), and STBIW_FREE() to replace
+   malloc,realloc,free.
+   You can define STBIW_MEMMOVE() to replace memmove()
+
 USAGE:
 
    There are four functions, one for each image file format:
@@ -32,7 +38,7 @@ USAGE:
      int stbi_write_hdr(char const *filename, int w, int h, int comp, const void *data);
 
    Each function returns 0 on failure and non-0 on success.
-   
+
    The functions create an image file defined by the parameters. The image
    is a rectangle of pixels stored from left-to-right, top-to-bottom.
    Each pixel contains 'comp' channels of data stored interleaved with 8-bits
@@ -45,7 +51,7 @@ USAGE:
    PNG creates output files with the same number of components as the input.
    The BMP format expands Y to RGB in the file format and does not
    output alpha.
-   
+
    PNG supports writing rectangles of data even when the bytes storing rows of
    data are not consecutive in memory (e.g. sub-rectangles of a larger image),
    by supplying the stride between the beginning of adjacent rows. The other
@@ -65,8 +71,10 @@ CREDITS:
       Baldur Karlsson
    TGA monochrome:
       Jean-Sebastien Guay
-   Bugfixes:
-      Chribba@github
+   misc enhancements:
+      Tim Kelsey
+   bugfixes:
+      github:Chribba
 */
 
 #ifndef INCLUDE_STB_IMAGE_WRITE_H
@@ -93,8 +101,30 @@ extern int stbi_write_hdr(char const *filename, int w, int h, int comp, const fl
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 #include <math.h>
+
+#if defined(STBIW_MALLOC) && defined(STBIW_FREE) && defined(STBIW_REALLOC)
+// ok
+#elif !defined(STBIW_MALLOC) && !defined(STBIW_FREE) && !defined(STBIW_REALLOC)
+// ok
+#else
+#error "Must define all or none of STBIW_MALLOC, STBIW_FREE, and STBIW_REALLOC."
+#endif
+
+#ifndef STBIW_MALLOC
+#define STBIW_MALLOC(sz)    malloc(sz)
+#define STBIW_REALLOC(p,sz) realloc(p,sz)
+#define STBIW_FREE(p)       free(p)
+#endif
+#ifndef STBIW_MEMMOVE
+#define STBIW_MEMMOVE(a,b,sz) memmove(a,b,sz)
+#endif
+
+
+#ifndef STBIW_ASSERT
+#include <assert.h>
+#define STBIW_ASSERT(x) assert(x)
+#endif
 
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
@@ -113,7 +143,7 @@ static void writefv(FILE *f, const char *fmt, va_list v)
                      b[2]=(unsigned char)(x>>16); b[3]=(unsigned char)(x>>24);
                      fwrite(b,4,1,f); break; }
          default:
-            assert(0);
+            STBIW_ASSERT(0);
             return;
       }
    }
@@ -135,7 +165,7 @@ static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp,
    if (y <= 0)
       return;
 
-   if (vdir < 0) 
+   if (vdir < 0)
       j_end = -1, j = y-1;
    else
       j_end =  y, j = 0;
@@ -229,18 +259,18 @@ void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
    }
 }
 
-void stbiw__write_rle_data(FILE *f, int length, unsigned char databyte)
+void stbiw__write_run_data(FILE *f, int length, unsigned char databyte)
 {
-   unsigned char lengthbyte = 0x80 | (unsigned char)(length & 0x7f);
-   assert(length <= 0x7f);
+   unsigned char lengthbyte = (unsigned char) (length+128);
+   STBIW_ASSERT(length+128 <= 255);
    fwrite(&lengthbyte, 1, 1, f);
    fwrite(&databyte, 1, 1, f);
 }
 
-void stbiw__write_nonrle_data(FILE *f, int length, unsigned char *data)
+void stbiw__write_dump_data(FILE *f, int length, unsigned char *data)
 {
    unsigned char lengthbyte = (unsigned char )(length & 0xff);
-   assert(length <= 0x7f);
+   STBIW_ASSERT(length <= 128); // inconsistent with spec but consistent with official code
    fwrite(&lengthbyte, 1, 1, f);
    fwrite(data, length, 1, f);
 }
@@ -272,6 +302,7 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
          fwrite(rgbe, 4, 1, f);
       }
    } else {
+      int c,r;
       /* encode into scratch buffer */
       for (x=0; x < width; x++) {
          switch(comp) {
@@ -294,50 +325,41 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
       fwrite(scanlineheader, 4, 1, f);
 
       /* RLE each component separately */
-      for (x=0; x < 4; x++) {
-         unsigned char *comp = &scratch[width*x];
-         int runstart = 0, head = 0, rlerun = 0;
+      for (c=0; c < 4; c++) {
+         unsigned char *comp = &scratch[width*c];
 
-         while (head < width) {
-            head++;
-
-            if (head - runstart == 127 && rlerun == 1) {
-               // max length RLE run
-               stbiw__write_rle_data(f, head - runstart, comp[runstart]);
-               rlerun = 0;
-               runstart = head;
-            } else if (head - runstart == 128 && rlerun == 0) {
-               // max length non-RLE run
-               stbiw__write_nonrle_data(f, head - runstart, comp+runstart);
-               rlerun = 0;
-               runstart = head;
-            } else if (comp[head] != comp[head-1] && rlerun == 1) {
-               // end of RLE run
-               stbiw__write_rle_data(f, head - runstart, comp[runstart]);
-               rlerun = 0;
-               runstart = head;
-            } else {
-               // continue accumulating RLE run
-               if (rlerun == 1) continue;
-
-               // see if we can start an RLE run, at least 3 bytes same
-               if (rlerun == 0 && head - runstart >= 2
-                    && comp[head] == comp[head-1]
-                    && comp[head] == comp[head-2]) {
-                  // found a run. Flush non-run (if there is anything) and then start an RLE run
-                  if (head - runstart > 2) {
-                     stbiw__write_nonrle_data(f, head-2 - runstart, comp+runstart);
-                  }
-
-                  rlerun = 1;
-                  runstart = head-2;
+         x = 0;
+         while (x < width) {
+            // find first run
+            r = x;
+            while (r+2 < width) {
+               if (comp[r] == comp[r+1] && comp[r] == comp[r+2])
+                  break;
+               ++r;
+            }
+            if (r+2 >= width)
+               r = width;
+            // dump up to first run
+            while (x < r) {
+               int len = r-x;
+               if (len > 128) len = 128;
+               stbiw__write_dump_data(f, len, &comp[x]);
+               x += len;
+            }
+            // if there's a run, output it
+            if (r+2 < width) { // same test as what we break out of in search loop, so only true if we break'd
+               // find next byte after run
+               while (r < width && comp[r] == comp[x])
+                  ++r;
+               // output run up to r
+               while (x < r) {
+                  int len = r-x;
+                  if (len > 127) len = 127;
+                  stbiw__write_run_data(f, len, comp[x]);
+                  x += len;
                }
             }
          }
-
-         // flush remaining sequence (if any)
-         if      (rlerun == 1)         stbiw__write_rle_data(f, head - runstart, comp[runstart]);
-         else if (head - runstart > 0) stbiw__write_nonrle_data(f, head - runstart, comp+runstart);
       }
    }
 }
@@ -350,12 +372,12 @@ int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *da
    f = fopen(filename, "wb");
    if (f) {
       /* Each component is stored separately. Allocate scratch space for full output scanline. */
-      unsigned char *scratch = (unsigned char *) malloc(x*4);
+      unsigned char *scratch = (unsigned char *) STBIW_MALLOC(x*4);
       fprintf(f, "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n"      );
       fprintf(f, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n"                 , y, x);
       for(i=0; i < y; i++)
          stbiw__write_hdr_scanline(f, x, comp, scratch, data + comp*i*x);
-      free(scratch);
+      STBIW_FREE(scratch);
       fclose(f);
    }
    return f != NULL;
@@ -375,13 +397,13 @@ int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *da
 
 #define stbiw__sbpush(a, v)      (stbiw__sbmaybegrow(a,1), (a)[stbiw__sbn(a)++] = (v))
 #define stbiw__sbcount(a)        ((a) ? stbiw__sbn(a) : 0)
-#define stbiw__sbfree(a)         ((a) ? free(stbiw__sbraw(a)),0 : 0)
+#define stbiw__sbfree(a)         ((a) ? STBIW_FREE(stbiw__sbraw(a)),0 : 0)
 
 static void *stbiw__sbgrowf(void **arr, int increment, int itemsize)
 {
    int m = *arr ? 2*stbiw__sbm(*arr)+increment : increment+1;
-   void *p = realloc(*arr ? stbiw__sbraw(*arr) : 0, itemsize * m + sizeof(int)*2);
-   assert(p);
+   void *p = STBIW_REALLOC(*arr ? stbiw__sbraw(*arr) : 0, itemsize * m + sizeof(int)*2);
+   STBIW_ASSERT(p);
    if (p) {
       if (!*arr) ((int *) p)[1] = 0;
       *arr = (void *) ((int *) p + 2);
@@ -466,7 +488,7 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
 
    i=0;
    while (i < data_len-3) {
-      // hash next 3 bytes of data to be compressed 
+      // hash next 3 bytes of data to be compressed
       int h = stbiw__zhash(data+i)&(stbiw__ZHASH-1), best=3;
       unsigned char *bestloc = 0;
       unsigned char **hlist = hash_table[h];
@@ -479,7 +501,7 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
       }
       // when hash table entry is too long, delete half the entries
       if (hash_table[h] && stbiw__sbn(hash_table[h]) == 2*quality) {
-         memcpy(hash_table[h], hash_table[h]+quality, sizeof(hash_table[h][0])*quality);
+         STBIW_MEMMOVE(hash_table[h], hash_table[h]+quality, sizeof(hash_table[h][0])*quality);
          stbiw__sbn(hash_table[h]) = quality;
       }
       stbiw__sbpush(hash_table[h],data+i);
@@ -502,7 +524,7 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
 
       if (bestloc) {
          int d = (int) (data+i - bestloc); // distance back
-         assert(d <= 32767 && best <= 258);
+         STBIW_ASSERT(d <= 32767 && best <= 258);
          for (j=0; best > lengthc[j+1]-1; ++j);
          stbiw__zlib_huff(j+257);
          if (lengtheb[j]) stbiw__zlib_add(best - lengthc[j], lengtheb[j]);
@@ -543,7 +565,7 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
    }
    *out_len = stbiw__sbn(out);
    // make returned pointer freeable
-   memmove(stbiw__sbraw(out), out, *out_len);
+   STBIW_MEMMOVE(stbiw__sbraw(out), out, *out_len);
    return (unsigned char *) stbiw__sbraw(out);
 }
 
@@ -590,8 +612,8 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
    if (stride_bytes == 0)
       stride_bytes = x * n;
 
-   filt = (unsigned char *) malloc((x*n+1) * y); if (!filt) return 0;
-   line_buffer = (signed char *) malloc(x * n); if (!line_buffer) { free(filt); return 0; }
+   filt = (unsigned char *) STBIW_MALLOC((x*n+1) * y); if (!filt) return 0;
+   line_buffer = (signed char *) STBIW_MALLOC(x * n); if (!line_buffer) { STBIW_FREE(filt); return 0; }
    for (j=0; j < y; ++j) {
       static int mapping[] = { 0,1,2,3,4 };
       static int firstmap[] = { 0,1,0,5,6 };
@@ -630,20 +652,20 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
       }
       // when we get here, best contains the filter type, and line_buffer contains the data
       filt[j*(x*n+1)] = (unsigned char) best;
-      memcpy(filt+j*(x*n+1)+1, line_buffer, x*n);
+      STBIW_MEMMOVE(filt+j*(x*n+1)+1, line_buffer, x*n);
    }
-   free(line_buffer);
+   STBIW_FREE(line_buffer);
    zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, 8); // increase 8 to get smaller but use more memory
-   free(filt);
+   STBIW_FREE(filt);
    if (!zlib) return 0;
 
    // each tag requires 12 bytes of overhead
-   out = (unsigned char *) malloc(8 + 12+13 + 12+zlen + 12); 
+   out = (unsigned char *) STBIW_MALLOC(8 + 12+13 + 12+zlen + 12);
    if (!out) return 0;
    *out_len = 8 + 12+13 + 12+zlen + 12;
 
    o=out;
-   memcpy(o,sig,8); o+= 8;
+   STBIW_MEMMOVE(o,sig,8); o+= 8;
    stbiw__wp32(o, 13); // header length
    stbiw__wptag(o, "IHDR");
    stbiw__wp32(o, x);
@@ -657,14 +679,16 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
 
    stbiw__wp32(o, zlen);
    stbiw__wptag(o, "IDAT");
-   memcpy(o, zlib, zlen); o += zlen; free(zlib);
+   STBIW_MEMMOVE(o, zlib, zlen);
+   o += zlen;
+   STBIW_FREE(zlib);
    stbiw__wpcrc(&o, zlen);
 
    stbiw__wp32(o,0);
    stbiw__wptag(o, "IEND");
    stbiw__wpcrc(&o,0);
 
-   assert(o == out + *out_len);
+   STBIW_ASSERT(o == out + *out_len);
 
    return out;
 }
@@ -676,16 +700,19 @@ int stbi_write_png(char const *filename, int x, int y, int comp, const void *dat
    unsigned char *png = stbi_write_png_to_mem((unsigned char *) data, stride_bytes, x, y, comp, &len);
    if (!png) return 0;
    f = fopen(filename, "wb");
-   if (!f) { free(png); return 0; }
+   if (!f) { STBIW_FREE(png); return 0; }
    fwrite(png, 1, len, f);
    fclose(f);
-   free(png);
+   STBIW_FREE(png);
    return 1;
 }
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
-
+      0.98 (2015-04-08)
+             added STBIW_MALLOC, STBIW_ASSERT etc
+      0.97 (2015-01-18)
+             fixed HDR asserts, rewrote HDR rle logic
       0.96 (2015-01-17)
              add HDR output
              fix monochrome BMP
