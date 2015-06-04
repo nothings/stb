@@ -258,32 +258,32 @@ int stbi_write_tga(char const *filename, int x, int y, int comp, const void *dat
       writef(f, "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, 24+8*has_alpha, 8*has_alpha);
 
       for (j = y - 1; j >= 0; --j) {
-         unsigned char *line = (unsigned char *) data + j * x * comp;
-         int run;
+         const unsigned char *row = (unsigned char *) data + j * x * comp;
+         int len;
 
-         for (i = 0; i < x; i += run) {
-            unsigned char *first = line + i * comp;
+         for (i = 0; i < x; i += len) {
+            const unsigned char *begin = row + i * comp;
             int diff = 1;
-            run = 1;
+            len = 1;
 
             if (i < x - 1) {
-               ++run;
-               diff = memcmp(first, line + (i + 1) * comp, comp);
+               ++len;
+               diff = memcmp(begin, row + (i + 1) * comp, comp);
                if (diff) {
-                  unsigned char *next = first;
-                  for (k = i + 2; k < x && run < 128; ++k) {
-                     if (memcmp(next, line + k * comp, comp)) {
-                        next += comp;
-                        ++run;
+                  const unsigned char *prev = begin;
+                  for (k = i + 2; k < x && len < 128; ++k) {
+                     if (memcmp(prev, row + k * comp, comp)) {
+                        prev += comp;
+                        ++len;
                      } else {
-                        --run;
+                        --len;
                         break;
                      }
                   }
                } else {
-                  for (k = i + 2; k < x && run < 128; ++k) {
-                     if (!memcmp(first, line + k * comp, comp)) {
-                        ++run;
+                  for (k = i + 2; k < x && len < 128; ++k) {
+                     if (!memcmp(begin, row + k * comp, comp)) {
+                        ++len;
                      } else {
                         break;
                      }
@@ -292,15 +292,15 @@ int stbi_write_tga(char const *filename, int x, int y, int comp, const void *dat
             }
 
             if (diff) {
-               unsigned char header = (unsigned char) (run - 1);
+               unsigned char header = (unsigned char) (len - 1);
                fwrite(&header, 1, 1, f);
-               for (k = 0; k < run; ++k) {
-                  write_pixel(f, -1, comp, has_alpha, 0, first + k * comp);
+               for (k = 0; k < len; ++k) {
+                  write_pixel(f, -1, comp, has_alpha, 0, begin + k * comp);
                }
             } else {
-               unsigned char header = (unsigned char) (run - 1) | 0x80;
+               unsigned char header = (unsigned char) (len - 129);
                fwrite(&header, 1, 1, f);
-               write_pixel(f, -1, comp, has_alpha, 0, first);
+               write_pixel(f, -1, comp, has_alpha, 0, begin);
             }
          }
       }
