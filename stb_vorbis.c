@@ -3403,6 +3403,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
    flush_packet(f);
 
    if (f->first_decode) {
+      printf("fucka foo\n");
       // assume we start so first non-discarded sample is sample 0
       // this isn't to spec, but spec would require us to read ahead
       // and decode the size of all current frames--could be done,
@@ -4764,6 +4765,263 @@ static int vorbis_seek_frame_from_page(stb_vorbis *f, uint32 page_start, uint32 
    return 0;
 }
 
+enum STBWindowType {
+	VORBIS_window_same = 0,
+	VORBIS_window_short_to_long,
+	VORBIS_window_long_to_short
+};
+
+static int vorbis_decode_seek(vorb *f, int *p_left_start, int *p_left_end, int *p_right_start, int *p_n, int *mode, int *startpos )
+{
+   Mode *m;
+   int i, n, prev, next, window_center;
+   f->channel_buffer_start = f->channel_buffer_end = 0;
+   if (startpos) *startpos = stb_vorbis_get_file_offset(f);
+retry:
+   if (f->eof) return FALSE;
+   if (!maybe_start_packet(f))
+      return FALSE;
+   // check packet type
+   if (get_bits(f,1) != 0) {
+      if (IS_PUSH_MODE(f))
+         return error(f,VORBIS_bad_packet_type);
+      while (EOP != get8_packet(f));
+      goto retry;
+   }
+
+   if (f->alloc.alloc_buffer)
+      assert(f->alloc.alloc_buffer_length_in_bytes == f->temp_offset);
+
+   i = get_bits(f, ilog(f->mode_count-1));
+   if (i == EOP) return FALSE;
+   if (i >= f->mode_count) return FALSE;
+   *mode = i;
+   m = f->mode_config + i;
+   if (m->blockflag) {
+      n = f->blocksize_1;
+      prev = get_bits(f,1);
+      next = get_bits(f,1);
+   } else {
+      prev = next = 0;
+      n = f->blocksize_0;
+   }
+
+// WINDOWING
+
+   window_center = n >> 1;
+   if (m->blockflag && !prev) {
+      *p_left_start = (n - f->blocksize_0) >> 2;
+      *p_left_end   = (n + f->blocksize_0) >> 2;
+   } else {
+      *p_left_start = 0;
+      *p_left_end   = window_center;
+   }
+   if (m->blockflag && !next) {
+      *p_right_start = (n*3 - f->blocksize_0) >> 2;
+   } else {
+      *p_right_start = window_center;
+   }
+   *p_n = n;
+   return TRUE;
+}
+
+static int vorbis_seek_frame_from_pages(stb_vorbis *f, const ProbedPage * p1, const ProbedPage* p2, uint32 target_sample, int fine)
+{
+#if 1
+   printf("\n~=(%u, %u)=~\n", target_sample, p1->first_decoded_sample);
+   int left_start, left_end, right_start, n, nlast=0, mode;
+   int sample_len_last = 0;
+   uint32 frame=0, sample_right = target_sample - p1->first_decoded_sample, fp, fp_last = p1->page_start;
+   set_file_offset( f, p1->page_start);
+   f->next_seg=-1;
+
+#if 1
+   if (!p1->first_decoded_sample) {
+      if (!vorbis_decode_seek(f, &left_start, &left_end, &right_start, &n, &mode, 0))
+         return error(f, VORBIS_seek_failed);
+      flush_packet(f);
+      printf("skipping first window\n");
+   }
+#endif
+
+   for (;;) {
+      int window;
+      if (!vorbis_decode_seek(f, &left_start, &left_end, &right_start, &n, &mode, &fp))
+         return error(f, VORBIS_seek_failed);
+      printf("window from %i to %i at %u\n",  left_start, right_start, fp);
+
+      window = (right_start - left_start);
+
+      printf("sample_right( %i ), window( %i )\n", sample_right, window);
+      if (sample_right <= window) break;
+
+      fp_last = fp;
+
+      flush_packet(f);
+      if (f->eof)
+         return error(f, VORBIS_seek_failed);
+
+      nlast = n;
+      sample_len_last = window;
+      sample_right -= window;
+      frame++;
+   }
+
+
+   // at this point, sample_right should be the number of samples to skip?
+
+   printf(" jumping to %u\n", fp_last);
+   set_file_offset(f, p1->page_start);
+   f->next_seg=-1;
+
+      {
+         f->previous_length = 0;
+#if 0
+         for (i=0; i < f->channels; ++i)
+            for (j=0; j < n; ++j)
+               f->previous_window[i][j] = 0;
+#endif
+         vorbis_pump_first_frame(f);
+      }
+
+   if (frame && sample_right < left_end - left_start) {
+      printf("%i\n", sample_len_last);
+      printf(" SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS \n");
+      frame--;
+   }
+
+   while (frame) {
+      maybe_start_packet(f);
+      flush_packet(f);
+      printf(" FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF \n");
+      frame--;
+   }
+
+   printf(" offset is %u\n", stb_vorbis_get_file_offset(f));
+
+#if 1
+   if (fine) {
+      printf("jumping ahead %i frames\n", sample_right);
+      if (sample_right > 0) {
+         int n;
+         stb_vorbis_get_frame_float(f, &n, NULL);
+         assert(sample_right >= 0);
+         f->channel_buffer_start += sample_right;
+      }
+   }
+#endif
+
+   printf(" offset is %u\n", stb_vorbis_get_file_offset(f));
+   return 0;
+#else
+   int left_start, left_end, right_start, right_end, mode,i;
+	enum STBWindowType window_type;
+   int frame=0;
+   uint32 frame_start;
+   int frames_to_skip, data_to_skip;
+
+   // first_sample is the sample # of the first sample that doesn't
+   // overlap the previous page... note that this requires us to
+   // _partially_ discard the first packet! bleh.
+   set_file_offset(f, p1->page_start);
+
+   f->next_seg = -1;  // force page resync
+
+   frame_start = p1->first_decoded_sample;
+   // frame start is where the previous packet's last decoded sample
+   // was, which corresponds to left_end... EXCEPT if the previous
+   // packet was long and this packet is short? Probably a bug here.
+
+
+   // now, we can start decoding frames... we'll only FAKE decode them,
+   // until we find the frame that contains our sample; then we'll rewind,
+   // and try again
+   for (;;) {
+      int start;
+
+      if (!vorbis_decode_seek(f, &left_start, &left_end, &right_start, &right_end, &mode, &window_type))
+         return error(f, VORBIS_seek_failed);
+
+      if (frame == 0)
+         start = left_end;
+      else
+         start = left_start;
+
+      // the window starts at left_start; the last valid sample we generate
+      // before the next frame's window start is right_start-1
+      if (target_sample < frame_start + right_start-start)
+         break;
+
+      flush_packet(f);
+      if (f->eof)
+         return error(f, VORBIS_seek_failed);
+
+      frame_start += right_start - start;
+
+      ++frame;
+   }
+
+   // ok, at this point, the sample we want is contained in frame #'frame'
+
+   // to decode frame #'frame' normally, we have to decode the
+   // previous frame first... but if it's the FIRST frame of the page
+   // we can't. if it's the first frame, it means it falls in the part
+   // of the first frame that doesn't overlap either of the other frames.
+   // so, if we have to handle that case for the first frame, we might
+   // as well handle it for all of them, so:
+   if (target_sample > frame_start + (left_end - left_start)) {
+      // so what we want to do is go ahead and just immediately decode
+      // this frame, but then make it so the next get_frame_float() uses
+      // this already-decoded data? or do we want to go ahead and rewind,
+      // and leave a flag saying to skip the first N data? let's do that
+      frames_to_skip = frame;  // if this is frame #1, skip 1 frame (#0)
+      data_to_skip = left_end - left_start;
+   } else {
+      // otherwise, we want to skip frames 0, 1, 2, ... frame-2
+      // (which means frame-2+1 total frames) then decode frame-1,
+      // then leave frame pending
+      frames_to_skip = frame - 1;
+      assert(frames_to_skip >= 0);
+      data_to_skip = -1;      
+   }
+
+   set_file_offset(f, p1->page_start);
+   f->next_seg = - 1; // force page resync
+
+   for (i=0; i < frames_to_skip; ++i) {
+      maybe_start_packet(f);
+      flush_packet(f);
+   }
+
+   if (data_to_skip >= 0) {
+      int i,j,n = f->blocksize_0 >> 1;
+      f->discard_samples_deferred = data_to_skip;
+      for (i=0; i < f->channels; ++i)
+         for (j=0; j < n; ++j)
+            f->previous_window[i][j] = 0;
+      f->previous_length = n;
+      frame_start += data_to_skip;
+   } else {
+      f->previous_length = 0;
+      vorbis_pump_first_frame(f);
+   }
+
+   // at this point, the NEXT decoded frame will generate the desired sample
+   if (fine) {
+      // so if we're doing sample accurate streaming, we want to go ahead and decode it!
+      if (target_sample != frame_start) {
+         int n;
+         stb_vorbis_get_frame_float(f, &n, NULL);
+         assert(target_sample > frame_start);
+         assert(f->channel_buffer_start + (int) (target_sample-frame_start) < f->channel_buffer_end);
+         f->channel_buffer_start += (target_sample - frame_start);
+      }
+   }
+
+   return 0;
+#endif
+}
+
 static int vorbis_seek_base(stb_vorbis *f, unsigned int sample_number, int fine)
 {
    ProbedPage p[2],q;
@@ -4782,7 +5040,7 @@ static int vorbis_seek_base(stb_vorbis *f, unsigned int sample_number, int fine)
       sample_number = f->p_last.last_decoded_sample-1;
 
    if (sample_number < f->p_first.last_decoded_sample) {
-      vorbis_seek_frame_from_page(f, p[0].page_start, 0, sample_number, fine);
+      vorbis_seek_frame_from_pages(f, &p[0], &p[0], sample_number, fine);
       return 0;
    } else {
       int attempts=0;
@@ -4842,7 +5100,7 @@ static int vorbis_seek_base(stb_vorbis *f, unsigned int sample_number, int fine)
       }
 
       if (p[0].last_decoded_sample <= sample_number && sample_number < p[1].last_decoded_sample) {
-         vorbis_seek_frame_from_page(f, p[1].page_start, p[0].last_decoded_sample, sample_number, fine);
+         vorbis_seek_frame_from_pages(f, &p[1], &p[0], sample_number, fine);
          return 0;
       }
       return error(f, VORBIS_seek_failed);
