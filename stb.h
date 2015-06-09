@@ -5255,7 +5255,7 @@ int stb_fullpath(char *abs, int abs_size, char *rel)
    #ifdef _MSC_VER
    return _fullpath(abs, rel, abs_size) != NULL;
    #else
-   if (abs[0] == '/' || abs[0] == '~') {
+   if (rel[0] == '/' || rel[0] == '~') {
       if ((int) strlen(rel) >= abs_size)
          return 0;
       strcpy(abs,rel);
