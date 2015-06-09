@@ -1021,9 +1021,15 @@ void stb_fatal(char *s, ...)
    vfprintf(stderr, s, a);
    va_end(a);
    fputs("\n", stderr);
-   #ifdef _WIN32
    #ifdef STB_DEBUG
+   #ifdef _MSC_VER
+   #ifndef STB_PTR64
    __asm int 3;   // trap to debugger!
+   #else
+   __debugbreak();
+   #endif
+   #else
+   __builtin_trap();
    #endif
    #endif
    exit(1);
