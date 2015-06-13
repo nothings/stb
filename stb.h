@@ -1023,7 +1023,7 @@ void stb_fatal(char *s, ...)
    fputs("\n", stderr);
    #ifdef _WIN32
    #ifdef STB_DEBUG
-   __asm int 3;   // trap to debugger!
+   __debugbreak;   // trap to debugger!
    #endif
    #endif
    exit(1);
@@ -1401,7 +1401,7 @@ int stb_is_pow2(unsigned int n)
 int stb_log2_floor(unsigned int n)
 {
    #if _MSC_VER > 1700
-   DWORD i;
+   unsigned int i;
    _BitScanReverse(&i, n);
    return i != 0 ? i : -1;
    #else
@@ -7359,7 +7359,7 @@ typedef struct
 #define GetBucket(p)    ((stb_ps_bucket *) ((char *) (p) - STB_ps_bucket))
 #define EncodeBucket(p) ((stb_ps *) ((char *) (p) + STB_ps_bucket))
 
-typedef char stb__verify_bucket_heap_size[sizeof(stb_ps_bucket) == 16];
+typedef char stb__verify_bucket_heap_size[sizeof(stb_ps_bucket) >= 16];
 
 static void stb_bucket_free(stb_ps_bucket *b)
 {
