@@ -1401,7 +1401,7 @@ int stb_is_pow2(unsigned int n)
 
 // tricky use of 4-bit table to identify 5 bit positions (note the '-1')
 // 3-bit table would require another tree level; 5-bit table wouldn't save one
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__clang__)
 #pragma warning(push)
 #pragma warning(disable: 4035)  // disable warning about no return value
 int stb_log2_floor(unsigned int n)
@@ -1749,7 +1749,7 @@ STB_EXTERN char **stb_tokens_quoted(char *src, char *delimit, int *count);
 
 char *stb_plural(int n)
 {
-   return n == 1 ? "" : "s";
+   return n == 1 ? (char *)"" : (char *)"s";
 }
 
 int stb_prefix(char *s, char *t)
@@ -10168,7 +10168,7 @@ static void stb__write(unsigned char v)
    ++stb__outbytes;
 }
 
-#define stb_out(v)    (stb__out ? *stb__out++ = (stb_uchar) (v) : stb__write((stb_uchar) (v)))
+#define stb_out(v)    (stb__out ? (void)(*stb__out++ = (stb_uchar) (v)) : stb__write((stb_uchar) (v)))
 
 static void stb_out2(stb_uint v)
 {
