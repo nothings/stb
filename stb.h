@@ -323,7 +323,7 @@ typedef char stb__testsize2_64[sizeof(stb_uint64)==8 ? 1 : -1];
 
 // add platform-specific ways of checking for sizeof(char*) == 8,
 // and make those define STB_PTR64
-#if defined(_WIN64) || defined(__x86_64__) || defined(__ia64__)
+#if defined(_WIN64) || defined(__x86_64__) || defined(__ia64__) || defined(__LP64__)
   #define STB_PTR64
 #endif
 
@@ -2561,7 +2561,8 @@ void stb_malloc_validate(void *p, void *parent)
 static void * stb__try_chunk(stb__chunk *c, int size, int align, int pre_align)
 {
    char *memblock = (char *) (c+1), *q;
-   int  iq, start_offset;
+   stb_inta iq;
+   int start_offset;
 
    // we going to allocate at the end of the chunk, not the start. confusing,
    // but it means we don't need both a 'limit' and a 'cur', just a 'cur'.
