@@ -190,6 +190,9 @@ Parenthesized items have since been removed.
 #include <stdio.h>      // need FILE
 #include <string.h>     // stb_define_hash needs memcpy/memset
 #include <time.h>       // stb_dirtree
+#ifdef __MINGW32__
+   #include <fcntl.h>   // O_RDWR
+#endif
 
 #ifdef STB_PERSONAL
    typedef int Bool;
@@ -1395,7 +1398,7 @@ int stb_is_pow2(unsigned int n)
 
 // tricky use of 4-bit table to identify 5 bit positions (note the '-1')
 // 3-bit table would require another tree level; 5-bit table wouldn't save one
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning(push)
 #pragma warning(disable: 4035)  // disable warning about no return value
 int stb_log2_floor(unsigned int n)
@@ -5049,7 +5052,7 @@ void stb_fwrite32(FILE *f, stb_uint32 x)
    fwrite(&x, 4, 1, f);
 }
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
    #define stb__stat   _stat
 #else
    #define stb__stat   stat
@@ -5389,7 +5392,11 @@ FILE *  stb_fopen(char *filename, char *mode)
    #else
    {
       strcpy(temp_full+p, "stmpXXXXXX");
-      int fd = mkstemp(temp_full);
+      #ifdef __MINGW32__
+         int fd = open(mktemp(temp_full), O_RDWR);
+      #else
+         int fd = mkstemp(temp_full);
+      #endif
       if (fd == -1) return NULL;
       f = fdopen(fd, mode);
       if (f == NULL) {
@@ -6988,7 +6995,7 @@ stb_dirtree *stb_dirtree_get_dir(char *dir, char *cache_dir)
    stb_sha1(sha, (unsigned char *) dir_lower, strlen(dir_lower));
    strcpy(cache_file, cache_dir);
    s = cache_file + strlen(cache_file);
-   if (s[-1] != '//' && s[-1] != '\\') *s++ = '/';
+   if (s[-1] != '/' && s[-1] != '\\') *s++ = '/';
    strcpy(s, "dirtree_");
    s += strlen(s);
    for (i=0; i < 8; ++i) {
