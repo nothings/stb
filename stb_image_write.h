@@ -129,6 +129,8 @@ extern int stbi_write_hdr(char const *filename, int w, int h, int comp, const fl
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
 
+static int stbi__write_tga_with_rle = 1;
+
 static void writefv(FILE *f, const char *fmt, va_list v)
 {
    while (*fmt) {
@@ -247,15 +249,20 @@ int stbi_write_tga(char const *filename, int x, int y, int comp, const void *dat
 {
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
-   int format = colorbytes < 2 ? 11 : 10; // 3 color channels (RGB/RGBA) = 10, 1 color channel (Y/YA) = 11
+   int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
    FILE *f;
+
+   if (!stbi__write_tga_with_rle) {
+      return outfile(filename, -1, -1, x, y, comp, 0, (void *) data, has_alpha, 0,
+         "111 221 2222 11", 0, 0, format, 0, 0, 0, 0, 0, x, y, (colorbytes + has_alpha) * 8, has_alpha * 8);
+   }
 
    if (y < 0 || x < 0) return 0;
    f = fopen(filename, "wb");
    if (f) {
       int i,j,k;
 
-      writef(f, "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, 24+8*has_alpha, 8*has_alpha);
+      writef(f, "111 221 2222 11", 0,0,format+8, 0,0,0, 0,0,x,y, (colorbytes + has_alpha) * 8, has_alpha * 8);
 
       for (j = y - 1; j >= 0; --j) {
          const unsigned char *row = (unsigned char *) data + j * x * comp;
