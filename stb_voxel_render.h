@@ -3291,7 +3291,8 @@ static void stbvox_make_mesh_for_column(stbvox_mesh_maker *mm, int x, int y, int
       int z;
       for (z=z0; z < mm->z1; ++z) {
          if (bt[z] && ( !bt[z+ns_off] || !STBVOX_GET_GEO(geo[z+ns_off]) || !bt[z-ns_off] || !STBVOX_GET_GEO(geo[z-ns_off])
-                      || !bt[z+ew_off] || !STBVOX_GET_GEO(geo[z+ew_off]) || !bt[z-ew_off] || !STBVOX_GET_GEO(geo[z-ew_off])))
+                      || !bt[z+ew_off] || !STBVOX_GET_GEO(geo[z+ew_off]) || !bt[z-ew_off] || !STBVOX_GET_GEO(geo[z-ew_off])
+                      || !bt[z-1] || !STBVOX_GET_GEO(geo[z-1]) || !bt[z+1] || !STBVOX_GET_GEO(geo[z+1])))
          {  // TODO check up and down
             pos.z = z;
             stbvox_make_mesh_for_block_with_geo(mm, pos, v_off+z);
