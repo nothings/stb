@@ -9,7 +9,7 @@ library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **stb_vorbis.c** | 1.05 | audio | 5445 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **stb_image.h** | 2.06 | graphics | 6437 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**stb_truetype.h** | 1.05 | graphics | 2632 | parse, decode, and rasterize characters from truetype fonts
+**stb_truetype.h** | 1.06 | graphics | 2632 | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | 0.98 | graphics | 730 | image writing to disk: PNG, TGA, BMP
 **stb_image_resize.h** | 0.90 | graphics | 2585 | resize images larger/smaller with good quality
 **stb_rect_pack.h** | 0.06 | graphics | 560 | simple 2D rectangle packer with decent quality
