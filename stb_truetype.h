@@ -952,7 +952,7 @@ int stbtt_GetFontOffsetForIndex(const unsigned char *font_collection, int index)
          stbtt_int32 n = ttLONG(font_collection+8);
          if (index >= n)
             return -1;
-         return ttULONG(font_collection+12+index*14);
+         return ttULONG(font_collection+12+index*4);
       }
    }
    return -1;
