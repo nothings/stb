@@ -88,6 +88,7 @@ void print_string(float x, float y, char *text, float r, float g, float b)
 #define INCLUDE_STB_EASY_FONT_H
 
 #include <stdlib.h>
+#include <math.h>
 
 struct {
     unsigned char advance;
