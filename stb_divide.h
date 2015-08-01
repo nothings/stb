@@ -75,6 +75,12 @@
 // by the euclidean division operator we define, so it's possibly not
 // always true. If any such platform turns up, we can add more cases.
 // (Possibly only stb_div_trunc currently relies on property (b).)
+//
+// LICENSE
+//
+//   This software is in the public domain. Where that dedication is not
+//   recognized, you are granted a perpetual, irrevocable license to copy,
+//   distribute, and modify this file as you see fit.
 
 
 #ifndef INCLUDE_STB_DIVIDE_H
