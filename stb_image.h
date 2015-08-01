@@ -1,5 +1,4 @@
 /* stb_image - v2.06 - public domain image loader - http://nothings.org/stb_image.h
-                                     no warranty implied; use at your own risk
 
    Do this:
       #define STB_IMAGE_IMPLEMENTATION
@@ -204,10 +203,11 @@
                                                  Joseph Thomson
                                                  Phil Jordan
 
-License:
-   This software is in the public domain. Where that dedication is not
-   recognized, you are granted a perpetual, irrevocable license to copy
-   and modify this file however you want.
+LICENSE
+
+This software is in the public domain. Where that dedication is not
+recognized, you are granted a perpetual, irrevocable license to copy,
+distribute, and modify this file as you see fit.
 
 */
 
