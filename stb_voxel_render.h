@@ -2084,7 +2084,7 @@ stbvox_mesh_face stbvox_compute_mesh_face_value(stbvox_mesh_maker *mm, stbvox_ro
                face_data.tex1 = rep1;
          }
          if (mm->input.overlay_tex2) {
-            unsigned char rep2 = mm->input.overlay_tex1[over][over_face];
+            unsigned char rep2 = mm->input.overlay_tex2[over][over_face];
             if (rep2)
                face_data.tex2 = rep2;
          }
