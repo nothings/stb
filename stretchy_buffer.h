@@ -161,6 +161,12 @@
 //    The details are trivial and implementation is straightforward;
 //    the main trick is in realizing in the first place that it's
 //    possible to do this in a generic, type-safe way in C.
+//
+// LICENSE
+//
+//   This software is in the public domain. Where that dedication is not
+//   recognized, you are granted a perpetual, irrevocable license to copy,
+//   distribute, and modify this file as you see fit.
 
 #ifndef STB_STRETCHY_BUFFER_H_INCLUDED
 #define STB_STRETCHY_BUFFER_H_INCLUDED
