@@ -210,6 +210,13 @@
 //   stb_voxel_render   20-byte quads   2015/01
 //   zmc engine         32-byte quads   2013/12
 //   zmc engine         96-byte quads   2011/10
+//
+//
+// LICENSE
+//
+//   This software is in the public domain. Where that dedication is not
+//   recognized, you are granted a perpetual, irrevocable license to copy,
+//   distribute, and modify this file as you see fit.
 
 #ifndef INCLUDE_STB_VOXEL_RENDER_H
 #define INCLUDE_STB_VOXEL_RENDER_H
