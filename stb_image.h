@@ -1,4 +1,4 @@
-/* stb_image - v2.03 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.06 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -143,6 +143,9 @@
 
 
    Latest revision history:
+      2.06  (2015-04-19) fix bug where PSD returns wrong '*comp' value
+      2.05  (2015-04-19) fix bug in progressive JPEG handling, fix warning
+      2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
       2.03  (2015-04-12) additional corruption checking
                          stbi_set_flip_vertically_on_load
                          fix NEON support; fix mingw support
@@ -159,8 +162,6 @@
       1.47  (2014-12-14) 1/2/4-bit PNG support (both grayscale and paletted)
                          optimize PNG
                          fix bug in interlaced PNG with user-specified channel count
-      1.46  (2014-08-26) fix broken tRNS chunk in non-paletted PNG
-      1.45  (2014-08-16) workaround MSVC-ARM internal compiler error by wrapping malloc
 
    See end of file for full revision history.
 
@@ -633,11 +634,14 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #endif
 
 // x86/x64 detection
-#if defined(__x86_64__) || defined(_M_X64) || defined(__i386) || defined(_M_IX86)
+#if defined(__x86_64__) || defined(_M_X64)
+#define STBI__X64_TARGET
+#elif defined(__i386) || defined(_M_IX86)
 #define STBI__X86_TARGET
 #endif
 
-#if defined(__GNUC__) && defined(STBI__X86_TARGET) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
+#if defined(__GNUC__) && (defined(STBI__X86_TARGET) || defined(STBI__X64_TARGET)) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
+// NOTE: not clear do we actually need this for the 64-bit path?
 // gcc doesn't support sse2 intrinsics unless you compile with -msse2,
 // (but compiling with -msse2 allows the compiler to use SSE2 everywhere;
 // this is just broken and gcc are jerks for not fixing it properly
@@ -646,6 +650,8 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #endif
 
 #if defined(__MINGW32__) && defined(STBI__X86_TARGET) && !defined(STBI_MINGW_ENABLE_SSE2) && !defined(STBI_NO_SIMD)
+// Note that __MINGW32__ doesn't actually mean 32-bit, so we have to avoid STBI__X64_TARGET
+//
 // 32-bit MinGW wants ESP to be 16-byte aligned, but this is not in the
 // Windows ABI and VC++ as well as Windows DLLs don't maintain that invariant.
 // As a result, enabling SSE2 on 32-bit MinGW is dangerous when not
@@ -1640,7 +1646,7 @@ stbi_inline static int stbi__extend_receive(stbi__jpeg *j, int n)
 
    sgn = (stbi__int32)j->code_buffer >> 31; // sign bit is always in MSB
    k = stbi_lrot(j->code_buffer, n);
-   STBI_ASSERT(n >= 0 && n < sizeof(stbi__bmask)/sizeof(*stbi__bmask));
+   STBI_ASSERT(n >= 0 && n < (int) (sizeof(stbi__bmask)/sizeof(*stbi__bmask)));
    j->code_buffer = k & ~stbi__bmask[n];
    k &= stbi__bmask[n];
    j->code_bits -= n;
@@ -1846,8 +1852,11 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
                   if (r)
                      j->eob_run += stbi__jpeg_get_bits(j, r);
                   r = 64; // force end of block
-               } else
-                  r = 16; // r=15 is the code for 16 0s
+               } else {
+                  // r=15 s=0 should write 16 0s, so we just do
+                  // a run of 15 0s and then write s (which is 0),
+                  // so we don't have to do anything special here
+               }
             } else {
                if (s != 1) return stbi__err("bad huffman code", "Corrupt JPEG");
                // sign bit
@@ -1859,7 +1868,7 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
 
             // advance by r
             while (k <= j->spec_end) {
-               short *p = &data[stbi__jpeg_dezigzag[k]];
+               short *p = &data[stbi__jpeg_dezigzag[k++]];
                if (*p != 0) {
                   if (stbi__jpeg_get_bit(j))
                      if ((*p & bit)==0) {
@@ -1868,15 +1877,12 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
                         else
                            *p -= bit;
                      }
-                  ++k;
                } else {
                   if (r == 0) {
-                     if (s)
-                        data[stbi__jpeg_dezigzag[k++]] = (short) s;
+                     *p = (short) s;
                      break;
                   }
                   --r;
-                  ++k;
                }
             }
          } while (k <= j->spec_end);
@@ -5134,7 +5140,8 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
          p = out+channel;
          if (channel >= channelCount) {
             // Fill this channel with default data.
-            for (i = 0; i < pixelCount; i++) *p = (channel == 3 ? 255 : 0), p += 4;
+            for (i = 0; i < pixelCount; i++, p += 4)
+               *p = (channel == 3 ? 255 : 0);
          } else {
             // Read the RLE data.
             count = 0;
@@ -5180,11 +5187,12 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
          p = out + channel;
          if (channel > channelCount) {
             // Fill this channel with default data.
-            for (i = 0; i < pixelCount; i++) *p = channel == 3 ? 255 : 0, p += 4;
+            for (i = 0; i < pixelCount; i++, p += 4)
+               *p = channel == 3 ? 255 : 0;
          } else {
             // Read the data.
-            for (i = 0; i < pixelCount; i++)
-               *p = stbi__get8(s), p += 4;
+            for (i = 0; i < pixelCount; i++, p += 4)
+               *p = stbi__get8(s);
          }
       }
    }
@@ -5194,7 +5202,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
       if (out == NULL) return out; // stbi__convert_format frees input on failure
    }
 
-   if (comp) *comp = channelCount;
+   if (comp) *comp = 4;
    *y = h;
    *x = w;
 
@@ -6287,6 +6295,9 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.06  (2015-04-19) fix bug where PSD returns wrong '*comp' value
+      2.05  (2015-04-19) fix bug in progressive JPEG handling, fix warning
+      2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
       2.03  (2015-04-12) extra corruption checking (mmozeiko)
                          stbi_set_flip_vertically_on_load (nguillemot)
                          fix NEON support; fix mingw support
