@@ -1,5 +1,4 @@
 /* stb.h - v2.24 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
-          no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
    for getting stuff done in C/C++.
@@ -166,6 +165,13 @@ Version History
           (stb_array), (stb_arena)
 
 Parenthesized items have since been removed.
+
+LICENSE
+
+This software is in the public domain. Where that dedication is not
+recognized, you are granted a perpetual, irrevocable license to copy,
+distribute, and modify this file as you see fit.
+
 */
 
 #ifndef STB__INCLUDE_STB_H

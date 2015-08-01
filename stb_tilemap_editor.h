@@ -1,5 +1,5 @@
 // stb_tilemap_editor.h - v0.35 - Sean Barrett - http://nothings.org/stb
-// placed in the public domain - not copyrighted - first released 2014-09
+// first released 2014-09
 //
 // Embeddable tilemap editor for C/C++
 //
@@ -313,9 +313,9 @@
 //
 // LICENSE
 //
-//   This software has been placed in the public domain by its author.
-//   Where that dedication is not recognized, you are granted a perpetual,
-//   irrevocable license to copy and modify this file as you see fit.
+//   This software is in the public domain. Where that dedication is not
+//   recognized, you are granted a perpetual, irrevocable license to copy,
+//   distribute, and modify this file as you see fit.
 
 
 

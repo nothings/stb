@@ -4,8 +4,11 @@
 // Written by Sean Barrett in 2007, last updated in 2014
 // Sponsored by RAD Game Tools.
 //
-// Placed in the public domain April 2007 by the author: no copyright
-// is claimed, and you may use it for any purpose you like.
+// LICENSE
+//
+//   This software is in the public domain. Where that dedication is not
+//   recognized, you are granted a perpetual, irrevocable license to copy,
+//   distribute, and modify this file as you see fit.
 //
 // No warranty for any purpose is expressed or implied by the author (nor
 // by RAD Game Tools). Report bugs and send enhancements to the author.
