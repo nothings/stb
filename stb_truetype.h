@@ -105,7 +105,7 @@
 //           #include "stb_rect_pack.h"           -- optional, but you really want it
 //           stbtt_PackBegin()
 //           stbtt_PackSetOversample()            -- for improved quality on small fonts
-//           stbtt_PackFontRanges()
+//           stbtt_PackFontRanges()               -- pack and renders
 //           stbtt_PackEnd()
 //           stbtt_GetPackedQuad()
 //
@@ -525,6 +525,10 @@ typedef struct
 } stbtt_packedchar;
 
 typedef struct stbtt_pack_context stbtt_pack_context;
+typedef struct stbtt_fontinfo stbtt_fontinfo;
+#ifndef STB_RECT_PACK_VERSION
+typedef struct stbrp_rect stbrp_rect;
+#endif
 
 STBTT_DEF int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int width, int height, int stride_in_bytes, int padding, void *alloc_context);
 // Initializes a packing context stored in the passed-in stbtt_pack_context.
@@ -570,6 +574,12 @@ STBTT_DEF int  stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *font
 // ranges. This will usually create a better-packed bitmap than multiple
 // calls to stbtt_PackFontRange.
 
+STBTT_DEF int  stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects);
+STBTT_DEF int  stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects);
+// Those functions are called by stbtt_PackFontRanges(). If you want to
+// pack multiple fonts or custom data into a same texture, you may copy
+// the contents of stbtt_PackFontRanges() and create a custom version 
+// using those functions.
 
 STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h_oversample, unsigned int v_oversample);
 // Oversampling a font increases the quality by allowing higher-quality subpixel
@@ -2572,11 +2582,11 @@ typedef struct
    unsigned char x;
 } stbrp_node;
 
-typedef struct
+struct stbrp_rect
 {
    stbrp_coord x,y;
    int id,w,h,was_packed;
-} stbrp_rect;
+};
 
 static void stbrp_init_target(stbrp_context *con, int pw, int ph, stbrp_node *nodes, int num_nodes)
 {
@@ -2643,7 +2653,8 @@ STBTT_DEF int stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, in
 
    stbrp_init_target(context, pw-padding, ph-padding, nodes, num_nodes);
 
-   STBTT_memset(pixels, 0, pw*ph); // background of 0 around pixels
+   if (pixels)
+      STBTT_memset(pixels, 0, pw*ph); // background of 0 around pixels
 
    return 1;
 }
@@ -2786,63 +2797,51 @@ static float stbtt__oversample_shift(int oversample)
    return (float)-(oversample - 1) / (2.0f * (float)oversample);
 }
 
-STBTT_DEF int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges)
+// rects array must be big enough to accommodate all characters in the given ranges
+STBTT_DEF int stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects)
 {
-   stbtt_fontinfo info;
-   float recip_h = 1.0f / spc->h_oversample;
-   float recip_v = 1.0f / spc->v_oversample;
-   float sub_x = stbtt__oversample_shift(spc->h_oversample);
-   float sub_y = stbtt__oversample_shift(spc->v_oversample);
-   int i,j,k,n, return_value = 1;
-   stbrp_context *context = (stbrp_context *) spc->pack_info;
-   stbrp_rect    *rects;
+   int i,j,k;
 
-   // flag all characters as NOT packed
-   for (i=0; i < num_ranges; ++i)
-      for (j=0; j < ranges[i].num_chars_in_range; ++j)
-         ranges[i].chardata_for_range[j].x0 =
-         ranges[i].chardata_for_range[j].y0 =
-         ranges[i].chardata_for_range[j].x1 =
-         ranges[i].chardata_for_range[j].y1 = 0;
-
-   n = 0;
-   for (i=0; i < num_ranges; ++i)
-      n += ranges[i].num_chars_in_range;
-         
-   rects = (stbrp_rect *) STBTT_malloc(sizeof(*rects) * n, spc->user_allocator_context);
-   if (rects == NULL)
-      return 0;
-
-   stbtt_InitFont(&info, fontdata, stbtt_GetFontOffsetForIndex(fontdata,font_index));
    k=0;
    for (i=0; i < num_ranges; ++i) {
       float fh = ranges[i].font_size;
-      float scale = fh > 0 ? stbtt_ScaleForPixelHeight(&info, fh) : stbtt_ScaleForMappingEmToPixels(&info, -fh);
+      float scale = fh > 0 ? stbtt_ScaleForPixelHeight(info, fh) : stbtt_ScaleForMappingEmToPixels(info, -fh);
       for (j=0; j < ranges[i].num_chars_in_range; ++j) {
          int x0,y0,x1,y1;
-         stbtt_GetCodepointBitmapBoxSubpixel(&info, ranges[i].first_unicode_char_in_range + j,
-                                              scale * spc->h_oversample,
-                                              scale * spc->v_oversample,
-                                              0,0,
-                                              &x0,&y0,&x1,&y1);
+		 int glyph = stbtt_FindGlyphIndex(info,ranges[i].first_unicode_char_in_range + j);
+         stbtt_GetGlyphBitmapBoxSubpixel(info,glyph,
+                                         scale * spc->h_oversample,
+                                         scale * spc->v_oversample,
+                                         0,0,
+                                         &x0,&y0,&x1,&y1);
          rects[k].w = (stbrp_coord) (x1-x0 + spc->padding + spc->h_oversample-1);
          rects[k].h = (stbrp_coord) (y1-y0 + spc->padding + spc->v_oversample-1);
          ++k;
       }
    }
 
-   stbrp_pack_rects(context, rects, k);
+   return k;
+}
+
+// rects array must be big enough to accommodate all characters in the given ranges
+STBTT_DEF int stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects)
+{
+   float recip_h = 1.0f / spc->h_oversample;
+   float recip_v = 1.0f / spc->v_oversample;
+   float sub_x = stbtt__oversample_shift(spc->h_oversample);
+   float sub_y = stbtt__oversample_shift(spc->v_oversample);
+   int i,j,k, return_value = 1;
 
    k = 0;
    for (i=0; i < num_ranges; ++i) {
       float fh = ranges[i].font_size;
-      float scale = fh > 0 ? stbtt_ScaleForPixelHeight(&info, fh) : stbtt_ScaleForMappingEmToPixels(&info, -fh);
+      float scale = fh > 0 ? stbtt_ScaleForPixelHeight(info, fh) : stbtt_ScaleForMappingEmToPixels(info, -fh);
       for (j=0; j < ranges[i].num_chars_in_range; ++j) {
          stbrp_rect *r = &rects[k];
          if (r->was_packed) {
             stbtt_packedchar *bc = &ranges[i].chardata_for_range[j];
             int advance, lsb, x0,y0,x1,y1;
-            int glyph = stbtt_FindGlyphIndex(&info, ranges[i].first_unicode_char_in_range + j);
+            int glyph = stbtt_FindGlyphIndex(info, ranges[i].first_unicode_char_in_range + j);
             stbrp_coord pad = (stbrp_coord) spc->padding;
 
             // pad on left and top
@@ -2850,12 +2849,12 @@ STBTT_DEF int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontd
             r->y += pad;
             r->w -= pad;
             r->h -= pad;
-            stbtt_GetGlyphHMetrics(&info, glyph, &advance, &lsb);
-            stbtt_GetGlyphBitmapBox(&info, glyph,
+            stbtt_GetGlyphHMetrics(info, glyph, &advance, &lsb);
+            stbtt_GetGlyphBitmapBox(info, glyph,
                                     scale * spc->h_oversample,
                                     scale * spc->v_oversample,
                                     &x0,&y0,&x1,&y1);
-            stbtt_MakeGlyphBitmapSubpixel(&info,
+            stbtt_MakeGlyphBitmapSubpixel(info,
                                           spc->pixels + r->x + r->y*spc->stride_in_bytes,
                                           r->w - spc->h_oversample+1,
                                           r->h - spc->v_oversample+1,
@@ -2891,6 +2890,40 @@ STBTT_DEF int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontd
          ++k;
       }
    }
+
+   return return_value;
+}
+
+STBTT_DEF int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges)
+{
+   stbtt_fontinfo info;
+   int i,j,n, return_value = 1;
+   stbrp_context *context = (stbrp_context *) spc->pack_info;
+   stbrp_rect    *rects;
+
+   // flag all characters as NOT packed
+   for (i=0; i < num_ranges; ++i)
+      for (j=0; j < ranges[i].num_chars_in_range; ++j)
+         ranges[i].chardata_for_range[j].x0 =
+         ranges[i].chardata_for_range[j].y0 =
+         ranges[i].chardata_for_range[j].x1 =
+         ranges[i].chardata_for_range[j].y1 = 0;
+
+   n = 0;
+   for (i=0; i < num_ranges; ++i)
+      n += ranges[i].num_chars_in_range;
+         
+   rects = (stbrp_rect *) STBTT_malloc(sizeof(*rects) * n, spc->user_allocator_context);
+   if (rects == NULL)
+      return 0;
+
+   stbtt_InitFont(&info, fontdata, stbtt_GetFontOffsetForIndex(fontdata,font_index));
+
+   n = stbtt_PackFontRangesGatherRects(spc, &info, ranges, num_ranges, rects);
+
+   stbrp_pack_rects(context, rects, n);
+  
+   return_value = stbtt_PackFontRangesRenderIntoRects(spc, &info, ranges, num_ranges, rects);
 
    STBTT_free(rects, spc->user_allocator_context);
    return return_value;
