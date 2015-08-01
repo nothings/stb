@@ -1,6 +1,5 @@
 /* stb_image_write - v0.98 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010
-                            no warranty implied; use at your own risk
 
 
    Before #including,
@@ -75,6 +74,12 @@ CREDITS:
       Tim Kelsey
    bugfixes:
       github:Chribba
+      
+LICENSE
+
+This software is in the public domain. Where that dedication is not
+recognized, you are granted a perpetual, irrevocable license to copy,
+distribute, and modify this file as you see fit.      
 */
 
 #ifndef INCLUDE_STB_IMAGE_WRITE_H
