@@ -1,6 +1,13 @@
 // stb_perlin.h - v0.2 - perlin noise
 // public domain single-file C implementation by Sean Barrett
 //
+// LICENSE
+//
+//   This software is in the public domain. Where that dedication is not
+//   recognized, you are granted a perpetual, irrevocable license to copy,
+//   distribute, and modify this file as you see fit.
+//
+//
 // to create the implementation,
 //     #define STB_PERLIN_IMPLEMENTATION
 // in *one* C/CPP file that includes this file.
