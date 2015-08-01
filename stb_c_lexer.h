@@ -28,6 +28,12 @@
 //     - haven't implemented octal/hex character constants
 //     - haven't implemented support for unicode CLEX_char
 //     - need to expand error reporting so you don't just get "CLEX_parse_error"
+//
+// LICENSE
+//
+//   This software is in the public domain. Where that dedication is not
+//   recognized, you are granted a perpetual, irrevocable license to copy,
+//   distribute, and modify this file as you see fit.
 
 #ifndef STB_C_LEXER_DEFINITIONS
 // to change the default parsing rules, copy the following lines
