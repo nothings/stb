@@ -50,6 +50,7 @@
 //                     variant PackFontRanges to pack and render in separate phases;
 //                     fix stbtt_GetFontOFfsetForIndex (never worked for non-0 input?);
 //                     fixed an assert() bug in the new rasterizer
+//                     replace assert() with STBTT_assert() in new rasterizer
 //   1.06 (2015-07-14) performance improvements (~35% faster on x86 and x64 on test machine)
 //                     also more precise AA rasterizer, except if shapes overlap
 //                     remove need for STBTT_sort
@@ -514,7 +515,7 @@ STBTT_DEF int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, i
 // Future calls using this context will pack characters into the bitmap passed
 // in here: a 1-channel bitmap that is weight x height. stride_in_bytes is
 // the distance from one row to the next (or 0 to mean they are packed tightly
-// together). "padding" is // the amount of padding to leave between each
+// together). "padding" is the amount of padding to leave between each
 // character (normally you want '1' for bitmaps you'll use as textures with
 // bilinear filtering).
 //
@@ -553,20 +554,8 @@ typedef struct
 STBTT_DEF int  stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges);
 // Creates character bitmaps from multiple ranges of characters stored in
 // ranges. This will usually create a better-packed bitmap than multiple
-// calls to stbtt_PackFontRange.
-
-STBTT_DEF int  stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects);
-STBTT_DEF void stbtt_PackFontRangesPackRects(stbtt_pack_context *spc, stbrp_rect *rects, int num_rects);
-STBTT_DEF int  stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects);
-// Calling these functions in sequence is roughly equivalent to calling
-// stbtt_PackFontRanges(). If you more control over the packing of multiple
-// fonts, or if you want to pack custom data into a font texture, take a look
-// at the source to of stbtt_PackFontRanges() and create a custom version 
-// using these functions, e.g. call GatherRects multiple times,
-// building up a single array of rects, then call PackRects once,
-// then call RenderIntoRects repeatedly. This may result in a
-// better packing than calling PackFontRanges multiple times
-// (or it may not).
+// calls to stbtt_PackFontRange. Note that you can call this multiple
+// times within a single PackBegin/PackEnd.
 
 STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h_oversample, unsigned int v_oversample);
 // Oversampling a font increases the quality by allowing higher-quality subpixel
@@ -589,6 +578,19 @@ STBTT_DEF void stbtt_GetPackedQuad(stbtt_packedchar *chardata, int pw, int ph,  
                                float *xpos, float *ypos,   // pointers to current position in screen pixel space
                                stbtt_aligned_quad *q,      // output: quad to draw
                                int align_to_integer);
+
+STBTT_DEF int  stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects);
+STBTT_DEF void stbtt_PackFontRangesPackRects(stbtt_pack_context *spc, stbrp_rect *rects, int num_rects);
+STBTT_DEF int  stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects);
+// Calling these functions in sequence is roughly equivalent to calling
+// stbtt_PackFontRanges(). If you more control over the packing of multiple
+// fonts, or if you want to pack custom data into a font texture, take a look
+// at the source to of stbtt_PackFontRanges() and create a custom version 
+// using these functions, e.g. call GatherRects multiple times,
+// building up a single array of rects, then call PackRects once,
+// then call RenderIntoRects repeatedly. This may result in a
+// better packing than calling PackFontRanges multiple times
+// (or it may not).
 
 // this is an opaque structure that you shouldn't mess with which holds
 // all the context needed from PackBegin to PackEnd.
@@ -1846,8 +1848,8 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
 static void stbtt__handle_clipped_edge(float *scanline, int x, stbtt__active_edge *e, float x0, float y0, float x1, float y1)
 {
    if (y0 == y1) return;
-   assert(y0 < y1);
-   assert(e->sy <= e->ey);
+   STBTT_assert(y0 < y1);
+   STBTT_assert(e->sy <= e->ey);
    if (y0 > e->ey) return;
    if (y1 < e->sy) return;
    if (y0 < e->sy) {
@@ -1860,22 +1862,22 @@ static void stbtt__handle_clipped_edge(float *scanline, int x, stbtt__active_edg
    }
 
    if (x0 == x)
-      assert(x1 <= x+1);
+      STBTT_assert(x1 <= x+1);
    else if (x0 == x+1)
-      assert(x1 >= x);
+      STBTT_assert(x1 >= x);
    else if (x0 <= x)
-      assert(x1 <= x);
+      STBTT_assert(x1 <= x);
    else if (x0 >= x+1)
-      assert(x1 >= x+1);
+      STBTT_assert(x1 >= x+1);
    else
-      assert(x1 >= x && x1 <= x+1);
+      STBTT_assert(x1 >= x && x1 <= x+1);
 
    if (x0 <= x && x1 <= x)
       scanline[x] += e->direction * (y1-y0);
    else if (x0 >= x+1 && x1 >= x+1)
       ;
    else {
-      assert(x0 >= x && x0 <= x+1 && x1 >= x && x1 <= x+1);
+      STBTT_assert(x0 >= x && x0 <= x+1 && x1 >= x && x1 <= x+1);
       scanline[x] += e->direction * (y1-y0) * (1-((x0-x)+(x1-x))/2); // coverage = 1 - average x position
    }
 }
@@ -1888,7 +1890,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
       // brute force every pixel
 
       // compute intersection points with top & bottom
-      assert(e->ey >= y_top);
+      STBTT_assert(e->ey >= y_top);
 
       if (e->fdx == 0) {
          float x0 = e->fx;
@@ -1907,7 +1909,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
          float x_top, x_bottom;
          float y0,y1;
          float dy = e->fdy;
-         assert(e->sy <= y_bottom && e->ey >= y_top);
+         STBTT_assert(e->sy <= y_bottom && e->ey >= y_top);
 
          // compute endpoints of line segment clipped to this scanline (if the
          // line segment starts on this scanline. x0 is the intersection of the
@@ -1935,7 +1937,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                // simple case, only spans one pixel
                int x = (int) x_top;
                height = y1 - y0;
-               assert(x >= 0 && x < len);
+               STBTT_assert(x >= 0 && x < len);
                scanline[x] += e->direction * (1-((x_top - x) + (x_bottom-x))/2)  * height;
                scanline_fill[x] += e->direction * height; // everything right of this pixel is filled
             } else {
@@ -1972,7 +1974,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                }
                y_crossing += dy * (x2 - (x1+1));
 
-               assert(fabs(area) <= 1.01f);
+               STBTT_assert(fabs(area) <= 1.01f);
 
                scanline[x2] += area + sign * (1-((x2-x2)+(x_bottom-x2))/2) * (y1-y_crossing);
 
@@ -2086,7 +2088,7 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
       // insert all edges that start before the bottom of this scanline
       while (e->y0 <= scan_y_bottom) {
          stbtt__active_edge *z = stbtt__new_active(&hh, e, off_x, scan_y_top, userdata);
-         assert(z->ey >= scan_y_top);
+         STBTT_assert(z->ey >= scan_y_top);
          // insert at front
          z->next = active;
          active = z;
@@ -2933,7 +2935,7 @@ STBTT_DEF int stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, stbtt
 
 STBTT_DEF void stbtt_PackFontRangesPackRects(stbtt_pack_context *spc, stbrp_rect *rects, int num_rects)
 {
-   stbrp_pack_rects(spc->pack_info, rects, num_rects);
+   stbrp_pack_rects((stbrp_context *) spc->pack_info, rects, num_rects);
 }
 
 STBTT_DEF int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges)
@@ -3180,6 +3182,7 @@ STBTT_DEF int stbtt_FindMatchingFont(const unsigned char *font_collection, const
 //                     allow PackFontRanges to pack and render in separate phases;
 //                     fix stbtt_GetFontOFfsetForIndex (never worked for non-0 input?);
 //                     fixed an assert() bug in the new rasterizer
+//                     replace assert() with STBTT_assert() in new rasterizer
 //   1.06 (2015-07-14) performance improvements (~35% faster on x86 and x64 on test machine)
 //                     also more precise AA rasterizer, except if shapes overlap
 //                     remove need for STBTT_sort
