@@ -1,4 +1,5 @@
 /* stb_image - v2.06 - public domain image loader - http://nothings.org/stb_image.h
+                                     no warranty implied; use at your own risk
 
    Do this:
       #define STB_IMAGE_IMPLEMENTATION
