@@ -1,4 +1,4 @@
-// stb_leakcheck.h - v0.1 - quick & dirty malloc leak-checking - public domain
+// stb_leakcheck.h - v0.2 - quick & dirty malloc leak-checking - public domain
 
 #ifdef STB_LEAKCHECK_IMPLEMENTATION
 #undef STB_LEAKCHECK_IMPLEMENTATION // don't implenment more than once
@@ -27,7 +27,7 @@ static stb_leakcheck_malloc_info *mi_head;
 
 void *stb_leakcheck_malloc(size_t sz, char *file, int line)
 {
-   stb_leakcheck_malloc_info *mi = malloc(sz + sizeof(*mi));
+   stb_leakcheck_malloc_info *mi = (stb_leakcheck_malloc_info *) malloc(sz + sizeof(*mi));
    if (mi == NULL) return mi;
    mi->file = file;
    mi->line = line;

@@ -1400,12 +1400,18 @@ int stb_is_pow2(unsigned int n)
 #pragma warning(disable: 4035)  // disable warning about no return value
 int stb_log2_floor(unsigned int n)
 {
+   #if _MSC_VER > 1700
+   DWORD i;
+   _BitScanReverse(&i, n);
+   return i != 0 ? i : -1;
+   #else
    __asm {
       bsr eax,n
       jnz done
       mov eax,-1
    }
    done:;
+   #endif
 }
 #pragma warning(pop)
 #else
@@ -5249,7 +5255,7 @@ int stb_fullpath(char *abs, int abs_size, char *rel)
    #ifdef _MSC_VER
    return _fullpath(abs, rel, abs_size) != NULL;
    #else
-   if (abs[0] == '/' || abs[0] == '~') {
+   if (rel[0] == '/' || rel[0] == '~') {
       if ((int) strlen(rel) >= abs_size)
          return 0;
       strcpy(abs,rel);

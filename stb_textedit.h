@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.5  - public domain - Sean Barrett
+// stb_textedit.h - v1.6  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -24,12 +24,14 @@
 //
 // DEPENDENCIES
 //
-// Uses the C runtime function 'memmove'. Uses no other functions.
-// Performs no runtime allocations.
+// Uses the C runtime function 'memmove', which you can override
+// by defining STB_TEXTEDIT_memmove before the implementation.
+// Uses no other functions. Performs no runtime allocations.
 //
 //
 // VERSION HISTORY
 //
+//   1.6  (2015-04-15) allow STB_TEXTEDIT_memmove
 //   1.5  (2014-09-10) add support for secondary keys for OS X
 //   1.4  (2014-08-17) fix signed/unsigned warnings
 //   1.3  (2014-06-19) fix mouse clicking to round to nearest char boundary
@@ -45,6 +47,7 @@
 //   Ulf Winklemann: move-by-word in 1.1
 //   Scott Graham: mouse selection bugfix in 1.3
 //   Fabian Giesen: secondary key inputs in 1.5
+//   Martins Mozeiko: STB_TEXTEDIT_memmove
 //
 // USAGE
 //
@@ -358,7 +361,10 @@ typedef struct
 // included just the "header" portion
 #ifdef STB_TEXTEDIT_IMPLEMENTATION
 
-#include <string.h> // memmove
+#ifndef STB_TEXTEDIT_memmove
+#include <string.h>
+#define STB_TEXTEDIT_memmove memmove
+#endif
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -1038,13 +1044,13 @@ static void stb_textedit_discard_undo(StbUndoState *state)
          int n = state->undo_rec[0].insert_length, i;
          // delete n characters from all other records
          state->undo_char_point = state->undo_char_point - (short) n;  // vsnet05
-         memmove(state->undo_char, state->undo_char + n, (size_t) (state->undo_char_point*sizeof(STB_TEXTEDIT_CHARTYPE)));
+         STB_TEXTEDIT_memmove(state->undo_char, state->undo_char + n, (size_t) (state->undo_char_point*sizeof(STB_TEXTEDIT_CHARTYPE)));
          for (i=0; i < state->undo_point; ++i)
             if (state->undo_rec[i].char_storage >= 0)
                state->undo_rec[i].char_storage = state->undo_rec[i].char_storage - (short) n; // vsnet05 // @OPTIMIZE: get rid of char_storage and infer it
       }
       --state->undo_point;
-      memmove(state->undo_rec, state->undo_rec+1, (size_t) (state->undo_point*sizeof(state->undo_rec[0])));
+      STB_TEXTEDIT_memmove(state->undo_rec, state->undo_rec+1, (size_t) (state->undo_point*sizeof(state->undo_rec[0])));
    }
 }
 
@@ -1062,13 +1068,13 @@ static void stb_textedit_discard_redo(StbUndoState *state)
          int n = state->undo_rec[k].insert_length, i;
          // delete n characters from all other records
          state->redo_char_point = state->redo_char_point + (short) n; // vsnet05
-         memmove(state->undo_char + state->redo_char_point, state->undo_char + state->redo_char_point-n, (size_t) ((STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_char_point)*sizeof(STB_TEXTEDIT_CHARTYPE)));
+         STB_TEXTEDIT_memmove(state->undo_char + state->redo_char_point, state->undo_char + state->redo_char_point-n, (size_t) ((STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_char_point)*sizeof(STB_TEXTEDIT_CHARTYPE)));
          for (i=state->redo_point; i < k; ++i)
             if (state->undo_rec[i].char_storage >= 0)
                state->undo_rec[i].char_storage = state->undo_rec[i].char_storage + (short) n; // vsnet05
       }
       ++state->redo_point;
-      memmove(state->undo_rec + state->redo_point-1, state->undo_rec + state->redo_point, (size_t) ((STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_point)*sizeof(state->undo_rec[0])));
+      STB_TEXTEDIT_memmove(state->undo_rec + state->redo_point-1, state->undo_rec + state->redo_point, (size_t) ((STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_point)*sizeof(state->undo_rec[0])));
    }
 }
 

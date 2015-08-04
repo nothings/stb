@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.04 - public domain
+// Ogg Vorbis audio decoder - v1.05 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Written by Sean Barrett in 2007, last updated in 2014
@@ -24,12 +24,13 @@
 //    Casey Muratori     John Bolton         Gargaj
 //    Laurent Gomila     Marc LeBlanc        Ronny Chevalier
 //    Bernhard Wodo      Evan Balster			"alxprd"@github
-//    Tom Beaumont       Ingo Leitgeb
+//    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
 // (If you reported a bug but do not appear in this list, it is because
 // someone else reported the bug before you. There were too many of you to
 // list them all because I was lax about updating for a long time, sorry.)
 //
 // Partial history:
+//    1.05    - 2015/04/19 - don't define __forceinline if it's redundant
 //    1.04    - 2014/08/27 - fix missing const-correct case in API
 //    1.03    - 2014/08/07 - warning fixes
 //    1.02    - 2014/07/09 - declare qsort comparison as explicitly _cdecl in Windows
@@ -553,7 +554,7 @@ enum STBVorbisError
 #define NULL 0
 #endif
 
-#ifndef _MSC_VER
+#if !defined(_MSC_VER) && !(defined(__MINGW32__) && defined(__forceinline))
    #if __GNUC__
       #define __forceinline inline
    #else
@@ -3147,6 +3148,20 @@ static int do_floor(vorb *f, Mapping *map, int i, int n, float *target, YTYPE *f
    return TRUE;
 }
 
+// The meaning of "left" and "right"
+//
+// For a given frame:
+//     we compute samples from 0..n
+//     window_center is n/2
+//     we'll window and mix the samples from left_start to left_end with data from the previous frame
+//     all of the samples from left_end to right_start can be output without mixing; however,
+//        this interval is 0-length except when transitioning between short and long frames
+//     all of the samples from right_start to right_end need to be mixed with the next frame,
+//        which we don't have, so those get saved in a buffer
+//     frame N's right_end-right_start, the number of samples to mix with the next frame,
+//        has to be the same as frame N+1's left_end-left_start (which they are by
+//        construction)
+
 static int vorbis_decode_initial(vorb *f, int *p_left_start, int *p_left_end, int *p_right_start, int *p_right_end, int *mode)
 {
    Mode *m;
@@ -5397,6 +5412,7 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
 #endif // STB_VORBIS_NO_PULLDATA_API
 
 /* Version history
+    1.05    - 2015/04/19 - don't define __forceinline if it's redundant
     1.04    - 2014/08/27 - fix missing const-correct case in API
     1.03    - 2014/08/07 - Warning fixes
     1.02    - 2014/07/09 - Declare qsort compare function _cdecl on windows
