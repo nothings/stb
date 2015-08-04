@@ -5438,8 +5438,8 @@ typedef struct
 typedef struct
 {
    int w,h;
-   stbi_uc *out;                 // output buffer (always 4 components)
-   int flags, bgindex, ratio, transparent, eflags;
+   stbi_uc *out, *old_out;             // output buffer (always 4 components)
+   int flags, bgindex, ratio, transparent, eflags, delay;
    stbi_uc  pal[256][4];
    stbi_uc lpal[256][4];
    stbi__gif_lzw codes[4096];
@@ -5634,17 +5634,18 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
    }
 }
 
-static void stbi__fill_gif_background(stbi__gif *g)
+static void stbi__fill_gif_background(stbi__gif *g, int x0, int y0, int x1, int y1)
 {
-   int i;
+   int x, y;
    stbi_uc *c = g->pal[g->bgindex];
-   // @OPTIMIZE: write a dword at a time
-   for (i = 0; i < g->w * g->h * 4; i += 4) {
-      stbi_uc *p  = &g->out[i];
-      p[0] = c[2];
-      p[1] = c[1];
-      p[2] = c[0];
-      p[3] = c[3];
+   for (y = y0; y < y1; y += 4 * g->w) {
+      for (x = x0; x < x1; x += 4) {
+         stbi_uc *p  = &g->out[y + x];
+         p[0] = c[2];
+         p[1] = c[1];
+         p[2] = c[0];
+         p[3] = 0;
+      }
    }
 }
 
@@ -5652,27 +5653,40 @@ static void stbi__fill_gif_background(stbi__gif *g)
 static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, int req_comp)
 {
    int i;
-   stbi_uc *old_out = 0;
+   stbi_uc *prev_out = 0;
 
-   if (g->out == 0) {
-      if (!stbi__gif_header(s, g, comp,0))     return 0; // stbi__g_failure_reason set by stbi__gif_header
-      g->out = (stbi_uc *) stbi__malloc(4 * g->w * g->h);
-      if (g->out == 0)                      return stbi__errpuc("outofmem", "Out of memory");
-      stbi__fill_gif_background(g);
-   } else {
-      // animated-gif-only path
-      if (((g->eflags & 0x1C) >> 2) == 3) {
-         old_out = g->out;
-         g->out = (stbi_uc *) stbi__malloc(4 * g->w * g->h);
-         if (g->out == 0)                   return stbi__errpuc("outofmem", "Out of memory");
-         memcpy(g->out, old_out, g->w*g->h*4);
-      }
+   if (g->out == 0 && !stbi__gif_header(s, g, comp,0))
+      return 0; // stbi__g_failure_reason set by stbi__gif_header
+
+   prev_out = g->out;
+   g->out = (stbi_uc *) stbi__malloc(4 * g->w * g->h);
+   if (g->out == 0) return stbi__errpuc("outofmem", "Out of memory");
+
+   switch ((g->eflags & 0x1C) >> 2) {
+      case 0: // unspecified (also always used on 1st frame)
+         stbi__fill_gif_background(g, 0, 0, 4 * g->w, 4 * g->w * g->h);
+         break;
+      case 1: // do not dispose
+         if (prev_out) memcpy(g->out, prev_out, 4 * g->w * g->h);
+         g->old_out = prev_out;
+         break;
+      case 2: // dispose to background
+         if (prev_out) memcpy(g->out, prev_out, 4 * g->w * g->h);
+         stbi__fill_gif_background(g, g->start_x, g->start_y, g->max_x, g->max_y);
+         break;
+      case 3: // dispose to previous
+         if (g->old_out) {
+            for (i = g->start_y; i < g->max_y; i += 4 * g->w)
+               memcpy(&g->out[i + g->start_x], &g->old_out[i + g->start_x], g->max_x - g->start_x);
+         }
+         break;
    }
 
    for (;;) {
       switch (stbi__get8(s)) {
          case 0x2C: /* Image Descriptor */
          {
+            int prev_trans = -1;
             stbi__int32 x, y, w, h;
             stbi_uc *o;
 
@@ -5705,10 +5719,10 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
                stbi__gif_parse_colortable(s,g->lpal, 2 << (g->lflags & 7), g->eflags & 0x01 ? g->transparent : -1);
                g->color_table = (stbi_uc *) g->lpal;
             } else if (g->flags & 0x80) {
-               for (i=0; i < 256; ++i)  // @OPTIMIZE: stbi__jpeg_reset only the previous transparent
-                  g->pal[i][3] = 255;
-               if (g->transparent >= 0 && (g->eflags & 0x01))
+               if (g->transparent >= 0 && (g->eflags & 0x01)) {
+                  prev_trans = g->pal[g->transparent][3];
                   g->pal[g->transparent][3] = 0;
+               }
                g->color_table = (stbi_uc *) g->pal;
             } else
                return stbi__errpuc("missing color table", "Corrupt GIF");
@@ -5716,8 +5730,9 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
             o = stbi__process_gif_raster(s, g);
             if (o == NULL) return NULL;
 
-            if (req_comp && req_comp != 4)
-               o = stbi__convert_format(o, 4, req_comp, g->w, g->h);
+            if (prev_trans != -1)
+               g->pal[g->transparent][3] = prev_trans;
+
             return o;
          }
 
@@ -5728,7 +5743,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
                len = stbi__get8(s);
                if (len == 4) {
                   g->eflags = stbi__get8(s);
-                  stbi__get16le(s); // delay
+                  g->delay = stbi__get16le(s);
                   g->transparent = stbi__get8(s);
                } else {
                   stbi__skip(s, len);
@@ -5760,7 +5775,11 @@ static stbi_uc *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int 
    if (u) {
       *x = g.w;
       *y = g.h;
+      if (req_comp && req_comp != 4)
+         u = stbi__convert_format(u, 4, req_comp, g.w, g.h);
    }
+   else if (g.out)
+      STBI_FREE(g.out);
 
    return u;
 }
