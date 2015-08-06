@@ -84,6 +84,10 @@ void print_string(float x, float y, char *text, float r, float g, float b)
 }
 #endif
 
+#ifdef _WIN32
+   #include <math.h>
+#endif
+
 #ifndef INCLUDE_STB_EASY_FONT_H
 #define INCLUDE_STB_EASY_FONT_H
 

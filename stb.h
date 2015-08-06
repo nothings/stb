@@ -186,6 +186,13 @@ Parenthesized items have since been removed.
    #endif
 #endif
 
+#ifdef _WIN32
+   #define _CRT_SECURE_NO_WARNINGS
+   #define _CRT_NONSTDC_NO_DEPRECATE
+   #define _CRT_NON_CONFORMING_SWPRINTFS
+   #include <intrin.h> // _BitScanReverse
+#endif
+
 #include <stdlib.h>     // stdlib could have min/max
 #include <stdio.h>      // need FILE
 #include <string.h>     // stb_define_hash needs memcpy/memset
@@ -1401,7 +1408,7 @@ int stb_is_pow2(unsigned int n)
 int stb_log2_floor(unsigned int n)
 {
    #if _MSC_VER > 1700
-   DWORD i;
+   unsigned long i;
    _BitScanReverse(&i, n);
    return i != 0 ? i : -1;
    #else

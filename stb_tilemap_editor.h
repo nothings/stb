@@ -326,6 +326,12 @@
 #ifndef STB_TILEMAP_INCLUDE_STB_TILEMAP_EDITOR_H
 #define STB_TILEMAP_INCLUDE_STB_TILEMAP_EDITOR_H
 
+#ifdef _WIN32
+  #define _CRT_SECURE_NO_WARNINGS
+  #include <stdlib.h>
+  #include <stdio.h>
+#endif
+
 typedef struct stbte_tilemap stbte_tilemap;
 
 // these are the drawmodes used in STBTE_DRAW_TILE
