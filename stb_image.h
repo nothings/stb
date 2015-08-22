@@ -4627,8 +4627,7 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
                   mg = 0xffu <<  8;
                   mb = 0xffu <<  0;
                   ma = 0xffu << 24;
-                  fake_a = 1; // @TODO: check for cases like alpha value is all 0 and switch it to 255
-                  STBI_NOTUSED(fake_a);
+                  fake_a = 1;
                } else {
                   mr = 31u << 10;
                   mg = 31u <<  5;
@@ -4739,7 +4738,10 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
                out[z+0] = stbi__get8(s);
                z += 3;
                a = (easy == 2 ? stbi__get8(s) : 255);
-               if (target == 4) out[z++] = a;
+               if (target == 4) {
+                  out[z++] = a;
+                  fake_a |= a << 8;
+               }
             }
          } else {
             for (i=0; i < (int) s->img_x; ++i) {
@@ -4754,6 +4756,8 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
          }
          stbi__skip(s, pad);
       }
+      if (target == 4 && (fake_a & 1) && (fake_a & 0xFF00) == 0)
+         for (i=-1, j=4*s->img_x*s->img_y - 4; i < j; out[i += 4] = 255);
    }
    if (flip_vertically) {
       stbi_uc t;
