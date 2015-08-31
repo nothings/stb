@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.05 - public domain
+// Ogg Vorbis audio decoder - v1.06 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Written by Sean Barrett in 2007, last updated in 2014
@@ -35,6 +35,7 @@
 // list them all because I was lax about updating for a long time, sorry.)
 //
 // Partial history:
+//    1.06    - 2015/08/31 - full, correct support for seeking API (Dougall Johnson)
 //    1.05    - 2015/04/19 - don't define __forceinline if it's redundant
 //    1.04    - 2014/08/27 - fix missing const-correct case in API
 //    1.03    - 2014/08/07 - warning fixes
