@@ -36,6 +36,8 @@
 //
 // Partial history:
 //    1.06    - 2015/08/31 - full, correct support for seeking API (Dougall Johnson)
+//                           some crash fixes when out of memory or with corrupt files
+//                           fix some inappropriately signed shifts
 //    1.05    - 2015/04/19 - don't define __forceinline if it's redundant
 //    1.04    - 2014/08/27 - fix missing const-correct case in API
 //    1.03    - 2014/08/07 - warning fixes
@@ -934,7 +936,7 @@ static void crc32_init(void)
    int i,j;
    uint32 s;
    for(i=0; i < 256; i++) {
-      for (s=i<<24, j=0; j < 8; ++j)
+      for (s=(uint32) i << 24, j=0; j < 8; ++j)
          s = (s << 1) ^ (s >= (1U<<31) ? CRC32_POLY : 0);
       crc_table[i] = s;
    }
@@ -1035,7 +1037,7 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
    add_entry(c, 0, k, m++, len[k], values);
    // add all available leaves
    for (i=1; i <= len[k]; ++i)
-      available[i] = 1 << (32-i);
+      available[i] = 1U << (32-i);
    // note that the above code treats the first case specially,
    // but it's really the same as the following code, so they
    // could probably be combined (except the initial code is 0,
@@ -1564,7 +1566,7 @@ static __forceinline void prep_huffman(vorb *f)
          if (f->last_seg && !f->bytes_in_seg) return;
          z = get8_packet_raw(f);
          if (z == EOP) return;
-         f->acc += z << f->valid_bits;
+         f->acc += (unsigned) z << f->valid_bits;
          f->valid_bits += 8;
       } while (f->valid_bits <= 24);
    }
@@ -5383,6 +5385,8 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
 #endif // STB_VORBIS_NO_PULLDATA_API
 
 /* Version history
+    1.06    - 2015/08/31 - full, correct support for seeking API (Dougall Johnson)
+                           some crash fixes when out of memory or with corrupt files
     1.05    - 2015/04/19 - don't define __forceinline if it's redundant
     1.04    - 2014/08/27 - fix missing const-correct case in API
     1.03    - 2014/08/07 - Warning fixes
