@@ -1053,7 +1053,7 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
       // trivial to prove, but it seems true and the assert never
       // fires, so!
       while (z > 0 && !available[z]) --z;
-      if (z == 0) { assert(0); return FALSE; }
+      if (z == 0) { return FALSE; }
       res = available[z];
       available[z] = 0;
       add_entry(c, bit_reverse(res), i, m++, len[i], values);
@@ -3138,7 +3138,8 @@ static int do_floor(vorb *f, Mapping *map, int i, int n, float *target, YTYPE *f
          {
             int hy = finalY[j] * g->floor1_multiplier;
             int hx = g->Xlist[j];
-            draw_line(target, lx,ly, hx,hy, n2);
+            if (lx != hx)
+               draw_line(target, lx,ly, hx,hy, n2);
             lx = hx, ly = hy;
          }
       }
@@ -3430,9 +3431,15 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
       f->current_loc_valid = TRUE;
       f->first_decode = FALSE;
    } else if (f->discard_samples_deferred) {
-      left_start += f->discard_samples_deferred;
-      *p_left = left_start;
-      f->discard_samples_deferred = 0;
+      if (f->discard_samples_deferred >= right_start - left_start) {
+         f->discard_samples_deferred -= (right_start - left_start);
+         left_start = right_start;
+         *p_left = left_start;
+      } else {
+         left_start += f->discard_samples_deferred;
+         *p_left = left_start;
+         f->discard_samples_deferred = 0;
+      }
    } else if (f->previous_length == 0 && f->current_loc_valid) {
       // we're recovering from a seek... that means we're going to discard
       // the samples from this packet even though we know our position from
@@ -4182,7 +4189,7 @@ static void vorbis_deinit(stb_vorbis *p)
          setup_free(p, p->mapping[i].chan);
       setup_free(p, p->mapping);
    }
-   for (i=0; i < p->channels; ++i) {
+   for (i=0; i < p->channels && i < STB_VORBIS_MAX_CHANNELS; ++i) {
       setup_free(p, p->channel_buffers[i]);
       setup_free(p, p->previous_window[i]);
       #ifdef STB_VORBIS_NO_DEFER_FLOOR

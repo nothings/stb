@@ -85,6 +85,8 @@ int main(int argc, char **argv)
       unsigned int successes=0, attempts = 0;
       unsigned int num_samples = stb_vorbis_decode_filename(argv[j], &num_chan, &samprate, &output);
 
+      break;
+
       if (num_samples == 0xffffffff) {
          fprintf(stderr, "Error: couldn't open file or not vorbis file: %s\n", argv[j]);
          goto fail;
