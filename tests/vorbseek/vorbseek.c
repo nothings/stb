@@ -57,11 +57,29 @@ int main(int argc, char **argv)
    int num_chan, samprate;
    int i, j, test, phase;
    short *output;
+
    if (argc == 1) {
       fprintf(stderr, "Usage: vorbseek {vorbisfile} [{vorbisfile]*]\n");
       fprintf(stderr, "Tests various seek offsets to make sure they're sample exact.\n");
       return 0;
    }
+
+   #if 0
+   {
+      // check that outofmem occurs correctly
+      stb_vorbis_alloc va;
+      va.alloc_buffer = malloc(1024*1024);
+      for (i=0; i < 1024*1024; i += 10) {
+         int error=0;
+         stb_vorbis *v;
+         va.alloc_buffer_length_in_bytes = i;
+         v = stb_vorbis_open_filename(argv[1], &error, &va);
+         if (v != NULL)
+            break;
+         printf("Error %d at %d\n", error, i);
+      }
+   }
+   #endif
 
    for (j=1; j < argc; ++j) {
       unsigned int successes=0, attempts = 0;

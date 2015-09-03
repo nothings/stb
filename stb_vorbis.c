@@ -3739,6 +3739,7 @@ static int start_decoder(vorb *f)
             f->setup_temp_memory_required = c->entries;
 
          c->codeword_lengths = (uint8 *) setup_malloc(f, c->entries);
+         if (c->codeword_lengths == NULL) return error(f, VORBIS_outofmem);
          memcpy(c->codeword_lengths, lengths, c->entries);
          setup_temp_free(f, lengths, c->entries); // note this is only safe if there have been no intervening temp mallocs!
          lengths = c->codeword_lengths;
@@ -3786,10 +3787,13 @@ static int start_decoder(vorb *f)
       if (c->sorted_entries) {
          // allocate an extra slot for sentinels
          c->sorted_codewords = (uint32 *) setup_malloc(f, sizeof(*c->sorted_codewords) * (c->sorted_entries+1));
+         if (c->sorted_codewords == NULL) return error(f, VORBIS_outofmem);
          // allocate an extra slot at the front so that c->sorted_values[-1] is defined
          // so that we can catch that case without an extra if
          c->sorted_values    = ( int   *) setup_malloc(f, sizeof(*c->sorted_values   ) * (c->sorted_entries+1));
-         if (c->sorted_values) { ++c->sorted_values; c->sorted_values[-1] = -1; }
+         if (c->sorted_values == NULL) return error(f, VORBIS_outofmem);
+         ++c->sorted_values;
+         c->sorted_values[-1] = -1;
          compute_sorted_huffman(c, lengths, values);
       }
 
@@ -3859,6 +3863,7 @@ static int start_decoder(vorb *f)
 #endif
          {
             c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->lookup_values);
+            if (c->multiplicands == NULL) { setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
             #ifndef STB_VORBIS_CODEBOOK_FLOATS
             memcpy(c->multiplicands, mults, sizeof(c->multiplicands[0]) * c->lookup_values);
             #else
@@ -3892,6 +3897,7 @@ static int start_decoder(vorb *f)
    // Floors
    f->floor_count = get_bits(f, 6)+1;
    f->floor_config = (Floor *)  setup_malloc(f, f->floor_count * sizeof(*f->floor_config));
+   if (f->floor_config == NULL) return error(f, VORBIS_outofmem);
    for (i=0; i < f->floor_count; ++i) {
       f->floor_types[i] = get_bits(f, 16);
       if (f->floor_types[i] > 1) return error(f, VORBIS_invalid_setup);
@@ -3963,7 +3969,9 @@ static int start_decoder(vorb *f)
 
    // Residue
    f->residue_count = get_bits(f, 6)+1;
-   f->residue_config = (Residue *) setup_malloc(f, f->residue_count * sizeof(*f->residue_config));
+   f->residue_config = (Residue *) setup_malloc(f, f->residue_count * sizeof(f->residue_config[0]));
+   if (f->residue_config == NULL) return error(f, VORBIS_outofmem);
+   memset(f->residue_config, 0, f->residue_count * sizeof(f->residue_config[0]));
    for (i=0; i < f->residue_count; ++i) {
       uint8 residue_cascade[64];
       Residue *r = f->residue_config+i;
@@ -3982,6 +3990,7 @@ static int start_decoder(vorb *f)
          residue_cascade[j] = high_bits*8 + low_bits;
       }
       r->residue_books = (short (*)[8]) setup_malloc(f, sizeof(r->residue_books[0]) * r->classifications);
+      if (r->residue_books == NULL) return error(f, VORBIS_outofmem);
       for (j=0; j < r->classifications; ++j) {
          for (k=0; k < 8; ++k) {
             if (residue_cascade[j] & (1 << k)) {
@@ -4001,6 +4010,7 @@ static int start_decoder(vorb *f)
          int classwords = f->codebooks[r->classbook].dimensions;
          int temp = j;
          r->classdata[j] = (uint8 *) setup_malloc(f, sizeof(r->classdata[j][0]) * classwords);
+         if (r->classdata[j] == NULL) return error(f, VORBIS_outofmem);
          for (k=classwords-1; k >= 0; --k) {
             r->classdata[j][k] = temp % r->classifications;
             temp /= r->classifications;
@@ -4010,11 +4020,14 @@ static int start_decoder(vorb *f)
 
    f->mapping_count = get_bits(f,6)+1;
    f->mapping = (Mapping *) setup_malloc(f, f->mapping_count * sizeof(*f->mapping));
+   if (f->mapping == NULL) return error(f, VORBIS_outofmem);
+   memset(f->mapping, 0, f->mapping_count * sizeof(*f->mapping));
    for (i=0; i < f->mapping_count; ++i) {
       Mapping *m = f->mapping + i;      
       int mapping_type = get_bits(f,16);
       if (mapping_type != 0) return error(f, VORBIS_invalid_setup);
       m->chan = (MappingChannel *) setup_malloc(f, f->channels * sizeof(*m->chan));
+      if (m->chan == NULL) return error(f, VORBIS_outofmem);
       if (get_bits(f,1))
          m->submaps = get_bits(f,4)+1;
       else
@@ -4075,8 +4088,10 @@ static int start_decoder(vorb *f)
       f->channel_buffers[i] = (float *) setup_malloc(f, sizeof(float) * f->blocksize_1);
       f->previous_window[i] = (float *) setup_malloc(f, sizeof(float) * f->blocksize_1/2);
       f->finalY[i]          = (int16 *) setup_malloc(f, sizeof(int16) * longest_floorlist);
+      if (f->channel_buffers[i] == NULL || f->previous_window[i] == NULL || f->finalY[i] == NULL) return error(f, VORBIS_outofmem);
       #ifdef STB_VORBIS_NO_DEFER_FLOOR
       f->floor_buffers[i]   = (float *) setup_malloc(f, sizeof(float) * f->blocksize_1/2);
+      if (f->floor_buffers[i] == NULL) return error(f, VORBIS_outofmem);
       #endif
    }
 
@@ -4134,14 +4149,16 @@ static int start_decoder(vorb *f)
 static void vorbis_deinit(stb_vorbis *p)
 {
    int i,j;
-   for (i=0; i < p->residue_count; ++i) {
-      Residue *r = p->residue_config+i;
-      if (r->classdata) {
-         for (j=0; j < p->codebooks[r->classbook].entries; ++j)
-            setup_free(p, r->classdata[j]);
-         setup_free(p, r->classdata);
+   if (p->residue_config) {
+      for (i=0; i < p->residue_count; ++i) {
+         Residue *r = p->residue_config+i;
+         if (r->classdata) {
+            for (j=0; j < p->codebooks[r->classbook].entries; ++j)
+               setup_free(p, r->classdata[j]);
+            setup_free(p, r->classdata);
+         }
+         setup_free(p, r->residue_books);
       }
-      setup_free(p, r->residue_books);
    }
 
    if (p->codebooks) {
@@ -4158,9 +4175,11 @@ static void vorbis_deinit(stb_vorbis *p)
    }
    setup_free(p, p->floor_config);
    setup_free(p, p->residue_config);
-   for (i=0; i < p->mapping_count; ++i)
-      setup_free(p, p->mapping[i].chan);
-   setup_free(p, p->mapping);
+   if (p->mapping) {
+      for (i=0; i < p->mapping_count; ++i)
+         setup_free(p, p->mapping[i].chan);
+      setup_free(p, p->mapping);
+   }
    for (i=0; i < p->channels; ++i) {
       setup_free(p, p->channel_buffers[i]);
       setup_free(p, p->previous_window[i]);
