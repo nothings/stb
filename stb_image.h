@@ -3544,7 +3544,7 @@ static void stbi__fill_bits(stbi__zbuf *z)
 {
    do {
       STBI_ASSERT(z->code_buffer < (1U << z->num_bits));
-      z->code_buffer |= (usigned int) stbi__zget8(z) << z->num_bits;
+      z->code_buffer |= (unsigned int) stbi__zget8(z) << z->num_bits;
       z->num_bits += 8;
    } while (z->num_bits <= 24);
 }
