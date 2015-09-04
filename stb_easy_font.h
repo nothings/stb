@@ -68,6 +68,12 @@
 //    Here's sample code for old OpenGL; it's a lot more complicated
 //    to make work on modern APIs, and that's your problem.
 //
+// LICENSE
+//
+//   This software is in the public domain. Where that dedication is not
+//   recognized, you are granted a perpetual, irrevocable license to copy,
+//   distribute, and modify this file as you see fit.
+//
 #if 0
 void print_string(float x, float y, char *text, float r, float g, float b)
 {

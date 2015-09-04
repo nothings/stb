@@ -159,9 +159,10 @@
       0.90 (2014-09-17) first released version
 
    LICENSE
-      This software is in the public domain. Where that dedication is not
-      recognized, you are granted a perpetual, irrevocable license to copy
-      and modify this file as you see fit.
+
+     This software is in the public domain. Where that dedication is not
+     recognized, you are granted a perpetual, irrevocable license to copy,
+     distribute, and modify this file as you see fit.
 
    TODO
       Don't decode all of the image data when only processing a partial tile

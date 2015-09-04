@@ -7,27 +7,27 @@ single-file public domain libraries for C/C++
 
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
-**stb_vorbis.c** | 1.05 | audio | 5459 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**stb_image.h** | 2.06 | graphics | 6437 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**stb_vorbis.c** | 1.06 | audio | 5441 | decode ogg vorbis files from file/memory to float/16-bit signed output
+**stb_image.h** | 2.06 | graphics | 6438 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **stb_truetype.h** | 1.07 | graphics | 3220 | parse, decode, and rasterize characters from truetype fonts
-**stb_image_write.h** | 0.98 | graphics | 730 | image writing to disk: PNG, TGA, BMP
-**stb_image_resize.h** | 0.90 | graphics | 2585 | resize images larger/smaller with good quality
-**stb_rect_pack.h** | 0.06 | graphics | 560 | simple 2D rectangle packer with decent quality
-**stretchy_buffer.h** | 1.02 | utility | 210 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
+**stb_image_write.h** | 0.98 | graphics | 735 | image writing to disk: PNG, TGA, BMP
+**stb_image_resize.h** | 0.90 | graphics | 2586 | resize images larger/smaller with good quality
+**stb_rect_pack.h** | 0.06 | graphics | 566 | simple 2D rectangle packer with decent quality
+**stretchy_buffer.h** | 1.02 | utility | 216 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **stb_textedit.h** | 1.6 | UI | 1290 | guts of a text editor for games etc implementing them from scratch
-**stb_voxel_render.h** | 0.82 | 3D&nbsp;graphics | 3739 | Minecraft-esque voxel rendering "engine" with many more features
-**stb_dxt.h** | 1.04 | 3D&nbsp;graphics | 624 | Fabian "ryg" Giesen's real-time DXT compressor
-**stb_perlin.h** | 0.2 | 3D&nbsp;graphics | 175 | revised Perlin noise (3D input, 1D output)
-**stb_easy_font.h** | 0.5 | 3D&nbsp;graphics | 220 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
+**stb_voxel_render.h** | 0.82 | 3D&nbsp;graphics | 3746 | Minecraft-esque voxel rendering "engine" with many more features
+**stb_dxt.h** | 1.04 | 3D&nbsp;graphics | 630 | Fabian "ryg" Giesen's real-time DXT compressor
+**stb_perlin.h** | 0.2 | 3D&nbsp;graphics | 182 | revised Perlin noise (3D input, 1D output)
+**stb_easy_font.h** | 0.5 | 3D&nbsp;graphics | 226 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
 **stb_tilemap_editor.h** | 0.35 | game&nbsp;dev | 4120 | embeddable tilemap editor
-**stb_herringbone_wa...** | 0.6 | game&nbsp;dev | 1217 | herringbone Wang tile map generator
-**stb_c_lexer.h** | 0.06 | parsing | 809 | simplify writing parsers for C-like languages
-**stb_divide.h** | 0.91 | math | 373 | more useful 32-bit modulus e.g. "euclidean divide"
-**stb.h** | 2.24 | misc | 14086 | helper functions for C, mostly redundant in C++; basically author's personal stuff
-**stb_leakcheck.h** | 0.2 | misc | 117 | quick-and-dirty malloc/free leak-checking
+**stb_herringbone_wa...** | 0.6 | game&nbsp;dev | 1220 | herringbone Wang tile map generator
+**stb_c_lexer.h** | 0.06 | parsing | 815 | simplify writing parsers for C-like languages
+**stb_divide.h** | 0.91 | math | 379 | more useful 32-bit modulus e.g. "euclidean divide"
+**stb.h** | 2.24 | misc | 14093 | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**stb_leakcheck.h** | 0.2 | misc | 122 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 18  
-Total lines of C code: 45971
+Total lines of C code: 46025
 
 
 FAQ
