@@ -5837,8 +5837,8 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
    #ifdef _MSC_VER
       stb__wchar *ws;
       struct _wfinddata_t data;
-      const long none = -1;
-      long z;
+      const intptr_t none = -1;
+      intptr_t z;
    #else
       const DIR *none = NULL;
       DIR *z;
@@ -6813,7 +6813,7 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
    int n;
 
    struct _wfinddata_t c_file;
-   long hFile;
+   intptr_t hFile;
    stb__wchar full_path[1024];
    int has_slash;
 
