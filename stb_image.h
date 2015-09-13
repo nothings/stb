@@ -5209,7 +5209,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
             // Read the data.
             if (bitdepth == 16) {
                for (i = 0; i < pixelCount; i++, p += 4)
-                  *p = stbi__get16be(s) >> 8
+                  *p = stbi__get16be(s) >> 8;
             } else {
                for (i = 0; i < pixelCount; i++, p += 4)
                   *p = stbi__get8(s);
