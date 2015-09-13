@@ -5186,7 +5186,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
          stbi_uc *p;
 
          p = out + channel;
-         if (channel > channelCount) {
+         if (channel >= channelCount) {
             // Fill this channel with default data.
             for (i = 0; i < pixelCount; i++, p += 4)
                *p = channel == 3 ? 255 : 0;
