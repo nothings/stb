@@ -8,7 +8,7 @@ These libraries are in the public domain (or the equivalent where that is not
 possible). You can do anything you want with them. You have no legal obligation
 to do anything else, although I appreciate attribution.
 
-#### Are there other single-file public-domain libraries out there?
+#### Are there other single-file public-domain libraries out there? <a name="other_libs"></a>
 
 Yes. I'll even tell you about some. However, I haven't used most of these libraries
 and can't comment on their quality. (If you use them and aren't their author, feel
