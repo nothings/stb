@@ -12,7 +12,7 @@ library    | lastest version | category | LoC | description
 **stb_truetype.h** | 1.08 | graphics | 3235 | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | 0.99 | graphics | 843 | image writing to disk: PNG, TGA, BMP
 **stb_image_resize.h** | 0.90 | graphics | 2586 | resize images larger/smaller with good quality
-**stb_rect_pack.h** | 0.07 | graphics | 572 | simple 2D rectangle packer with decent quality
+**stb_rect_pack.h** | 0.08 | graphics | 572 | simple 2D rectangle packer with decent quality
 **stretchy_buffer.h** | 1.02 | utility | 216 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **stb_textedit.h** | 1.7 | UI | 1301 | guts of a text editor for games etc implementing them from scratch
 **stb_voxel_render.h** | 0.83 | 3D&nbsp;graphics | 3750 | Minecraft-esque voxel rendering "engine" with many more features
@@ -49,25 +49,24 @@ free to tell me about their quality.)
 - [gif.h](https://github.com/ginsweater/gif-h): animated GIF writer (public domain)
 - [tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/blob/master/tiny_jpeg.h): JPEG encoder (public domain)
 - [lodepng](http://lodev.org/lodepng/): PNG encoder/decoder (zlib license)
-
 - [nanoSVG](https://github.com/memononen/nanosvg): 1-file SVG parser; 1-file SVG rasterizer (zlib license)
 - [tinyobjloader](https://github.com/syoyo/tinyobjloader): wavefront OBJ file loader (BSD license)
-
 - [sdf.h](https://github.com/memononen/SDF): compute signed-distance field from antialiased image (MIT license)
 - [nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/): find voronoi regions on lattice w/ integer inputs (public domain)
 - [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
-
 - [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
 - [DG_misc.h](https://github.com/DanielGibson/Snippets/): Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings (public domain)
 - [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
 - [utest](https://github.com/evolutional/utest): unit testing (MIT license)
 - [catch](https://github.com/philsquared/Catch): unit testing (Boost license)
-- [pempek_assert.cpp](https://github.com/gpakosz/Assert/tree/master/src): C++ flexible assertions in C++ (WTFPL v2 license)
+- [zed_net](https://github.com/ZedZull/zed_net): cross-platform socket wrapper (public domain)
 
 There are some that have a source file and require a separate header file (which they may
 not even supply). That's twice as many files, and we at nothings/stb cannot condone
 this! But you might like them anyway:
 
+- [pempek_assert.cpp](https://github.com/gpakosz/Assert/tree/master/src): C++ flexible assertions in C++ (WTFPL v2 license)
+- [whereami](https://github.com/gpakosz/whereami): get path/filename of executable (WTFPL v2 license)
 - [picopng.cpp](http://lodev.org/lodepng/picopng.cpp): tiny PNG loader (zlib license)
 - [jpeg-compressor](https://github.com/richgel999/jpeg-compressor): 2-file jpeg compress, 2-file jpeg decompress (public domain)
 - [lz4](https://github.com/Cyan4973/lz4): fast but larger LZ compression (BSD license)
