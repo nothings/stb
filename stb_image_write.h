@@ -1,4 +1,4 @@
-/* stb_image_write - v0.98 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v0.99 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010
                                      no warranty implied; use at your own risk
 
@@ -74,6 +74,7 @@ CREDITS:
       Tim Kelsey
    bugfixes:
       github:Chribba
+      Guillaume Chereau
       
 LICENSE
 
@@ -720,6 +721,8 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
+      0.99 (2015-09-13)
+             warning fixes
       0.98 (2015-04-08)
              added STBIW_MALLOC, STBIW_ASSERT etc
       0.97 (2015-01-18)
