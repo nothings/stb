@@ -8,13 +8,13 @@ single-file public domain libraries for C/C++
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **stb_vorbis.c** | 1.06 | audio | 5441 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**stb_image.h** | 2.07 | graphics | 6502 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**stb_truetype.h** | 1.07 | graphics | 3221 | parse, decode, and rasterize characters from truetype fonts
-**stb_image_write.h** | 0.99 | graphics | 744 | image writing to disk: PNG, TGA, BMP
+**stb_image.h** | 2.08 | graphics | 6509 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**stb_truetype.h** | 1.08 | graphics | 3235 | parse, decode, and rasterize characters from truetype fonts
+**stb_image_write.h** | 0.99 | graphics | 843 | image writing to disk: PNG, TGA, BMP
 **stb_image_resize.h** | 0.90 | graphics | 2586 | resize images larger/smaller with good quality
-**stb_rect_pack.h** | 0.06 | graphics | 566 | simple 2D rectangle packer with decent quality
+**stb_rect_pack.h** | 0.07 | graphics | 572 | simple 2D rectangle packer with decent quality
 **stretchy_buffer.h** | 1.02 | utility | 216 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
-**stb_textedit.h** | 1.6 | UI | 1290 | guts of a text editor for games etc implementing them from scratch
+**stb_textedit.h** | 1.7 | UI | 1301 | guts of a text editor for games etc implementing them from scratch
 **stb_voxel_render.h** | 0.83 | 3D&nbsp;graphics | 3750 | Minecraft-esque voxel rendering "engine" with many more features
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | 630 | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h** | 0.2 | 3D&nbsp;graphics | 182 | revised Perlin noise (3D input, 1D output)
@@ -27,7 +27,7 @@ library    | lastest version | category | LoC | description
 **stb_leakcheck.h** | 0.2 | misc | 124 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 18  
-Total lines of C code: 46161
+Total lines of C code: 46298
 
 
 FAQ
@@ -38,6 +38,53 @@ FAQ
 These libraries are in the public domain (or the equivalent where that is not
 possible). You can do anything you want with them. You have no legal obligation
 to do anything else, although I appreciate attribution.
+
+#### Are there other single-file public-domain libraries out there?
+
+Yes. I'll even tell you about some. However, I haven't used most of these libraries
+and can't comment on their quality. (If you use them and aren't their author, feel
+free to tell me about their quality.)
+
+- [jo_gif.cpp](http://www.jonolick.com/home/gif-writer): tiny GIF writer (public domain)
+- [gif.h](https://github.com/ginsweater/gif-h): animated GIF writer (public domain)
+- [tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/blob/master/tiny_jpeg.h): JPEG encoder (public domain)
+- [lodepng](http://lodev.org/lodepng/): PNG encoder/decoder (zlib license)
+
+- [nanoSVG](https://github.com/memononen/nanosvg): 1-file SVG parser; 1-file SVG rasterizer (zlib license)
+- [tinyobjloader](https://github.com/syoyo/tinyobjloader): wavefront OBJ file loader (BSD license)
+
+- [sdf.h](https://github.com/memononen/SDF): compute signed-distance field from antialiased image (MIT license)
+- [nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/): find voronoi regions on lattice w/ integer inputs (public domain)
+- [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
+
+- [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
+- [DG_misc.h](https://github.com/DanielGibson/Snippets/): Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings (public domain)
+- [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
+- [utest](https://github.com/evolutional/utest): unit testing (MIT license)
+- [catch](https://github.com/philsquared/Catch): unit testing (Boost license)
+- [pempek_assert.cpp](https://github.com/gpakosz/Assert/tree/master/src): C++ flexible assertions in C++ (WTFPL v2 license)
+
+There are some that have a source file and require a separate header file (which they may
+not even supply). That's twice as many files, and we at nothings/stb cannot condone
+this! But you might like them anyway:
+
+- [picopng.cpp](http://lodev.org/lodepng/picopng.cpp): tiny PNG loader (zlib license)
+- [jpeg-compressor](https://github.com/richgel999/jpeg-compressor): 2-file jpeg compress, 2-file jpeg decompress (public domain)
+- [lz4](https://github.com/Cyan4973/lz4): fast but larger LZ compression (BSD license)
+- [fastlz](https://code.google.com/p/fastlz/source/browse/#svn%2Ftrunk): fast but larger LZ compression (MIT license)
+- [tinyexr](https://github.com/syoyo/tinyexr): EXR image read/write, uses miniz internally (BSD license)
+- [miniz.c](https://github.com/richgel999/miniz): zlib compression,decompression, zip file, png writing (public domain)
+- [Remotery](https://github.com/Celtoys/Remotery): CPU/GPU profiler Win/Mac/Linux, using web browser for viewer (Apache 2.0 license)
+- [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile): CPU (and GPU?) profiler, 1-3 header files (unlicense)
+- [Clipper](http://www.angusj.com/delphi/clipper.php): line & polygon clipping & offsetting (Boost license)
+- [json.h](https://github.com/sheredom/json.h): JSON parser (public domain)
+- [Zange](https://github.com/vurtun/zange/blob/master/json.c): another JSON parser (MIT license)
+- [yocto](https://github.com/tom-seddon/yhs): non-production-use http server (public domain)
+- [happyhttp](http://scumways.com/happyhttp/happyhttp.html): http client requests (zlib license)
+
+There is also this XML library, but if you're using XML, shame on you:
+
+- [tinyxml2](https://github.com/leethomason/tinyxml2): XML (zlib license)
 
 #### If I wrap an stb library in a new library, does the new library have to be public domain?
 
@@ -88,7 +135,7 @@ remember to attach *two* files, etc.
 #### Why "stb"? Is this something to do with Set-Top Boxes?
 
 No, they are just the initials for my name, Sean T. Barrett.
-This was not chosen out of egomania, but as a semi-robust
+This was not chosen out of egomania, but as a moderately sane
 way of namespacing the filenames and source function names.
 
 #### Will you add more image types to stb_image.c?
@@ -98,10 +145,6 @@ is less for applications like image viewer apps (which need to support
 every type of image under the sun) and more for things like games which
 can choose what images to use, so I may decline to add them if they're
 too rare or if the size of implementation vs. apparent benefit is too low.
-
-#### Are there other single-file public-domain libraries out there?
-
-Yes. I'll put a list here when people remind me what they are.
 
 #### Do you have any advice on how to create my own single-file library?
 
