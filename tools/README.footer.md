@@ -70,7 +70,40 @@ too rare or if the size of implementation vs. apparent benefit is too low.
 
 #### Are there other single-file public-domain libraries out there?
 
-Yes. I'll put a list here when people remind me what they are.
+Yes. Here are some:
+
+- [jo_gif.cpp](http://www.jonolick.com/home/gif-writer): tiny GIF writer (public domain)
+- [gif.h](https://github.com/ginsweater/gif-h): animated GIF writer (public domain)
+- [tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/blob/master/tiny_jpeg.h): JPEG encoder (public domain)
+- [lodepng](http://lodev.org/lodepng/): PNG encoder/decoder (zlib license)
+
+- [nanoSVG](https://github.com/memononen/nanosvg): 1-file SVG parser; 1-file SVG rasterizer (zlib license)
+- [tinyobjloader](https://github.com/syoyo/tinyobjloader): wavefront OBJ file loader (BSD license)
+
+- [sdf.h](https://github.com/memononen/SDF): compute signed-distance field from antialiased image (MIT license)
+- [nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/): find voronoi regions on lattice w/ integer inputs (public domain)
+- [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
+
+- [DG_misc.h](https://github.com/DanielGibson/Snippets/): Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings (public domain)
+- [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
+- [utest](https://github.com/evolutional/utest): unit testing (MIT license)
+
+There are some that have a source file and require a separate header file (which they may
+not even supply). That's twice as many files, and we at nothings/stb cannot condone
+this! But you might like them anyway:
+
+- [picopng.cpp](http://lodev.org/lodepng/picopng.cpp): tiny PNG loader (zlib license)
+- [jpeg-compressor](https://github.com/richgel999/jpeg-compressor): 2-file jpeg compress, 2-file jpeg decompress (public domain)
+- [tinyexr](https://github.com/syoyo/tinyexr): EXR image read/write, uses miniz internally (BSD license)
+- [miniz.c](https://github.com/richgel999/miniz): zlib compression,decompression, zip file, png writing (public domain)
+- [Remotery](https://github.com/Celtoys/Remotery): CPU/GPU profiler Win/Mac/Linux, using web browser for viewer (Apache 2.0 license)
+- [Clipper](http://www.angusj.com/delphi/clipper.php): line & polygon clipping & offsetting (Boost license)
+- [json.h](https://github.com/sheredom/json.h): JSON parser (public domain)
+- [Zange](https://github.com/vurtun/zange/blob/master/json.c): another JSON parser (MIT license)
+
+There is also this XML library, but if you're using XML, shame on you:
+
+- [tinyxml2](https://github.com/leethomason/tinyxml2): XML (zlib license)
 
 #### Do you have any advice on how to create my own single-file library?
 

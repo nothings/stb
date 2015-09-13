@@ -1919,7 +1919,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
          float dx = e->fdx;
          float xb = x0 + dx;
          float x_top, x_bottom;
-         float y0,y1;
+         float sy0,sy1;
          float dy = e->fdy;
          STBTT_assert(e->sy <= y_bottom && e->ey >= y_top);
 
@@ -1928,17 +1928,17 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
          // line with y_top, but that may be off the line segment.
          if (e->sy > y_top) {
             x_top = x0 + dx * (e->sy - y_top);
-            y0 = e->sy;
+            sy0 = e->sy;
          } else {
             x_top = x0;
-            y0 = y_top;
+            sy0 = y_top;
          }
          if (e->ey < y_bottom) {
             x_bottom = x0 + dx * (e->ey - y_top);
-            y1 = e->ey;
+            sy1 = e->ey;
          } else {
             x_bottom = xb;
-            y1 = y_bottom;
+            sy1 = y_bottom;
          }
 
          if (x_top >= 0 && x_bottom >= 0 && x_top < len && x_bottom < len) {
@@ -1948,7 +1948,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                float height;
                // simple case, only spans one pixel
                int x = (int) x_top;
-               height = y1 - y0;
+               height = sy1 - sy0;
                STBTT_assert(x >= 0 && x < len);
                scanline[x] += e->direction * (1-((x_top - x) + (x_bottom-x))/2)  * height;
                scanline_fill[x] += e->direction * height; // everything right of this pixel is filled
@@ -1959,9 +1959,9 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                if (x_top > x_bottom) {
                   // flip scanline vertically; signed area is the same
                   float t;
-                  y0 = y_bottom - (y0 - y_top);
-                  y1 = y_bottom - (y1 - y_top);
-                  t = y0, y0 = y1, y1 = t;
+                  sy0 = y_bottom - (sy0 - y_top);
+                  sy1 = y_bottom - (sy1 - y_top);
+                  t = sy0, sy0 = sy1, sy1 = t;
                   t = x_bottom, x_bottom = x_top, x_top = t;
                   dx = -dx;
                   dy = -dy;
@@ -1975,7 +1975,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
 
                sign = e->direction;
                // area of the rectangle covered from y0..y_crossing
-               area = sign * (y_crossing-y0);
+               area = sign * (y_crossing-sy0);
                // area of the triangle (x_top,y0), (x+1,y0), (x+1,y_crossing)
                scanline[x1] += area * (1-((x_top - x1)+(x1+1-x1))/2);
 
@@ -1988,9 +1988,9 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
 
                STBTT_assert(fabs(area) <= 1.01f);
 
-               scanline[x2] += area + sign * (1-((x2-x2)+(x_bottom-x2))/2) * (y1-y_crossing);
+               scanline[x2] += area + sign * (1-((x2-x2)+(x_bottom-x2))/2) * (sy1-y_crossing);
 
-               scanline_fill[x2] += sign * (y1-y0);
+               scanline_fill[x2] += sign * (sy1-sy0);
             }
          } else {
             // if edge goes outside of box we're drawing, we require
