@@ -147,6 +147,8 @@ STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const 
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
 
+static int stbi__write_tga_with_rle = 1;
+
 static void writefv(FILE *f, const char *fmt, va_list v)
 {
    while (*fmt) {
@@ -167,6 +169,14 @@ static void writefv(FILE *f, const char *fmt, va_list v)
    }
 }
 
+static void writef(FILE *f, const char *fmt, ...)
+{
+   va_list v;
+   va_start(v, fmt);
+   writefv(f, fmt, v);
+   va_end(v);
+}
+
 static void write3(FILE *f, unsigned char a, unsigned char b, unsigned char c)
 {
    unsigned char arr[3];
@@ -174,11 +184,42 @@ static void write3(FILE *f, unsigned char a, unsigned char b, unsigned char c)
    fwrite(arr, 3, 1, f);
 }
 
-static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
+static void write_pixel(FILE *f, int rgb_dir, int comp, int write_alpha, int expand_mono, const unsigned char *d)
 {
    unsigned char bg[3] = { 255, 0, 255}, px[3];
+   int k;
+
+   if (write_alpha < 0)
+      fwrite(&d[comp - 1], 1, 1, f);
+   switch (comp) {
+   case 1: fwrite(d, 1, 1, f);
+           break;
+   case 2: if (expand_mono)
+             write3(f, d[0], d[0], d[0]); // monochrome bmp
+           else
+              fwrite(d, 1, 1, f);  // monochrome TGA
+           break;
+   case 4:
+      if (!write_alpha) {
+         // composite against pink background
+         for (k = 0; k < 3; ++k)
+            px[k] = bg[k] + ((d[k] - bg[k]) * d[3]) / 255;
+         write3(f, px[1 - rgb_dir], px[1], px[1 + rgb_dir]);
+         break;
+      }
+      /* FALLTHROUGH */
+   case 3:
+      write3(f, d[1 - rgb_dir], d[1], d[1 + rgb_dir]);
+      break;
+   }
+   if (write_alpha > 0)
+      fwrite(&d[comp - 1], 1, 1, f);
+}
+
+static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
+{
    stbiw_uint32 zero = 0;
-   int i,j,k, j_end;
+   int i,j, j_end;
 
    if (y <= 0)
       return;
@@ -191,31 +232,7 @@ static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp,
    for (; j != j_end; j += vdir) {
       for (i=0; i < x; ++i) {
          unsigned char *d = (unsigned char *) data + (j*x+i)*comp;
-         if (write_alpha < 0)
-            fwrite(&d[comp-1], 1, 1, f);
-         switch (comp) {
-            case 1: fwrite(d, 1, 1, f);
-                    break;
-            case 2: if (expand_mono)
-                       write3(f, d[0],d[0],d[0]); // monochrome bmp
-                    else
-                       fwrite(d, 1, 1, f);  // monochrome TGA
-                    break;
-            case 4:
-               if (!write_alpha) {
-                  // composite against pink background
-                  for (k=0; k < 3; ++k)
-                     px[k] = bg[k] + ((d[k] - bg[k]) * d[3])/255;
-                  write3(f, px[1-rgb_dir],px[1],px[1+rgb_dir]);
-                  break;
-               }
-               /* FALLTHROUGH */
-            case 3:
-               write3(f, d[1-rgb_dir],d[1],d[1+rgb_dir]);
-               break;
-         }
-         if (write_alpha > 0)
-            fwrite(&d[comp-1], 1, 1, f);
+         write_pixel(f, rgb_dir, comp, write_alpha, expand_mono, d);
       }
       fwrite(&zero,scanline_pad,1,f);
    }
@@ -251,8 +268,72 @@ STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const 
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
    int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
-   return outfile(filename, -1,-1, x, y, comp, 0, (void *) data, has_alpha, 0,
-                  "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, (colorbytes+has_alpha)*8, has_alpha*8);
+   FILE *f;
+
+   if (!stbi__write_tga_with_rle) {
+      return outfile(filename, -1, -1, x, y, comp, 0, (void *) data, has_alpha, 0,
+         "111 221 2222 11", 0, 0, format, 0, 0, 0, 0, 0, x, y, (colorbytes + has_alpha) * 8, has_alpha * 8);
+   }
+
+   if (y < 0 || x < 0) return 0;
+   f = fopen(filename, "wb");
+   if (f) {
+      int i,j,k;
+
+      writef(f, "111 221 2222 11", 0,0,format+8, 0,0,0, 0,0,x,y, (colorbytes + has_alpha) * 8, has_alpha * 8);
+
+      for (j = y - 1; j >= 0; --j) {
+         const unsigned char *row = (unsigned char *) data + j * x * comp;
+         int len;
+
+         for (i = 0; i < x; i += len) {
+            const unsigned char *begin = row + i * comp;
+            int diff = 1;
+            len = 1;
+
+            if (i < x - 1) {
+               ++len;
+               diff = memcmp(begin, row + (i + 1) * comp, comp);
+               if (diff) {
+                  const unsigned char *prev = begin;
+                  for (k = i + 2; k < x && len < 128; ++k) {
+                     if (memcmp(prev, row + k * comp, comp)) {
+                        prev += comp;
+                        ++len;
+                     } else {
+                        --len;
+                        break;
+                     }
+                  }
+               } else {
+                  for (k = i + 2; k < x && len < 128; ++k) {
+                     if (!memcmp(begin, row + k * comp, comp)) {
+                        ++len;
+                     } else {
+                        break;
+                     }
+                  }
+               }
+            }
+
+            if (diff) {
+               unsigned char header = (unsigned char) (len - 1);
+               fwrite(&header, 1, 1, f);
+               for (k = 0; k < len; ++k) {
+                  write_pixel(f, -1, comp, has_alpha, 0, begin + k * comp);
+               }
+            } else {
+               unsigned char header = (unsigned char) (len - 129);
+               fwrite(&header, 1, 1, f);
+               write_pixel(f, -1, comp, has_alpha, 0, begin);
+            }
+         }
+      }
+
+      fclose(f);
+   }
+
+   return f != NULL;
 }
 
 // *************************************************************************************************
