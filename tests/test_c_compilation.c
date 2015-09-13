@@ -8,7 +8,9 @@
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_VOXEL_RENDER_IMPLEMENTATION
+#define STB_EASY_FONT_IMPLEMENTATION
 
+#include "stb_easy_font.h"
 #include "stb_herringbone_wang_tile.h"
 #include "stb_image.h"
 #include "stb_image_write.h"

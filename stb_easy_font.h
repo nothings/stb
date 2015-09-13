@@ -1,4 +1,4 @@
-// stb_easy_font.h - v0.5 - bitmap font for 3D rendering - public domain
+// stb_easy_font.h - v0.6 - bitmap font for 3D rendering - public domain
 // Sean Barrett, Feb 2015
 //
 //    Easy-to-deploy,
@@ -74,6 +74,11 @@
 //   recognized, you are granted a perpetual, irrevocable license to copy,
 //   distribute, and modify this file as you see fit.
 //
+// VERSION HISTORY
+//
+//   (2015-09-13)  0.6   #include <math.h>; updated license
+//   (2015-02-01)  0.5   First release
+
 #if 0
 void print_string(float x, float y, char *text, float r, float g, float b)
 {
