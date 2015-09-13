@@ -146,8 +146,9 @@
 
 
    Latest revision history:
-      2.07  (2015-09-13) fix compiler warnings; animated GIF support close;
-                         limited 16-bit PSD support; #ifdef unused functions
+      2.07  (2015-09-13) partial animated GIF support
+                         limited 16-bit PSD support
+                         minor bugs, code cleanup, and compiler warnings
       2.06  (2015-04-19) fix bug where PSD returns wrong '*comp' value
       2.05  (2015-04-19) fix bug in progressive JPEG handling, fix warning
       2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
@@ -757,7 +758,7 @@ typedef struct
    stbi_uc buffer_start[128];
 
    stbi_uc *img_buffer, *img_buffer_end;
-   stbi_uc *img_buffer_original;
+   stbi_uc *img_buffer_original, *img_buffer_original_end;
 } stbi__context;
 
 
@@ -769,7 +770,7 @@ static void stbi__start_mem(stbi__context *s, stbi_uc const *buffer, int len)
    s->io.read = NULL;
    s->read_from_callbacks = 0;
    s->img_buffer = s->img_buffer_original = (stbi_uc *) buffer;
-   s->img_buffer_end = (stbi_uc *) buffer+len;
+   s->img_buffer_end = s->img_buffer_original_end = (stbi_uc *) buffer+len;
 }
 
 // initialize a callback-based context
@@ -781,6 +782,7 @@ static void stbi__start_callbacks(stbi__context *s, stbi_io_callbacks *c, void *
    s->read_from_callbacks = 1;
    s->img_buffer_original = s->buffer_start;
    stbi__refill_buffer(s);
+   s->img_buffer_original_end = s->img_buffer_end;
 }
 
 #ifndef STBI_NO_STDIO
@@ -822,6 +824,7 @@ static void stbi__rewind(stbi__context *s)
    // but we just rewind to the beginning of the initial buffer, because
    // we only use it after doing 'test', which only ever looks at at most 92 bytes
    s->img_buffer = s->img_buffer_original;
+   s->img_buffer_end = s->img_buffer_original_end;
 }
 
 #ifndef STBI_NO_JPEG
@@ -6111,14 +6114,22 @@ static int stbi__pic_info(stbi__context *s, int *x, int *y, int *comp)
    int act_comp=0,num_packets=0,chained;
    stbi__pic_packet packets[10];
 
-   stbi__skip(s, 92);
+   if (!stbi__pic_is4(s,"\x53\x80\xF6\x34")) {
+      stbi__rewind(s);
+      return 0;
+   }
+
+   stbi__skip(s, 88);
 
    *x = stbi__get16be(s);
    *y = stbi__get16be(s);
-   if (stbi__at_eof(s))  return 0;
+   if (stbi__at_eof(s)) {
+      stbi__rewind( s);
+      return 0;
+   }
    if ( (*x) != 0 && (1 << 28) / (*x) < (*y)) {
-       stbi__rewind( s );
-       return 0;
+      stbi__rewind( s );
+      return 0;
    }
 
    stbi__skip(s, 8);
@@ -6344,8 +6355,11 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
-      2.07  (2015-09-13) fix compiler warnings; animated GIF support;
-                         limited 16-bit PSD support; #ifdef unused functions
+      2.07  (2015-09-13) fix compiler warnings
+                         partial animated GIF support
+                         limited 16-bit PSD support
+                         #ifdef unused functions
+                         bug with < 92 byte PIC,PNM,HDR,TGA
       2.06  (2015-04-19) fix bug where PSD returns wrong '*comp' value
       2.05  (2015-04-19) fix bug in progressive JPEG handling, fix warning
       2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit

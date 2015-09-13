@@ -73,14 +73,17 @@ int main(int argc, char **argv)
       int i, n;
 
       for (i=1; i < argc; ++i) {
+         int res;
          unsigned char *data;
          printf("%s\n", argv[i]);
+         res = stbi_info(argv[1], &w, &h, &n);
          data = stbi_load(argv[i], &w, &h, &n, 4); if (data) free(data); else printf("Failed &n\n");
          data = stbi_load(argv[i], &w, &h,  0, 1); if (data) free(data); else printf("Failed 1\n");
          data = stbi_load(argv[i], &w, &h,  0, 2); if (data) free(data); else printf("Failed 2\n");
          data = stbi_load(argv[i], &w, &h,  0, 3); if (data) free(data); else printf("Failed 3\n");
          data = stbi_load(argv[i], &w, &h,  0, 4);
          assert(data);
+         assert(res);
          if (data) {
             char fname[512];
             stb_splitpath(fname, argv[i], STB_FILE);
