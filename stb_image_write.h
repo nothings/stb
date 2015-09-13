@@ -62,6 +62,9 @@ USAGE:
    data, alpha (if provided) is discarded, and for monochrome data it is
    replicated across all three channels.
 
+   TGA supports RLE or non-RLE compressed data. To use non-RLE-compressed
+   data, set the global variable 'stbi_write_tga_with_rle' to 0.
+
 CREDITS:
 
    PNG/BMP/TGA
@@ -72,6 +75,8 @@ CREDITS:
       Jean-Sebastien Guay
    misc enhancements:
       Tim Kelsey
+   TGA RLE
+      Alan Hickman
    bugfixes:
       github:Chribba
       Guillaume Chereau
@@ -95,6 +100,7 @@ extern "C" {
 #define STBIWDEF static
 #else
 #define STBIWDEF extern
+extern int stbi_write_tga_with_rle;
 #endif
 
 STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
@@ -147,7 +153,12 @@ STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const 
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
 
-static int stbi__write_tga_with_rle = 1;
+
+#ifdef STB_IMAGE_WRITE_STATIC
+static int stbi_write_tga_with_rle = 1;
+#else
+int stbi_write_tga_with_rle = 1;
+#endif
 
 static void writefv(FILE *f, const char *fmt, va_list v)
 {
@@ -270,7 +281,7 @@ STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const 
    int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
    FILE *f;
 
-   if (!stbi__write_tga_with_rle) {
+   if (!stbi_write_tga_with_rle) {
       return outfile(filename, -1, -1, x, y, comp, 0, (void *) data, has_alpha, 0,
          "111 221 2222 11", 0, 0, format, 0, 0, 0, 0, 0, x, y, (colorbytes + has_alpha) * 8, has_alpha * 8);
    }
@@ -810,7 +821,7 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
 
 /* Revision history
       0.99 (2015-09-13)
-             warning fixes
+             warning fixes; TGA rle support
       0.98 (2015-04-08)
              added STBIW_MALLOC, STBIW_ASSERT etc
       0.97 (2015-01-18)
