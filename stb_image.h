@@ -2746,7 +2746,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
       if (z->img_comp[i].raw_data == NULL) {
          for(--i; i >= 0; --i) {
             STBI_FREE(z->img_comp[i].raw_data);
-            z->img_comp[i].data = NULL;
+            z->img_comp[i].raw_data = NULL;
          }
          return stbi__err("outofmem", "Out of memory");
       }
