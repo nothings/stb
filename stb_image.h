@@ -5065,6 +5065,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
    int   pixelCount;
    int channelCount, compression;
    int channel, i, count, len;
+   int bitdepth;
    int w,h;
    stbi_uc *out;
 
@@ -5089,8 +5090,9 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
    w = stbi__get32be(s);
 
    // Make sure the depth is 8 bits.
-   if (stbi__get16be(s) != 8)
-      return stbi__errpuc("unsupported bit depth", "PSD bit depth is not 8 bit");
+   bitdepth = stbi__get16be(s);
+   if (bitdepth != 8 && bitdepth != 16)
+      return stbi__errpuc("unsupported bit depth", "PSD bit depth is not 8 or 16 bit");
 
    // Make sure the color mode is RGB.
    // Valid options are:
@@ -5202,8 +5204,13 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
                *p = channel == 3 ? 255 : 0;
          } else {
             // Read the data.
-            for (i = 0; i < pixelCount; i++, p += 4)
-               *p = stbi__get8(s);
+            if (bitdepth == 16) {
+               for (i = 0; i < pixelCount; i++, p += 4)
+                  *p = stbi__get16be(s) * 255 / 65535;
+            } else {
+               for (i = 0; i < pixelCount; i++, p += 4)
+                  *p = stbi__get8(s);
+            }
          }
       }
    }
