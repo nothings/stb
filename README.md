@@ -9,8 +9,8 @@ library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **stb_vorbis.c** | 1.06 | audio | 5441 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **stb_image.h** | 2.07 | graphics | 6502 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**stb_truetype.h** | 1.07 | graphics | 3220 | parse, decode, and rasterize characters from truetype fonts
-**stb_image_write.h** | 0.98 | graphics | 735 | image writing to disk: PNG, TGA, BMP
+**stb_truetype.h** | 1.07 | graphics | 3221 | parse, decode, and rasterize characters from truetype fonts
+**stb_image_write.h** | 0.99 | graphics | 744 | image writing to disk: PNG, TGA, BMP
 **stb_image_resize.h** | 0.90 | graphics | 2586 | resize images larger/smaller with good quality
 **stb_rect_pack.h** | 0.06 | graphics | 566 | simple 2D rectangle packer with decent quality
 **stretchy_buffer.h** | 1.02 | utility | 216 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
@@ -27,7 +27,7 @@ library    | lastest version | category | LoC | description
 **stb_leakcheck.h** | 0.2 | misc | 124 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 18  
-Total lines of C code: 46151
+Total lines of C code: 46161
 
 
 FAQ
