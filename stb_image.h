@@ -1,4 +1,4 @@
-/* stb_image - v2.08 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.07 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -25,12 +25,15 @@
 
       TGA (not sure what subset, if a subset)
       BMP non-1bpp, non-RLE
-      PSD (composited view only, no extra channels)
+      PSD (composited view only, no extra channels, 8/16 bit-per-channel)
 
       GIF (*comp always reports as 4-channel)
       HDR (radiance rgbE format)
       PIC (Softimage PIC)
       PNM (PPM and PGM binary only)
+
+      Animated GIF still needs a proper API, but here's one way to do it:
+          http://gist.github.com/urraka/685d9a6340b26b830d49
 
       - decode from memory or through FILE (define STBI_NO_STDIO to remove code)
       - decode from arbitrary I/O callbacks
@@ -143,7 +146,8 @@
 
 
    Latest revision history:
-      2.07  (2015-09-13) fix compiler warnings
+      2.07  (2015-09-13) fix compiler warnings; animated GIF support close;
+                         limited 16-bit PSD support
       2.06  (2015-04-19) fix bug where PSD returns wrong '*comp' value
       2.05  (2015-04-19) fix bug in progressive JPEG handling, fix warning
       2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
@@ -177,35 +181,34 @@
     Tom Seddon (pic)                             the Horde3D community
     Thatcher Ulrich (psd)                        Janez Zemva
     Ken Miller (pgm, ppm)                        Jonathan Blow
-                                                 Laurent Gomila
+    urraka@github (animated gif)                 Laurent Gomila
                                                  Aruelien Pocheville
- Extensions, features                            Ryamond Barbiero
-    Jetro Lauha (stbi_info)                      David Woo
-    Martin "SpartanJ" Golini (stbi_info)         Martin Golini
-    James "moose2000" Brown (iPhone PNG)         Roy Eltham
-    Ben "Disch" Wenger (io callbacks)            Luke Graham
-    Omar Cornut (1/2/4-bit PNG)                  Thomas Ruf
-    Nicolas Guillemot (vertical flip)            John Bartholomew
-                                                 Ken Hamada
- Optimizations & bugfixes                        Cort Stratton
-    Fabian "ryg" Giesen                          Blazej Dariusz Roszkowski
-    Arseny Kapoulkine                            Thibault Reuille
+                                                 Ryamond Barbiero
+                                                 David Woo
+ Extensions, features                            Martin Golini
+    Jetro Lauha (stbi_info)                      Roy Eltham
+    Martin "SpartanJ" Golini (stbi_info)         Luke Graham
+    James "moose2000" Brown (iPhone PNG)         Thomas Ruf
+    Ben "Disch" Wenger (io callbacks)            John Bartholomew
+    Omar Cornut (1/2/4-bit PNG)                  Ken Hamada
+    Nicolas Guillemot (vertical flip)            Cort Stratton
+    Richard Mitton (16-bit PSD)                  Blazej Dariusz Roszkowski
+                                                 Thibault Reuille
                                                  Paul Du Bois
                                                  Guillaume George
-  If your name should be here but                Jerry Jansson
-  isn't, let Sean know.                          Hayaki Saito
+                                                 Jerry Jansson
+                                                 Hayaki Saito
                                                  Johan Duparc
                                                  Ronny Chevalier
-                                                 Michal Cichon
-                                                 Tero Hanninen
-                                                 Sergio Gonzalez
+ Optimizations & bugfixes                        Michal Cichon
+    Fabian "ryg" Giesen                          Tero Hanninen
+    Arseny Kapoulkine                            Sergio Gonzalez
                                                  Cass Everitt
                                                  Engin Manap
-                                                 Martins Mozeiko
-                                                 Joseph Thomson
+  If your name should be here but                Martins Mozeiko
+  isn't, let Sean know.                          Joseph Thomson
                                                  Phil Jordan
                                                  Nathan Reed
-                                                 urraka@github
 
 LICENSE
 
@@ -5206,7 +5209,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
             // Read the data.
             if (bitdepth == 16) {
                for (i = 0; i < pixelCount; i++, p += 4)
-                  *p = stbi__get16be(s) * 255 / 65535;
+                  *p = stbi__get16be(s) >> 8
             } else {
                for (i = 0; i < pixelCount; i++, p += 4)
                   *p = stbi__get8(s);
@@ -6331,6 +6334,8 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.07  (2015-09-13) fix compiler warnings; animated GIF support;
+                         limited 16-bit PSD support
       2.06  (2015-04-19) fix bug where PSD returns wrong '*comp' value
       2.05  (2015-04-19) fix bug in progressive JPEG handling, fix warning
       2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
