@@ -182,6 +182,7 @@ Fixes:
  Philipp Wiesemann
  Robert Nix
  r-lyeh
+ blackpawn
 
 */
 
