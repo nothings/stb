@@ -180,6 +180,8 @@ Written by Sean Barrett.
 
 Fixes:
  Philipp Wiesemann
+ Robert Nix
+ r-lyeh
 
 */
 
