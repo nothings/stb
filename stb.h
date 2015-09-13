@@ -184,7 +184,7 @@ Fixes:
  r-lyeh
  blackpawn
  Mojofreem@github
-
+ Ryan Whitworth
 */
 
 #ifndef STB__INCLUDE_STB_H
@@ -202,6 +202,15 @@ Fixes:
    #endif
    #ifndef STB_THREADS
    #define STB_THREADS
+   #endif
+#endif
+
+#ifdef _WIN32
+   #define _CRT_SECURE_NO_WARNINGS
+   #define _CRT_NONSTDC_NO_DEPRECATE
+   #define _CRT_NON_CONFORMING_SWPRINTFS
+   #if !defined(_MSC_VER) || _MSC_VER > 1700
+   #include <intrin.h> // _BitScanReverse
    #endif
 #endif
 
@@ -1429,7 +1438,7 @@ int stb_is_pow2(unsigned int n)
 int stb_log2_floor(unsigned int n)
 {
    #if _MSC_VER > 1700
-   unsigned int i;
+   unsigned long i;
    _BitScanReverse(&i, n);
    return i != 0 ? i : -1;
    #else
