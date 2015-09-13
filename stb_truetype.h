@@ -39,6 +39,7 @@
 //       Omar Cornut
 //       github:aloucks
 //       Peter LaValle
+//       Sergey Popov
 //       Giumo X. Clanjor
 //
 //   Misc other:
