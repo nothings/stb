@@ -176,15 +176,16 @@ distribute, and modify this file as you see fit.
 
 CREDITS
 
-Written by Sean Barrett.
+ Written by Sean Barrett.
 
-Fixes:
- Philipp Wiesemann
- Robert Nix
- r-lyeh
- blackpawn
- Mojofreem@github
- Ryan Whitworth
+ Fixes:
+  Philipp Wiesemann
+  Robert Nix
+  r-lyeh
+  blackpawn
+  Mojofreem@github
+  Ryan Whitworth
+  Vincent Isambart
 */
 
 #ifndef STB__INCLUDE_STB_H
