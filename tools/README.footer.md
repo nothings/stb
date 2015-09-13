@@ -49,6 +49,7 @@ this! But you might like them anyway:
 - [Zange](https://github.com/vurtun/zange/blob/master/json.c): another JSON parser (MIT license)
 - [yocto](https://github.com/tom-seddon/yhs): non-production-use http server (public domain)
 - [happyhttp](http://scumways.com/happyhttp/happyhttp.html): http client requests (zlib license)
+- [tigr](https://bitbucket.org/rmitton/tigr/src): quick-n-dirty window text/graphics for Windows (public domain)
 
 There is also this XML library, but if you're using XML, shame on you:
 
