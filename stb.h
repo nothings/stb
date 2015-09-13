@@ -1036,9 +1036,15 @@ void stb_fatal(char *s, ...)
    vfprintf(stderr, s, a);
    va_end(a);
    fputs("\n", stderr);
-   #ifdef _WIN32
    #ifdef STB_DEBUG
+   #ifdef _MSC_VER
+   #ifndef STB_PTR64
    __asm int 3;   // trap to debugger!
+   #else
+   __debugbreak();
+   #endif
+   #else
+   __builtin_trap();
    #endif
    #endif
    exit(1);
@@ -5840,14 +5846,19 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
 {
    char **results = NULL;
    char buffer[512], with_slash[512];
-   int n;
+   size_t n;
 
    #ifdef _MSC_VER
       stb__wchar *ws;
       struct _wfinddata_t data;
+   #ifdef _WIN64
+      const intptr_t none = -1;
+      intptr_t z;
+   #else
       const long none = -1;
       long z;
-   #else
+   #endif
+   #else // !_MSC_VER
       const DIR *none = NULL;
       DIR *z;
    #endif
@@ -6821,7 +6832,11 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
    int n;
 
    struct _wfinddata_t c_file;
+   #ifdef STB_PTR64
+   intptr_t hFile;
+   #else
    long hFile;
+   #endif
    stb__wchar full_path[1024];
    int has_slash;
 
@@ -7353,7 +7368,7 @@ STB_EXTERN void ** stb_ps_fastlist(stb_ps *ps, int *count);
 //     but some entries of the list may be invalid;
 //     test with 'stb_ps_fastlist_valid(x)'
 
-#define stb_ps_fastlist_valid(x)   ((unsigned int) (x) > 1)
+#define stb_ps_fastlist_valid(x)   ((stb_uinta) (x) > 1)
 
 #ifdef STB_DEFINE
 
@@ -7373,8 +7388,6 @@ typedef struct
 } stb_ps_bucket;
 #define GetBucket(p)    ((stb_ps_bucket *) ((char *) (p) - STB_ps_bucket))
 #define EncodeBucket(p) ((stb_ps *) ((char *) (p) + STB_ps_bucket))
-
-typedef char stb__verify_bucket_heap_size[sizeof(stb_ps_bucket) == 16];
 
 static void stb_bucket_free(stb_ps_bucket *b)
 {
