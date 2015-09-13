@@ -3382,10 +3382,13 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
 
 static void stbvox_make_mesh_for_column(stbvox_mesh_maker *mm, int x, int y, int z0)
 {
-   stbvox_pos pos; pos.x = x; pos.y = y; pos.z = 0;
+   stbvox_pos pos;
    int v_off = x * mm->x_stride_in_bytes + y * mm->y_stride_in_bytes;
    int ns_off = mm->y_stride_in_bytes;
    int ew_off = mm->x_stride_in_bytes;
+   pos.x = x;
+   pos.y = y;
+   pos.z = 0;
    if (mm->input.geometry) {
       unsigned char *bt  = mm->input.blocktype + v_off;
       unsigned char *geo = mm->input.geometry + v_off;
