@@ -1,4 +1,4 @@
-/* stb.h - v2.24 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.25 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
@@ -25,6 +25,7 @@
 
 Version History
 
+   2.25   various warning & bugfixes
    2.24   various warning & bugfixes
    2.23   fix 2.22
    2.22   64-bit fixes from '!='; fix stb_sdict_copy() to have preferred name
@@ -173,6 +174,18 @@ This software is in the public domain. Where that dedication is not
 recognized, you are granted a perpetual, irrevocable license to copy,
 distribute, and modify this file as you see fit.
 
+CREDITS
+
+ Written by Sean Barrett.
+
+ Fixes:
+  Philipp Wiesemann
+  Robert Nix
+  r-lyeh
+  blackpawn
+  Mojofreem@github
+  Ryan Whitworth
+  Vincent Isambart
 */
 
 #ifndef STB__INCLUDE_STB_H
@@ -193,10 +206,22 @@ distribute, and modify this file as you see fit.
    #endif
 #endif
 
+#ifdef _WIN32
+   #define _CRT_SECURE_NO_WARNINGS
+   #define _CRT_NONSTDC_NO_DEPRECATE
+   #define _CRT_NON_CONFORMING_SWPRINTFS
+   #if !defined(_MSC_VER) || _MSC_VER > 1700
+   #include <intrin.h> // _BitScanReverse
+   #endif
+#endif
+
 #include <stdlib.h>     // stdlib could have min/max
 #include <stdio.h>      // need FILE
 #include <string.h>     // stb_define_hash needs memcpy/memset
 #include <time.h>       // stb_dirtree
+#ifdef __MINGW32__
+   #include <fcntl.h>   // O_RDWR
+#endif
 
 #ifdef STB_PERSONAL
    typedef int Bool;
@@ -330,7 +355,7 @@ typedef char stb__testsize2_64[sizeof(stb_uint64)==8 ? 1 : -1];
 
 // add platform-specific ways of checking for sizeof(char*) == 8,
 // and make those define STB_PTR64
-#if defined(_WIN64) || defined(__x86_64__) || defined(__ia64__)
+#if defined(_WIN64) || defined(__x86_64__) || defined(__ia64__) || defined(__LP64__)
   #define STB_PTR64
 #endif
 
@@ -1028,9 +1053,15 @@ void stb_fatal(char *s, ...)
    vfprintf(stderr, s, a);
    va_end(a);
    fputs("\n", stderr);
-   #ifdef _WIN32
    #ifdef STB_DEBUG
+   #ifdef _MSC_VER
+   #ifndef STB_PTR64
    __asm int 3;   // trap to debugger!
+   #else
+   __debugbreak();
+   #endif
+   #else
+   __builtin_trap();
    #endif
    #endif
    exit(1);
@@ -1402,13 +1433,13 @@ int stb_is_pow2(unsigned int n)
 
 // tricky use of 4-bit table to identify 5 bit positions (note the '-1')
 // 3-bit table would require another tree level; 5-bit table wouldn't save one
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
 #pragma warning(push)
 #pragma warning(disable: 4035)  // disable warning about no return value
 int stb_log2_floor(unsigned int n)
 {
    #if _MSC_VER > 1700
-   DWORD i;
+   unsigned long i;
    _BitScanReverse(&i, n);
    return i != 0 ? i : -1;
    #else
@@ -2568,7 +2599,8 @@ void stb_malloc_validate(void *p, void *parent)
 static void * stb__try_chunk(stb__chunk *c, int size, int align, int pre_align)
 {
    char *memblock = (char *) (c+1), *q;
-   int  iq, start_offset;
+   stb_inta iq;
+   int start_offset;
 
    // we going to allocate at the end of the chunk, not the start. confusing,
    // but it means we don't need both a 'limit' and a 'cur', just a 'cur'.
@@ -2980,8 +3012,8 @@ typedef struct
 #define stb_arr_check(a)       assert(!a || stb_arrhead(a)->signature == stb_arr_signature)
 #define stb_arr_check2(a)      assert(!a || stb_arrhead2(a)->signature == stb_arr_signature)
 #else
-#define stb_arr_check(a)       0
-#define stb_arr_check2(a)      0
+#define stb_arr_check(a)       ((void) 0)
+#define stb_arr_check2(a)      ((void) 0)
 #endif
 
 // ARRAY LENGTH
@@ -3304,7 +3336,7 @@ unsigned int stb_hashptr(void *p)
 
 unsigned int stb_rehash_improved(unsigned int v)
 {
-   return stb_hashptr((void *) v);
+   return stb_hashptr((void *)(size_t) v);
 }
 
 unsigned int stb_hash2(char *str, unsigned int *hash2_ptr)
@@ -5056,7 +5088,7 @@ void stb_fwrite32(FILE *f, stb_uint32 x)
    fwrite(&x, 4, 1, f);
 }
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
    #define stb__stat   _stat
 #else
    #define stb__stat   stat
@@ -5396,7 +5428,11 @@ FILE *  stb_fopen(char *filename, char *mode)
    #else
    {
       strcpy(temp_full+p, "stmpXXXXXX");
-      int fd = mkstemp(temp_full);
+      #ifdef __MINGW32__
+         int fd = open(mktemp(temp_full), O_RDWR);
+      #else
+         int fd = mkstemp(temp_full);
+      #endif
       if (fd == -1) return NULL;
       f = fdopen(fd, mode);
       if (f == NULL) {
@@ -5832,14 +5868,19 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
 {
    char **results = NULL;
    char buffer[512], with_slash[512];
-   int n;
+   size_t n;
 
    #ifdef _MSC_VER
       stb__wchar *ws;
       struct _wfinddata_t data;
+   #ifdef _WIN64
+      const intptr_t none = -1;
+      intptr_t z;
+   #else
       const long none = -1;
       long z;
-   #else
+   #endif
+   #else // !_MSC_VER
       const DIR *none = NULL;
       DIR *z;
    #endif
@@ -6813,7 +6854,11 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
    int n;
 
    struct _wfinddata_t c_file;
+   #ifdef STB_PTR64
+   intptr_t hFile;
+   #else
    long hFile;
+   #endif
    stb__wchar full_path[1024];
    int has_slash;
 
@@ -6995,7 +7040,7 @@ stb_dirtree *stb_dirtree_get_dir(char *dir, char *cache_dir)
    stb_sha1(sha, (unsigned char *) dir_lower, strlen(dir_lower));
    strcpy(cache_file, cache_dir);
    s = cache_file + strlen(cache_file);
-   if (s[-1] != '//' && s[-1] != '\\') *s++ = '/';
+   if (s[-1] != '/' && s[-1] != '\\') *s++ = '/';
    strcpy(s, "dirtree_");
    s += strlen(s);
    for (i=0; i < 8; ++i) {
@@ -7345,7 +7390,7 @@ STB_EXTERN void ** stb_ps_fastlist(stb_ps *ps, int *count);
 //     but some entries of the list may be invalid;
 //     test with 'stb_ps_fastlist_valid(x)'
 
-#define stb_ps_fastlist_valid(x)   ((unsigned int) (x) > 1)
+#define stb_ps_fastlist_valid(x)   ((stb_uinta) (x) > 1)
 
 #ifdef STB_DEFINE
 
@@ -7365,8 +7410,6 @@ typedef struct
 } stb_ps_bucket;
 #define GetBucket(p)    ((stb_ps_bucket *) ((char *) (p) - STB_ps_bucket))
 #define EncodeBucket(p) ((stb_ps *) ((char *) (p) + STB_ps_bucket))
-
-typedef char stb__verify_bucket_heap_size[sizeof(stb_ps_bucket) == 16];
 
 static void stb_bucket_free(stb_ps_bucket *b)
 {
@@ -10065,7 +10108,7 @@ char *stb_decompress_fromfile(char *filename, unsigned int *len)
    if (p == NULL) return NULL;
    if (p[0] != 0x57 || p[1] != 0xBc || p[2] || p[3]) { free(p); return NULL; }
    q = (char *) malloc(stb_decompress_length(p)+1);
-   if (!q) { free(p); free(p); return NULL; }
+   if (!q) { free(p); return NULL; }
    *len = stb_decompress((unsigned char *) q, p, n);
    if (*len) q[*len] = 0;
    free(p);
@@ -10414,15 +10457,15 @@ int stb_compress_intofile(FILE *f, char *input, unsigned int length)
 //////////////////////    streaming I/O version    /////////////////////
 
 
-static stb_uint stb_out_backpatch_id(void)
+static size_t stb_out_backpatch_id(void)
 {
    if (stb__out)
-      return (stb_uint) stb__out;
+      return (size_t) stb__out;
    else
       return ftell(stb__outfile);
 }
 
-static void stb_out_backpatch(stb_uint id, stb_uint value)
+static void stb_out_backpatch(size_t id, stb_uint value)
 {
    stb_uchar data[4] = { value >> 24, value >> 16, value >> 8, value };
    if (stb__out) {
