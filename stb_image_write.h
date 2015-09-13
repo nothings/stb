@@ -75,6 +75,7 @@ CREDITS:
    bugfixes:
       github:Chribba
       Guillaume Chereau
+      github:jry2
       
 LICENSE
 
@@ -108,6 +109,11 @@ STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const 
 #endif//INCLUDE_STB_IMAGE_WRITE_H
 
 #ifdef STB_IMAGE_WRITE_IMPLEMENTATION
+
+#ifdef _WIN32
+   #define _CRT_SECURE_NO_WARNINGS
+   #define _CRT_NONSTDC_NO_DEPRECATE
+#endif
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -287,7 +293,7 @@ void stbiw__write_dump_data(FILE *f, int length, unsigned char *data)
    fwrite(data, length, 1, f);
 }
 
-void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scratch, const float *scanline)
+void stbiw__write_hdr_scanline(FILE *f, int width, int ncomp, unsigned char *scratch, const float *scanline)
 {
    unsigned char scanlineheader[4] = { 2, 2, 0, 0 };
    unsigned char rgbe[4];
@@ -300,14 +306,14 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
    /* skip RLE for images too small or large */
    if (width < 8 || width >= 32768) {
       for (x=0; x < width; x++) {
-         switch (comp) {
+         switch (ncomp) {
             case 4: /* fallthrough */
-            case 3: linear[2] = scanline[x*comp + 2];
-                    linear[1] = scanline[x*comp + 1];
-                    linear[0] = scanline[x*comp + 0];
+            case 3: linear[2] = scanline[x*ncomp + 2];
+                    linear[1] = scanline[x*ncomp + 1];
+                    linear[0] = scanline[x*ncomp + 0];
                     break;
             default:
-                    linear[0] = linear[1] = linear[2] = scanline[x*comp + 0];
+                    linear[0] = linear[1] = linear[2] = scanline[x*ncomp + 0];
                     break;
          }
          stbiw__linear_to_rgbe(rgbe, linear);
@@ -317,14 +323,14 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
       int c,r;
       /* encode into scratch buffer */
       for (x=0; x < width; x++) {
-         switch(comp) {
+         switch(ncomp) {
             case 4: /* fallthrough */
-            case 3: linear[2] = scanline[x*comp + 2];
-                    linear[1] = scanline[x*comp + 1];
-                    linear[0] = scanline[x*comp + 0];
+            case 3: linear[2] = scanline[x*ncomp + 2];
+                    linear[1] = scanline[x*ncomp + 1];
+                    linear[0] = scanline[x*ncomp + 0];
                     break;
             default:
-                    linear[0] = linear[1] = linear[2] = scanline[x*comp + 0];
+                    linear[0] = linear[1] = linear[2] = scanline[x*ncomp + 0];
                     break;
          }
          stbiw__linear_to_rgbe(rgbe, linear);
@@ -562,8 +568,9 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
 
    {
       // compute adler32 on input
-      unsigned int i=0, s1=1, s2=0, blocklen = data_len % 5552;
-      int j=0;
+      unsigned int k=0, s1=1, s2=0;
+      int blocklen = (int) (data_len % 5552);
+      j=0;
       while (j < data_len) {
          for (i=0; i < blocklen; ++i) s1 += data[j+i], s2 += s1;
          s1 %= 65521, s2 %= 65521;
