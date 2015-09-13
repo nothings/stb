@@ -3011,8 +3011,8 @@ typedef struct
 #define stb_arr_check(a)       assert(!a || stb_arrhead(a)->signature == stb_arr_signature)
 #define stb_arr_check2(a)      assert(!a || stb_arrhead2(a)->signature == stb_arr_signature)
 #else
-#define stb_arr_check(a)       0
-#define stb_arr_check2(a)      0
+#define stb_arr_check(a)       ((void) 0)
+#define stb_arr_check2(a)      ((void) 0)
 #endif
 
 // ARRAY LENGTH
@@ -3335,7 +3335,7 @@ unsigned int stb_hashptr(void *p)
 
 unsigned int stb_rehash_improved(unsigned int v)
 {
-   return stb_hashptr((void *) v);
+   return stb_hashptr((void *)(size_t) v);
 }
 
 unsigned int stb_hash2(char *str, unsigned int *hash2_ptr)
@@ -10456,15 +10456,15 @@ int stb_compress_intofile(FILE *f, char *input, unsigned int length)
 //////////////////////    streaming I/O version    /////////////////////
 
 
-static stb_uint stb_out_backpatch_id(void)
+static size_t stb_out_backpatch_id(void)
 {
    if (stb__out)
-      return (stb_uint) stb__out;
+      return (size_t) stb__out;
    else
       return ftell(stb__outfile);
 }
 
-static void stb_out_backpatch(stb_uint id, stb_uint value)
+static void stb_out_backpatch(size_t id, stb_uint value)
 {
    stb_uchar data[4] = { value >> 24, value >> 16, value >> 8, value };
    if (stb__out) {
