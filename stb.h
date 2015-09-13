@@ -1422,7 +1422,7 @@ int stb_is_pow2(unsigned int n)
 int stb_log2_floor(unsigned int n)
 {
    #if _MSC_VER > 1700
-   DWORD i;
+   unsigned int i;
    _BitScanReverse(&i, n);
    return i != 0 ? i : -1;
    #else
