@@ -186,7 +186,7 @@
 //   Features             Porting            Bugfixes & Warnings
 //  Sean Barrett                          github:r-leyh   Jesus Fernandez
 //                                        Miguel Lechon   github:Arbeiterunfallversicherungsgesetz
-//                                        Thomas Frase
+//                                        Thomas Frase    James Hoffman
 //
 // VERSION HISTORY
 //
