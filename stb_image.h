@@ -996,6 +996,7 @@ static unsigned char *stbi__load_flip(stbi__context *s, int *x, int *y, int *com
    return result;
 }
 
+#ifndef STBI_NO_HDR
 static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, int req_comp)
 {
    if (stbi__vertically_flip_on_load && result != NULL) {
@@ -1016,7 +1017,7 @@ static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, in
       }
    }
 }
-
+#endif
 
 #ifndef STBI_NO_STDIO
 
@@ -1160,6 +1161,7 @@ STBIDEF int      stbi_is_hdr_from_file(FILE *f)
    stbi__start_file(&s,f);
    return stbi__hdr_test(&s);
    #else
+   STBI_NOTUSED(f);
    return 0;
    #endif
 }
@@ -1172,6 +1174,8 @@ STBIDEF int      stbi_is_hdr_from_callbacks(stbi_io_callbacks const *clbk, void 
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
    return stbi__hdr_test(&s);
    #else
+   STBI_NOTUSED(clbk);
+   STBI_NOTUSED(user);
    return 0;
    #endif
 }
@@ -1292,17 +1296,22 @@ static stbi__uint32 stbi__get32be(stbi__context *s)
    return (z << 16) + stbi__get16be(s);
 }
 
+#if defined (STBI_NO_BMP) && (STBI_NO_TGA) && (STBI_NO_GIF)
+#else
 static int stbi__get16le(stbi__context *s)
 {
    int z = stbi__get8(s);
    return z + (stbi__get8(s) << 8);
 }
+#endif
 
+#ifndef STBI_NO_BMP
 static stbi__uint32 stbi__get32le(stbi__context *s)
 {
    stbi__uint32 z = stbi__get16le(s);
    return z + (stbi__get16le(s) << 16);
 }
+#endif
 
 #define STBI__BYTECAST(x)  ((stbi_uc) ((x) & 255))  // truncate int to byte without warnings
 
