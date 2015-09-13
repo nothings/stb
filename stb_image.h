@@ -5222,7 +5222,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
             // Read the data.
             if (bitdepth == 16) {
                for (i = 0; i < pixelCount; i++, p += 4)
-                  *p = stbi__get16be(s) >> 8;
+                  *p = (stbi_uc) (stbi__get16be(s) >> 8);
             } else {
                for (i = 0; i < pixelCount; i++, p += 4)
                   *p = stbi__get8(s);
@@ -5764,7 +5764,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
             if (o == NULL) return NULL;
 
             if (prev_trans != -1)
-               g->pal[g->transparent][3] = prev_trans;
+               g->pal[g->transparent][3] = (stbi_uc) prev_trans;
 
             return o;
          }
@@ -5795,6 +5795,8 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
             return stbi__errpuc("unknown code", "Corrupt GIF");
       }
    }
+
+   STBI_NOTUSED(req_comp);
 }
 
 static stbi_uc *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp)
