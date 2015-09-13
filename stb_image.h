@@ -147,7 +147,7 @@
 
    Latest revision history:
       2.07  (2015-09-13) fix compiler warnings; animated GIF support close;
-                         limited 16-bit PSD support
+                         limited 16-bit PSD support; #ifdef unused functions
       2.06  (2015-04-19) fix bug where PSD returns wrong '*comp' value
       2.05  (2015-04-19) fix bug in progressive JPEG handling, fix warning
       2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
@@ -209,6 +209,7 @@
   isn't, let Sean know.                          Joseph Thomson
                                                  Phil Jordan
                                                  Nathan Reed
+                                                 Michaelangel007@github
 
 LICENSE
 
@@ -6344,7 +6345,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 /*
    revision history:
       2.07  (2015-09-13) fix compiler warnings; animated GIF support;
-                         limited 16-bit PSD support
+                         limited 16-bit PSD support; #ifdef unused functions
       2.06  (2015-04-19) fix bug where PSD returns wrong '*comp' value
       2.05  (2015-04-19) fix bug in progressive JPEG handling, fix warning
       2.04  (2015-04-15) try to re-enable SIMD on MinGW 64-bit
