@@ -547,11 +547,6 @@ STBRP_DEF void stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int n
    STBRP_SORT(rects, num_rects, sizeof(rects[0]), rect_height_compare);
 
    for (i=0; i < num_rects; ++i) {
-      if (rects[i].w == 0 || rects[i].h == 0) {
-          // rect is degenerate, we don't have to reserve any space for it
-          rects[i].x = rects[i].y = 0;
-          continue;
-      }
       stbrp__findresult fr = stbrp__skyline_pack_rectangle(context, rects[i].w, rects[i].h);
       if (fr.prev_link) {
          rects[i].x = (stbrp_coord) fr.x;
