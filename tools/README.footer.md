@@ -31,6 +31,7 @@ Not public domain:
 - **2D** [blendish](https://bitbucket.org/duangle/oui-blendish/src): blender-style widget rendering (MIT license)
 - **geometry** [sdf.h](https://github.com/memononen/SDF): compute signed-distance field from antialiased image (MIT license)
 - **geometry** [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
+- **audio** [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h): IMA-ADPCM audio decoder (MIT license)
 - **parsing** [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
 - **tests** [utest](https://github.com/evolutional/utest): unit testing (MIT license)
 - **tests** [catch](https://github.com/philsquared/Catch): unit testing (Boost license)
