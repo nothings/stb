@@ -87,7 +87,7 @@ Probably because I don't know about it, feel free to submit an issue. But I migh
 it for various other reasons, including subtleties of what is 'minimal other dependencies' and
 subtleties about what is 'lightweight'.
 
-###### Why isn't sqllite's amalgamated build on this list?
+###### Why isn't SQLite's amalgamated build on this list?
 
 Come on.
 
