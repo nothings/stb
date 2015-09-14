@@ -53,7 +53,7 @@ void test_ycbcr(void)
 
 float hdr_data[200][200][3];
 
-void dummy(void *context, void *data, int len)
+void dummy_write(void *context, void *data, int len)
 {
    static char dummy[1024];
    if (len > 1024) len = 1024;
@@ -97,6 +97,9 @@ int main(int argc, char **argv)
             stbi_write_png(stb_sprintf("output/%s.png", fname), w, h, 4, data, w*4);
             stbi_write_bmp(stb_sprintf("output/%s.bmp", fname), w, h, 4, data);
             stbi_write_tga(stb_sprintf("output/%s.tga", fname), w, h, 4, data);
+            stbi_write_png_to_func(dummy_write,0, w, h, 4, data, w*4);
+            stbi_write_bmp_to_func(dummy_write,0, w, h, 4, data);
+            stbi_write_tga_to_func(dummy_write,0, w, h, 4, data);
             free(data);
          } else
             printf("FAILED 4\n");

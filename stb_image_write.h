@@ -1,5 +1,5 @@
 /* stb_image_write - v1.00 - public domain - http://nothings.org/stb/stb_image_write.h
-   writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010
+   writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010-2015
                                      no warranty implied; use at your own risk
 
    Before #including,
@@ -43,6 +43,9 @@ USAGE:
      int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
      int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
      int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
+
+   where the callback is:
+      void stbi_write_func(void *context, void *data, int size);
 
    You can define STBI_WRITE_NO_STDIO to disable the file variant of these
    functions, so the library will not use stdio.h at all. However, this will
@@ -125,7 +128,7 @@ STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const 
 STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
 #endif
 
-typedef int stbi_write_func(void *context, void *data, int size);
+typedef void stbi_write_func(void *context, void *data, int size);
 
 STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
 STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
@@ -192,15 +195,15 @@ static void stbi__start_write_callbacks(stbi__write_context *s, stbi_write_func 
 
 #ifndef STBI_WRITE_NO_STDIO
 
-static int stbi__stdio_write(void *user, void *data, int size)
+static void stbi__stdio_write(void *context, void *data, int size)
 {
-   return (int) fwrite(data,1,size,(FILE*) user);
+   fwrite(data,1,size,(FILE*) context);
 }
 
 static int stbi__start_write_file(stbi__write_context *s, const char *filename)
 {
    FILE *f = fopen(filename, "wb");
-   stbi__start_write_callbacks(s, &stbi__stdio_write, (void *) f);
+   stbi__start_write_callbacks(s, stbi__stdio_write, (void *) f);
    return f != NULL;
 }
 
