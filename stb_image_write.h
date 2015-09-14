@@ -197,10 +197,11 @@ static int stbi__stdio_write(void *user, void *data, int size)
    return (int) fwrite(data,1,size,(FILE*) user);
 }
 
-static void stbi__start_write_file(stbi__write_context *s, const char *filename)
+static int stbi__start_write_file(stbi__write_context *s, const char *filename)
 {
    FILE *f = fopen(filename, "wb");
    stbi__start_write_callbacks(s, &stbi__stdio_write, (void *) f);
+   return f != NULL;
 }
 
 static void stbi__end_write_file(stbi__write_context *s)
@@ -353,12 +354,13 @@ STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int x,
 #ifndef STBI_WRITE_NO_STDIO
 STBIWDEF int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *data)
 {
-   int r;
    stbi__write_context s;
-   stbi__start_write_file(&s,filename);
-   r = stbi_write_bmp_core(&s, x, y, comp, data);
-   stbi__end_write_file(&s);
-   return r;
+   if (stbi__start_write_file(&s,filename)) {
+      int r = stbi_write_bmp_core(&s, x, y, comp, data);
+      stbi__end_write_file(&s);
+      return r;
+   } else
+      return 0;
 }
 #endif //!STBI_WRITE_NO_STDIO
 
@@ -440,12 +442,13 @@ int stbi_write_tga_to_func(stbi_write_func *func, void *context, int x, int y, i
 #ifndef STBI_WRITE_NO_STDIO
 int stbi_write_tga_to_file(char const *filename, int x, int y, int comp, const void *data)
 {
-   int r;
    stbi__write_context s;
-   stbi__start_write_file(&s,filename);
-   r = stbi_write_tga_core(&s, x, y, comp, (void *) data);
-   stbi__end_write_file(&s);
-   return r;
+   if (stbi__start_write_file(&s,filename)) {
+      int r = stbi_write_tga_core(&s, x, y, comp, (void *) data);
+      stbi__end_write_file(&s);
+      return r;
+   } else
+      return 0;
 }
 #endif
 
@@ -609,12 +612,13 @@ int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int x, int y, i
 
 int stbi_write_hdr_to_file(char const *filename, int x, int y, int comp, const float *data)
 {
-   int r;
    stbi__write_context s;
-   stbi__start_write_file(&s,filename);
-   r = stbi_write_hdr_core(&s, x, y, comp, (float *) data);
-   stbi__end_write_file(&s);
-   return r;
+   if (stbi__start_write_file(&s,filename)) {
+      int r = stbi_write_hdr_core(&s, x, y, comp, (float *) data);
+      stbi__end_write_file(&s);
+      return r;
+   } else
+      return 0;
 }
 #endif // STBI_WRITE_NO_STDIO
 
