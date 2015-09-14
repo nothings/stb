@@ -106,6 +106,10 @@ SOURCE=..\stb_dxt.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_easy_font.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_herringbone_wang_tile.h
 # End Source File
 # Begin Source File

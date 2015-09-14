@@ -1,4 +1,4 @@
-// stb_voxel_render.h - v0.82 - Sean Barrett, 2015 - public domain
+// stb_voxel_render.h - v0.83 - Sean Barrett, 2015 - public domain
 //
 // This library helps render large-scale "voxel" worlds for games,
 // in this case, one with blocks that can have textures and that
@@ -186,10 +186,11 @@
 //   Features             Porting            Bugfixes & Warnings
 //  Sean Barrett                          github:r-leyh   Jesus Fernandez
 //                                        Miguel Lechon   github:Arbeiterunfallversicherungsgesetz
-//                                        Thomas Frase
+//                                        Thomas Frase    James Hofmann
 //
 // VERSION HISTORY
 //
+//   0.83   (2015-09-13)  remove non-constant struct initializers to support more compilers
 //   0.82   (2015-08-01)  added input.packed_compact to store rot, vheight & texlerp efficiently
 //                        fix broken tex_overlay2
 //   0.81   (2015-05-28)  fix broken STBVOX_CONFIG_OPTIMIZED_VHEIGHT
@@ -3382,10 +3383,13 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
 
 static void stbvox_make_mesh_for_column(stbvox_mesh_maker *mm, int x, int y, int z0)
 {
-   stbvox_pos pos = { x,y,0 };
+   stbvox_pos pos;
    int v_off = x * mm->x_stride_in_bytes + y * mm->y_stride_in_bytes;
    int ns_off = mm->y_stride_in_bytes;
    int ew_off = mm->x_stride_in_bytes;
+   pos.x = x;
+   pos.y = y;
+   pos.z = 0;
    if (mm->input.geometry) {
       unsigned char *bt  = mm->input.blocktype + v_off;
       unsigned char *geo = mm->input.geometry + v_off;

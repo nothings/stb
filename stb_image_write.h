@@ -1,4 +1,4 @@
-/* stb_image_write - v0.98 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v0.99 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010
                                      no warranty implied; use at your own risk
 
@@ -62,6 +62,9 @@ USAGE:
    data, alpha (if provided) is discarded, and for monochrome data it is
    replicated across all three channels.
 
+   TGA supports RLE or non-RLE compressed data. To use non-RLE-compressed
+   data, set the global variable 'stbi_write_tga_with_rle' to 0.
+
 CREDITS:
 
    PNG/BMP/TGA
@@ -72,8 +75,12 @@ CREDITS:
       Jean-Sebastien Guay
    misc enhancements:
       Tim Kelsey
+   TGA RLE
+      Alan Hickman
    bugfixes:
       github:Chribba
+      Guillaume Chereau
+      github:jry2
       
 LICENSE
 
@@ -89,10 +96,17 @@ distribute, and modify this file as you see fit.
 extern "C" {
 #endif
 
-extern int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
-extern int stbi_write_bmp(char const *filename, int w, int h, int comp, const void  *data);
-extern int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
-extern int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
+#ifdef STB_IMAGE_WRITE_STATIC
+#define STBIWDEF static
+#else
+#define STBIWDEF extern
+extern int stbi_write_tga_with_rle;
+#endif
+
+STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
+STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const void  *data);
+STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
+STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
 
 #ifdef __cplusplus
 }
@@ -101,6 +115,11 @@ extern int stbi_write_hdr(char const *filename, int w, int h, int comp, const fl
 #endif//INCLUDE_STB_IMAGE_WRITE_H
 
 #ifdef STB_IMAGE_WRITE_IMPLEMENTATION
+
+#ifdef _WIN32
+   #define _CRT_SECURE_NO_WARNINGS
+   #define _CRT_NONSTDC_NO_DEPRECATE
+#endif
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -134,6 +153,13 @@ extern int stbi_write_hdr(char const *filename, int w, int h, int comp, const fl
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
 
+
+#ifdef STB_IMAGE_WRITE_STATIC
+static int stbi_write_tga_with_rle = 1;
+#else
+int stbi_write_tga_with_rle = 1;
+#endif
+
 static void writefv(FILE *f, const char *fmt, va_list v)
 {
    while (*fmt) {
@@ -154,6 +180,14 @@ static void writefv(FILE *f, const char *fmt, va_list v)
    }
 }
 
+static void writef(FILE *f, const char *fmt, ...)
+{
+   va_list v;
+   va_start(v, fmt);
+   writefv(f, fmt, v);
+   va_end(v);
+}
+
 static void write3(FILE *f, unsigned char a, unsigned char b, unsigned char c)
 {
    unsigned char arr[3];
@@ -161,11 +195,42 @@ static void write3(FILE *f, unsigned char a, unsigned char b, unsigned char c)
    fwrite(arr, 3, 1, f);
 }
 
-static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
+static void write_pixel(FILE *f, int rgb_dir, int comp, int write_alpha, int expand_mono, const unsigned char *d)
 {
    unsigned char bg[3] = { 255, 0, 255}, px[3];
+   int k;
+
+   if (write_alpha < 0)
+      fwrite(&d[comp - 1], 1, 1, f);
+   switch (comp) {
+   case 1: fwrite(d, 1, 1, f);
+           break;
+   case 2: if (expand_mono)
+             write3(f, d[0], d[0], d[0]); // monochrome bmp
+           else
+              fwrite(d, 1, 1, f);  // monochrome TGA
+           break;
+   case 4:
+      if (!write_alpha) {
+         // composite against pink background
+         for (k = 0; k < 3; ++k)
+            px[k] = bg[k] + ((d[k] - bg[k]) * d[3]) / 255;
+         write3(f, px[1 - rgb_dir], px[1], px[1 + rgb_dir]);
+         break;
+      }
+      /* FALLTHROUGH */
+   case 3:
+      write3(f, d[1 - rgb_dir], d[1], d[1 + rgb_dir]);
+      break;
+   }
+   if (write_alpha > 0)
+      fwrite(&d[comp - 1], 1, 1, f);
+}
+
+static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
+{
    stbiw_uint32 zero = 0;
-   int i,j,k, j_end;
+   int i,j, j_end;
 
    if (y <= 0)
       return;
@@ -178,31 +243,7 @@ static void write_pixels(FILE *f, int rgb_dir, int vdir, int x, int y, int comp,
    for (; j != j_end; j += vdir) {
       for (i=0; i < x; ++i) {
          unsigned char *d = (unsigned char *) data + (j*x+i)*comp;
-         if (write_alpha < 0)
-            fwrite(&d[comp-1], 1, 1, f);
-         switch (comp) {
-            case 1: fwrite(d, 1, 1, f);
-                    break;
-            case 2: if (expand_mono)
-                       write3(f, d[0],d[0],d[0]); // monochrome bmp
-                    else
-                       fwrite(d, 1, 1, f);  // monochrome TGA
-                    break;
-            case 4:
-               if (!write_alpha) {
-                  // composite against pink background
-                  for (k=0; k < 3; ++k)
-                     px[k] = bg[k] + ((d[k] - bg[k]) * d[3])/255;
-                  write3(f, px[1-rgb_dir],px[1],px[1+rgb_dir]);
-                  break;
-               }
-               /* FALLTHROUGH */
-            case 3:
-               write3(f, d[1-rgb_dir],d[1],d[1+rgb_dir]);
-               break;
-         }
-         if (write_alpha > 0)
-            fwrite(&d[comp-1], 1, 1, f);
+         write_pixel(f, rgb_dir, comp, write_alpha, expand_mono, d);
       }
       fwrite(&zero,scanline_pad,1,f);
    }
@@ -224,7 +265,7 @@ static int outfile(char const *filename, int rgb_dir, int vdir, int x, int y, in
    return f != NULL;
 }
 
-int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *data)
+STBIWDEF int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *data)
 {
    int pad = (-x*3) & 3;
    return outfile(filename,-1,-1,x,y,comp,1,(void *) data,0,pad,
@@ -233,13 +274,77 @@ int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *dat
             40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
 }
 
-int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
+STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
 {
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
    int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
-   return outfile(filename, -1,-1, x, y, comp, 0, (void *) data, has_alpha, 0,
-                  "111 221 2222 11", 0,0,format, 0,0,0, 0,0,x,y, (colorbytes+has_alpha)*8, has_alpha*8);
+   FILE *f;
+
+   if (!stbi_write_tga_with_rle) {
+      return outfile(filename, -1, -1, x, y, comp, 0, (void *) data, has_alpha, 0,
+         "111 221 2222 11", 0, 0, format, 0, 0, 0, 0, 0, x, y, (colorbytes + has_alpha) * 8, has_alpha * 8);
+   }
+
+   if (y < 0 || x < 0) return 0;
+   f = fopen(filename, "wb");
+   if (f) {
+      int i,j,k;
+
+      writef(f, "111 221 2222 11", 0,0,format+8, 0,0,0, 0,0,x,y, (colorbytes + has_alpha) * 8, has_alpha * 8);
+
+      for (j = y - 1; j >= 0; --j) {
+         const unsigned char *row = (unsigned char *) data + j * x * comp;
+         int len;
+
+         for (i = 0; i < x; i += len) {
+            const unsigned char *begin = row + i * comp;
+            int diff = 1;
+            len = 1;
+
+            if (i < x - 1) {
+               ++len;
+               diff = memcmp(begin, row + (i + 1) * comp, comp);
+               if (diff) {
+                  const unsigned char *prev = begin;
+                  for (k = i + 2; k < x && len < 128; ++k) {
+                     if (memcmp(prev, row + k * comp, comp)) {
+                        prev += comp;
+                        ++len;
+                     } else {
+                        --len;
+                        break;
+                     }
+                  }
+               } else {
+                  for (k = i + 2; k < x && len < 128; ++k) {
+                     if (!memcmp(begin, row + k * comp, comp)) {
+                        ++len;
+                     } else {
+                        break;
+                     }
+                  }
+               }
+            }
+
+            if (diff) {
+               unsigned char header = (unsigned char) (len - 1);
+               fwrite(&header, 1, 1, f);
+               for (k = 0; k < len; ++k) {
+                  write_pixel(f, -1, comp, has_alpha, 0, begin + k * comp);
+               }
+            } else {
+               unsigned char header = (unsigned char) (len - 129);
+               fwrite(&header, 1, 1, f);
+               write_pixel(f, -1, comp, has_alpha, 0, begin);
+            }
+         }
+      }
+
+      fclose(f);
+   }
+
+   return f != NULL;
 }
 
 // *************************************************************************************************
@@ -280,7 +385,7 @@ void stbiw__write_dump_data(FILE *f, int length, unsigned char *data)
    fwrite(data, length, 1, f);
 }
 
-void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scratch, const float *scanline)
+void stbiw__write_hdr_scanline(FILE *f, int width, int ncomp, unsigned char *scratch, const float *scanline)
 {
    unsigned char scanlineheader[4] = { 2, 2, 0, 0 };
    unsigned char rgbe[4];
@@ -293,14 +398,14 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
    /* skip RLE for images too small or large */
    if (width < 8 || width >= 32768) {
       for (x=0; x < width; x++) {
-         switch (comp) {
+         switch (ncomp) {
             case 4: /* fallthrough */
-            case 3: linear[2] = scanline[x*comp + 2];
-                    linear[1] = scanline[x*comp + 1];
-                    linear[0] = scanline[x*comp + 0];
+            case 3: linear[2] = scanline[x*ncomp + 2];
+                    linear[1] = scanline[x*ncomp + 1];
+                    linear[0] = scanline[x*ncomp + 0];
                     break;
-            case 2: /* fallthrough */
-            case 1: linear[0] = linear[1] = linear[2] = scanline[x*comp + 0];
+            default:
+                    linear[0] = linear[1] = linear[2] = scanline[x*ncomp + 0];
                     break;
          }
          stbiw__linear_to_rgbe(rgbe, linear);
@@ -310,14 +415,14 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
       int c,r;
       /* encode into scratch buffer */
       for (x=0; x < width; x++) {
-         switch(comp) {
+         switch(ncomp) {
             case 4: /* fallthrough */
-            case 3: linear[2] = scanline[x*comp + 2];
-                    linear[1] = scanline[x*comp + 1];
-                    linear[0] = scanline[x*comp + 0];
+            case 3: linear[2] = scanline[x*ncomp + 2];
+                    linear[1] = scanline[x*ncomp + 1];
+                    linear[0] = scanline[x*ncomp + 0];
                     break;
-            case 2: /* fallthrough */
-            case 1: linear[0] = linear[1] = linear[2] = scanline[x*comp + 0];
+            default:
+                    linear[0] = linear[1] = linear[2] = scanline[x*ncomp + 0];
                     break;
          }
          stbiw__linear_to_rgbe(rgbe, linear);
@@ -369,7 +474,7 @@ void stbiw__write_hdr_scanline(FILE *f, int width, int comp, unsigned char *scra
    }
 }
 
-int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *data)
+STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *data)
 {
    int i;
    FILE *f;
@@ -555,8 +660,9 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
 
    {
       // compute adler32 on input
-      unsigned int i=0, s1=1, s2=0, blocklen = data_len % 5552;
-      int j=0;
+      unsigned int k=0, s1=1, s2=0;
+      int blocklen = (int) (data_len % 5552);
+      j=0;
       while (j < data_len) {
          for (i=0; i < blocklen; ++i) s1 += data[j+i], s2 += s1;
          s1 %= 65521, s2 %= 65521;
@@ -698,7 +804,7 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
    return out;
 }
 
-int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
+STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
 {
    FILE *f;
    int len;
@@ -714,6 +820,8 @@ int stbi_write_png(char const *filename, int x, int y, int comp, const void *dat
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
+      0.99 (2015-09-13)
+             warning fixes; TGA rle support
       0.98 (2015-04-08)
              added STBIW_MALLOC, STBIW_ASSERT etc
       0.97 (2015-01-18)

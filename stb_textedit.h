@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.6  - public domain - Sean Barrett
+// stb_textedit.h - v1.7  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -31,6 +31,7 @@
 //
 // VERSION HISTORY
 //
+//   1.7  (2015-09-13) change y range handling in case baseline is non-0
 //   1.6  (2015-04-15) allow STB_TEXTEDIT_memmove
 //   1.5  (2014-09-10) add support for secondary keys for OS X
 //   1.4  (2014-08-17) fix signed/unsigned warnings
@@ -45,9 +46,13 @@
 // ADDITIONAL CONTRIBUTORS
 //
 //   Ulf Winklemann: move-by-word in 1.1
-//   Scott Graham: mouse selection bugfix in 1.3
 //   Fabian Giesen: secondary key inputs in 1.5
 //   Martins Mozeiko: STB_TEXTEDIT_memmove
+//
+//   Bugfixes:
+//      Scott Graham
+//      Daniel Keller
+//      Omar Cornut
 //
 // USAGE
 //
@@ -380,9 +385,6 @@ static int stb_text_locate_coord(STB_TEXTEDIT_STRING *str, float x, float y)
    float base_y = 0, prev_x;
    int i=0, k;
 
-   if (y < 0)
-      return 0;
-
    r.x0 = r.x1 = 0;
    r.ymin = r.ymax = 0;
    r.num_chars = 0;
@@ -392,6 +394,9 @@ static int stb_text_locate_coord(STB_TEXTEDIT_STRING *str, float x, float y)
       STB_TEXTEDIT_LAYOUTROW(&r, str, i);
       if (r.num_chars <= 0)
          return n;
+
+      if (i==0 && y < base_y + r.ymin)
+         return 0;
 
       if (y < base_y + r.ymax)
          break;
@@ -986,8 +991,11 @@ retry:
          stb_textedit_clamp(str, state);
          stb_textedit_move_to_first(state);
          stb_textedit_find_charpos(&find, str, state->cursor, state->single_line);
-         state->cursor = find.first_char + find.length;
+
          state->has_preferred_x = 0;
+         state->cursor = find.first_char + find.length;
+         if (find.length > 0 && STB_TEXTEDIT_GETCHAR(str, state->cursor-1) == STB_TEXTEDIT_NEWLINE)
+            --state->cursor;
          break;
       }
 
@@ -1012,8 +1020,11 @@ retry:
          stb_textedit_clamp(str, state);
          stb_textedit_prep_selection_at_cursor(state);
          stb_textedit_find_charpos(&find, str, state->cursor, state->single_line);
-         state->cursor = state->select_end = find.first_char + find.length;
          state->has_preferred_x = 0;
+         state->cursor = find.first_char + find.length;
+         if (find.length > 0 && STB_TEXTEDIT_GETCHAR(str, state->cursor-1) == STB_TEXTEDIT_NEWLINE)
+            --state->cursor;
+         state->select_end = state->cursor;
          break;
       }
 

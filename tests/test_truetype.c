@@ -24,6 +24,7 @@ void debug(void)
 unsigned char temp_bitmap[BITMAP_H][BITMAP_W];
 stbtt_bakedchar cdata[256*2]; // ASCII 32..126 is 95 glyphs
 stbtt_packedchar pdata[256*2];
+
 int main(int argc, char **argv)
 {
    stbtt_fontinfo font;
@@ -34,6 +35,17 @@ int main(int argc, char **argv)
 
    // @TODO: why is minglui.ttc failing? 
    fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/mingliu.ttc", "rb"));
+
+   //fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/x/DroidSansMono.ttf", "rb"));
+   {
+      static stbtt_pack_context pc;
+      static stbtt_packedchar cd[256];
+      static unsigned char atlas[1024*1024];
+
+      stbtt_PackBegin(&pc, atlas, 1024,1024,1024,1,NULL);
+      stbtt_PackFontRange(&pc, ttf_buffer, 0, 32.0, 0, 256, cd);
+      stbtt_PackEnd(&pc);
+   }
 
 #if 0
    stbtt_BakeFontBitmap(ttf_buffer,stbtt_GetFontOffsetForIndex(ttf_buffer,0), 40.0, temp_bitmap[0],BITMAP_W,BITMAP_H, 32,96, cdata); // no guarantee this fits!
