@@ -53,12 +53,19 @@ void test_ycbcr(void)
 
 float hdr_data[200][200][3];
 
+void dummy(void *context, void *data, int len)
+{
+   static char dummy[1024];
+   if (len > 1024) len = 1024;
+   memcpy(dummy, data, len);
+}
+
 int main(int argc, char **argv)
 {
    int w,h;
    //test_ycbcr();
 
-   #if 0
+   #if 1
    // test hdr asserts
    for (h=0; h < 100; h += 2)
       for (w=0; w < 200; ++w)
@@ -88,6 +95,8 @@ int main(int argc, char **argv)
             char fname[512];
             stb_splitpath(fname, argv[i], STB_FILE);
             stbi_write_png(stb_sprintf("output/%s.png", fname), w, h, 4, data, w*4);
+            stbi_write_bmp(stb_sprintf("output/%s.bmp", fname), w, h, 4, data);
+            stbi_write_tga(stb_sprintf("output/%s.tga", fname), w, h, 4, data);
             free(data);
          } else
             printf("FAILED 4\n");
