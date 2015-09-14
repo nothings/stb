@@ -86,7 +86,7 @@ There is also this XML library, but if you're using XML, shame on you:
 
 - [tinyxml2](https://github.com/leethomason/tinyxml2): XML (zlib license)
 
-You can use (this URL)[https://github.com/nothings/stb#other_libs] to link directly to this list.
+You can use [this URL](https://github.com/nothings/stb#other_libs) to link directly to this list.
 
 
 #### If I wrap an stb library in a new library, does the new library have to be public domain?
