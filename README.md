@@ -45,7 +45,7 @@ Yes. I'll even tell you about some. However, I haven't used most of these librar
 and can't comment on their quality. (If you use them and aren't their author, feel
 free to tell me about their quality.)
 
-- **images** [jo_gif.cpp](http://www.jonolick.com/home/gif-writer): tiny GIF writer (public domain)
+- **images** [jo_gif.cpp](http://www.jonolick.com/home/gif-writer): animated GIF writer (public domain)
 - **images** [gif.h](https://github.com/ginsweater/gif-h): animated GIF writer (public domain)
 - **images** [tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/blob/master/tiny_jpeg.h): JPEG encoder (public domain)
 - **images** [miniexr](https://github.com/aras-p/miniexr): OpenEXR writer (public domain)
