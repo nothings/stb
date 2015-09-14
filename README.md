@@ -49,11 +49,20 @@ free to tell me about their quality.)
 - [gif.h](https://github.com/ginsweater/gif-h): animated GIF writer (public domain)
 - [tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/blob/master/tiny_jpeg.h): JPEG encoder (public domain)
 - [lodepng](http://lodev.org/lodepng/): PNG encoder/decoder (zlib license)
+
+&nbsp;
+
 - [nanoSVG](https://github.com/memononen/nanosvg): 1-file SVG parser; 1-file SVG rasterizer (zlib license)
 - [tinyobjloader](https://github.com/syoyo/tinyobjloader): wavefront OBJ file loader (BSD license)
+
+&nbsp;
+
 - [sdf.h](https://github.com/memononen/SDF): compute signed-distance field from antialiased image (MIT license)
 - [nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/): find voronoi regions on lattice w/ integer inputs (public domain)
 - [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
+
+&nbsp;
+
 - [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
 - [DG_misc.h](https://github.com/DanielGibson/Snippets/): Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings (public domain)
 - [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
