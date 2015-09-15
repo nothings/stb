@@ -206,7 +206,7 @@ CREDITS
    #endif
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
    #define _CRT_SECURE_NO_WARNINGS
    #define _CRT_NONSTDC_NO_DEPRECATE
    #define _CRT_NON_CONFORMING_SWPRINTFS
