@@ -98,12 +98,12 @@ CREDITS:
       github:Chribba
       Guillaume Chereau
       github:jry2
-      
+
 LICENSE
 
 This software is in the public domain. Where that dedication is not
 recognized, you are granted a perpetual, irrevocable license to copy,
-distribute, and modify this file as you see fit.      
+distribute, and modify this file as you see fit.
 
 */
 
@@ -144,8 +144,12 @@ STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w,
 #ifdef STB_IMAGE_WRITE_IMPLEMENTATION
 
 #ifdef _WIN32
+   #ifndef _CRT_SECURE_NO_WARNINGS
    #define _CRT_SECURE_NO_WARNINGS
+   #endif
+   #ifndef _CRT_NONSTDC_NO_DEPRECATE
    #define _CRT_NONSTDC_NO_DEPRECATE
+   #endif
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
