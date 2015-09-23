@@ -56,6 +56,7 @@ free to tell me about their quality.)
 
 Not public domain:
 
+- **images** [tinyexr](https://github.com/syoyo/tinyexr): EXR image read/write (BSD license)  *uses miniz internally*
 - **images** [lodepng](http://lodev.org/lodepng/): PNG encoder/decoder (zlib license)
 - **images** [nanoSVG](https://github.com/memononen/nanosvg): 1-file SVG parser; 1-file SVG rasterizer (zlib license)
 - **3D** [tinyobjloader](https://github.com/syoyo/tinyobjloader): wavefront OBJ file loader (BSD license)
@@ -74,7 +75,6 @@ this! But you might like them anyway:
 
 - **images** [picopng.cpp](http://lodev.org/lodepng/picopng.cpp): tiny PNG loader (zlib license)
 - **images** [jpeg-compressor](https://github.com/richgel999/jpeg-compressor): 2-file jpeg compress, 2-file jpeg decompress (public domain)
-- **images** [tinyexr](https://github.com/syoyo/tinyexr): EXR image read/write (BSD license)  *uses miniz internally*
 - **3D** [mikktspace](https://svn.blender.org/svnroot/bf-blender/trunk/blender/intern/mikktspace/): compute tangent space for normal mapping (zlib)
 - **2D** [tigr](https://bitbucket.org/rmitton/tigr/src): quick-n-dirty window text/graphics for Windows (public domain)
 - **2D** [noc_turtle](https://github.com/guillaumechereau/noc): procedural graphics generator (public domain)
