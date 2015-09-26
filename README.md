@@ -53,6 +53,7 @@ free to tell me about their quality.)
 - **network** [zed_net](https://github.com/ZedZull/zed_net): cross-platform socket wrapper (public domain)
 - **misc** [DG_misc.h](https://github.com/DanielGibson/Snippets/): Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings (public domain)
 - **misc** [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
+- **misc** [gb_string.h](https://github.com/gingerBill/gb): dynamic strings for C
 
 Not public domain:
 
