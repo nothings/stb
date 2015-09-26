@@ -100,6 +100,12 @@ There is also this XML library, but if you're using XML, shame on you:
 
 - **parsing** [tinyxml2](https://github.com/leethomason/tinyxml2): XML (zlib license)
 
+There are some libraries that are just _so_ awesome that even though they use more
+than two files we're going to give them special dispensation to appear in their own
+little list here. If you're a crazy purist, be warned, but otherwise, enjoy!
+
+- _**user interface** [ImGui](https://github.com/ocornut/imgui) an immediate-mode GUI ("imgui") named "ImGui" (MIT license)_
+
 *List FAQ*
 
 ###### Can I link directly to this list?
