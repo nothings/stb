@@ -60,7 +60,7 @@ this! But you might like them anyway:
 - _**misc** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (zlib license)_
 - _**misc** [klib](http://attractivechaos.github.io/klib/) many 2-file libs: hash, sort, b-tree, etc (MIT license)_
 - **misc** [whereami](https://github.com/gpakosz/whereami): get path/filename of executable or module (WTFPL v2 license)
-- **misc** [dbgtools](https://github.com/wc-duck/dbgtools): cross-platform debug util libraries (zlib license)_
+- _**misc** [dbgtools](https://github.com/wc-duck/dbgtools): cross-platform debug util libraries (zlib license)_
 - **tests** [pempek_assert.cpp](https://github.com/gpakosz/Assert/tree/master/src): flexible assertions in C++ (WTFPL v2 license)
 
 There is also these XML libraries, but if you're using XML, shame on you:
