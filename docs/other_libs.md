@@ -93,3 +93,7 @@ me (it can be your own library or somebody else's). But I might not include it f
 other reasons, including subtleties of what is 'minimal other dependencies' and subtleties
 about what is 'lightweight'.
 
+### Why isn't SQLite's amalgamated build on this list?
+
+Come on.
+
