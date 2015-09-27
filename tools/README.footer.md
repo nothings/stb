@@ -33,8 +33,10 @@ Not public domain:
 - _**2D** [blendish](https://bitbucket.org/duangle/oui-blendish/src): blender-style widget rendering (MIT license)_
 - **geometry** [sdf.h](https://github.com/memononen/SDF): compute signed-distance field from antialiased image (MIT license)
 - **geometry** [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
+- _**geometry** [jc_voronoi](https://github.com/JCash/voronoi): find voronoi regions on float/double data (MIT license)_
 - _**audio** [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h): IMA-ADPCM audio decoder (MIT license)_
 - **parsing** [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
+- _**parsing** [PicoJSON](https://github.com/kazuho/picojson): JSON parse/serializer for C++ (BSD license)_
 - **tests** [utest](https://github.com/evolutional/utest): unit testing (MIT license)
 - **tests** [catch](https://github.com/philsquared/Catch): unit testing (Boost license)
 - _**tests** [SPUT](http://www.lingua-systems.com/unit-testing/): unit testing (BSD license)_
@@ -52,6 +54,7 @@ this! But you might like them anyway:
 - **geometry** [Clipper](http://www.angusj.com/delphi/clipper.php): line & polygon clipping & offsetting (Boost license)
 - **network** [yocto](https://github.com/tom-seddon/yhs): non-production-use http server (public domain)
 - **network** [happyhttp](http://scumways.com/happyhttp/happyhttp.html): http client requests (zlib license)
+- _**network** [mongoose](https://github.com/cesanta/mongoose): http server (GPL v2)_
 - _**AI** [micropather](http://www.grinninglizard.com/MicroPather/): pathfinding with A* (zlib license)_
 - **compression** [miniz.c](https://github.com/richgel999/miniz): zlib compression,decompression, zip file, png writing (public domain)
 - **compression** [lz4](https://github.com/Cyan4973/lz4): fast but larger LZ compression (BSD license)
@@ -61,13 +64,17 @@ this! But you might like them anyway:
 - **profiling** [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile): CPU (and GPU?) profiler, 1-3 header files (unlicense) *uses miniz internally*
 - **parsing** [json.h](https://github.com/sheredom/json.h): JSON parser (public domain)
 - **parsing** [Zange](https://github.com/vurtun/zange/blob/master/json.c): another JSON parser (MIT license)
-- _**misc** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (zlib)_
+- _**parsing** [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/): fast utf8 decoder (MIT license)_
+- _**misc** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (zlib license)_
+- _**misc** [klib](http://attractivechaos.github.io/klib/) many 2-file libs: hash, sort, b-tree, etc (MIT license)
 - **misc** [whereami](https://github.com/gpakosz/whereami): get path/filename of executable or module (WTFPL v2 license)
+- **misc** [dbgtools](https://github.com/wc-duck/dbgtools): cross-platform debug util libraries (zlib license)_
 - **tests** [pempek_assert.cpp](https://github.com/gpakosz/Assert/tree/master/src): flexible assertions in C++ (WTFPL v2 license)
 
-There is also this XML library, but if you're using XML, shame on you:
+There is also these XML libraries, but if you're using XML, shame on you:
 
 - **parsing** [tinyxml2](https://github.com/leethomason/tinyxml2): XML (zlib license)
+- **parsing** [pugixml](http://pugixml.org/): XML (MIT license)
 
 There are some libraries that are just _so_ awesome that even though they use more
 than two files we're going to give them special dispensation to appear in their own
