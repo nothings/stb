@@ -1,6 +1,6 @@
-#### <a name="other_libs"></a> Are there other single-file public-domain/open source libraries with minimal dependencies out there?
+# Other single-file public-domain/open source libraries with minimal dependencies
 
-Yes. I'll even tell you about some. However, I haven't used most of these libraries
+People have told me about quite a few of these. However, I haven't used most of these libraries
 and can't comment on their quality. (If you use them and aren't their author, feel
 free to tell me about their quality.) _Newest additions are in italics._
 
@@ -72,13 +72,13 @@ little list here. If you're a crazy purist, be warned, but otherwise, enjoy!
 
 - _**user interface** [ImGui](https://github.com/ocornut/imgui) an immediate-mode GUI ("imgui") named "ImGui" (MIT license)_
 
-*List FAQ*
+## *List FAQ*
 
-###### Can I link directly to this list?
+### Can I link directly to this list?
 
-You can use [this URL](https://github.com/nothings/stb#other_libs) to link directly to this list.
+Yes, you can just use this page. If you want a shorter, more readable link, you can use [this URL](https://github.com/nothings/stb#other_libs) to link to the FAQ question that links to this page.
 
-###### Why isn't library XXX which is made of 3 or more files on this list?
+### Why isn't library XXX which is made of 3 or more files on this list?
 
 I draw the line arbitrarily at 2 files at most. (Note that some libraries that appear to
 be two files require a separate LICENSE file, which made me leave them out). Some of these
@@ -86,7 +86,7 @@ libraries are still easy to drop into your project and build, so you might still
 But since people come to stb for single-file public domain libraries, I feel that starts
 to get too far from what we do here.
 
-###### Why isn't library XXX which is at most two files and has minimal other dependencies on this list?
+### Why isn't library XXX which is at most two files and has minimal other dependencies on this list?
 
 Probably because I don't know about it, feel free to submit a pull request, issue, email, or tweet it at
 me (it can be your own library or somebody else's). But I might not include it for various
