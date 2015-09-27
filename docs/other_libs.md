@@ -64,7 +64,7 @@ this! But you might like them anyway:
 There is also these XML libraries, but if you're using XML, shame on you:
 
 - **parsing** [tinyxml2](https://github.com/leethomason/tinyxml2): XML (zlib license)
-- **parsing** [pugixml](http://pugixml.org/): XML (MIT license)
+- _**parsing** [pugixml](http://pugixml.org/): XML (MIT license)_
 
 There are some libraries that are just _so_ awesome that even though they use more
 than two files we're going to give them special dispensation to appear in their own
