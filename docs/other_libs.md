@@ -27,6 +27,7 @@ Not public domain:
 - **geometry** [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
 - _**geometry** [jc_voronoi](https://github.com/JCash/voronoi): find voronoi regions on float/double data (MIT license)_
 - _**audio** [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h): IMA-ADPCM audio decoder (MIT license)_
+- _**mulithreading** [mts](https://github.com/vurtun/mts): cross-platform multithreaded task scheduler (zlib license)_
 - **parsing** [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
 - _**parsing** [PicoJSON](https://github.com/kazuho/picojson): JSON parse/serializer for C++ (BSD license)_
 - **tests** [utest](https://github.com/evolutional/utest): unit testing (MIT license)
