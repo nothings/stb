@@ -66,7 +66,7 @@ this! But you might like them anyway:
 - **parsing** [Zange](https://github.com/vurtun/zange/blob/master/json.c): another JSON parser (MIT license)
 - _**parsing** [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/): fast utf8 decoder (MIT license)_
 - _**misc** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (zlib license)_
-- _**misc** [klib](http://attractivechaos.github.io/klib/) many 2-file libs: hash, sort, b-tree, etc (MIT license)
+- _**misc** [klib](http://attractivechaos.github.io/klib/) many 2-file libs: hash, sort, b-tree, etc (MIT license)_
 - **misc** [whereami](https://github.com/gpakosz/whereami): get path/filename of executable or module (WTFPL v2 license)
 - **misc** [dbgtools](https://github.com/wc-duck/dbgtools): cross-platform debug util libraries (zlib license)_
 - **tests** [pempek_assert.cpp](https://github.com/gpakosz/Assert/tree/master/src): flexible assertions in C++ (WTFPL v2 license)
