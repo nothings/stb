@@ -1,5 +1,7 @@
 # Other single-file public-domain/open source libraries with minimal dependencies
 
+In addition to all of [my libraries](https://github.com/nothings/stb), there are other, similar libraries.
+
 People have told me about quite a few of these. However, I haven't used most of these libraries
 and can't comment on their quality. (If you use them and aren't their author, feel
 free to tell me about their quality.) _Newest additions are in italics._
