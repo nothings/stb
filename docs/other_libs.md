@@ -63,7 +63,7 @@ this! But you might like them anyway:
 - _**misc** [minilibs](https://github.com/ccxvii/minilibs): two-file regex, binary tree (public domain)_
 - **misc** [whereami](https://github.com/gpakosz/whereami): get path/filename of executable or module (WTFPL v2 license)
 - _**misc** [dbgtools](https://github.com/wc-duck/dbgtools): cross-platform debug util libraries (zlib license)_
-- _**misc** [PackedArray](https://github.com/gpakosz/PackedArray): memory-efficient array of elements with non-pow2 bitcount (WTFPL v2 license)
+- _**misc** [PackedArray](https://github.com/gpakosz/PackedArray): memory-efficient array of elements with non-pow2 bitcount (WTFPL v2 license)_
 - **tests** [pempek_assert.cpp](https://github.com/gpakosz/Assert/tree/master/src): flexible assertions in C++ (WTFPL v2 license)
 
 There is also these XML libraries, but if you're using XML, shame on you:
