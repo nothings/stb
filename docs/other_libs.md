@@ -48,6 +48,7 @@ this! But you might like them anyway:
 - **network** [yocto](https://github.com/tom-seddon/yhs): non-production-use http server (public domain)
 - **network** [happyhttp](http://scumways.com/happyhttp/happyhttp.html): http client requests (zlib license)
 - _**network** [mongoose](https://github.com/cesanta/mongoose): http server (GPL v2)_
+- _**crypto** [TweetNaCl](http://tweetnacl.cr.yp.to/software.html): high-quality tiny cryptography library (public domain)_
 - _**AI** [micropather](http://www.grinninglizard.com/MicroPather/): pathfinding with A* (zlib license)_
 - **compression** [miniz.c](https://github.com/richgel999/miniz): zlib compression,decompression, zip file, png writing (public domain)
 - **compression** [lz4](https://github.com/Cyan4973/lz4): fast but larger LZ compression (BSD license)
