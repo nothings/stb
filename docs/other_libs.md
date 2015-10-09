@@ -61,7 +61,7 @@ this! But you might like them anyway:
 - **strings** [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/): fast utf8 decoder (MIT license)
 - **strings** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (zlib license)
 - **data structures** [klib](http://attractivechaos.github.io/klib/): many 2-file libs: hash, sort, b-tree, etc (MIT license)
-- _**data structures** [uthash](https://github.com/troydhanson/uthash): several 1-file libs: generic hash, list, etc (BSD license)_
+- _**data structures** [uthash](https://github.com/troydhanson/uthash): several 1-header, 1-license-file libs: generic hash, list, etc (BSD license)_
 - _**data structures** [PackedArray](https://github.com/gpakosz/PackedArray): memory-efficient array of elements with non-pow2 bitcount (WTFPL v2 license)_
 - **data structures**; **algorithms** [minilibs](https://github.com/ccxvii/minilibs): two-file regex, binary tree (public domain)
 - **files & filenames** [whereami](https://github.com/gpakosz/whereami): get path/filename of executable or module (WTFPL v2 license)
@@ -79,7 +79,11 @@ There are some libraries that are just _so_ awesome that even though they use mo
 than two files we're going to give them special dispensation to appear in their own
 little list here. If you're a crazy purist, be warned, but otherwise, enjoy!
 
-- **user interface** [ImGui](https://github.com/ocornut/imgui) an immediate-mode GUI ("imgui") named "ImGui" (MIT license)
+- **user interface** [ImGui](https://github.com/ocornut/imgui): an immediate-mode GUI ("imgui") named "ImGui" (MIT license)
+
+Also you might be interested in other related, but different lists:
+
+- [clib](https://github.com/clibs/clib/wiki/Packages): list of (mostly) small single C functions (licenses not listed)
 
 ## *List FAQ*
 
