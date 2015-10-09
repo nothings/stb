@@ -26,8 +26,9 @@ Not public domain:
 - **geometry** [sdf.h](https://github.com/memononen/SDF): compute signed-distance field from antialiased image (MIT license)
 - **geometry** [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
 - **geometry** [jc_voronoi](https://github.com/JCash/voronoi): find voronoi regions on float/double data (MIT license)
+- _**network** [wby](https://github.com/vurtun/wby): lightweight webserver, fork of webby (BSD license)_
 - **audio** [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h): IMA-ADPCM audio decoder (MIT license)
-- **mulithreading** [mts](https://github.com/vurtun/mts): cross-platform multithreaded task scheduler (zlib license)
+- **multithreading** [mts](https://github.com/vurtun/mts): cross-platform multithreaded task scheduler (zlib license)
 - **parsing** [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
 - **parsing** [PicoJSON](https://github.com/kazuho/picojson): JSON parse/serializer for C++ (BSD license)
 - **tests** [utest](https://github.com/evolutional/utest): unit testing (MIT license)
