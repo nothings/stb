@@ -367,7 +367,7 @@ enum STBVorbisError
    VORBIS_invalid_first_page,
    VORBIS_bad_packet_type,
    VORBIS_cant_find_last_page,
-   VORBIS_seek_failed,
+   VORBIS_seek_failed
 };
 
 
@@ -1576,7 +1576,7 @@ enum
 {
    VORBIS_packet_id = 1,
    VORBIS_packet_comment = 3,
-   VORBIS_packet_setup = 5,
+   VORBIS_packet_setup = 5
 };
 
 static int codebook_decode_scalar_raw(vorb *f, Codebook *c)
