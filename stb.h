@@ -5863,6 +5863,13 @@ void stb_readdir_free(char **files)
    stb_arr_free(f2);
 }
 
+static int isdotdirname(char *name)
+{
+   if (name[0] == '.')
+      return (name[1] == '.') ? !name[2] : !name[1];
+   return 0;
+}
+
 STB_EXTERN int stb_wildmatchi(char *expr, char *candidate);
 static char **readdir_raw(char *dir, int return_subdirs, char *mask)
 {
@@ -5931,7 +5938,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
             #endif
         
             if (is_subdir == return_subdirs) {
-               if (!is_subdir || name[0] != '.') {
+               if (!is_subdir || !isdotdirname(name)) {
                   if (!mask || stb_wildmatchi(mask, name)) {
                      char buffer[512],*p=buffer;
                      sprintf(buffer, "%s%s", with_slash, name);
