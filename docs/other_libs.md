@@ -35,6 +35,7 @@ Not public domain:
 - **tests** [utest](https://github.com/evolutional/utest): unit testing (MIT license)
 - **tests** [catch](https://github.com/philsquared/Catch): unit testing (Boost license)
 - **tests** [SPUT](http://www.lingua-systems.com/unit-testing/): unit testing (BSD license)
+- _**misc** [lualite](https://github.com/janezz55/lualite/): generate lua bindings in C++ (MIT license)_
 
 There are some that have a source file and require a separate header file (which they may
 not even supply). That's twice as many files, and we at nothings/stb cannot condone
