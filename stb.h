@@ -714,20 +714,41 @@ STB_EXTERN char * stb_sstrdup(char *s);
 STB_EXTERN void stbprint(const char *fmt, ...);
 STB_EXTERN char *stb_sprintf(const char *fmt, ...);
 STB_EXTERN char *stb_mprintf(const char *fmt, ...);
+STB_EXTERN int  stb_snprintf(char *s, size_t n, const char *fmt, ...);
+STB_EXTERN int  stb_vsnprintf(char *s, size_t n, const char *fmt, va_list v);
 
 #ifdef STB_DEFINE
+int stb_vsnprintf(char *s, size_t n, const char *fmt, va_list v)
+{
+   int res;
+   #ifdef _WIN32
+   // Could use "_vsnprintf_s(s, n, _TRUNCATE, fmt, v)" ?
+   res = _vsnprintf(s,n,fmt,v);
+   #else
+   res = vsnprintf(s,n,fmt,v);
+   #endif
+   if (n) s[n-1] = 0;
+   // Unix returns length output would require, Windows returns negative when truncated.
+   return (res >= n || res < 0) ? -1 : res;
+}
+
+int stb_snprintf(char *s, size_t n, const char *fmt, ...)
+{
+   int res;
+   va_list v;
+   va_start(v,fmt);
+   res = stb_vsnprintf(s, n, fmt, v);
+   va_end(v);
+   return res;
+}
+
 char *stb_sprintf(const char *fmt, ...)
 {
    static char buffer[1024];
    va_list v;
    va_start(v,fmt);
-   #ifdef _WIN32
-   _vsnprintf(buffer, 1024, fmt, v);
-   #else
-   vsnprintf(buffer, 1024, fmt, v);
-   #endif
+   stb_vsnprintf(buffer,1024,fmt,v);
    va_end(v);
-   buffer[1023] = 0;
    return buffer;
 }
 
@@ -736,13 +757,8 @@ char *stb_mprintf(const char *fmt, ...)
    static char buffer[1024];
    va_list v;
    va_start(v,fmt);
-   #ifdef _WIN32
-   _vsnprintf(buffer, 1024, fmt, v);
-   #else
-   vsnprintf(buffer, 1024, fmt, v);
-   #endif
+   stb_vsnprintf(buffer,1024,fmt,v);
    va_end(v);
-   buffer[1023] = 0;
    return strdup(buffer);
 }
 
@@ -842,9 +858,8 @@ void stbprint(const char *fmt, ...)
    va_list v;
 
    va_start(v,fmt);
-   res = _vsnprintf(buffer, sizeof(buffer), fmt, v);
+   res = stb_vsnprintf(buffer, sizeof(buffer), fmt, v);
    va_end(v);
-   buffer[sizeof(buffer)-1] = 0;
 
    if (res < 0) {
       tbuf = (char *) malloc(16384);
@@ -1765,6 +1780,7 @@ STB_EXTERN char * stb_strichr(char *s, char t);
 STB_EXTERN char * stb_stristr(char *s, char *t);
 STB_EXTERN int    stb_prefix_count(char *s, char *t);
 STB_EXTERN char * stb_plural(int n);  // "s" or ""
+STB_EXTERN size_t stb_strscpy(char *d, const char *s, size_t n);
 
 STB_EXTERN char **stb_tokens(char *src, char *delimit, int *count);
 STB_EXTERN char **stb_tokens_nested(char *src, char *delimit, int *count, char *nest_in, char *nest_out);
@@ -1778,6 +1794,17 @@ STB_EXTERN char **stb_tokens_quoted(char *src, char *delimit, int *count);
 // appear back to back, in which case they're considered escaped)
 
 #ifdef STB_DEFINE
+
+size_t stb_strscpy(char *d, const char *s, size_t n)
+{
+   size_t len = strlen(s);
+   if (len >= n) {
+      if (n) d[0] = 0;
+      return 0;
+   }
+   strcpy(d,s);
+   return len + 1;
+}
 
 char *stb_plural(int n)
 {
@@ -5874,7 +5901,7 @@ STB_EXTERN int stb_wildmatchi(char *expr, char *candidate);
 static char **readdir_raw(char *dir, int return_subdirs, char *mask)
 {
    char **results = NULL;
-   char buffer[512], with_slash[512];
+   char buffer[4096], with_slash[4096];
    size_t n;
 
    #ifdef _MSC_VER
@@ -5892,24 +5919,27 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
       DIR *z;
    #endif
 
-   strcpy(buffer,dir);
+   n = stb_strscpy(buffer,dir,sizeof(buffer));
+   if (!n || n >= sizeof(buffer))
+      return NULL;
    stb_fixpath(buffer);
-   n = strlen(buffer);
+   n--;
 
    if (n > 0 && (buffer[n-1] != '/')) {
       buffer[n++] = '/';
    }
    buffer[n] = 0;
-   strcpy(with_slash, buffer);
+   if (!stb_strscpy(with_slash,buffer,sizeof(with_slash)))
+      return NULL;
 
    #ifdef _MSC_VER
-      strcpy(buffer+n, "*.*");
+      if (!stb_strscpy(buffer+n,"*.*",sizeof(buffer)-n))
+         return NULL;
       ws = stb__from_utf8(buffer);
       z = _wfindfirst((const wchar_t *)ws, &data);
    #else
       z = opendir(dir);
    #endif
-
 
    if (z != none) {
       int nonempty = STB_TRUE;
@@ -5931,17 +5961,18 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
             is_subdir = !!(data.attrib & _A_SUBDIR);
             #else
             char *name = data->d_name;
-            strcpy(buffer+n,name);
-            DIR *y = opendir(buffer);
-            is_subdir = (y != NULL);
-            if (y != NULL) closedir(y);
+            if (!stb_strscpy(buffer+n,name,sizeof(buffer)-n))
+               break;
+            // Could follow DT_LNK, but would need to check for recursive links.
+            is_subdir = !!(data->d_type & DT_DIR);
             #endif
-        
+
             if (is_subdir == return_subdirs) {
                if (!is_subdir || !isdotdirname(name)) {
                   if (!mask || stb_wildmatchi(mask, name)) {
-                     char buffer[512],*p=buffer;
-                     sprintf(buffer, "%s%s", with_slash, name);
+                     char buffer[4096],*p=buffer;
+                     if ( stb_snprintf(buffer, sizeof(buffer), "%s%s", with_slash, name) < 0 )
+                        break;
                      if (buffer[0] == '.' && buffer[1] == '/')
                         p = buffer+2;
                      stb_arr_push(results, strdup(p));
