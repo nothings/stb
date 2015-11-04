@@ -1590,7 +1590,7 @@ static const char *stbvox_vertex_program =
       "uniform vec3 normal_table[32];\n"
 
       #ifndef STBVOX_CONFIG_OPENGL_MODELVIEW
-         "uniform mat44 model_view;\n"
+         "uniform mat4x4 model_view;\n"
       #endif
 
       // fragment output data
