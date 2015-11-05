@@ -64,6 +64,7 @@ this! But you might like them anyway:
 - **profiling** [Remotery](https://github.com/Celtoys/Remotery): CPU/GPU profiler Win/Mac/Linux, using web browser for viewer (Apache 2.0 license)
 - **profiling** [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile): CPU (and GPU?) profiler, 1-3 header files (unlicense) *uses miniz internally*
 - **parsing** [json.h](https://github.com/sheredom/json.h): JSON parser (public domain)
+- _**parsing** [jzon.h](https://github.com/Zguy/Jzon): JSON parser, C++ (MIT license)
 - **strings** [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/): fast utf8 decoder (MIT license)
 - **data structures** [klib](http://attractivechaos.github.io/klib/): many 2-file libs: hash, sort, b-tree, etc (MIT license)
 - _**data structures** [uthash](https://github.com/troydhanson/uthash): several 1-header, 1-license-file libs: generic hash, list, etc (BSD license)_
