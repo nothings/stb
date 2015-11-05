@@ -14,6 +14,7 @@ free to tell me about their quality.) _Newest additions are in italics._
 - _**geometry** [sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-junk/blob/master/src/SFH/Sobol.h): sobol & stratified sampling sequences (public domain)_
 - **network** [zed_net](https://github.com/ZedZull/zed_net): cross-platform socket wrapper (public domain)
 - **strings**; **files & filenames** [DG_misc.h](https://github.com/DanielGibson/Snippets/): Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings (public domain)
+- **strings** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (public domain)
 - **misc** [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
 - **misc** [gb_string.h](https://github.com/gingerBill/gb): dynamic strings for C (public domain)
 - _**hardware** [EasyTab](https://github.com/ApoorvaJ/EasyTab): multi-platform tablet input (public domain)_
@@ -64,7 +65,6 @@ this! But you might like them anyway:
 - **parsing** [json.h](https://github.com/sheredom/json.h): JSON parser (public domain)
 - **parsing** [Zange](https://github.com/vurtun/zange/blob/master/json.c): another JSON parser (MIT license)
 - **strings** [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/): fast utf8 decoder (MIT license)
-- **strings** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (zlib license)
 - **data structures** [klib](http://attractivechaos.github.io/klib/): many 2-file libs: hash, sort, b-tree, etc (MIT license)
 - _**data structures** [uthash](https://github.com/troydhanson/uthash): several 1-header, 1-license-file libs: generic hash, list, etc (BSD license)_
 - _**data structures** [PackedArray](https://github.com/gpakosz/PackedArray): memory-efficient array of elements with non-pow2 bitcount (WTFPL v2 license)_
