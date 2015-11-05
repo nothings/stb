@@ -12,7 +12,7 @@ free to tell me about their quality.) _Newest additions are in italics._
 - **images** [miniexr](https://github.com/aras-p/miniexr): OpenEXR writer (public domain)
 - **geometry** [nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/): find voronoi regions on lattice w/ integer inputs (public domain)
 - **network** [zed_net](https://github.com/ZedZull/zed_net): cross-platform socket wrapper (public domain)
-- _**math** [sobol](https://github.com/Marc-B-Reynolds/Stand-alone-junk/blob/master/src/SFH/Sobol.h): sobol & stratified sampling sequences (public domain)_
+- _**math** [sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-junk/blob/master/src/SFH/Sobol.h): sobol & stratified sampling sequences (public domain)_
 - **strings**; **files & filenames** [DG_misc.h](https://github.com/DanielGibson/Snippets/): Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings (public domain)
 - **misc** [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
 - **misc** [gb_string.h](https://github.com/gingerBill/gb): dynamic strings for C (public domain)
