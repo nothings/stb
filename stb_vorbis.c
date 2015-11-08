@@ -3715,6 +3715,8 @@ static int start_decoder(vorb *f)
       ordered = get_bits(f,1);
       c->sparse = ordered ? 0 : get_bits(f,1);
 
+      if (c->dimensions == 0 && c->entries != 0)    return error(f, VORBIS_invalid_setup);
+
       if (c->sparse)
          lengths = (uint8 *) setup_temp_malloc(f, c->entries);
       else
@@ -3998,6 +4000,7 @@ static int start_decoder(vorb *f)
       if (f->residue_types[i] > 2) return error(f, VORBIS_invalid_setup);
       r->begin = get_bits(f, 24);
       r->end = get_bits(f, 24);
+      if (r->end < r->begin) return error(f, VORBIS_invalid_setup);
       r->part_size = get_bits(f,24)+1;
       r->classifications = get_bits(f,6)+1;
       r->classbook = get_bits(f,8);
