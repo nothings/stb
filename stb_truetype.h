@@ -49,7 +49,7 @@
 //
 // VERSION HISTORY
 //
-//   1.09 (????-??-??) warning fix
+//   1.09 (????-??-??) warning fix; avoid crash on outofmem
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
 //                     variant PackFontRanges to pack and render in separate phases;
@@ -1674,6 +1674,7 @@ static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, i
 {
    stbtt__active_edge *z = (stbtt__active_edge *) stbtt__hheap_alloc(hh, sizeof(*z), userdata);
    float dxdy = (e->x1 - e->x0) / (e->y1 - e->y0);
+   STBTT_assert(z != NULL);
    if (!z) return z;
    
    // round dx down to avoid overshooting
@@ -1695,6 +1696,7 @@ static stbtt__active_edge *stbtt__new_active(stbtt__hheap *hh, stbtt__edge *e, i
 {
    stbtt__active_edge *z = (stbtt__active_edge *) stbtt__hheap_alloc(hh, sizeof(*z), userdata);
    float dxdy = (e->x1 - e->x0) / (e->y1 - e->y0);
+   STBTT_assert(z != NULL);
    //STBTT_assert(e->y0 <= start_point);
    if (!z) return z;
    z->fdx = dxdy;
@@ -1819,21 +1821,23 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
          while (e->y0 <= scan_y) {
             if (e->y1 > scan_y) {
                stbtt__active_edge *z = stbtt__new_active(&hh, e, off_x, scan_y, userdata);
-               // find insertion point
-               if (active == NULL)
-                  active = z;
-               else if (z->x < active->x) {
-                  // insert at front
-                  z->next = active;
-                  active = z;
-               } else {
-                  // find thing to insert AFTER
-                  stbtt__active_edge *p = active;
-                  while (p->next && p->next->x < z->x)
-                     p = p->next;
-                  // at this point, p->next->x is NOT < z->x
-                  z->next = p->next;
-                  p->next = z;
+               if (z != NULL) {
+                  // find insertion point
+                  if (active == NULL)
+                     active = z;
+                  else if (z->x < active->x) {
+                     // insert at front
+                     z->next = active;
+                     active = z;
+                  } else {
+                     // find thing to insert AFTER
+                     stbtt__active_edge *p = active;
+                     while (p->next && p->next->x < z->x)
+                        p = p->next;
+                     // at this point, p->next->x is NOT < z->x
+                     z->next = p->next;
+                     p->next = z;
+                  }
                }
             }
             ++e;
@@ -2103,10 +2107,12 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
       while (e->y0 <= scan_y_bottom) {
          if (e->y0 != e->y1) {
             stbtt__active_edge *z = stbtt__new_active(&hh, e, off_x, scan_y_top, userdata);
-            STBTT_assert(z->ey >= scan_y_top);
-            // insert at front
-            z->next = active;
-            active = z;
+            if (z != NULL) {
+               STBTT_assert(z->ey >= scan_y_top);
+               // insert at front
+               z->next = active;
+               active = z;
+            }
          }
          ++e;
       }
