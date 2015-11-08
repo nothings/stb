@@ -634,7 +634,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
                if (p[1] == 'x' || p[1] == 'X') {
                   char *q = p+2;
                   #ifdef STB__CLEX_use_stdlib
-                  lexer->int_number = strtol((char *) p, (char **) q, 16);
+                  lexer->int_number = strtol((char *) p, (char **) &q, 16);
                   #else
                   stb__clex_int n=0;
                   while (q != lexer->eof) {
