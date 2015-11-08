@@ -906,7 +906,7 @@ static void *setup_malloc(vorb *f, int sz)
 
 static void setup_free(vorb *f, void *p)
 {
-   if (f->alloc.alloc_buffer) return; // do nothing; setup mem is not a stack
+   if (f->alloc.alloc_buffer) return; // do nothing; setup mem is a stack
    free(p);
 }
 
@@ -3219,6 +3219,7 @@ static int vorbis_decode_initial(vorb *f, int *p_left_start, int *p_left_end, in
       *p_right_start = window_center;
       *p_right_end   = n;
    }
+
    return TRUE;
 }
 
@@ -3457,7 +3458,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
       if (f->current_loc_valid && (f->page_flag & PAGEFLAG_last_page)) {
          uint32 current_end = f->known_loc_for_packet - (n-right_end);
          // then let's infer the size of the (probably) short final frame
-         if (current_end < f->current_loc + right_end) {
+         if (current_end < f->current_loc + (right_end-left_start)) {
             if (current_end < f->current_loc) {
                // negative truncation, that's impossible!
                *len = 0;
@@ -3465,6 +3466,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
                *len = current_end - f->current_loc;
             }
             *len += left_start;
+            if (*len > right_end) *len = right_end; // this should never happen
             f->current_loc += *len;
             return TRUE;
          }
@@ -3482,6 +3484,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
    if (f->alloc.alloc_buffer)
       assert(f->alloc.alloc_buffer_length_in_bytes == f->temp_offset);
    *len = right_end;  // ignore samples after the window goes to 0
+
    return TRUE;
 }
 
