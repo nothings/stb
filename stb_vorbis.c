@@ -1906,7 +1906,7 @@ static int codebook_decode_deinterleave_repeat_2(vorb *f, Codebook *c, float **o
             }
          } else {
             i=0;
-            if (c_inter == 1) {
+            if (c_inter == 1 && i < effective) {
                float val = CODEBOOK_ELEMENT_FAST(c,z+i) + last;
                if (outputs[c_inter])
                   outputs[c_inter][p_inter] += val;
@@ -2176,7 +2176,7 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                         goto done;
                      #else
                      // saves 1%
-                     if (!codebook_decode_deinterleave_repeat_2(f, book, residue_buffers, &c_inter, &p_inter, n, r->part_size))
+                     if (!codebook_decode_deinterleave_repeat(f, book, residue_buffers, ch, &c_inter, &p_inter, n, r->part_size))
                         goto done;
                      #endif
                      stb_prof(7);
