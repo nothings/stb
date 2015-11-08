@@ -556,9 +556,11 @@ enum STBVorbisError
 #if !(defined(__APPLE__) || defined(MACOSX) || defined(macintosh) || defined(Macintosh))
 #include <malloc.h>
 #endif
-#else
+#else // STB_VORBIS_NO_CRT
 #define NULL 0
-#endif
+#endif // STB_VORBIS_NO_CRT
+
+#include <limits.h>
 
 #if !defined(_MSC_VER) && !(defined(__MINGW32__) && defined(__forceinline))
    #if __GNUC__
@@ -3645,14 +3647,15 @@ static int start_decoder(vorb *f)
    get32(f); // bitrate_nominal
    get32(f); // bitrate_minimum
    x = get8(f);
-   { int log0,log1;
-   log0 = x & 15;
-   log1 = x >> 4;
-   f->blocksize_0 = 1 << log0;
-   f->blocksize_1 = 1 << log1;
-   if (log0 < 6 || log0 > 13)                       return error(f, VORBIS_invalid_setup);
-   if (log1 < 6 || log1 > 13)                       return error(f, VORBIS_invalid_setup);
-   if (log0 > log1)                                 return error(f, VORBIS_invalid_setup);
+   {
+      int log0,log1;
+      log0 = x & 15;
+      log1 = x >> 4;
+      f->blocksize_0 = 1 << log0;
+      f->blocksize_1 = 1 << log1;
+      if (log0 < 6 || log0 > 13)                       return error(f, VORBIS_invalid_setup);
+      if (log1 < 6 || log1 > 13)                       return error(f, VORBIS_invalid_setup);
+      if (log0 > log1)                                 return error(f, VORBIS_invalid_setup);
    }
 
    // framing_flag
@@ -3828,6 +3831,7 @@ static int start_decoder(vorb *f)
          } else {
             c->lookup_values = c->entries * c->dimensions;
          }
+         if (c->lookup_values == 0) return error(f, VORBIS_invalid_setup);
          mults = (uint16 *) setup_temp_malloc(f, sizeof(mults[0]) * c->lookup_values);
          if (mults == NULL) return error(f, VORBIS_outofmem);
          for (j=0; j < (int) c->lookup_values; ++j) {
@@ -3848,21 +3852,27 @@ static int start_decoder(vorb *f)
             if (c->multiplicands == NULL) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
             len = sparse ? c->sorted_entries : c->entries;
             for (j=0; j < len; ++j) {
-               int z = sparse ? c->sorted_values[j] : j, div=1;
+               unsigned int z = sparse ? c->sorted_values[j] : j;
+               unsigned int div=1;
                for (k=0; k < c->dimensions; ++k) {
                   int off = (z / div) % c->lookup_values;
-                  c->multiplicands[j*c->dimensions + k] =
-                         #ifndef STB_VORBIS_CODEBOOK_FLOATS
-                            mults[off];
-                         #else
-                            mults[off]*c->delta_value + c->minimum_value;
+                  #ifndef STB_VORBIS_CODEBOOK_FLOATS
+                  c->multiplicands[j*c->dimensions + k] = mults[off];
+                  #else
+                  c->multiplicands[j*c->dimensions + k] = mults[off]*c->delta_value + c->minimum_value;
                             // in this case (and this case only) we could pre-expand c->sequence_p,
                             // and throw away the decode logic for it; have to ALSO do
                             // it in the case below, but it can only be done if
                             //    STB_VORBIS_CODEBOOK_FLOATS
                             //   !STB_VORBIS_DIVIDES_IN_CODEBOOK
-                         #endif
-                  div *= c->lookup_values;
+                  #endif
+                  if (k+1 < c->dimensions) {
+                     if (div > UINT_MAX / (unsigned int) c->lookup_values) {
+                        setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values);
+                        return error(f, VORBIS_invalid_setup);
+                     }
+                     div *= c->lookup_values;
+                  }
                }
             }
             setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values);
