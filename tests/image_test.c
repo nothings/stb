@@ -7,7 +7,7 @@
 #define STB_DEFINE
 #include "stb.h"
 
-#define PNGSUITE_PRIMARY
+//#define PNGSUITE_PRIMARY
 
 #if 0
 void test_ycbcr(void)
@@ -65,7 +65,7 @@ int main(int argc, char **argv)
    int w,h;
    //test_ycbcr();
 
-   #if 1
+   #if 0
    // test hdr asserts
    for (h=0; h < 100; h += 2)
       for (w=0; w < 200; ++w)
