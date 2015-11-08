@@ -195,7 +195,7 @@
     Omar Cornut (1/2/4-bit PNG)                  Ken Hamada
     Nicolas Guillemot (vertical flip)            Cort Stratton
     Richard Mitton (16-bit PSD)                  Blazej Dariusz Roszkowski
-                                                 Thibault Reuille
+    Junggon Kim (PNM comments)                   Thibault Reuille
                                                  Paul Du Bois
                                                  Guillaume George
                                                  Jerry Jansson
@@ -6222,8 +6222,16 @@ static int      stbi__pnm_isspace(char c)
 
 static void     stbi__pnm_skip_whitespace(stbi__context *s, char *c)
 {
-   while (!stbi__at_eof(s) && stbi__pnm_isspace(*c))
-      *c = (char) stbi__get8(s);
+   for (;;) {
+      while (!stbi__at_eof(s) && stbi__pnm_isspace(*c))
+         *c = (char) stbi__get8(s);
+
+      if (stbi__at_eof(s) || *c != '#')
+         break;
+
+      while (!stbi__at_eof(s) && *c != '\n' && *c != '\r' )
+         *c = (char) stbi__get8(s);
+   }
 }
 
 static int      stbi__pnm_isdigit(char c)
