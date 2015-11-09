@@ -579,6 +579,13 @@ enum STBVorbisError
 #endif
 
 
+#if 0
+#include <crtdbg.h>
+#define CHECK(f)   _CrtIsValidHeapPointer(f->channel_buffers[1])
+#else
+#define CHECK(f)   ((void) 0)
+#endif
+
 #define MAX_BLOCKSIZE_LOG  13   // from specification
 #define MAX_BLOCKSIZE      (1 << MAX_BLOCKSIZE_LOG)
 
@@ -832,13 +839,6 @@ struct stb_vorbis
    int channel_buffer_start;
    int channel_buffer_end;
 };
-
-extern int my_prof(int slot);
-//#define stb_prof my_prof
-
-#ifndef stb_prof
-#define stb_prof(x)  ((void) 0)
-#endif
 
 #if defined(STB_VORBIS_NO_PUSHDATA_API)
    #define IS_PUSH_MODE(f)   FALSE
@@ -1894,7 +1894,6 @@ static int codebook_decode_deinterleave_repeat_2(vorb *f, Codebook *c, float **o
 
       {
          z *= c->dimensions;
-         stb_prof(11);
          if (c->sequence_p) {
             // haven't optimized this case because I don't have any examples
             for (i=0; i < effective; ++i) {
@@ -2078,15 +2077,17 @@ static __forceinline void draw_line(float *output, int x0, int y0, int x1, int y
 #endif
    ady -= abs(base) * adx;
    if (x1 > n) x1 = n;
-   LINE_OP(output[x], inverse_db_table[y]);
-   for (++x; x < x1; ++x) {
-      err += ady;
-      if (err >= adx) {
-         err -= adx;
-         y += sy;
-      } else
-         y += base;
+   if (x < x1) {
       LINE_OP(output[x], inverse_db_table[y]);
+      for (++x; x < x1; ++x) {
+         err += ady;
+         if (err >= adx) {
+            err -= adx;
+            y += sy;
+         } else
+            y += base;
+         LINE_OP(output[x], inverse_db_table[y]);
+      }
    }
 }
 
@@ -2125,7 +2126,8 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
    int **classifications = (int **) temp_block_array(f,f->channels, part_read * sizeof(**classifications));
    #endif
 
-   stb_prof(2);
+   CHECK(f);
+
    for (i=0; i < ch; ++i)
       if (!do_not_decode[i])
          memset(residue_buffers[i], 0, sizeof(float) * n);
@@ -2137,11 +2139,9 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
       if (j == ch)
          goto done;
 
-      stb_prof(3);
       for (pass=0; pass < 8; ++pass) {
          int pcount = 0, class_set = 0;
          if (ch == 2) {
-            stb_prof(13);
             while (pcount < part_read) {
                int z = r->begin + pcount*r->part_size;
                int c_inter = (z & 1), p_inter = z>>1;
@@ -2159,7 +2159,6 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                   }
                   #endif
                }
-               stb_prof(5);
                for (i=0; i < classwords && pcount < part_read; ++i, ++pcount) {
                   int z = r->begin + pcount*r->part_size;
                   #ifndef STB_VORBIS_DIVIDES_IN_RESIDUE
@@ -2170,7 +2169,6 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                   int b = r->residue_books[c][pass];
                   if (b >= 0) {
                      Codebook *book = f->codebooks + b;
-                     stb_prof(20);  // accounts for X time
                      #ifdef STB_VORBIS_DIVIDES_IN_CODEBOOK
                      if (!codebook_decode_deinterleave_repeat(f, book, residue_buffers, ch, &c_inter, &p_inter, n, r->part_size))
                         goto done;
@@ -2179,14 +2177,12 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                      if (!codebook_decode_deinterleave_repeat(f, book, residue_buffers, ch, &c_inter, &p_inter, n, r->part_size))
                         goto done;
                      #endif
-                     stb_prof(7);
                   } else {
                      z += r->part_size;
                      c_inter = z & 1;
                      p_inter = z >> 1;
                   }
                }
-               stb_prof(8);
                #ifndef STB_VORBIS_DIVIDES_IN_RESIDUE
                ++class_set;
                #endif
@@ -2219,10 +2215,8 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                   int b = r->residue_books[c][pass];
                   if (b >= 0) {
                      Codebook *book = f->codebooks + b;
-                     stb_prof(22);
                      if (!codebook_decode_deinterleave_repeat(f, book, residue_buffers, ch, &c_inter, &p_inter, n, r->part_size))
                         goto done;
-                     stb_prof(3);
                   } else {
                      z += r->part_size;
                      c_inter = 0;
@@ -2261,10 +2255,8 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                   int b = r->residue_books[c][pass];
                   if (b >= 0) {
                      Codebook *book = f->codebooks + b;
-                     stb_prof(22);
                      if (!codebook_decode_deinterleave_repeat(f, book, residue_buffers, ch, &c_inter, &p_inter, n, r->part_size))
                         goto done;
-                     stb_prof(3);
                   } else {
                      z += r->part_size;
                      c_inter = z % ch;
@@ -2279,7 +2271,7 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
       }
       goto done;
    }
-   stb_prof(9);
+   CHECK(f);
 
    for (pass=0; pass < 8; ++pass) {
       int pcount = 0, class_set=0;
@@ -2328,7 +2320,7 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
       }
    }
   done:
-   stb_prof(0);
+   CHECK(f);
    temp_alloc_restore(f,temp_alloc_point);
 }
 
@@ -3142,13 +3134,16 @@ static int do_floor(vorb *f, Mapping *map, int i, int n, float *target, YTYPE *f
             int hx = g->Xlist[j];
             if (lx != hx)
                draw_line(target, lx,ly, hx,hy, n2);
+            CHECK(f);
             lx = hx, ly = hy;
          }
       }
-      if (lx < n2)
+      if (lx < n2) {
          // optimization of: draw_line(target, lx,ly, n,ly, n2);
          for (j=lx; j < n2; ++j)
             LINE_OP(target[j], inverse_db_table[ly]);
+         CHECK(f);
+      }
    }
    return TRUE;
 }
@@ -3238,7 +3233,8 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
 // FLOORS
    n2 = n >> 1;
 
-   stb_prof(1);
+   CHECK(f);
+
    for (i=0; i < f->channels; ++i) {
       int s = map->chan[i].mux, floor;
       zero_channel[i] = FALSE;
@@ -3330,7 +3326,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
          // at this point we've decoded the floor into buffer
       }
    }
-   stb_prof(0);
+   CHECK(f);
    // at this point we've decoded all floors
 
    if (f->alloc.alloc_buffer)
@@ -3343,6 +3339,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
          zero_channel[map->chan[i].magnitude] = zero_channel[map->chan[i].angle] = FALSE;
       }
 
+   CHECK(f);
 // RESIDUE DECODE
    for (i=0; i < map->submaps; ++i) {
       float *residue_buffers[STB_VORBIS_MAX_CHANNELS];
@@ -3367,9 +3364,9 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
 
    if (f->alloc.alloc_buffer)
       assert(f->alloc.alloc_buffer_length_in_bytes == f->temp_offset);
+   CHECK(f);
 
 // INVERSE COUPLING
-   stb_prof(14);
    for (i = map->coupling_steps-1; i >= 0; --i) {
       int n2 = n >> 1;
       float *m = f->channel_buffers[map->chan[i].magnitude];
@@ -3390,10 +3387,10 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
          a[j] = a2;
       }
    }
+   CHECK(f);
 
    // finish decoding the floors
 #ifndef STB_VORBIS_NO_DEFER_FLOOR
-   stb_prof(15);
    for (i=0; i < f->channels; ++i) {
       if (really_zero_channel[i]) {
          memset(f->channel_buffers[i], 0, sizeof(*f->channel_buffers[i]) * n2);
@@ -3413,10 +3410,10 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
 #endif
 
 // INVERSE MDCT
-   stb_prof(16);
+   CHECK(f);
    for (i=0; i < f->channels; ++i)
       inverse_mdct(f->channel_buffers[i], n, f, m->blockflag);
-   stb_prof(0);
+   CHECK(f);
 
    // this shouldn't be necessary, unless we exited on an error
    // and want to flush to get to the next packet
@@ -3484,6 +3481,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
    if (f->alloc.alloc_buffer)
       assert(f->alloc.alloc_buffer_length_in_bytes == f->temp_offset);
    *len = right_end;  // ignore samples after the window goes to 0
+   CHECK(f);
 
    return TRUE;
 }
@@ -3707,6 +3705,7 @@ static int start_decoder(vorb *f)
       int total=0;
       uint8 *lengths;
       Codebook *c = f->codebooks+i;
+      CHECK(f);
       x = get_bits(f, 8); if (x != 0x42)            return error(f, VORBIS_invalid_setup);
       x = get_bits(f, 8); if (x != 0x43)            return error(f, VORBIS_invalid_setup);
       x = get_bits(f, 8); if (x != 0x56)            return error(f, VORBIS_invalid_setup);
@@ -3778,6 +3777,7 @@ static int start_decoder(vorb *f)
       c->sorted_entries = sorted_count;
       values = NULL;
 
+      CHECK(f);
       if (!c->sparse) {
          c->codewords = (uint32 *) setup_malloc(f, sizeof(c->codewords[0]) * c->entries);
          if (!c->codewords)                  return error(f, VORBIS_outofmem);
@@ -3823,6 +3823,7 @@ static int start_decoder(vorb *f)
 
       compute_accelerated_huffman(c);
 
+      CHECK(f);
       c->lookup_type = get_bits(f, 4);
       if (c->lookup_type > 2) return error(f, VORBIS_invalid_setup);
       if (c->lookup_type > 0) {
@@ -3886,6 +3887,7 @@ static int start_decoder(vorb *f)
          else
 #endif
          {
+            CHECK(f);
             c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->lookup_values);
             if (c->multiplicands == NULL) { setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
             #ifndef STB_VORBIS_CODEBOOK_FLOATS
@@ -3900,14 +3902,17 @@ static int start_decoder(vorb *f)
         skip:;
 #endif
 
+         CHECK(f);
          #ifdef STB_VORBIS_CODEBOOK_FLOATS
          if (c->lookup_type == 2 && c->sequence_p) {
-            for (j=1; j < (int) c->lookup_values; ++j)
-               c->multiplicands[j] = c->multiplicands[j-1];
+            for (j=1; j < (int) (c->sparse ? c->sorted_entries : c->lookup_values); ++j)
+               c->multiplicands[j] += c->multiplicands[j-1];
+            CHECK(f);
             c->sequence_p = 0;
          }
          #endif
       }
+      CHECK(f);
    }
 
    // time domain transfers (notused)
@@ -4187,6 +4192,7 @@ static void vorbis_deinit(stb_vorbis *p)
    }
 
    if (p->codebooks) {
+      CHECK(p);
       for (i=0; i < p->codebook_count; ++i) {
          Codebook *c = p->codebooks + i;
          setup_free(p, c->codeword_lengths);
@@ -4205,6 +4211,7 @@ static void vorbis_deinit(stb_vorbis *p)
          setup_free(p, p->mapping[i].chan);
       setup_free(p, p->mapping);
    }
+   CHECK(p);
    for (i=0; i < p->channels && i < STB_VORBIS_MAX_CHANNELS; ++i) {
       setup_free(p, p->channel_buffers[i]);
       setup_free(p, p->previous_window[i]);
