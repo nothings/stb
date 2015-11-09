@@ -1,4 +1,5 @@
-#include <malloc.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #if defined(_WIN32) && _MSC_VER > 1200
 #define STBIR_ASSERT(x) \
@@ -351,6 +352,30 @@ void test_subpixel(const char* file, float width_percent, float height_percent, 
 
 	char output[200];
 	sprintf(output, "test-output/subpixel-%d-%d-%f-%f-%s", new_w, new_h, s1, t1, file);
+	stbi_write_png(output, new_w, new_h, n, output_data, 0);
+
+	free(output_data);
+}
+
+void test_subpixel_really(const char* file, float width_percent, float height_percent, float s0, float t0, float s1, float t1)
+{
+	int w, h, n;
+	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
+
+	if (input_data == NULL)
+		return;
+
+	int new_w = (int)(w * width_percent);
+	int new_h = (int)(h * height_percent);
+
+	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
+
+	stbir_resize_region(input_data, w, h, 0, output_data, new_w, new_h, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, s0, t0, s1, t1);
+
+	stbi_image_free(input_data);
+
+	char output[200];
+	sprintf(output, "test-output/subpixel-really-%d-%d-%f-%f-%f-%f-%s", new_w, new_h, s0, t0, s1, t1, file);
 	stbi_write_png(output, new_w, new_h, n, output_data, 0);
 
 	free(output_data);
@@ -879,6 +904,19 @@ void test_suite(int argc, char **argv)
 	stbir_resize(image88, 8, 8, 0, output88, 4, 16, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_BOX, STBIR_COLORSPACE_SRGB, &g_context);
 	stbir_resize(image88, 8, 8, 0, output88, 16, 4, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context);
 	stbir_resize(image88, 8, 8, 0, output88, 16, 4, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_BOX, STBIR_COLORSPACE_SRGB, &g_context);
+
+	int res = 10;
+	for (int i = 0; i < res; i++)
+	{
+		float t = (float)i/res / 2;
+		test_subpixel_really(barbara, 0.5f, 0.5f, t, t, t+0.5f, t+0.5f);
+	}
+
+	for (int i = 0; i < res; i++)
+	{
+		float t = (float)i/res / 2;
+		test_subpixel_really(barbara, 2, 2, t, t, t+0.5f, t+0.5f);
+	}
 
 	for (i = 0; i < 10; i++)
 		test_subpixel(barbara, 0.5f, 0.5f, (float)i / 10, 1);
