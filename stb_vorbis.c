@@ -493,14 +493,8 @@ enum STBVorbisError
 //     trade off storage for speed.
 //#define STB_VORBIS_DIVIDES_IN_CODEBOOK
 
-// STB_VORBIS_CODEBOOK_SHORTS
-//     The vorbis file format encodes VQ codebook floats as ax+b where a and
-//     b are floating point per-codebook constants, and x is a 16-bit int.
-//     Normally, stb_vorbis decodes them to floats rather than leaving them
-//     as 16-bit ints and computing ax+b while decoding. This is a speed/space
-//     tradeoff; you can save space by defining this flag.
-#ifndef STB_VORBIS_CODEBOOK_SHORTS
-#define STB_VORBIS_CODEBOOK_FLOATS
+#ifdef STB_VORBIS_CODEBOOK_SHORTS
+#error "STB_VORBIS_CODEBOOK_SHORTS is no longer supported as it produced incorrect results for some input formats"
 #endif
 
 // STB_VORBIS_DIVIDE_TABLE
@@ -607,11 +601,7 @@ typedef   signed int    int32;
 #define FALSE 0
 #endif
 
-#ifdef STB_VORBIS_CODEBOOK_FLOATS
 typedef float codetype;
-#else
-typedef uint16 codetype;
-#endif
 
 // @NOTE
 //
@@ -1703,15 +1693,9 @@ static int codebook_decode_scalar(vorb *f, Codebook *c)
 
 // CODEBOOK_ELEMENT_FAST is an optimization for the CODEBOOK_FLOATS case
 // where we avoid one addition
-#ifndef STB_VORBIS_CODEBOOK_FLOATS
-   #define CODEBOOK_ELEMENT(c,off)          (c->multiplicands[off] * c->delta_value + c->minimum_value)
-   #define CODEBOOK_ELEMENT_FAST(c,off)     (c->multiplicands[off] * c->delta_value)
-   #define CODEBOOK_ELEMENT_BASE(c)         (c->minimum_value)
-#else
-   #define CODEBOOK_ELEMENT(c,off)          (c->multiplicands[off])
-   #define CODEBOOK_ELEMENT_FAST(c,off)     (c->multiplicands[off])
-   #define CODEBOOK_ELEMENT_BASE(c)         (0)
-#endif
+#define CODEBOOK_ELEMENT(c,off)          (c->multiplicands[off] * c->delta_value + c->minimum_value)
+#define CODEBOOK_ELEMENT_FAST(c,off)     (c->multiplicands[off] * c->delta_value)
+#define CODEBOOK_ELEMENT_BASE(c)         (c->minimum_value)
 
 static int codebook_decode_start(vorb *f, Codebook *c)
 {
@@ -3860,6 +3844,7 @@ static int start_decoder(vorb *f)
 #ifndef STB_VORBIS_DIVIDES_IN_CODEBOOK
          if (c->lookup_type == 1) {
             int len, sparse = c->sparse;
+            float last=0;
             // pre-expand the lookup1-style multiplicands, to avoid a divide in the inner loop
             if (sparse) {
                if (c->sorted_entries == 0) goto skip;
@@ -3873,16 +3858,11 @@ static int start_decoder(vorb *f)
                unsigned int div=1;
                for (k=0; k < c->dimensions; ++k) {
                   int off = (z / div) % c->lookup_values;
-                  #ifndef STB_VORBIS_CODEBOOK_FLOATS
-                  c->multiplicands[j*c->dimensions + k] = mults[off];
-                  #else
-                  c->multiplicands[j*c->dimensions + k] = mults[off]*c->delta_value + c->minimum_value;
-                            // in this case (and this case only) we could pre-expand c->sequence_p,
-                            // and throw away the decode logic for it; have to ALSO do
-                            // it in the case below, but it can only be done if
-                            //    STB_VORBIS_CODEBOOK_FLOATS
-                            //   !STB_VORBIS_DIVIDES_IN_CODEBOOK
-                  #endif
+                  float val = mults[off];
+                  val = mults[off]*c->delta_value + c->minimum_value + last;
+                  c->multiplicands[j*c->dimensions + k] = val;
+                  if (c->sequence_p)
+                     last = val;
                   if (k+1 < c->dimensions) {
                      if (div > UINT_MAX / (unsigned int) c->lookup_values) {
                         setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values);
@@ -3898,15 +3878,16 @@ static int start_decoder(vorb *f)
          else
 #endif
          {
+            float last=0;
             CHECK(f);
             c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->lookup_values);
             if (c->multiplicands == NULL) { setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
-            #ifndef STB_VORBIS_CODEBOOK_FLOATS
-            memcpy(c->multiplicands, mults, sizeof(c->multiplicands[0]) * c->lookup_values);
-            #else
-            for (j=0; j < (int) c->lookup_values; ++j)
-               c->multiplicands[j] = mults[j] * c->delta_value + c->minimum_value;
-            #endif
+            for (j=0; j < (int) c->lookup_values; ++j) {
+               float val = mults[j] * c->delta_value + c->minimum_value + last;
+               c->multiplicands[j] = val;
+               if (c->sequence_p)
+                  last = val;
+            }
             setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values);
          }
 #ifndef STB_VORBIS_DIVIDES_IN_CODEBOOK
@@ -3914,14 +3895,6 @@ static int start_decoder(vorb *f)
 #endif
 
          CHECK(f);
-         #ifdef STB_VORBIS_CODEBOOK_FLOATS
-         if (c->lookup_type == 2 && c->sequence_p) {
-            for (j=1; j < (int) (c->sparse ? c->sorted_entries : c->lookup_values); ++j)
-               c->multiplicands[j] += c->multiplicands[j-1];
-            CHECK(f);
-            c->sequence_p = 0;
-         }
-         #endif
       }
       CHECK(f);
    }
