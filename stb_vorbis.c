@@ -1,8 +1,11 @@
-// Ogg Vorbis audio decoder - v1.06 - public domain
+// Ogg Vorbis audio decoder - v1.07 - public domain
 // http://nothings.org/stb_vorbis/
 //
-// Written by Sean Barrett in 2007, last updated in 2014
-// Sponsored by RAD Game Tools.
+// Original version written by Sean Barrett in 2007.
+//
+// Originally sponsored by RAD Game Tools. Seeking sponsored
+// by Phillip Bennefall, Marc Andersen, Elias Software, vgstorm.com,
+// Aras Pranckevicius, and Sean Barrett.
 //
 // LICENSE
 //
@@ -30,11 +33,13 @@
 //    Laurent Gomila     Marc LeBlanc        Ronny Chevalier
 //    Bernhard Wodo      Evan Balster        "alxprd"@github
 //    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
+//    Phillip Bennefall  
 // (If you reported a bug but do not appear in this list, it is because
 // someone else reported the bug before you. There were too many of you to
 // list them all because I was lax about updating for a long time, sorry.)
 //
 // Partial history:
+//    1.07    - 2015/11/08 - fixes for crashes on invalid files
 //    1.06    - 2015/08/31 - full, correct support for seeking API (Dougall Johnson)
 //                           some crash fixes when out of memory or with corrupt files
 //                           fix some inappropriately signed shifts
@@ -1057,10 +1062,12 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
       while (z > 0 && !available[z]) --z;
       if (z == 0) { return FALSE; }
       res = available[z];
+      assert(z >= 0 && z < 32);
       available[z] = 0;
       add_entry(c, bit_reverse(res), i, m++, len[i], values);
       // propogate availability up the tree
       if (z != len[i]) {
+         assert(len[i] >= 0 && len[i] < 32);
          for (y=len[i]; y > z; --y) {
             assert(available[y] == 0);
             available[y] = res + (1 << (32-y));
@@ -1586,7 +1593,9 @@ static int codebook_decode_scalar_raw(vorb *f, Codebook *c)
    int i;
    prep_huffman(f);
 
-   assert(c->sorted_codewords || c->codewords);
+   if (c->codewords == NULL && c->sorted_codewords == NULL)
+      return -1;
+
    // cases to use binary search: sorted_codewords && !c->codewords
    //                             sorted_codewords && c->entries > 8
    if (c->entries > 8 ? c->sorted_codewords!=NULL : !c->codewords) {
@@ -3743,6 +3752,8 @@ static int start_decoder(vorb *f)
             if (present) {
                lengths[j] = get_bits(f, 5) + 1;
                ++total;
+               if (lengths[j] == 32)
+                  return error(f, VORBIS_invalid_setup);
             } else {
                lengths[j] = NO_CODE;
             }
@@ -4012,6 +4023,7 @@ static int start_decoder(vorb *f)
       r->part_size = get_bits(f,24)+1;
       r->classifications = get_bits(f,6)+1;
       r->classbook = get_bits(f,8);
+      if (r->classbook >= f->codebook_count) return error(f, VORBIS_invalid_setup);
       for (j=0; j < r->classifications; ++j) {
          uint8 high_bits=0;
          uint8 low_bits=get_bits(f,3);
