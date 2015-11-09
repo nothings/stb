@@ -1693,9 +1693,9 @@ static int codebook_decode_scalar(vorb *f, Codebook *c)
 
 // CODEBOOK_ELEMENT_FAST is an optimization for the CODEBOOK_FLOATS case
 // where we avoid one addition
-#define CODEBOOK_ELEMENT(c,off)          (c->multiplicands[off] * c->delta_value + c->minimum_value)
-#define CODEBOOK_ELEMENT_FAST(c,off)     (c->multiplicands[off] * c->delta_value)
-#define CODEBOOK_ELEMENT_BASE(c)         (c->minimum_value)
+#define CODEBOOK_ELEMENT(c,off)          (c->multiplicands[off])
+#define CODEBOOK_ELEMENT_FAST(c,off)     (c->multiplicands[off])
+#define CODEBOOK_ELEMENT_BASE(c)         (0)
 
 static int codebook_decode_start(vorb *f, Codebook *c)
 {
