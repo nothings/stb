@@ -510,6 +510,18 @@ void test_subpixel_1()
 			STBIR_ASSERT(output_data[y * 16 + x + 8] == output_right[y * 8 + x]);
 		}
 	}
+
+	stbir_resize_subpixel(image, 8, 8, 0, output_left, 8, 16, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, 2, 2, 0, 0);
+	stbir_resize_subpixel(image, 8, 8, 0, output_right, 8, 16, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, 2, 2, 8, 0);
+
+	for (int x = 0; x < 8; x++)
+	{
+		for (int y = 0; y < 16; y++)
+		{
+			STBIR_ASSERT(output_data[y * 16 + x] == output_left[y * 8 + x]);
+			STBIR_ASSERT(output_data[y * 16 + x + 8] == output_right[y * 8 + x]);
+		}
+	}
 }
 
 // test that replicating an image and using a subtile of it produces same results as wraparound
@@ -547,6 +559,14 @@ void test_subpixel_2()
 		for (int y = 0; y < 16; y++)
 			STBIR_ASSERT(output_data_1[y * 16 + x] == output_data_2[y * 16 + x]);
 	}}
+
+	stbir_resize_subpixel(large_image, 32, 32, 0, output_data_2, 16, 16, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_WRAP, STBIR_EDGE_WRAP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, 2, 2, 16, 16);
+
+	{for (int x = 0; x < 16; x++)
+	{
+		for (int y = 0; y < 16; y++)
+			STBIR_ASSERT(output_data_1[y * 16 + x] == output_data_2[y * 16 + x]);
+	}}
 }
 
 // test that 0,0,1,1 subpixel produces same result as no-rect
@@ -570,6 +590,14 @@ void test_subpixel_3()
 		for (int y = 0; y < 32; y++)
 			STBIR_ASSERT(output_data_1[y * 32 + x] == output_data_2[y * 32 + x]);
 	}
+
+	stbir_resize_subpixel(image, 8, 8, 0, output_data_1, 32, 32, 0, STBIR_TYPE_UINT8, 1, 0, STBIR_ALPHA_CHANNEL_NONE, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_LINEAR, NULL, 4, 4, 0, 0);
+
+	for (int x = 0; x < 32; x++)
+	{
+		for (int y = 0; y < 32; y++)
+			STBIR_ASSERT(output_data_1[y * 32 + x] == output_data_2[y * 32 + x]);
+	}
 }
 
 // test that 1:1 resample using s,t=0,0,1,1 with bilinear produces original image
@@ -585,6 +613,9 @@ void test_subpixel_4()
 	unsigned char output[8 * 8];
 
 	stbir_resize_region(image, 8, 8, 0, output, 8, 8, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_TRIANGLE, STBIR_FILTER_TRIANGLE, STBIR_COLORSPACE_LINEAR, &g_context, 0, 0, 1, 1);
+	STBIR_ASSERT(memcmp(image, output, 8 * 8) == 0);
+
+	stbir_resize_subpixel(image, 8, 8, 0, output, 8, 8, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_TRIANGLE, STBIR_FILTER_TRIANGLE, STBIR_COLORSPACE_LINEAR, &g_context, 1, 1, 0, 0);
 	STBIR_ASSERT(memcmp(image, output, 8 * 8) == 0);
 }
 

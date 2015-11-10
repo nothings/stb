@@ -1004,31 +1004,31 @@ stbir__inline static int stbir__edge_wrap(stbir_edge edge, int n, int max)
 }
 
 // What input pixels contribute to this output pixel?
-static void stbir__calculate_sample_range_upsample(int n, float out_filter_radius, float scale_ratio, float in_shift, int* in_first_pixel, int* in_last_pixel, float* in_center_of_out)
+static void stbir__calculate_sample_range_upsample(int n, float out_filter_radius, float scale_ratio, float out_shift, int* in_first_pixel, int* in_last_pixel, float* in_center_of_out)
 {
     float out_pixel_center = (float)n + 0.5f;
     float out_pixel_influence_lowerbound = out_pixel_center - out_filter_radius;
     float out_pixel_influence_upperbound = out_pixel_center + out_filter_radius;
 
-    float in_pixel_influence_lowerbound = out_pixel_influence_lowerbound / scale_ratio + in_shift;
-    float in_pixel_influence_upperbound = out_pixel_influence_upperbound / scale_ratio + in_shift;
+    float in_pixel_influence_lowerbound = (out_pixel_influence_lowerbound + out_shift) / scale_ratio;
+    float in_pixel_influence_upperbound = (out_pixel_influence_upperbound + out_shift) / scale_ratio;
 
-    *in_center_of_out = out_pixel_center / scale_ratio + in_shift;
+    *in_center_of_out = (out_pixel_center + out_shift) / scale_ratio;
     *in_first_pixel = (int)(floor(in_pixel_influence_lowerbound + 0.5));
     *in_last_pixel = (int)(floor(in_pixel_influence_upperbound - 0.5));
 }
 
 // What output pixels does this input pixel contribute to?
-static void stbir__calculate_sample_range_downsample(int n, float in_pixels_radius, float scale_ratio, float in_shift, int* out_first_pixel, int* out_last_pixel, float* out_center_of_in)
+static void stbir__calculate_sample_range_downsample(int n, float in_pixels_radius, float scale_ratio, float out_shift, int* out_first_pixel, int* out_last_pixel, float* out_center_of_in)
 {
     float in_pixel_center = (float)n + 0.5f;
     float in_pixel_influence_lowerbound = in_pixel_center - in_pixels_radius;
     float in_pixel_influence_upperbound = in_pixel_center + in_pixels_radius;
 
-    float out_pixel_influence_lowerbound = (in_pixel_influence_lowerbound - in_shift) * scale_ratio;
-    float out_pixel_influence_upperbound = (in_pixel_influence_upperbound - in_shift) * scale_ratio;
+    float out_pixel_influence_lowerbound = in_pixel_influence_lowerbound * scale_ratio - out_shift;
+    float out_pixel_influence_upperbound = in_pixel_influence_upperbound * scale_ratio - out_shift;
 
-    *out_center_of_in = (in_pixel_center - in_shift) * scale_ratio;
+    *out_center_of_in = in_pixel_center * scale_ratio - out_shift;
     *out_first_pixel = (int)(floor(out_pixel_influence_lowerbound + 0.5));
     *out_last_pixel = (int)(floor(out_pixel_influence_upperbound - 0.5));
 }
