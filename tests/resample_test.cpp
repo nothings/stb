@@ -1,4 +1,5 @@
-#include <malloc.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 #if defined(_WIN32) && _MSC_VER > 1200
 #define STBIR_ASSERT(x) \
@@ -351,6 +352,54 @@ void test_subpixel(const char* file, float width_percent, float height_percent, 
 
 	char output[200];
 	sprintf(output, "test-output/subpixel-%d-%d-%f-%f-%s", new_w, new_h, s1, t1, file);
+	stbi_write_png(output, new_w, new_h, n, output_data, 0);
+
+	free(output_data);
+}
+
+void test_subpixel_region(const char* file, float width_percent, float height_percent, float s0, float t0, float s1, float t1)
+{
+	int w, h, n;
+	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
+
+	if (input_data == NULL)
+		return;
+
+	int new_w = (int)(w * width_percent);
+	int new_h = (int)(h * height_percent);
+
+	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
+
+	stbir_resize_region(input_data, w, h, 0, output_data, new_w, new_h, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, s0, t0, s1, t1);
+
+	stbi_image_free(input_data);
+
+	char output[200];
+	sprintf(output, "test-output/subpixel-region-%d-%d-%f-%f-%f-%f-%s", new_w, new_h, s0, t0, s1, t1, file);
+	stbi_write_png(output, new_w, new_h, n, output_data, 0);
+
+	free(output_data);
+}
+
+void test_subpixel_command(const char* file, float width_percent, float height_percent, float x_scale, float y_scale, float x_offset, float y_offset)
+{
+	int w, h, n;
+	unsigned char* input_data = stbi_load(file, &w, &h, &n, 0);
+
+	if (input_data == NULL)
+		return;
+
+	int new_w = (int)(w * width_percent);
+	int new_h = (int)(h * height_percent);
+
+	unsigned char* output_data = (unsigned char*)malloc(new_w * new_h * n * sizeof(unsigned char));
+
+	stbir_resize_subpixel(input_data, w, h, 0, output_data, new_w, new_h, 0, STBIR_TYPE_UINT8, n, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, x_scale, y_scale, x_offset, y_offset);
+
+	stbi_image_free(input_data);
+
+	char output[200];
+	sprintf(output, "test-output/subpixel-command-%d-%d-%f-%f-%f-%f-%s", new_w, new_h, x_scale, y_scale, x_offset, y_offset, file);
 	stbi_write_png(output, new_w, new_h, n, output_data, 0);
 
 	free(output_data);
@@ -879,6 +928,55 @@ void test_suite(int argc, char **argv)
 	stbir_resize(image88, 8, 8, 0, output88, 4, 16, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_BOX, STBIR_COLORSPACE_SRGB, &g_context);
 	stbir_resize(image88, 8, 8, 0, output88, 16, 4, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_BOX, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context);
 	stbir_resize(image88, 8, 8, 0, output88, 16, 4, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_BOX, STBIR_COLORSPACE_SRGB, &g_context);
+
+	int barbara_width, barbara_height, barbara_channels;
+	stbi_image_free(stbi_load(barbara, &barbara_width, &barbara_height, &barbara_channels, 0));
+
+	int res = 10;
+	// Downscaling
+	for (int i = 0; i <= res; i++)
+	{
+		float t = (float)i/res;
+		float scale = 0.5;
+		float out_scale = 2.0/3;
+		float x_shift = (barbara_width*out_scale - barbara_width*scale) * t;
+		float y_shift = (barbara_height*out_scale - barbara_height*scale) * t;
+
+		test_subpixel_command(barbara, scale, scale, out_scale, out_scale, x_shift, y_shift);
+	}
+
+	// Upscaling
+	for (int i = 0; i <= res; i++)
+	{
+		float t = (float)i/res;
+		float scale = 2;
+		float out_scale = 3;
+		float x_shift = (barbara_width*out_scale - barbara_width*scale) * t;
+		float y_shift = (barbara_height*out_scale - barbara_height*scale) * t;
+
+		test_subpixel_command(barbara, scale, scale, out_scale, out_scale, x_shift, y_shift);
+	}
+
+	// Downscaling
+	for (int i = 0; i <= res; i++)
+	{
+		float t = (float)i/res / 2;
+		test_subpixel_region(barbara, 0.25f, 0.25f, t, t, t+0.5f, t+0.5f);
+	}
+
+	// No scaling
+	for (int i = 0; i <= res; i++)
+	{
+		float t = (float)i/res / 2;
+		test_subpixel_region(barbara, 0.5f, 0.5f, t, t, t+0.5f, t+0.5f);
+	}
+
+	// Upscaling
+	for (int i = 0; i <= res; i++)
+	{
+		float t = (float)i/res / 2;
+		test_subpixel_region(barbara, 1, 1, t, t, t+0.5f, t+0.5f);
+	}
 
 	for (i = 0; i < 10; i++)
 		test_subpixel(barbara, 0.5f, 0.5f, (float)i / 10, 1);
