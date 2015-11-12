@@ -52,6 +52,7 @@ this! But you might like them anyway:
 - **2D** [noc_turtle](https://github.com/guillaumechereau/noc): procedural graphics generator (public domain)
 - **geometry** [Tomas Akenine-Moller snippets](http://fileadmin.cs.lth.se/cs/Personal/Tomas_Akenine-Moller/code/): various 3D intersection calculations, not lib-ified (public domain)
 - **geometry** [Clipper](http://www.angusj.com/delphi/clipper.php): line & polygon clipping & offsetting (Boost license)
+- _**geometry** [PolyPartition](https://github.com/ivanfratric/polypartition): polygon triangulation, partitioning (MIT license)_
 - **network** [yocto](https://github.com/tom-seddon/yhs): non-production-use http server (public domain)
 - **network** [happyhttp](http://scumways.com/happyhttp/happyhttp.html): http client requests (zlib license)
 - **network** [mongoose](https://github.com/cesanta/mongoose): http server (GPL v2)
