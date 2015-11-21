@@ -35,7 +35,7 @@ Not public domain:
 - **multithreading** [mts](https://github.com/vurtun/mts): cross-platform multithreaded task scheduler (zlib license)
 - **parsing** [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
 - **parsing** [PicoJSON](https://github.com/kazuho/picojson): JSON parse/serializer for C++ (BSD license)
-- _**parsing** [zange](https://github.com/vurtun/zange): JSON parser (MIT license)_
+- _**parsing** [mm_json](https://github.com/vurtun/mmx): JSON parser (zlib license)_
 - **tests** [utest](https://github.com/evolutional/utest): unit testing (MIT license)
 - **tests** [catch](https://github.com/philsquared/Catch): unit testing (Boost license)
 - **tests** [SPUT](http://www.lingua-systems.com/unit-testing/): unit testing (BSD license)
