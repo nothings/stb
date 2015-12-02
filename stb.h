@@ -3249,7 +3249,7 @@ void stb__arr_insertn_(void **pp, int size, int i, int n  STB__PARAMS)
 
       z = stb_arr_len2(p);
       stb__arr_addlen_(&p, size, i  STB__ARGS);
-      memmove((char *) p + (i+n)*size, (char *) p + i*size, size * (z-i));
+      memmove((char *) p + (i+n)*size, (char *) p + i*size, size * (z-(i+n)));
    }
    *pp = p;
 }
@@ -3258,7 +3258,7 @@ void stb__arr_deleten_(void **pp, int size, int i, int n  STB__PARAMS)
 {
    void *p = *pp;
    if (n) {
-      memmove((char *) p + i*size, (char *) p + (i+n)*size, size * (stb_arr_len2(p)-i));
+      memmove((char *) p + i*size, (char *) p + (i+n)*size, size * (stb_arr_len2(p)-(i+n)));
       stb_arrhead2(p)->len -= n;
    }
    *pp = p;
