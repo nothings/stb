@@ -3248,8 +3248,8 @@ void stb__arr_insertn_(void **pp, int size, int i, int n  STB__PARAMS)
       }
 
       z = stb_arr_len2(p);
-      stb__arr_addlen_(&p, size, i  STB__ARGS);
-      memmove((char *) p + (i+n)*size, (char *) p + i*size, size * (z-(i+n)));
+      stb__arr_addlen_(&p, size, n  STB__ARGS);
+      memmove((char *) p + (i+n)*size, (char *) p + i*size, size * (z-i));
    }
    *pp = p;
 }
