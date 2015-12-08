@@ -4003,6 +4003,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
       stbi_uc *prior = cur - stride;
       int filter = *raw++;
       int filter_bytes = img_n;
+      int raw_step = (depth == 16? 2 : 1);
       int width = x;
       if (filter > 4)
          return stbi__err("invalid filter","Corrupt PNG");
@@ -4020,20 +4021,20 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
       // handle first byte explicitly
       for (k=0; k < filter_bytes; ++k) {
          switch (filter) {
-            case STBI__F_none       : cur[k] = raw[k]; break;
-            case STBI__F_sub        : cur[k] = raw[k]; break;
-            case STBI__F_up         : cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
-            case STBI__F_avg        : cur[k] = STBI__BYTECAST(raw[k] + (prior[k]>>1)); break;
-            case STBI__F_paeth      : cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(0,prior[k],0)); break;
-            case STBI__F_avg_first  : cur[k] = raw[k]; break;
-            case STBI__F_paeth_first: cur[k] = raw[k]; break;
+            case STBI__F_none       : cur[k] = raw[k*raw_step]; break;
+            case STBI__F_sub        : cur[k] = raw[k*raw_step]; break;
+            case STBI__F_up         : cur[k] = STBI__BYTECAST(raw[k*raw_step] + prior[k]); break;
+            case STBI__F_avg        : cur[k] = STBI__BYTECAST(raw[k*raw_step] + (prior[k]>>1)); break;
+            case STBI__F_paeth      : cur[k] = STBI__BYTECAST(raw[k*raw_step] + stbi__paeth(0,prior[k],0)); break;
+            case STBI__F_avg_first  : cur[k] = raw[k*raw_step]; break;
+            case STBI__F_paeth_first: cur[k] = raw[k*raw_step]; break;
          }
       }
 
-      if (depth == 8) {
+      if (depth == 8 || depth == 16) {
          if (img_n != out_n)
             cur[img_n] = 255; // first pixel
-         raw += img_n;
+         raw += img_n*raw_step;
          cur += out_n;
          prior += out_n;
       } else {
@@ -4050,30 +4051,30 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
                 for (k=0; k < nk; ++k)
          switch (filter) {
             // "none" filter turns into a memcpy here; make that explicit.
-            case STBI__F_none:         memcpy(cur, raw, nk); break;
-            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(raw[k] + cur[k-filter_bytes]); break;
-            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
-            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(raw[k] + ((prior[k] + cur[k-filter_bytes])>>1)); break;
-            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-filter_bytes],prior[k],prior[k-filter_bytes])); break;
-            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(raw[k] + (cur[k-filter_bytes] >> 1)); break;
-            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-filter_bytes],0,0)); break;
+            case STBI__F_none:         if (depth == 16) for(k=0; k < nk; ++k) cur[k] = STBI__BYTECAST(raw[k*raw_step]); else memcpy(cur, raw, nk); break;
+            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(raw[k*raw_step] + cur[k-filter_bytes]); break;
+            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(raw[k*raw_step] + prior[k]); break;
+            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(raw[k*raw_step] + ((prior[k] + cur[k - filter_bytes]) >> 1)); break;
+            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(raw[k*raw_step] + stbi__paeth(cur[k - filter_bytes], prior[k], prior[k - filter_bytes])); break;
+            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(raw[k*raw_step] + (cur[k - filter_bytes] >> 1)); break;
+            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(raw[k*raw_step] + stbi__paeth(cur[k - filter_bytes], 0, 0)); break;
          }
          #undef CASE
-         raw += nk;
+         raw += nk*raw_step;
       } else {
          STBI_ASSERT(img_n+1 == out_n);
          #define CASE(f) \
              case f:     \
-                for (i=x-1; i >= 1; --i, cur[img_n]=255,raw+=img_n,cur+=out_n,prior+=out_n) \
+                for (i=x-1; i >= 1; --i, cur[img_n]=255,raw+=img_n*raw_step,cur+=out_n,prior+=out_n) \
                    for (k=0; k < img_n; ++k)
          switch (filter) {
-            CASE(STBI__F_none)         cur[k] = raw[k]; break;
-            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(raw[k] + cur[k-out_n]); break;
-            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(raw[k] + prior[k]); break;
-            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(raw[k] + ((prior[k] + cur[k-out_n])>>1)); break;
-            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-out_n],prior[k],prior[k-out_n])); break;
-            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(raw[k] + (cur[k-out_n] >> 1)); break;
-            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(raw[k] + stbi__paeth(cur[k-out_n],0,0)); break;
+            CASE(STBI__F_none)         cur[k] = raw[k*raw_step]; break;
+            CASE(STBI__F_sub)          cur[k] = STBI__BYTECAST(raw[k*raw_step] + cur[k - out_n]); break;
+            CASE(STBI__F_up)           cur[k] = STBI__BYTECAST(raw[k*raw_step] + prior[k]); break;
+            CASE(STBI__F_avg)          cur[k] = STBI__BYTECAST(raw[k*raw_step] + ((prior[k] + cur[k - out_n]) >> 1)); break;
+            CASE(STBI__F_paeth)        cur[k] = STBI__BYTECAST(raw[k*raw_step] + stbi__paeth(cur[k - out_n], prior[k], prior[k - out_n])); break;
+            CASE(STBI__F_avg_first)    cur[k] = STBI__BYTECAST(raw[k*raw_step] + (cur[k - out_n] >> 1)); break;
+            CASE(STBI__F_paeth_first)  cur[k] = STBI__BYTECAST(raw[k*raw_step] + stbi__paeth(cur[k - out_n], 0, 0)); break;
          }
          #undef CASE
       }
@@ -4347,8 +4348,9 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             if (c.length != 13) return stbi__err("bad IHDR len","Corrupt PNG");
             s->img_x = stbi__get32be(s); if (s->img_x > (1 << 24)) return stbi__err("too large","Very large image (corrupt?)");
             s->img_y = stbi__get32be(s); if (s->img_y > (1 << 24)) return stbi__err("too large","Very large image (corrupt?)");
-            depth = stbi__get8(s);  if (depth != 1 && depth != 2 && depth != 4 && depth != 8)  return stbi__err("1/2/4/8-bit only","PNG not supported: 1/2/4/8-bit only");
+            depth = stbi__get8(s);  if (depth != 1 && depth != 2 && depth != 4 && depth != 8 && depth != 16)  return stbi__err("1/2/4/8/16-bit only","PNG not supported: 1/2/4/8/16-bit only");
             color = stbi__get8(s);  if (color > 6)         return stbi__err("bad ctype","Corrupt PNG");
+            if (color == 3 && depth == 16)                 return stbi__err("bad ctype","Corrupt PNG");
             if (color == 3) pal_img_n = 3; else if (color & 1) return stbi__err("bad ctype","Corrupt PNG");
             comp  = stbi__get8(s);  if (comp) return stbi__err("bad comp method","Corrupt PNG");
             filter= stbi__get8(s);  if (filter) return stbi__err("bad filter method","Corrupt PNG");
