@@ -3127,15 +3127,15 @@ static int do_floor(vorb *f, Mapping *map, int i, int n, float *target, YTYPE *f
    } else {
       Floor1 *g = &f->floor_config[floor].floor1;
       int j,q;
-      int lx = 0, ly = finalY[0] * g->floor1_multiplier;
+      int lx = 0, ly = finalY[0] * g->floor1_multiplier, test_final_exists;
       for (q=1; q < g->values; ++q) {
          j = g->sorted_order[q];
          #ifndef STB_VORBIS_NO_DEFER_FLOOR
-         if (finalY[j] >= 0)
+         test_final_exists = finalY[j] >= 0;
          #else
-         if (step2_flag[j])
+         test_final_exists = step2_flag[j];
          #endif
-         {
+         if (test_final_exists) {
             int hy = finalY[j] * g->floor1_multiplier;
             int hx = g->Xlist[j];
             if (lx != hx)
