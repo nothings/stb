@@ -15,8 +15,8 @@ free to tell me about their quality.) _Newest additions are in italics._
 - **network** [zed_net](https://github.com/ZedZull/zed_net): cross-platform socket wrapper (public domain)
 - **strings**; **files & filenames** [DG_misc.h](https://github.com/DanielGibson/Snippets/): Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings (public domain)
 - **strings** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (public domain)
-- _**strings** [strpool.h](https://github.com/mattiasgustavsson/libs): string interning (public domain/MIT)_
-- **misc** [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
+- **strings** [strpool.h](https://github.com/mattiasgustavsson/libs): string interning (public domain/MIT)
+- **misc** [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallowcate small integer IDs efficiently (public domain)
 - **misc** [gb_string.h](https://github.com/gingerBill/gb): dynamic strings for C (public domain)
 - **misc** [loguru](https://github.com/emilk/loguru): flexible logging for C++ (public domain)
 - **hardware** [EasyTab](https://github.com/ApoorvaJ/EasyTab): multi-platform tablet input (public domain)
@@ -28,21 +28,24 @@ Not public domain:
 - **images** [nanoSVG](https://github.com/memononen/nanosvg): 1-file SVG parser; 1-file SVG rasterizer (zlib license)
 - **3D** [tinyobjloader](https://github.com/syoyo/tinyobjloader): wavefront OBJ file loader (BSD license)
 - **2D** [blendish](https://bitbucket.org/duangle/oui-blendish/src): blender-style widget rendering (MIT license)
-- _**math** [mm_vec.h](https://github.com/vurtun/mmx): vector math (BSD license)_
+- **math** [mm_vec.h](https://github.com/vurtun/mmx): vector math (BSD license)
 - **geometry** [sdf.h](https://github.com/memononen/SDF): compute signed-distance field from antialiased image (MIT license)
 - **geometry** [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
 - **geometry** [jc_voronoi](https://github.com/JCash/voronoi): find voronoi regions on float/double data (MIT license)
+- _**geometry** [par_msquares](https://github.com/prideout/par): convert (binarized) image to triangles (MIT license)_
 - **network** [mm_web.h](https://github.com/vurtun/mmx): lightweight webserver, fork of webby (BSD license)
+- _**network** [par_easycurl.h](https://github.com/prideout/par): curl wrapper (MIT license)_
 - **audio** [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h): IMA-ADPCM audio decoder (MIT license)
-- **multithreading** [mm_sched.h](https://github.com/vurtun/mts): cross-platform multithreaded task scheduler (zlib license)
+- **multithreading** [mm_sched.h](https://github.com/vurtun/mmx): cross-platform multithreaded task scheduler (zlib license)
 - **parsing** [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
 - **parsing** [PicoJSON](https://github.com/kazuho/picojson): JSON parse/serializer for C++ (BSD license)
-- _**parsing** [mm_json.h](https://github.com/vurtun/mmx): JSON parser (zlib license)_
-- _**parsing** [mm_lexer.h](https://github.com/vurtun/mmx): C-esque language lexer (zlib license)_
+- **parsing** [mm_json.h](https://github.com/vurtun/mmx): JSON parser (zlib license)
+- **parsing** [mm_lexer.h](https://github.com/vurtun/mmx): C-esque language lexer (zlib license)
 - **tests** [utest](https://github.com/evolutional/utest): unit testing (MIT license)
 - **tests** [catch](https://github.com/philsquared/Catch): unit testing (Boost license)
 - **tests** [SPUT](http://www.lingua-systems.com/unit-testing/): unit testing (BSD license)
 - **misc** [lualite](https://github.com/janezz55/lualite/): generate lua bindings in C++ (MIT license)
+- _**misc** [tinyformat](https://github.com/c42f/tinyformat): C++ typesafe printf (Boost license)_
 
 There are some that have a source file and require a separate header file (which they may
 not even supply). That's twice as many files, and we at nothings/stb cannot condone
