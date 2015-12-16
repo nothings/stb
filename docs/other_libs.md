@@ -16,7 +16,7 @@ free to tell me about their quality.) _Newest additions are in italics._
 - **strings**; **files & filenames** [DG_misc.h](https://github.com/DanielGibson/Snippets/): Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings (public domain)
 - **strings** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (public domain)
 - **strings** [strpool.h](https://github.com/mattiasgustavsson/libs): string interning (public domain/MIT)
-- **misc** [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallowcate small integer IDs efficiently (public domain)
+- **misc** [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
 - **misc** [gb_string.h](https://github.com/gingerBill/gb): dynamic strings for C (public domain)
 - **misc** [loguru](https://github.com/emilk/loguru): flexible logging for C++ (public domain)
 - **hardware** [EasyTab](https://github.com/ApoorvaJ/EasyTab): multi-platform tablet input (public domain)
