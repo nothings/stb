@@ -32,9 +32,10 @@ Not public domain:
 - **geometry** [sdf.h](https://github.com/memononen/SDF): compute signed-distance field from antialiased image (MIT license)
 - **geometry** [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
 - **geometry** [jc_voronoi](https://github.com/JCash/voronoi): find voronoi regions on float/double data (MIT license)
-- _**geometry** [par_msquares](https://github.com/prideout/par): convert (binarized) image to triangles (MIT license)_
+- **geometry** [par_msquares](https://github.com/prideout/par): convert (binarized) image to triangles (MIT license)
+- _**geometry** [tk_objfile](https://github.com/joeld42/tk_objfile): OBJ file loader (MIT license)_
 - **network** [mm_web.h](https://github.com/vurtun/mmx): lightweight webserver, fork of webby (BSD license)
-- _**network** [par_easycurl.h](https://github.com/prideout/par): curl wrapper (MIT license)_
+- **network** [par_easycurl.h](https://github.com/prideout/par): curl wrapper (MIT license)
 - **audio** [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h): IMA-ADPCM audio decoder (MIT license)
 - **multithreading** [mm_sched.h](https://github.com/vurtun/mmx): cross-platform multithreaded task scheduler (zlib license)
 - **parsing** [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
@@ -45,7 +46,7 @@ Not public domain:
 - **tests** [catch](https://github.com/philsquared/Catch): unit testing (Boost license)
 - **tests** [SPUT](http://www.lingua-systems.com/unit-testing/): unit testing (BSD license)
 - **misc** [lualite](https://github.com/janezz55/lualite/): generate lua bindings in C++ (MIT license)
-- _**misc** [tinyformat](https://github.com/c42f/tinyformat): C++ typesafe printf (Boost license)_
+- **misc** [tinyformat](https://github.com/c42f/tinyformat): C++ typesafe printf (Boost license)
 
 There are some that have a source file and require a separate header file (which they may
 not even supply). That's twice as many files, and we at nothings/stb cannot condone
