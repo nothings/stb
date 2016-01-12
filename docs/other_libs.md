@@ -34,7 +34,7 @@ Not public domain:
 - **geometry** [jc_voronoi](https://github.com/JCash/voronoi): find voronoi regions on float/double data (MIT license)
 - **geometry** [par_msquares](https://github.com/prideout/par): convert (binarized) image to triangles (MIT license)
 - **geometry** [tk_objfile](https://github.com/joeld42/tk_objfile): OBJ file loader (MIT license)
-- _**geometry** [par_shapes](http://github.prideout.net/shapes/): generate various 3d geometric shapes (MIT license)
+- _**geometry** [par_shapes](http://github.prideout.net/shapes/): generate various 3d geometric shapes (MIT license)_
 - **network** [mm_web.h](https://github.com/vurtun/mmx): lightweight webserver, fork of webby (BSD license)
 - **network** [par_easycurl.h](https://github.com/prideout/par): curl wrapper (MIT license)
 - **audio** [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h): IMA-ADPCM audio decoder (MIT license)
