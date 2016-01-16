@@ -482,7 +482,7 @@ void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
    int exponent;
    float maxcomp = stbiw__max(linear[0], stbiw__max(linear[1], linear[2]));
 
-   if (maxcomp < 1e-32) {
+   if (maxcomp < 1e-32f) {
       rgbe[0] = rgbe[1] = rgbe[2] = rgbe[3] = 0;
    } else {
       float normalize = (float) frexp(maxcomp, &exponent) * 256.0f/maxcomp;
