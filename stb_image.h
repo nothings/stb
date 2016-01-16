@@ -1,4 +1,4 @@
-/* stb_image - v2.08 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.09 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -6391,6 +6391,8 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.09  (2016-01-16) allow comments in PNM files
+                         info() for BMP to shares code instead of sloppy parse
       2.08  (2015-09-13) fix to 2.07 cleanup, reading RGB PSD as RGBA
       2.07  (2015-09-13) fix compiler warnings
                          partial animated GIF support
