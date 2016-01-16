@@ -7,7 +7,7 @@
 #define STB_DEFINE
 #include "stb.h"
 
-#define PNGSUITE_PRIMARY
+//#define PNGSUITE_PRIMARY
 
 #if 0
 void test_ycbcr(void)
@@ -65,7 +65,7 @@ int main(int argc, char **argv)
    int w,h;
    //test_ycbcr();
 
-   #if 1
+   #if 0
    // test hdr asserts
    for (h=0; h < 100; h += 2)
       for (w=0; w < 200; ++w)
@@ -81,15 +81,17 @@ int main(int argc, char **argv)
 
       for (i=1; i < argc; ++i) {
          int res;
+         int w2,h2,n2;
          unsigned char *data;
          printf("%s\n", argv[i]);
-         res = stbi_info(argv[1], &w, &h, &n);
+         res = stbi_info(argv[1], &w2, &h2, &n2);
          data = stbi_load(argv[i], &w, &h, &n, 4); if (data) free(data); else printf("Failed &n\n");
          data = stbi_load(argv[i], &w, &h,  0, 1); if (data) free(data); else printf("Failed 1\n");
          data = stbi_load(argv[i], &w, &h,  0, 2); if (data) free(data); else printf("Failed 2\n");
          data = stbi_load(argv[i], &w, &h,  0, 3); if (data) free(data); else printf("Failed 3\n");
-         data = stbi_load(argv[i], &w, &h,  0, 4);
+         data = stbi_load(argv[i], &w, &h, &n, 4);
          assert(data);
+         assert(w == w2 && h == h2 && n == n2);
          assert(res);
          if (data) {
             char fname[512];
