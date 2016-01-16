@@ -101,6 +101,7 @@ CREDITS:
       github:romigrou
       Sergio Gonzalez
       Jonas Karlsson
+      Filip Wasil
       
 LICENSE
 
