@@ -1,4 +1,4 @@
-/* stb_image_write - v1.00 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v1.01 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010-2015
                                      no warranty implied; use at your own risk
 
@@ -98,6 +98,7 @@ CREDITS:
       github:Chribba
       Guillaume Chereau
       github:jry2
+      github:romigrou
       
 LICENSE
 
@@ -974,6 +975,8 @@ STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x,
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
+      1.01 (2016-01-16)
+             STBIW_REALLOC_SIZED: support allocators with no realloc support
       1.00 (2015-09-14)
              installable file IO function
       0.99 (2015-09-13)

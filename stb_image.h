@@ -146,6 +146,7 @@
 
 
    Latest revision history:
+      2.09  (2016-01-16) 16-bit TGA; comments in PNM files; STBI_REALLOC_SIZED
       2.08  (2015-09-13) fix to 2.07 cleanup, reading RGB PSD as RGBA
       2.07  (2015-09-13) partial animated GIF support
                          limited 16-bit PSD support
@@ -198,7 +199,7 @@
     the Horde3D community   Thomas Ruf         Ronny Chevalier    Nick Verigakis
     Janez Zemva             John Bartholomew   Michal Cichon      svdijk@github
     Jonathan Blow           Ken Hamada         Tero Hanninen      Baldur Karlsson
-    Laurent Gomila          Cort Stratton      Sergio Gonzalez
+    Laurent Gomila          Cort Stratton      Sergio Gonzalez    romigrou@github
     Aruelien Pocheville     Thibault Reuille   Cass Everitt
     Ryamond Barbiero        Paul Du Bois       Engin Manap
     Blazej Dariusz Roszkowski
@@ -6456,11 +6457,13 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 /*
    revision history:
       2.09  (2016-01-16) allow comments in PNM files
+                         16-bit-per-pixel TGA (not bit-per-component)
                          info() for BMP to shares code instead of sloppy parse
+                         can use STBI_REALLOC_SIZED if allocator doesn't support realloc
       2.08  (2015-09-13) fix to 2.07 cleanup, reading RGB PSD as RGBA
       2.07  (2015-09-13) fix compiler warnings
                          partial animated GIF support
-                         limited 16-bit PSD support
+                         limited 16-bpc PSD support
                          #ifdef unused functions
                          bug with < 92 byte PIC,PNM,HDR,TGA
       2.06  (2015-04-19) fix bug where PSD returns wrong '*comp' value
