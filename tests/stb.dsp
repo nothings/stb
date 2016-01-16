@@ -130,6 +130,10 @@ SOURCE=..\stb_leakcheck.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_malloc.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_perlin.h
 # End Source File
 # Begin Source File

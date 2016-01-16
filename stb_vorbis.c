@@ -4,7 +4,7 @@
 // Original version written by Sean Barrett in 2007.
 //
 // Originally sponsored by RAD Game Tools. Seeking sponsored
-// by Phillip Bennefall, Marc Andersen, Elias Software, vgstorm.com,
+// by Phillip Bennefall, Marc Andersen, Aaron Baker, Elias Software,
 // Aras Pranckevicius, and Sean Barrett.
 //
 // LICENSE
@@ -557,11 +557,24 @@ enum STBVorbisError
 #endif
 #else // STB_VORBIS_NO_CRT
 #define NULL 0
+#define malloc(s)   0
+#define free(s)     ((void) 0)
+#define realloc(s)  0
 #endif // STB_VORBIS_NO_CRT
 
 #include <limits.h>
 
-#if !defined(_MSC_VER) && !(defined(__MINGW32__) && defined(__forceinline))
+#ifdef __MINGW32__
+   // eff you mingw:
+   //     "fixed":
+   //         http://sourceforge.net/p/mingw-w64/mailman/message/32882927/
+   //     "no that broke the build, reverted, who cares about C":
+   //         http://sourceforge.net/p/mingw-w64/mailman/message/32890381/
+   #ifdef __forceinline
+   #undef __forceinline
+   #endif
+   #define __forceinline
+#elif !defined(_MSC_VER)
    #if __GNUC__
       #define __forceinline inline
    #else
