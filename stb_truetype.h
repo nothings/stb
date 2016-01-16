@@ -50,7 +50,7 @@
 //
 // VERSION HISTORY
 //
-//   1.09 (2016-01-16) warning fix; avoid crash on outofmem
+//   1.09 (2016-01-16) warning fix; avoid crash on outofmem; use allocation userdata properly
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
 //                     variant PackFontRanges to pack and render in separate phases;
@@ -2522,6 +2522,7 @@ STBTT_DEF int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // fo
    float scale;
    int x,y,bottom_y, i;
    stbtt_fontinfo f;
+   f.userdata = NULL;
    if (!stbtt_InitFont(&f, data, offset))
       return -1;
    STBTT_memset(pixels, 0, pw*ph); // background of 0 around pixels
@@ -2986,6 +2987,7 @@ STBTT_DEF int stbtt_PackFontRanges(stbtt_pack_context *spc, unsigned char *fontd
    if (rects == NULL)
       return 0;
 
+   info.userdata = spc->user_allocator_context;
    stbtt_InitFont(&info, fontdata, stbtt_GetFontOffsetForIndex(fontdata,font_index));
 
    n = stbtt_PackFontRangesGatherRects(spc, &info, ranges, num_ranges, rects);
@@ -3203,7 +3205,7 @@ STBTT_DEF int stbtt_FindMatchingFont(const unsigned char *font_collection, const
 
 // FULL VERSION HISTORY
 //
-//   1.09 (2016-01-16) warning fix; avoid crash on outofmem
+//   1.09 (2016-01-16) warning fix; avoid crash on outofmem; use alloc userdata for PackFontRanges
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
 //                     allow PackFontRanges to pack and render in separate phases;
