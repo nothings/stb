@@ -34,7 +34,7 @@ USAGE:
      int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
      int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
-     int stbi_write_hdr(char const *filename, int w, int h, int comp, const void *data);
+     int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
 
    There are also four equivalent functions that use an arbitrary write function. You are
    expected to open/close your file-equivalent before and after calling these:
