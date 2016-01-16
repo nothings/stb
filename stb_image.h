@@ -184,6 +184,7 @@
     Thatcher Ulrich (psd)                  Nicolas Guillemot (vertical flip)
     Ken Miller (pgm, ppm)                  Richard Mitton (16-bit PSD)
     urraka@github (animated gif)           Junggon Kim (PNM comments)
+                                           Daniel Gibson (16-bit TGA)
 
  Optimizations & bugfixes
     Fabian "ryg" Giesen
