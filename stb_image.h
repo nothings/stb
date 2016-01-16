@@ -6053,7 +6053,7 @@ static int stbi__hdr_info(stbi__context *s, int *x, int *y, int *comp)
    char *token;
    int valid = 0;
 
-   if (strcmp(stbi__hdr_gettoken(s,buffer), "#?RADIANCE") != 0) {
+   if (stbi__hdr_test(s) == 0) {
        stbi__rewind( s );
        return 0;
    }

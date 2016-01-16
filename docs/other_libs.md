@@ -17,7 +17,7 @@ free to tell me about their quality.) _Newest additions are in italics._
 - **strings** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (public domain)
 - **misc** [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
 - **misc** [gb_string.h](https://github.com/gingerBill/gb): dynamic strings for C (public domain)
-- _**misc** [loguru](https://github.com/emilk/loguru): flexible logging for C++ (public domain)
+- _**misc** [loguru](https://github.com/emilk/loguru): flexible logging for C++ (public domain)_
 - _**hardware** [EasyTab](https://github.com/ApoorvaJ/EasyTab): multi-platform tablet input (public domain)_
 
 Not public domain:
@@ -52,6 +52,7 @@ this! But you might like them anyway:
 - **2D** [noc_turtle](https://github.com/guillaumechereau/noc): procedural graphics generator (public domain)
 - **geometry** [Tomas Akenine-Moller snippets](http://fileadmin.cs.lth.se/cs/Personal/Tomas_Akenine-Moller/code/): various 3D intersection calculations, not lib-ified (public domain)
 - **geometry** [Clipper](http://www.angusj.com/delphi/clipper.php): line & polygon clipping & offsetting (Boost license)
+- _**geometry** [PolyPartition](https://github.com/ivanfratric/polypartition): polygon triangulation, partitioning (MIT license)_
 - **network** [yocto](https://github.com/tom-seddon/yhs): non-production-use http server (public domain)
 - **network** [happyhttp](http://scumways.com/happyhttp/happyhttp.html): http client requests (zlib license)
 - **network** [mongoose](https://github.com/cesanta/mongoose): http server (GPL v2)
