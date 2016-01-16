@@ -4836,20 +4836,55 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
 // Targa Truevision - TGA
 // by Jonathan Dummer
 #ifndef STBI_NO_TGA
+// returns STBI_rgb or whatever, 0 on error
+static int stbi__tga_get_comp(int bits_per_pixel, int is_grey, int* is_rgb16)
+{
+   // only RGB or RGBA (incl. 16bit) or grey allowed
+   if(is_rgb16) *is_rgb16 = 0;
+   switch(bits_per_pixel) {
+      case 8:  return STBI_grey;
+      case 16: if(is_grey) return STBI_grey_alpha;
+            // else: fall-through
+      case 15: if(is_rgb16) *is_rgb16 = 1;
+            return STBI_rgb;
+      case 24: // fall-through
+      case 32: return bits_per_pixel/8;
+      default: return 0;
+   }
+}
+
 static int stbi__tga_info(stbi__context *s, int *x, int *y, int *comp)
 {
-    int tga_w, tga_h, tga_comp;
-    int sz;
+    int tga_w, tga_h, tga_comp, tga_image_type, tga_bits_per_pixel, tga_colormap_bpp;
+    int sz, tga_colormap_type;
     stbi__get8(s);                   // discard Offset
-    sz = stbi__get8(s);              // color type
-    if( sz > 1 ) {
+    tga_colormap_type = stbi__get8(s); // colormap type
+    if( tga_colormap_type > 1 ) {
         stbi__rewind(s);
         return 0;      // only RGB or indexed allowed
     }
-    sz = stbi__get8(s);              // image type
-    // only RGB or grey allowed, +/- RLE
-    if ((sz != 1) && (sz != 2) && (sz != 3) && (sz != 9) && (sz != 10) && (sz != 11)) return 0;
-    stbi__skip(s,9);
+    tga_image_type = stbi__get8(s); // image type
+    if ( tga_colormap_type == 1 ) { // colormapped (paletted) image
+        if (tga_image_type != 1 && tga_image_type != 9) {
+            stbi__rewind(s);
+            return 0;
+        }
+        stbi__skip(s,4);       // skip index of first colormap entry and number of entries
+        sz = stbi__get8(s);    //   check bits per palette color entry
+        if ( (sz != 8) && (sz != 15) && (sz != 16) && (sz != 24) && (sz != 32) ) {
+            stbi__rewind(s);
+            return 0;
+        }
+        stbi__skip(s,4);       // skip image x and y origin
+        tga_colormap_bpp = sz;
+    } else { // "normal" image w/o colormap - only RGB or grey allowed, +/- RLE
+        if ( (tga_image_type != 2) && (tga_image_type != 3) && (tga_image_type != 10) && (tga_image_type != 11) ) {
+            stbi__rewind(s);
+            return 0; // only RGB or grey allowed, +/- RLE
+        }
+        stbi__skip(s,9); // skip colormap specification and image x/y origin
+        tga_colormap_bpp = 0;
+    }
     tga_w = stbi__get16le(s);
     if( tga_w < 1 ) {
         stbi__rewind(s);
@@ -4860,42 +4895,78 @@ static int stbi__tga_info(stbi__context *s, int *x, int *y, int *comp)
         stbi__rewind(s);
         return 0;   // test height
     }
-    sz = stbi__get8(s);               // bits per pixel
-    // only RGB or RGBA or grey allowed
-    if ((sz != 8) && (sz != 16) && (sz != 24) && (sz != 32)) {
-        stbi__rewind(s);
-        return 0;
+    tga_bits_per_pixel = stbi__get8(s); // bits per pixel
+    stbi__get8(s); // ignore alpha bits
+    if (tga_colormap_bpp != 0) {
+        if((tga_bits_per_pixel != 8) && (tga_bits_per_pixel != 16)) {
+            // when using a colormap, tga_bits_per_pixel is the size of the indexes
+            // I don't think anything but 8 or 16bit indexes makes sense
+            stbi__rewind(s);
+            return 0;
+        }
+        tga_comp = stbi__tga_get_comp(tga_colormap_bpp, 0, NULL);
+    } else {
+        tga_comp = stbi__tga_get_comp(tga_bits_per_pixel, (tga_image_type == 3) || (tga_image_type == 11), NULL);
     }
-    tga_comp = sz;
+    if(!tga_comp) {
+      stbi__rewind(s);
+      return 0;
+    }
     if (x) *x = tga_w;
     if (y) *y = tga_h;
-    if (comp) *comp = tga_comp / 8;
+    if (comp) *comp = tga_comp;
     return 1;                   // seems to have passed everything
 }
 
 static int stbi__tga_test(stbi__context *s)
 {
-   int res;
-   int sz;
+   int res = 0;
+   int sz, tga_color_type;
    stbi__get8(s);      //   discard Offset
-   sz = stbi__get8(s);   //   color type
-   if ( sz > 1 ) return 0;   //   only RGB or indexed allowed
+   tga_color_type = stbi__get8(s);   //   color type
+   if ( tga_color_type > 1 ) goto errorEnd;   //   only RGB or indexed allowed
    sz = stbi__get8(s);   //   image type
-   if ( (sz != 1) && (sz != 2) && (sz != 3) && (sz != 9) && (sz != 10) && (sz != 11) ) return 0;   //   only RGB or grey allowed, +/- RLE
-   stbi__get16be(s);      //   discard palette start
-   stbi__get16be(s);      //   discard palette length
-   stbi__get8(s);         //   discard bits per palette color entry
-   stbi__get16be(s);      //   discard x origin
-   stbi__get16be(s);      //   discard y origin
-   if ( stbi__get16be(s) < 1 ) return 0;      //   test width
-   if ( stbi__get16be(s) < 1 ) return 0;      //   test height
+   if ( tga_color_type == 1 ) { // colormapped (paletted) image
+      if (sz != 1 && sz != 9) goto errorEnd; // colortype 1 demands image type 1 or 9
+      stbi__skip(s,4);       // skip index of first colormap entry and number of entries
+      sz = stbi__get8(s);    //   check bits per palette color entry
+      if ( (sz != 8) && (sz != 15) && (sz != 16) && (sz != 24) && (sz != 32) ) goto errorEnd;
+      stbi__skip(s,4);       // skip image x and y origin
+   } else { // "normal" image w/o colormap
+      if ( (sz != 2) && (sz != 3) && (sz != 10) && (sz != 11) ) goto errorEnd; // only RGB or grey allowed, +/- RLE
+      stbi__skip(s,9); // skip colormap specification and image x/y origin
+   }
+   if ( stbi__get16le(s) < 1 ) goto errorEnd;      //   test width
+   if ( stbi__get16le(s) < 1 ) goto errorEnd;      //   test height
    sz = stbi__get8(s);   //   bits per pixel
-   if ( (sz != 8) && (sz != 16) && (sz != 24) && (sz != 32) )
-      res = 0;
-   else
-      res = 1;
+   if ( (tga_color_type == 1) && (sz != 8) && (sz != 16) ) goto errorEnd; // for colormapped images, bpp is size of an index
+   if ( (sz != 8) && (sz != 15) && (sz != 16) && (sz != 24) && (sz != 32) ) goto errorEnd;
+
+   res = 1; // if we got this far, everything's good and we can return 1 instead of 0
+
+errorEnd:
    stbi__rewind(s);
    return res;
+}
+
+// read 16bit value and convert to 24bit RGB
+void stbi__tga_read_rgb16(stbi__context *s, stbi_uc* out)
+{
+   stbi__uint16 px = stbi__get16le(s);
+   stbi__uint16 fiveBitMask = 31;
+   // we have 3 channels with 5bits each
+   int r = (px >> 10) & fiveBitMask;
+   int g = (px >> 5) & fiveBitMask;
+   int b = px & fiveBitMask;
+   // Note that this saves the data in RGB(A) order, so it doesn't need to be swapped later
+   out[0] = (r * 255)/31;
+   out[1] = (g * 255)/31;
+   out[2] = (b * 255)/31;
+
+   // some people claim that the most significant bit might be used for alpha
+   // (possibly if an alpha-bit is set in the "image descriptor byte")
+   // but that only made 16bit test images completely translucent..
+   // so let's treat all 15 and 16bit TGAs as RGB with no alpha.
 }
 
 static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req_comp)
@@ -4913,8 +4984,9 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
    int tga_width = stbi__get16le(s);
    int tga_height = stbi__get16le(s);
    int tga_bits_per_pixel = stbi__get8(s);
-   int tga_comp = tga_bits_per_pixel / 8;
+   int tga_comp, tga_rgb16=0;
    int tga_inverted = stbi__get8(s);
+   // int tga_alpha_bits = tga_inverted & 15; // the 4 lowest bits - unused (useless?)
    //   image data
    unsigned char *tga_data;
    unsigned char *tga_palette = NULL;
@@ -4930,25 +5002,14 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
       tga_image_type -= 8;
       tga_is_RLE = 1;
    }
-   /* int tga_alpha_bits = tga_inverted & 15; */
    tga_inverted = 1 - ((tga_inverted >> 5) & 1);
 
-   //   error check
-   if ( //(tga_indexed) ||
-      (tga_width < 1) || (tga_height < 1) ||
-      (tga_image_type < 1) || (tga_image_type > 3) ||
-      ((tga_bits_per_pixel != 8) && (tga_bits_per_pixel != 16) &&
-      (tga_bits_per_pixel != 24) && (tga_bits_per_pixel != 32))
-      )
-   {
-      return NULL; // we don't report this as a bad TGA because we don't even know if it's TGA
-   }
-
    //   If I'm paletted, then I'll use the number of bits from the palette
-   if ( tga_indexed )
-   {
-      tga_comp = tga_palette_bits / 8;
-   }
+   if ( tga_indexed ) tga_comp = stbi__tga_get_comp(tga_palette_bits, 0, &tga_rgb16);
+   else tga_comp = stbi__tga_get_comp(tga_bits_per_pixel, (tga_image_type == 3), &tga_rgb16);
+
+   if(!tga_comp) // shouldn't really happen, stbi__tga_test() should have ensured basic consistency
+      return stbi__errpuc("bad format", "Can't find out TGA pixelformat");
 
    //   tga info
    *x = tga_width;
@@ -4961,7 +5022,7 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
    // skip to the data's starting position (offset usually = 0)
    stbi__skip(s, tga_offset );
 
-   if ( !tga_indexed && !tga_is_RLE) {
+   if ( !tga_indexed && !tga_is_RLE && !tga_rgb16 ) {
       for (i=0; i < tga_height; ++i) {
          int row = tga_inverted ? tga_height -i - 1 : i;
          stbi_uc *tga_row = tga_data + row*tga_width*tga_comp;
@@ -4974,15 +5035,22 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
          //   any data to skip? (offset usually = 0)
          stbi__skip(s, tga_palette_start );
          //   load the palette
-         tga_palette = (unsigned char*)stbi__malloc( tga_palette_len * tga_palette_bits / 8 );
+         tga_palette = (unsigned char*)stbi__malloc( tga_palette_len * tga_comp );
          if (!tga_palette) {
             STBI_FREE(tga_data);
             return stbi__errpuc("outofmem", "Out of memory");
          }
-         if (!stbi__getn(s, tga_palette, tga_palette_len * tga_palette_bits / 8 )) {
-            STBI_FREE(tga_data);
-            STBI_FREE(tga_palette);
-            return stbi__errpuc("bad palette", "Corrupt TGA");
+         if (tga_rgb16) {
+            stbi_uc *pal_entry = tga_palette;
+            STBI_ASSERT(tga_comp == STBI_rgb);
+            for (i=0; i < tga_palette_len; ++i) {
+               stbi__tga_read_rgb16(s, pal_entry);
+               pal_entry += tga_comp;
+            }
+         } else if (!stbi__getn(s, tga_palette, tga_palette_len * tga_comp)) {
+               STBI_FREE(tga_data);
+               STBI_FREE(tga_palette);
+               return stbi__errpuc("bad palette", "Corrupt TGA");
          }
       }
       //   load the data
@@ -5012,23 +5080,22 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
             //   load however much data we did have
             if ( tga_indexed )
             {
-               //   read in 1 byte, then perform the lookup
-               int pal_idx = stbi__get8(s);
-               if ( pal_idx >= tga_palette_len )
-               {
-                  //   invalid index
+               // read in index, then perform the lookup
+               int pal_idx = (tga_bits_per_pixel == 8) ? stbi__get8(s) : stbi__get16le(s);
+               if ( pal_idx >= tga_palette_len ) {
+                  // invalid index
                   pal_idx = 0;
                }
-               pal_idx *= tga_bits_per_pixel / 8;
-               for (j = 0; j*8 < tga_bits_per_pixel; ++j)
-               {
+               pal_idx *= tga_comp;
+               for (j = 0; j < tga_comp; ++j) {
                   raw_data[j] = tga_palette[pal_idx+j];
                }
-            } else
-            {
+            } else if(tga_rgb16) {
+               STBI_ASSERT(tga_comp == STBI_rgb);
+               stbi__tga_read_rgb16(s, raw_data);
+            } else {
                //   read in the data raw
-               for (j = 0; j*8 < tga_bits_per_pixel; ++j)
-               {
+               for (j = 0; j < tga_comp; ++j) {
                   raw_data[j] = stbi__get8(s);
                }
             }
@@ -5067,8 +5134,8 @@ static stbi_uc *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int 
       }
    }
 
-   // swap RGB
-   if (tga_comp >= 3)
+   // swap RGB - if the source data was RGB16, it already is in the right order
+   if (tga_comp >= 3 && !tga_rgb16)
    {
       unsigned char* tga_pixel = tga_data;
       for (i=0; i < tga_width * tga_height; ++i)
