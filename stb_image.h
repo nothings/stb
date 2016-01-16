@@ -175,45 +175,34 @@
 
  ============================    Contributors    =========================
 
- Image formats                                Bug fixes & warning fixes
-    Sean Barrett (jpeg, png, bmp)                Marc LeBlanc
-    Nicolas Schulz (hdr, psd)                    Christpher Lloyd
-    Jonathan Dummer (tga)                        Dave Moore
-    Jean-Marc Lienher (gif)                      Won Chun
-    Tom Seddon (pic)                             the Horde3D community
-    Thatcher Ulrich (psd)                        Janez Zemva
-    Ken Miller (pgm, ppm)                        Jonathan Blow
-    urraka@github (animated gif)                 Laurent Gomila
-                                                 Aruelien Pocheville
-                                                 Ryamond Barbiero
-                                                 David Woo
- Extensions, features                            Martin Golini
-    Jetro Lauha (stbi_info)                      Roy Eltham
-    Martin "SpartanJ" Golini (stbi_info)         Luke Graham
-    James "moose2000" Brown (iPhone PNG)         Thomas Ruf
-    Ben "Disch" Wenger (io callbacks)            John Bartholomew
-    Omar Cornut (1/2/4-bit PNG)                  Ken Hamada
-    Nicolas Guillemot (vertical flip)            Cort Stratton
-    Richard Mitton (16-bit PSD)                  Blazej Dariusz Roszkowski
-    Junggon Kim (PNM comments)                   Thibault Reuille
-                                                 Paul Du Bois
-                                                 Guillaume George
-                                                 Jerry Jansson
-                                                 Hayaki Saito
-                                                 Johan Duparc
-                                                 Ronny Chevalier
- Optimizations & bugfixes                        Michal Cichon
-    Fabian "ryg" Giesen                          Tero Hanninen
-    Arseny Kapoulkine                            Sergio Gonzalez
-                                                 Cass Everitt
-                                                 Engin Manap
-  If your name should be here but                Martins Mozeiko
-  isn't, let Sean know.                          Joseph Thomson
-                                                 Phil Jordan
-                                                 Nathan Reed
-                                                 Michaelangel007@github
-                                                 Nick Verigakis
-                                                 svdijk@github
+ Image formats                          Extensions, features
+    Sean Barrett (jpeg, png, bmp)          Jetro Lauha (stbi_info)
+    Nicolas Schulz (hdr, psd)              Martin "SpartanJ" Golini (stbi_info)
+    Jonathan Dummer (tga)                  James "moose2000" Brown (iPhone PNG)
+    Jean-Marc Lienher (gif)                Ben "Disch" Wenger (io callbacks)
+    Tom Seddon (pic)                       Omar Cornut (1/2/4-bit PNG)
+    Thatcher Ulrich (psd)                  Nicolas Guillemot (vertical flip)
+    Ken Miller (pgm, ppm)                  Richard Mitton (16-bit PSD)
+    urraka@github (animated gif)           Junggon Kim (PNM comments)
+
+ Optimizations & bugfixes
+    Fabian "ryg" Giesen
+    Arseny Kapoulkine
+
+ Bug & warning fixes
+    Marc LeBlanc            David Woo          Guillaume George   Martins Mozeiko
+    Christpher Lloyd        Martin Golini      Jerry Jansson      Joseph Thomson
+    Dave Moore              Roy Eltham         Hayaki Saito       Phil Jordan
+    Won Chun                Luke Graham        Johan Duparc       Nathan Reed
+    the Horde3D community   Thomas Ruf         Ronny Chevalier    Nick Verigakis
+    Janez Zemva             John Bartholomew   Michal Cichon      svdijk@github
+    Jonathan Blow           Ken Hamada         Tero Hanninen      Baldur Karlsson
+    Laurent Gomila          Cort Stratton      Sergio Gonzalez
+    Aruelien Pocheville     Thibault Reuille   Cass Everitt
+    Ryamond Barbiero        Paul Du Bois       Engin Manap
+    Blazej Dariusz Roszkowski
+    Michaelangel007@github
+
 
 LICENSE
 
