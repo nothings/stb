@@ -33,13 +33,10 @@
 //    Laurent Gomila     Marc LeBlanc        Ronny Chevalier
 //    Bernhard Wodo      Evan Balster        "alxprd"@github
 //    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
-//    Phillip Bennefall  
-// (If you reported a bug but do not appear in this list, it is because
-// someone else reported the bug before you. There were too many of you to
-// list them all because I was lax about updating for a long time, sorry.)
+//    Phillip Bennefall  Rohit
 //
 // Partial history:
-//    1.07    - 2015/11/08 - fixes for crashes on invalid files
+//    1.07    - 2015/01/16 - fixes for crashes on invalid files; warning fixes; const
 //    1.06    - 2015/08/31 - full, correct support for seeking API (Dougall Johnson)
 //                           some crash fixes when out of memory or with corrupt files
 //                           fix some inappropriately signed shifts
@@ -50,8 +47,6 @@
 //    1.01    - 2014/06/18 - fix stb_vorbis_get_samples_float (interleaved was correct)
 //    1.0     - 2014/05/26 - fix memory leaks; fix warnings; fix bugs in >2-channel;
 //                           (API change) report sample rate for decode-full-file funcs
-//    0.99996 -            - bracket #include <malloc.h> for macintosh compilation
-//    0.99995 -            - avoid alias-optimization issue in float-to-int conversion
 //
 // See end of file for full version history.
 
@@ -5416,6 +5411,8 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
 #endif // STB_VORBIS_NO_PULLDATA_API
 
 /* Version history
+    1.07    - 2015/01/16 - fixed some warnings, fix mingw, const-correct API
+                           some more crash fixes when out of memory or with corrupt files 
     1.06    - 2015/08/31 - full, correct support for seeking API (Dougall Johnson)
                            some crash fixes when out of memory or with corrupt files
     1.05    - 2015/04/19 - don't define __forceinline if it's redundant
