@@ -160,10 +160,10 @@ extern unsigned int stb_vorbis_get_file_offset(stb_vorbis *f);
 // specification does not bound the size of an individual frame.
 
 extern stb_vorbis *stb_vorbis_open_pushdata(
-         unsigned char *datablock, int datablock_length_in_bytes,
+         const unsigned char * datablock, int datablock_length_in_bytes,
          int *datablock_memory_consumed_in_bytes,
          int *error,
-         stb_vorbis_alloc *alloc_buffer);
+         const stb_vorbis_alloc *alloc_buffer);
 // create a vorbis decoder by passing in the initial data block containing
 //    the ogg&vorbis headers (you don't need to do parse them, just provide
 //    the first N bytes of the file--you're told if it's not enough, see below)
@@ -174,7 +174,8 @@ extern stb_vorbis *stb_vorbis_open_pushdata(
 //       incomplete and you need to pass in a larger block from the start of the file
 
 extern int stb_vorbis_decode_frame_pushdata(
-         stb_vorbis *f, unsigned char *datablock, int datablock_length_in_bytes,
+         stb_vorbis *f,
+         const unsigned char *datablock, int datablock_length_in_bytes,
          int *channels,             // place to write number of float * buffers
          float ***output,           // place to write float ** array of float * buffers
          int *samples               // place to write number of output samples
@@ -297,15 +298,17 @@ extern int stb_vorbis_get_frame_float(stb_vorbis *f, int *channels, float ***out
 extern int stb_vorbis_get_frame_short_interleaved(stb_vorbis *f, int num_c, short *buffer, int num_shorts);
 extern int stb_vorbis_get_frame_short            (stb_vorbis *f, int num_c, short **buffer, int num_samples);
 #endif
-// decode the next frame and return the number of samples per channel. the
-// data is coerced to the number of channels you request according to the
+// decode the next frame and return the number of *samples* per channel.
+// Note that for interleaved data, you pass in the number of shorts (the
+// size of your array), but the return value is the number of samples per
+// channel, not the total number of samples.
+//
+// The data is coerced to the number of channels you request according to the
 // channel coercion rules (see below). You must pass in the size of your
 // buffer(s) so that stb_vorbis will not overwrite the end of the buffer.
 // The maximum buffer size needed can be gotten from get_info(); however,
 // the Vorbis I specification implies an absolute maximum of 4096 samples
-// per channel. Note that for interleaved data, you pass in the number of
-// shorts (the size of your array), but the return value is the number of
-// samples per channel, not the total number of samples.
+// per channel.
 
 // Channel coercion rules:
 //    Let M be the number of channels requested, and N the number of channels present,
