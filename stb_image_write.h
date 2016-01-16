@@ -193,6 +193,8 @@ STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w,
 #define STBIW_ASSERT(x) assert(x)
 #endif
 
+#define STBIW_UCHAR(x) (unsigned char) ((x) & 0xff)
+
 typedef struct
 {
    stbi_write_func *func;
@@ -241,21 +243,21 @@ static void stbiw__writefv(stbi__write_context *s, const char *fmt, va_list v)
    while (*fmt) {
       switch (*fmt++) {
          case ' ': break;
-         case '1': { unsigned char x = (unsigned char) va_arg(v, int);
+         case '1': { unsigned char x = STBIW_UCHAR(va_arg(v, int));
                      s->func(s->context,&x,1);
                      break; }
          case '2': { int x = va_arg(v,int);
                      unsigned char b[2];
-                     b[0] = (unsigned char) x;
-                     b[1] = (unsigned char) (x>>8);
+                     b[0] = STBIW_UCHAR(x);
+                     b[1] = STBIW_UCHAR(x>>8);
                      s->func(s->context,b,2);
                      break; }
          case '4': { stbiw_uint32 x = va_arg(v,int);
                      unsigned char b[4];
-                     b[0]=(unsigned char)x;
-                     b[1]=(unsigned char)(x>>8);
-                     b[2]=(unsigned char)(x>>16);
-                     b[3]=(unsigned char)(x>>24);
+                     b[0]=STBIW_UCHAR(x);
+                     b[1]=STBIW_UCHAR(x>>8);
+                     b[2]=STBIW_UCHAR(x>>16);
+                     b[3]=STBIW_UCHAR(x>>24);
                      s->func(s->context,b,4);
                      break; }
          default:
@@ -432,13 +434,13 @@ static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, v
             }
 
             if (diff) {
-               unsigned char header = (unsigned char) (len - 1);
+               unsigned char header = STBIW_UCHAR(len - 1);
                s->func(s->context, &header, 1);
                for (k = 0; k < len; ++k) {
                   stbiw__write_pixel(s, -1, comp, has_alpha, 0, begin + k * comp);
                }
             } else {
-               unsigned char header = (unsigned char) (len - 129);
+               unsigned char header = STBIW_UCHAR(len - 129);
                s->func(s->context, &header, 1);
                stbiw__write_pixel(s, -1, comp, has_alpha, 0, begin);
             }
@@ -494,7 +496,7 @@ void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
 
 void stbiw__write_run_data(stbi__write_context *s, int length, unsigned char databyte)
 {
-   unsigned char lengthbyte = (unsigned char) (length+128);
+   unsigned char lengthbyte = STBIW_UCHAR(length+128);
    STBIW_ASSERT(length+128 <= 255);
    s->func(s->context, &lengthbyte, 1);
    s->func(s->context, &databyte, 1);
@@ -502,7 +504,7 @@ void stbiw__write_run_data(stbi__write_context *s, int length, unsigned char dat
 
 void stbiw__write_dump_data(stbi__write_context *s, int length, unsigned char *data)
 {
-   unsigned char lengthbyte = (unsigned char )(length & 0xff);
+   unsigned char lengthbyte = STBIW_UCHAR(length);
    STBIW_ASSERT(length <= 128); // inconsistent with spec but consistent with official code
    s->func(s->context, &lengthbyte, 1);
    s->func(s->context, data, length);
@@ -673,7 +675,7 @@ static void *stbiw__sbgrowf(void **arr, int increment, int itemsize)
 static unsigned char *stbiw__zlib_flushf(unsigned char *data, unsigned int *bitbuffer, int *bitcount)
 {
    while (*bitcount >= 8) {
-      stbiw__sbpush(data, (unsigned char) *bitbuffer);
+      stbiw__sbpush(data, STBIW_UCHAR(*bitbuffer));
       *bitbuffer >>= 8;
       *bitcount -= 8;
    }
@@ -817,10 +819,10 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
          j += blocklen;
          blocklen = 5552;
       }
-      stbiw__sbpush(out, (unsigned char) (s2 >> 8));
-      stbiw__sbpush(out, (unsigned char) s2);
-      stbiw__sbpush(out, (unsigned char) (s1 >> 8));
-      stbiw__sbpush(out, (unsigned char) s1);
+      stbiw__sbpush(out, STBIW_UCHAR(s2 >> 8));
+      stbiw__sbpush(out, STBIW_UCHAR(s2));
+      stbiw__sbpush(out, STBIW_UCHAR(s1 >> 8));
+      stbiw__sbpush(out, STBIW_UCHAR(s1));
    }
    *out_len = stbiw__sbn(out);
    // make returned pointer freeable
@@ -873,7 +875,7 @@ static unsigned int stbiw__crc32(unsigned char *buffer, int len)
    return ~crc;
 }
 
-#define stbiw__wpng4(o,a,b,c,d) ((o)[0]=(unsigned char)(a),(o)[1]=(unsigned char)(b),(o)[2]=(unsigned char)(c),(o)[3]=(unsigned char)(d),(o)+=4)
+#define stbiw__wpng4(o,a,b,c,d) ((o)[0]=STBIW_UCHAR(a),(o)[1]=STBIW_UCHAR(b),(o)[2]=STBIW_UCHAR(c),(o)[3]=STBIW_UCHAR(d),(o)+=4)
 #define stbiw__wp32(data,v) stbiw__wpng4(data, (v)>>24,(v)>>16,(v)>>8,(v));
 #define stbiw__wptag(data,s) stbiw__wpng4(data, s[0],s[1],s[2],s[3])
 
@@ -886,9 +888,9 @@ static void stbiw__wpcrc(unsigned char **data, int len)
 static unsigned char stbiw__paeth(int a, int b, int c)
 {
    int p = a + b - c, pa = abs(p-a), pb = abs(p-b), pc = abs(p-c);
-   if (pa <= pb && pa <= pc) return (unsigned char) a;
-   if (pb <= pc) return (unsigned char) b;
-   return (unsigned char) c;
+   if (pa <= pb && pa <= pc) return STBIW_UCHAR(a);
+   if (pb <= pc) return STBIW_UCHAR(b);
+   return STBIW_UCHAR(c);
 }
 
 unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
@@ -961,7 +963,7 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
    stbiw__wp32(o, x);
    stbiw__wp32(o, y);
    *o++ = 8;
-   *o++ = (unsigned char) ctype[n];
+   *o++ = STBIW_UCHAR(ctype[n]);
    *o++ = 0;
    *o++ = 0;
    *o++ = 0;
