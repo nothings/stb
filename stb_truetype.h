@@ -50,7 +50,7 @@
 //
 // VERSION HISTORY
 //
-//   1.09 (????-??-??) warning fix; avoid crash on outofmem
+//   1.09 (2016-01-16) warning fix; avoid crash on outofmem
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
 //                     variant PackFontRanges to pack and render in separate phases;
@@ -3203,6 +3203,7 @@ STBTT_DEF int stbtt_FindMatchingFont(const unsigned char *font_collection, const
 
 // FULL VERSION HISTORY
 //
+//   1.09 (2016-01-16) warning fix; avoid crash on outofmem
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
 //                     allow PackFontRanges to pack and render in separate phases;
