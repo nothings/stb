@@ -213,6 +213,7 @@
                                                  Nathan Reed
                                                  Michaelangel007@github
                                                  Nick Verigakis
+                                                 svdijk@github
 
 LICENSE
 
