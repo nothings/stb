@@ -6222,8 +6222,15 @@ static int      stbi__pnm_isspace(char c)
 
 static void     stbi__pnm_skip_whitespace(stbi__context *s, char *c)
 {
-   while (!stbi__at_eof(s) && stbi__pnm_isspace(*c))
-      *c = (char) stbi__get8(s);
+   while (!stbi__at_eof(s)) {
+      if (stbi__pnm_isspace(*c))
+         *c = (char) stbi__get8(s);
+      else if (*c == '#') { /* Skip comments */
+         while (!stbi__at_eof(s) && *c!='\r' && *c!='\n')
+            *c = (char) stbi__get8(s);
+      } else
+         break;
+   }
 }
 
 static int      stbi__pnm_isdigit(char c)
