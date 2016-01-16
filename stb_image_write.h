@@ -157,19 +157,25 @@ STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w,
 #include <string.h>
 #include <math.h>
 
-#if defined(STBIW_MALLOC) && defined(STBIW_FREE) && defined(STBIW_REALLOC)
+#if defined(STBIW_MALLOC) && defined(STBIW_FREE) && (defined(STBIW_REALLOC) || defined(STBIW_REALLOC_SIZED))
 // ok
-#elif !defined(STBIW_MALLOC) && !defined(STBIW_FREE) && !defined(STBIW_REALLOC)
+#elif !defined(STBIW_MALLOC) && !defined(STBIW_FREE) && !defined(STBIW_REALLOC) && !defined(STBIW_REALLOC_SIZED)
 // ok
 #else
-#error "Must define all or none of STBIW_MALLOC, STBIW_FREE, and STBIW_REALLOC."
+#error "Must define all or none of STBIW_MALLOC, STBIW_FREE, and STBIW_REALLOC (or STBIW_REALLOC_SIZED)."
 #endif
 
 #ifndef STBIW_MALLOC
-#define STBIW_MALLOC(sz)             malloc(sz)
-#define STBIW_REALLOC(p,oldsz,newsz) realloc(p,newsz)
-#define STBIW_FREE(p)                free(p)
+#define STBIW_MALLOC(sz)        malloc(sz)
+#define STBIW_REALLOC(p,newsz)  realloc(p,newsz)
+#define STBIW_FREE(p)           free(p)
 #endif
+
+#ifndef STBIW_REALLOC_SIZED
+#define STBIW_REALLOC_SIZED(p,oldsz,newsz) STBIW_REALLOC(p,newsz)
+#endif
+
+
 #ifndef STBIW_MEMMOVE
 #define STBIW_MEMMOVE(a,b,sz) memmove(a,b,sz)
 #endif
@@ -647,7 +653,7 @@ int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *da
 static void *stbiw__sbgrowf(void **arr, int increment, int itemsize)
 {
    int m = *arr ? 2*stbiw__sbm(*arr)+increment : increment+1;
-   void *p = STBIW_REALLOC(*arr ? stbiw__sbraw(*arr) : 0, *arr ? (stbiw__sbm(*arr)*itemsize + sizeof(int)*2) : 0, itemsize * m + sizeof(int)*2);
+   void *p = STBIW_REALLOC_SIZED(*arr ? stbiw__sbraw(*arr) : 0, *arr ? (stbiw__sbm(*arr)*itemsize + sizeof(int)*2) : 0, itemsize * m + sizeof(int)*2);
    STBIW_ASSERT(p);
    if (p) {
       if (!*arr) ((int *) p)[1] = 0;
