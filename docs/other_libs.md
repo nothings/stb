@@ -95,7 +95,7 @@ There are some libraries that are just _so_ awesome that even though they use mo
 than two files we're going to give them special dispensation to appear in their own
 little list here. If you're a crazy purist, be warned, but otherwise, enjoy!
 
-- **user interface** [ImGui](https://github.com/ocornut/imgui): an immediate-mode GUI ("imgui") named "ImGui" (MIT license)
+- **user interface** [dear imgui](https://github.com/ocornut/imgui): an immediate-mode GUI ("imgui") named "ImGui" (MIT license)
 
 Also you might be interested in other related, but different lists:
 
