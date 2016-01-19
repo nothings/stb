@@ -7786,7 +7786,7 @@ stb_ps *stb_ps_remove_any(stb_ps *ps, void **value)
 void ** stb_ps_getlist(stb_ps *ps, int *count)
 {
    int i,n=0;
-   void **p;
+   void **p = NULL;
    switch (3 & (int) ps) {
       case STB_ps_direct:
          if (ps == NULL) { *count = 0; return NULL; }
