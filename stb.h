@@ -207,9 +207,15 @@ CREDITS
 #endif
 
 #ifdef _WIN32
+   #ifndef _CRT_SECURE_NO_WARNINGS
    #define _CRT_SECURE_NO_WARNINGS
+   #endif
+   #ifndef _CRT_NONSTDC_NO_DEPRECATE
    #define _CRT_NONSTDC_NO_DEPRECATE
+   #endif
+   #ifndef _CRT_NON_CONFORMING_SWPRINTFS
    #define _CRT_NON_CONFORMING_SWPRINTFS
+   #endif
    #if !defined(_MSC_VER) || _MSC_VER > 1700
    #include <intrin.h> // _BitScanReverse
    #endif
