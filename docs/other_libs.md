@@ -9,7 +9,7 @@ free to tell me about their quality.
 **Public domain single-file libraries are in bold.**
 
 
-category | library | license | # files | description
+category | library | license | files | description
 -------- | ------- | ------- | ------- | -----------
 2D | [blendish](https://bitbucket.org/duangle/oui-blendish/src) | MIT | **1** | blender-style widget rendering
 2D | [tigr](https://bitbucket.org/rmitton/tigr/src) | **public&nbsp;domain** | 2 | quick-n-dirty window text/graphics for Windows
@@ -72,7 +72,7 @@ profiling | [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile) | **un
 scripting | [lualite](https://github.com/janezz55/lualite/) | MIT | **1** | generate lua bindings in C++
 strings | **[DG_misc.h](https://github.com/DanielGibson/Snippets/)**|**public&nbsp;domain**|**1**|Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings
 strings | **[utf8](https://github.com/sheredom/utf8.h)**|**public&nbsp;domain**|**1**|utf8 string library
-strings | **[strpool.h](https://github.com/mattiasgustavsson/libs)**|**public&nbsp;domain**/MIT|string interning
+strings | **[strpool.h](https://github.com/mattiasgustavsson/libs)**|**public&nbsp;domain**/MIT|**1**|string interning
 strings | [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/) | MIT | 2 | fast utf8 decoder
 strings | **[gb_string.h](https://github.com/gingerBill/gb)**|**public&nbsp;domain**|**1**|dynamic strings for C
 tests | [utest](https://github.com/evolutional/utest) | MIT | **1** | unit testing
