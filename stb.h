@@ -3089,7 +3089,7 @@ typedef struct
 #define stb_arr_insertn(a,i,n) (stb__arr_insertn((void **) &(a), sizeof(*a), i, n))
 
 // insert an element at i
-#define stb_arr_insert(a,i,v)  (stb__arr_insertn((void **) &(a), sizeof(*a), i, n), ((a)[i] = v))
+#define stb_arr_insert(a,i,v)  (stb__arr_insertn((void **) &(a), sizeof(*a), i, 1), ((a)[i] = v))
 
 // delete N elements from the middle starting at index 'i'
 #define stb_arr_deleten(a,i,n) (stb__arr_deleten((void **) &(a), sizeof(*a), i, n))
@@ -3275,7 +3275,7 @@ void stb__arr_insertn_(void **pp, int size, int i, int n  STB__PARAMS)
       }
 
       z = stb_arr_len2(p);
-      stb__arr_addlen_(&p, size, i  STB__ARGS);
+      stb__arr_addlen_(&p, size, n  STB__ARGS);
       memmove((char *) p + (i+n)*size, (char *) p + i*size, size * (z-i));
    }
    *pp = p;
@@ -3285,7 +3285,7 @@ void stb__arr_deleten_(void **pp, int size, int i, int n  STB__PARAMS)
 {
    void *p = *pp;
    if (n) {
-      memmove((char *) p + i*size, (char *) p + (i+n)*size, size * (stb_arr_len2(p)-i));
+      memmove((char *) p + i*size, (char *) p + (i+n)*size, size * (stb_arr_len2(p)-(i+n)));
       stb_arrhead2(p)->len -= n;
    }
    *pp = p;
