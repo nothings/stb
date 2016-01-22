@@ -206,7 +206,7 @@ CREDITS
    #endif
 #endif
 
-#ifdef _WIN32
+#if defined(_WIN32) && !defined(__MINGW32__)
    #ifndef _CRT_SECURE_NO_WARNINGS
    #define _CRT_SECURE_NO_WARNINGS
    #endif
@@ -735,7 +735,7 @@ int stb_vsnprintf(char *s, size_t n, const char *fmt, va_list v)
    #endif
    if (n) s[n-1] = 0;
    // Unix returns length output would require, Windows returns negative when truncated.
-   return (res >= n || res < 0) ? -1 : res;
+   return (res >= (int) n || res < 0) ? -1 : res;
 }
 
 int stb_snprintf(char *s, size_t n, const char *fmt, ...)
