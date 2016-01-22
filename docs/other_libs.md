@@ -79,7 +79,7 @@ tests | [utest](https://github.com/evolutional/utest) | MIT | **1** | unit testi
 tests | [catch](https://github.com/philsquared/Catch) | Boost | **1** | unit testing
 tests | [SPUT](http://www.lingua-systems.com/unit-testing/) | BSD | **1** | unit testing
 tests | [pempek_assert.cpp](https://github.com/gpakosz/Assert/tree/master/src) | **WTFPLv2** | 2 | flexible assertions in C++
-user interface|[dear imgui](https://github.com/ocornut/imgui)|MIT|_many_|an immediate-mode GUI formerly named "ImGui"
+user interface|[dear imgui](https://github.com/ocornut/imgui)|MIT|9|an immediate-mode GUI formerly named "ImGui"
 misc | **[MakeID.h](http://www.humus.name/3D/MakeID.h)**|**public&nbsp;domain**|**1**|allocate/deallocate small integer IDs efficiently
 misc | **[loguru](https://github.com/emilk/loguru)**|**public&nbsp;domain**|**1**|flexible logging for C++
 misc | [tinyformat](https://github.com/c42f/tinyformat) | Boost | **1** | C++ typesafe printf
