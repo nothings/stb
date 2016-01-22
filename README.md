@@ -8,8 +8,8 @@ single-file public domain libraries for C/C++ <a name="stb_libs"></a>
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **stb_vorbis.c** | 1.07 | audio | 5462 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**stb_image.h** | 2.09 | graphics | 6610 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**stb_truetype.h** | 1.09 | graphics | 3246 | parse, decode, and rasterize characters from truetype fonts
+**stb_image.h** | 2.10 | graphics | 6614 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**stb_truetype.h** | 1.09 | graphics | 3249 | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | 1.01 | graphics | 1044 | image writing to disk: PNG, TGA, BMP
 **stb_image_resize.h** | 0.90 | graphics | 2586 | resize images larger/smaller with good quality
 **stb_rect_pack.h** | 0.08 | graphics | 572 | simple 2D rectangle packer with decent quality
@@ -18,16 +18,16 @@ library    | lastest version | category | LoC | description
 **stb_voxel_render.h** | 0.83 | 3D&nbsp;graphics | 3750 | Minecraft-esque voxel rendering "engine" with many more features
 **stb_dxt.h** | 1.04 | 3D&nbsp;graphics | 630 | Fabian "ryg" Giesen's real-time DXT compressor
 **stb_perlin.h** | 0.2 | 3D&nbsp;graphics | 182 | revised Perlin noise (3D input, 1D output)
-**stb_easy_font.h** | 0.6 | 3D&nbsp;graphics | 232 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
-**stb_tilemap_editor.h** | 0.36 | game&nbsp;dev | 4127 | embeddable tilemap editor
+**stb_easy_font.h** | 0.7 | 3D&nbsp;graphics | 258 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
+**stb_tilemap_editor.h** | 0.37 | game&nbsp;dev | 4131 | embeddable tilemap editor
 **stb_herringbone_wa...** | 0.6 | game&nbsp;dev | 1220 | herringbone Wang tile map generator
 **stb_c_lexer.h** | 0.07 | parsing | 816 | simplify writing parsers for C-like languages
 **stb_divide.h** | 0.91 | math | 379 | more useful 32-bit modulus e.g. "euclidean divide"
-**stb.h** | 2.25 | misc | 14136 | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**stb.h** | 2.26 | misc | 14184 | helper functions for C, mostly redundant in C++; basically author's personal stuff
 **stb_leakcheck.h** | 0.2 | misc | 124 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 18  
-Total lines of C code: 46633
+Total lines of C code: 46718
 
 
 FAQ
