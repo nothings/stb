@@ -1,4 +1,4 @@
-// stb_easy_font.h - v0.6 - bitmap font for 3D rendering - public domain
+// stb_easy_font.h - v0.7 - bitmap font for 3D rendering - public domain
 // Sean Barrett, Feb 2015
 //
 //    Easy-to-deploy,
@@ -16,8 +16,10 @@
 // DOCUMENTATION:
 //
 //   int stb_easy_font_width(char *text)
+//   int stb_easy_font_height(char *text)
 //
-//      Takes a string without newlines and returns the horizontal size.
+//      Takes a string and returns the horizontal size and the
+//      vertical size (which can vary if 'text' has newlines).
 //
 //   int stb_easy_font_print(float x, float y,
 //                           char *text, unsigned char color[4],
@@ -40,7 +42,7 @@
 //
 //      You can ignore z and color if you get them from elsewhere
 //      This format was chosen in the hopes it would make it
-//      easier for you to reuse existing buffer-drawing code.
+//      easier for you to reuse existing vertex-buffer-drawing code.
 //
 //      If you pass in NULL for color, it becomes 255,255,255,255.
 //
@@ -63,11 +65,6 @@
 //      compact to me; -0.5 is a reasonable compromise as long as
 //      you're scaling the font up.
 //
-// SAMPLE CODE:
-//
-//    Here's sample code for old OpenGL; it's a lot more complicated
-//    to make work on modern APIs, and that's your problem.
-//
 // LICENSE
 //
 //   This software is in the public domain. Where that dedication is not
@@ -76,10 +73,16 @@
 //
 // VERSION HISTORY
 //
+//   (2016-01-22)  0.7   width() supports multiline text; add height()
 //   (2015-09-13)  0.6   #include <math.h>; updated license
 //   (2015-02-01)  0.5   First release
 
 #if 0
+// SAMPLE CODE:
+//
+//    Here's sample code for old OpenGL; it's a lot more complicated
+//    to make work on modern APIs, and that's your problem.
+//
 void print_string(float x, float y, char *text, float r, float g, float b)
 {
   static char buffer[99999]; // ~500 chars
@@ -222,11 +225,34 @@ static int stb_easy_font_print(float x, float y, char *text, unsigned char color
 static int stb_easy_font_width(char *text)
 {
     float len = 0;
+    float max_len = 0;
     while (*text) {
-        len += stb_easy_font_charinfo[*text-32].advance & 15;
-        len += stb_easy_font_spacing_val;
+        if (*text == '\n') {
+            if (len > max_len) max_len = len;
+            len = 0;
+        } else {
+            len += stb_easy_font_charinfo[*text-32].advance & 15;
+            len += stb_easy_font_spacing_val;
+        }
         ++text;
     }
-    return (int) ceil(len);
+    if (len > max_len) max_len = len;
+    return (int) ceil(max_len);
+}
+
+static int stb_easy_font_height(char *text)
+{
+    float y = 0;
+    int nonempty_line=0;
+    while (*text) {
+        if (*text == '\n') {
+            y += 12;
+            nonempty_line = 0;
+        } else {
+            nonempty_line = 1;
+        }
+        ++text;
+    }
+    return (int) ceil(y + (nonempty_line ? 12 : 0));
 }
 #endif
