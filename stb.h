@@ -1,4 +1,4 @@
-/* stb.h - v2.25 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.26 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
@@ -25,6 +25,7 @@
 
 Version History
 
+   2.26   various warning & buffixes
    2.25   various warning & bugfixes
    2.24   various warning & bugfixes
    2.23   fix 2.22
@@ -186,6 +187,9 @@ CREDITS
   Mojofreem@github
   Ryan Whitworth
   Vincent Isambart
+  Mike Sartain
+  Eugene Opalev
+  Tim Sjostrand
 */
 
 #ifndef STB__INCLUDE_STB_H

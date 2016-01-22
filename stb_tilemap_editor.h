@@ -1,4 +1,4 @@
-// stb_tilemap_editor.h - v0.36 - Sean Barrett - http://nothings.org/stb
+// stb_tilemap_editor.h - v0.37 - Sean Barrett - http://nothings.org/stb
 // placed in the public domain - not copyrighted - first released 2014-09
 //
 // Embeddable tilemap editor for C/C++
@@ -259,7 +259,7 @@
 //      #define STBTE_MAX_CATEGORIES     100
 //      #define STBTE_UNDO_BUFFER_BYTES  (1 << 24) // 16 MB
 //      #define STBTE_MAX_COPY           90000  // e.g. 300x300
-//      #define STBTE_MAX_PROPERTIESERTIES     10     // max properties per tile
+//      #define STBTE_MAX_PROPERTIES     10     // max properties per tile
 //
 // API
 //
@@ -275,6 +275,7 @@
 //   either approach allows cut&pasting between levels.)
 //
 // REVISION HISTORY
+//   0.37  fix warning
 //   0.36  minor compiler support
 //   0.35  layername button changes
 //          - layername buttons grow with the layer panel
@@ -311,6 +312,7 @@
 //      Josh Huelsman
 //   Bugfixes:
 //      Ryan Whitworth
+//      Eugene Opalev
 //
 // LICENSE
 //
