@@ -6,7 +6,8 @@ People have told me about quite a few of these. However, I haven't used most of 
 and can't comment on their quality. (If you use them and aren't their author, feel
 free to tell me about their quality.
 
-**Public domain single-file libraries are in bold.**
+**Public domain single-file libraries are in bold.** Other libraries are either non-public domain,
+or two files, or both.
 
 
 category | library | license | files | description
