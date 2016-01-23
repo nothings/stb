@@ -73,6 +73,7 @@ graphics (2d)     |  [tigr](https://bitbucket.org/rmitton/tigr/src)             
 graphics (2d)     |  [noc_turtle](https://github.com/guillaumechereau/noc)                | **public domain**    |     |  2  | procedural graphics generator
 graphics (3-D)    |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | BSD                  |     |**1**| wavefront OBJ file loader
 graphics (3-D)    |  [mikktspace](http://tinyurl.com/z6xtucm)                             | zlib                 |     |  2  | compute tangent space for normal mapping
+graphics (3-D)    |  [debug-draw](https://github.com/glampert/debug-draw)                 | **public domain**    | C++ |  1  | API-agnostic immediate-mode debug rendering
 hardware          |**[EasyTab](https://github.com/ApoorvaJ/EasyTab)**                     | **public domain**    |**C**|**1**| multi-platform tablet input
 images            |**[jo_gif.cpp](http://www.jonolick.com/home/gif-writer)**              | **public domain**    |     |**1**| animated GIF writer
 images            |**[gif.h](https://github.com/ginsweater/gif-h)**                       | **public domain**    |     |**1**| animated GIF writer
