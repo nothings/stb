@@ -85,7 +85,7 @@ user interface    |  [dear imgui](https://github.com/ocornut/imgui)             
 _misc_            |**[MakeID.h](http://www.humus.name/3D/MakeID.h)**                      | **public domain**    |     |**1**| allocate/deallocate small integer IDs efficiently
 _misc_            |**[loguru](https://github.com/emilk/loguru)**                          | **public domain**    | C++ |**1**| flexible logging for C++
 _misc_            |  [tinyformat](https://github.com/c42f/tinyformat)                     | Boost                | C++ |**1**| C++ typesafe printf
-_misc_            |  [dbgtools](https://github.com/wc-duck/dbgtools)                      | zlib                 |     |  2  | cross-platform debug util libraries
+_misc_            |  [dbgtools](https://github.com/wc-duck/dbgtools)                      | zlib                 |**C**|  2  | cross-platform debug util libraries
 _misc_            |  [stmr](https://github.com/wooorm/stmr.c)                             | MIT                  |     |  2  | extract English word stems
 _misc_            |  [levenshtein](https://github.com/wooorm/levenshtein.c)               | MIT                  |     |  2  | compute edit distance between two strings
                                                                                                                        
