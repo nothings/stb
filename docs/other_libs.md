@@ -17,19 +17,7 @@ Exceptions will be allowed for good reasons.
 
 ### New libraries and corrections
 
-Submissions of new libraries: I accept submissions (as issues or as pull requests). Please
-note that every file that must be included in a user's project counts; a header and a source
-file is 2 files, but a header file, source file, and LICENSE (if the license isn't in the
-source file) is 3 files, and won't be accepted, because it's not 2 files. But actually
-'LICENSE' is a problem for just dropping the library in a source tree anyway, since it's
-not scoped to just the library, so library authors are encouraged to include the license in the
-source file and not require a separate LICENSE.
-
-Corrections: if information for a library below is wrong, please send a correction as an
-issue, pull request, or email. Note that if the list indicates a library works from both
-C/C++, but it doesn't, this could be an error in the list or it could be a bug in the
-library. If you find a library doesn't work in 32-bit or 64-bit, the library should be
-removed from this list, unless it's a bug in the library.
+See discussion after the list.
 
 ## Library listing
 
@@ -133,6 +121,22 @@ There are also these XML libraries, but if you're using XML, shame on you:
 Also you might be interested in other related, but different lists:
 
 - [clib](https://github.com/clibs/clib/wiki/Packages): list of (mostly) small single C functions (licenses not listed)
+
+## New libraries and corrections
+
+Submissions of new libraries: I accept submissions (as issues or as pull requests). Please
+note that every file that must be included in a user's project counts; a header and a source
+file is 2 files, but a header file, source file, and LICENSE (if the license isn't in the
+source file) is 3 files, and won't be accepted, because it's not 2 files. But actually
+'LICENSE' is a problem for just dropping the library in a source tree anyway, since it's
+not scoped to just the library, so library authors are encouraged to include the license in the
+source file and not require a separate LICENSE.
+
+Corrections: if information for a library below is wrong, please send a correction as an
+issue, pull request, or email. Note that if the list indicates a library works from both
+C/C++, but it doesn't, this could be an error in the list or it could be a bug in the
+library. If you find a library doesn't work in 32-bit or 64-bit, the library should be
+removed from this list, unless it's a bug in the library.
 
 ## *List FAQ*
 
