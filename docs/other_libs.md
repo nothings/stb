@@ -34,7 +34,7 @@ category          | library                                                     
 ----------------- | --------------------------------------------------------------------- | -------------------- | --- | --- | -----------
 AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 | C++ |  2  | pathfinding with A*
 audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |     |**1**| IMA-ADPCM audio decoder
-compression       |  [miniz.c](https://github.com/richgel999/miniz)                       |**public&nbsp;domain**|**C**|  2  | compression,decompression, zip file, png writing
+compression       |**[miniz.c](https://github.com/richgel999/miniz)**                     |**public&nbsp;domain**|**C**|**1**| compression,decompression, zip file, png writing
 compression       |  [lz4](https://github.com/Cyan4973/lz4)                               | BSD                  |     |  2  | fast but larger LZ compression
 compression       |  [fastlz](https://code.google.com/p/fastlz/source/browse/#svn%2Ftrunk)| MIT                  |     |  2  | fast but larger LZ compression
 compression       |  [pithy](https://github.com/johnezang/pithy)                          | BSD                  |     |  2  | fast but larger LZ compression
@@ -43,7 +43,7 @@ data structures   |  [klib](http://attractivechaos.github.io/klib/)             
 data structures   |  [uthash](https://github.com/troydhanson/uthash)                      | BSD                  |     |  2  | several 1-header, 1-license-file libs: generic hash, list, etc
 data structures   |  [PackedArray](https://github.com/gpakosz/PackedArray)                | **WTFPLv2**          |     |  2  | memory-efficient array of elements with non-pow2 bitcount
 data structures   |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |     |  2  | two-file binary tress (also regex, etc)
-files & filenames |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |     |**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings
+files & filenames |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |**C**|**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings
 files & filenames |  [whereami](https://github.com/gpakosz/whereami)                      |**WTFPLv2**           |     |  2  | get path/filename of executable or module
 geometry          |**[nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/)**             | **public domain**    |     |**1**| find voronoi regions on lattice w/ integer inputs
 geometry          |**[sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-junk/)**    | **public domain**    |     |**1**| sobol & stratified sampling sequences
@@ -68,8 +68,8 @@ images            |**[gif.h](https://github.com/ginsweater/gif-h)**             
 images            |**[tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/)**              | **public domain**    |     |**1**| JPEG encoder
 images            |**[miniexr](https://github.com/aras-p/miniexr)**                       | **public domain**    |     |**1**| OpenEXR writer
 images            |  [tinyexr](https://github.com/syoyo/tinyexr)                          | BSD                  |     |**1**| EXR image read/write, uses miniz internally  
-images            |  [lodepng](http://lodev.org/lodepng/)                                 | zlib                 |     |**1**| PNG encoder/decoder
-images            |  [nanoSVG](https://github.com/memononen/nanosvg)                      | zlib                 |     |**1**| 1-file SVG parser; 1-file SVG rasterizer
+images            |  [lodepng](http://lodev.org/lodepng/)                                 | zlib                 |**C**|**1**| PNG encoder/decoder
+images            |  [nanoSVG](https://github.com/memononen/nanosvg)                      | zlib                 |**C**|**1**| 1-file SVG parser; 1-file SVG rasterizer
 images            |  [picopng.cpp](http://lodev.org/lodepng/picopng.cpp)                  | zlib                 | C++ |  2  | tiny PNG loader
 images            |  [jpeg-compressor](https://github.com/richgel999/jpeg-compressor)     | **public domain**    |     |  2  | 2-file jpeg compress, 2-file jpeg decompress
 images            |  [easyexif](https://github.com/mayanklahiri/easyexif)                 | MIT                  | C++ |  2  | EXIF metadata extractor for JPEG images
