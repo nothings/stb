@@ -31,7 +31,7 @@ I use this notation to keep the column a little narrower than "C/C++" would be.
 is given for boldfacing.)
 
 category          | library                                                               | license              | API |files| description
------------------ | --------------------------------------------------------------------- | -------------------- | --- | --- | -----------
+----------------- | --------------------------------------------------------------------- |:--------------------:|:---:|:---:| -----------
 AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 | C++ |  2  | pathfinding with A*
 audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |     |**1**| IMA-ADPCM audio decoder
 compression       |**[miniz.c](https://github.com/richgel999/miniz)**                     |**public&nbsp;domain**|**C**|**1**| compression,decompression, zip file, png writing
@@ -39,7 +39,7 @@ compression       |  [lz4](https://github.com/Cyan4973/lz4)                     
 compression       |  [fastlz](https://code.google.com/p/fastlz/source/browse/#svn%2Ftrunk)| MIT                  |     |  2  | fast but larger LZ compression
 compression       |  [pithy](https://github.com/johnezang/pithy)                          | BSD                  |     |  2  | fast but larger LZ compression
 crypto            |  [TweetNaCl](http://tweetnacl.cr.yp.to/software.html)                 | **public domain**    |     |  2  | high-quality tiny cryptography library
-data structures   |  [klib](http://attractivechaos.github.io/klib/)                       | MIT                  |     |  2  | many 2-file libs: hash, sort, b-tree, etc
+data&nbsp;structures|[klib](http://attractivechaos.github.io/klib/)                       | MIT                  |     |  2  | many 2-file libs: hash, sort, b-tree, etc
 data structures   |  [uthash](https://github.com/troydhanson/uthash)                      | BSD                  |     |  2  | several 1-header, 1-license-file libs: generic hash, list, etc
 data structures   |  [PackedArray](https://github.com/gpakosz/PackedArray)                | **WTFPLv2**          |     |  2  | memory-efficient array of elements with non-pow2 bitcount
 data structures   |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |     |  2  | two-file binary tress (also regex, etc)
