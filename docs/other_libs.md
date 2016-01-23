@@ -54,6 +54,7 @@ images | [jpeg-compressor](https://github.com/richgel999/jpeg-compressor) | **pu
 math | [mm_vec.h](https://github.com/vurtun/mmx) | BSD | **1** | SIMD vector math
 math | [ShaderFastLibs](https://github.com/michaldrobot/ShaderFastLibs) | MIT | **1** | approximate transcendental functions optimized for shaders (esp. GCN)
 multithreading | [mm_sched.h](https://github.com/vurtun/mmx) | zlib | **1** | cross-platform multithreaded task scheduler
+multithreading | [atomic-ring](https://github.com/djcapelis/atomic-ring) | **public&nbsp;domain** | 2 | Single Producer Single Consumer (SPSC) lock-free queue
 network | **[zed_net](https://github.com/ZedZull/zed_net)**|**public&nbsp;domain**|**1**|cross-platform socket wrapper
 network | [mm_web.h](https://github.com/vurtun/mmx) | BSD | **1** | lightweight webserver, fork of webby
 network | [par_easycurl.h](https://github.com/prideout/par) | MIT | **1** | curl wrapper
