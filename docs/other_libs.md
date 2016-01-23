@@ -55,6 +55,7 @@ images            |  [lodepng](http://lodev.org/lodepng/)                       
 images            |  [nanoSVG](https://github.com/memononen/nanosvg)                      | zlib                 |     |**1**| 1-file SVG parser; 1-file SVG rasterizer
 images            |  [picopng.cpp](http://lodev.org/lodepng/picopng.cpp)                  | zlib                 | C++ |  2  | tiny PNG loader
 images            |  [jpeg-compressor](https://github.com/richgel999/jpeg-compressor)     | **public domain**    |     |  2  | 2-file jpeg compress, 2-file jpeg decompress
+images            |  [easyexif](https://github.com/mayanklahiri/easyexif)     | MIT    | C++   |  1  | 1-file EXIF metadata extractor for JPEG images
 math              |  [mm_vec.h](https://github.com/vurtun/mmx)                            | BSD                  |     |**1**| SIMD vector math
 math              |  [ShaderFastLibs](https://github.com/michaldrobot/ShaderFastLibs)     | MIT                  |     |**1**| approximate transcendental functions optimized for shaders (esp. GCN)
 math              |  [TinyExpr](https://github.com/codeplea/tinyexpr)                     | zlib                 |  C  |  2  | evaluation of math expressions from strings
