@@ -12,7 +12,7 @@ many libraries, and the benefit of the doubt is given for boldfacing.)
 
 category          | library                                                               | license              | API |files| description
 ----------------- | --------------------------------------------------------------------- | -------------------- | --- | --- | -----------
-AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 |     |  2  | pathfinding with A*
+AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 | C++ |  2  | pathfinding with A*
 audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |     |**1**| IMA-ADPCM audio decoder
 compression       |  [miniz.c](https://github.com/richgel999/miniz)                       |**public&nbsp;domain**|  C  |  2  | compression,decompression, zip file, png writing
 compression       |  [lz4](https://github.com/Cyan4973/lz4)                               | BSD                  |     |  2  | fast but larger LZ compression
