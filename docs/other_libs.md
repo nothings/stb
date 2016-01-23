@@ -2,17 +2,25 @@
 
 In addition to all of [my libraries](https://github.com/nothings/stb), there are other, similar libraries.
 
-People have told me about quite a few of these. However, I haven't used most of these libraries
-and can't comment on their quality. (If you use them and aren't their author, feel
-free to tell me about their quality.
+People have told me about quite a few of these. However, I haven't used most of
+these libraries and can't comment on their quality. (If you use them and aren't
+their author, feel free to tell me about their quality.
 
 **Public domain single-file libraries usable from C and C++ are in bold.** Other libraries are either non-public domain,
-or two files, or only usable from C++, or all three.
+or two files, or only usable from C++, or all three. Libraries of more than two
+files are mostly forbidden.
 
 For the API column, "C" means C only, "C++" means C++ only, and "**C**" means C/C++;
 I use this notation to keep the column a little narrower than "C/C++" would be.
 (As of this writing, the API is unknown for many libraries, and the benefit of the doubt
 is given for boldfacing.)
+
+Submissions: I accept submissions (as issues or as pull requests). Please note that every
+file that must be included in the project counts; a header and a source file is 2 files,
+but a header file, source file, and LICENSE (if the license isn't in the source file) is 3
+files, and won't be accepted, because it's not 2 files. But actually 'LICENSE' is a problem
+for just dropping the library in a source tree anyway, since it's not scoped to just the
+library, so authors are encouraged to include the license in the source file.
 
 category          | library                                                               | license              | API |files| description
 ----------------- | --------------------------------------------------------------------- | -------------------- | --- | --- | -----------
@@ -55,7 +63,7 @@ images            |  [lodepng](http://lodev.org/lodepng/)                       
 images            |  [nanoSVG](https://github.com/memononen/nanosvg)                      | zlib                 |     |**1**| 1-file SVG parser; 1-file SVG rasterizer
 images            |  [picopng.cpp](http://lodev.org/lodepng/picopng.cpp)                  | zlib                 | C++ |  2  | tiny PNG loader
 images            |  [jpeg-compressor](https://github.com/richgel999/jpeg-compressor)     | **public domain**    |     |  2  | 2-file jpeg compress, 2-file jpeg decompress
-images            |  [easyexif](https://github.com/mayanklahiri/easyexif)     | MIT    | C++   |  1  | 1-file EXIF metadata extractor for JPEG images
+images            |  [easyexif](https://github.com/mayanklahiri/easyexif)                 | MIT                  | C++ |  2  | EXIF metadata extractor for JPEG images
 math              |  [mm_vec.h](https://github.com/vurtun/mmx)                            | BSD                  |     |**1**| SIMD vector math
 math              |  [ShaderFastLibs](https://github.com/michaldrobot/ShaderFastLibs)     | MIT                  |     |**1**| approximate transcendental functions optimized for shaders (esp. GCN)
 math              |  [TinyExpr](https://github.com/codeplea/tinyexpr)                     | zlib                 |  C  |  2  | evaluation of math expressions from strings
