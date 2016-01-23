@@ -67,6 +67,7 @@ parsing | [mm_json.h](https://github.com/vurtun/mmx) | zlib | **1** | JSON parse
 parsing | [mm_lexer.h](https://github.com/vurtun/mmx) | zlib | **1** | C-esque language lexer
 parsing | [json.h](https://github.com/sheredom/json.h) | **public&nbsp;domain** | 2 | JSON parser
 parsing | [jzon.h](https://github.com/Zguy/Jzon) | MIT | 2 | JSON parser, C++
+parsing | [parson](https://github.com/kgabis/parson) | MIT | 2 | JSON parser and serializer, C
 parsing | [minilibs](https://github.com/ccxvii/minilibs) | **public&nbsp;domain** | 2 | two-file regex (also binary tree, etc)
 profiling | [Remotery](https://github.com/Celtoys/Remotery) | Apache 2.0 | 2 | CPU/GPU profiler Win/Mac/Linux, using web browser for viewer
 profiling | [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile) | **unlicense** | 2-4 | CPU (and GPU?) profiler, 1-3 header files, uses miniz internally
