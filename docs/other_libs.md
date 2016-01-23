@@ -83,7 +83,7 @@ network           |  [par_easycurl.h](https://github.com/prideout/par)          
 network           |  [yocto](https://github.com/tom-seddon/yhs)                           | **public domain**    |     |  2  | non-production-use http server
 network           |  [happyhttp](http://scumways.com/happyhttp/happyhttp.html)            | zlib                 |     |  2  | http client requests
 network           |  [mongoose](https://github.com/cesanta/mongoose)                      | GPLv2                |     |  2  | http server
-network           |  [LUrlParser](https://github.com/corporateshark/LUrlParser)           | MIT                  |     |  2  | lightweight URL & URI parser RFC 1738, RFC 3986
+network           |  [LUrlParser](https://github.com/corporateshark/LUrlParser)           | MIT                  | C++ |  2  | lightweight URL & URI parser RFC 1738, RFC 3986
 parsing           |  [SLRE](https://github.com/cesanta/slre)                              | GPLv2                |     |**1**| regular expression matcher
 parsing           |  [PicoJSON](https://github.com/kazuho/picojson)                       | BSD                  | C++ |**1**| JSON parse/serializer
 parsing           |  [mm_json.h](https://github.com/vurtun/mmx)                           | zlib                 |     |**1**| JSON parser
