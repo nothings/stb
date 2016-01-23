@@ -57,6 +57,7 @@ images            |  [picopng.cpp](http://lodev.org/lodepng/picopng.cpp)        
 images            |  [jpeg-compressor](https://github.com/richgel999/jpeg-compressor)     | **public domain**    |     |  2  | 2-file jpeg compress, 2-file jpeg decompress
 math              |  [mm_vec.h](https://github.com/vurtun/mmx)                            | BSD                  |     |**1**| SIMD vector math
 math              |  [ShaderFastLibs](https://github.com/michaldrobot/ShaderFastLibs)     | MIT                  |     |**1**| approximate transcendental functions optimized for shaders (esp. GCN)
+math              |  [TinyExpr](https://github.com/codeplea/tinyexpr)                     | zlib                 |  C  |  2  | evaluation of math expressions from strings
 multithreading    |  [mm_sched.h](https://github.com/vurtun/mmx)                          | zlib                 |     |**1**| cross-platform multithreaded task scheduler
 network           |**[zed_net](https://github.com/ZedZull/zed_net)**                      | **public domain**    |     |**1**| cross-platform socket wrapper
 network           |  [mm_web.h](https://github.com/vurtun/mmx)                            | BSD                  |     |**1**| lightweight webserver, fork of webby
@@ -85,6 +86,7 @@ tests             |  [utest](https://github.com/evolutional/utest)              
 tests             |  [catch](https://github.com/philsquared/Catch)                        | Boost                |     |**1**| unit testing
 tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)                  | BSD                  |     |**1**| unit testing
 tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)               | **WTFPLv2**          | C++ |  2  | flexible assertions
+tests             |  [minctest](https://github.com/codeplea/minctest)                     | zlib                 |  C  |**1**| unit testing
 user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  |     |  9  | an immediate-mode GUI formerly named "ImGui"
 _misc_            |**[MakeID.h](http://www.humus.name/3D/MakeID.h)**                      | **public domain**    |     |**1**| allocate/deallocate small integer IDs efficiently
 _misc_            |**[loguru](https://github.com/emilk/loguru)**                          | **public domain**    | C++ |**1**| flexible logging
