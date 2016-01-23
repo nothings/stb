@@ -53,6 +53,7 @@ images            |  [picopng.cpp](http://lodev.org/lodepng/picopng.cpp)        
 images            |  [jpeg-compressor](https://github.com/richgel999/jpeg-compressor)     | **public domain**    |     |  2  | 2-file jpeg compress, 2-file jpeg decompress
 math              |  [mm_vec.h](https://github.com/vurtun/mmx)                            | BSD                  |     |**1**| SIMD vector math
 math              |  [ShaderFastLibs](https://github.com/michaldrobot/ShaderFastLibs)     | MIT                  |     |**1**| approximate transcendental functions optimized for shaders (esp. GCN)
+math              |  [TinyExpr](https://github.com/codeplea/tinyexpr)                     | zlib                 |  C  |  2  | evaluation of math expressions from strings
 multithreading    |  [mm_sched.h](https://github.com/vurtun/mmx)                          | zlib                 |     |**1**| cross-platform multithreaded task scheduler
 network           |**[zed_net](https://github.com/ZedZull/zed_net)**                      | **public domain**    |     |**1**| cross-platform socket wrapper
 network           |  [mm_web.h](https://github.com/vurtun/mmx)                            | BSD                  |     |**1**| lightweight webserver, fork of webby
@@ -77,6 +78,7 @@ strings           |**[utf8](https://github.com/sheredom/utf8.h)**               
 strings           |**[strpool.h](https://github.com/mattiasgustavsson/libs)**             | **public domain**    |     |**1**| string interning
 strings           |  [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/)                 | MIT                  |     |  2  | fast utf8 decoder
 strings           |**[gb_string.h](https://github.com/gingerBill/gb)**                    | **public domain**    |  C  |**1**| dynamic strings for C
+tests             |  [minctest](https://github.com/codeplea/minctest)                     | zlib                 |  C  |**1**| unit testing
 tests             |  [utest](https://github.com/evolutional/utest)                        | MIT                  |     |**1**| unit testing
 tests             |  [catch](https://github.com/philsquared/Catch)                        | Boost                |     |**1**| unit testing
 tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)                  | BSD                  |     |**1**| unit testing
