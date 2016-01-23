@@ -86,6 +86,10 @@ LINK32=link.exe
 # Name "stb - Win32 Debug"
 # Begin Source File
 
+SOURCE=..\docs\other_libs.md
+# End Source File
+# Begin Source File
+
 SOURCE=.\stb.c
 # End Source File
 # Begin Source File

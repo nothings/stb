@@ -6,15 +6,19 @@ People have told me about quite a few of these. However, I haven't used most of 
 and can't comment on their quality. (If you use them and aren't their author, feel
 free to tell me about their quality.
 
-**Public domain single-file libraries usable from C are in bold.** Other libraries are either non-public domain,
-or two files, or only usable from C++, or all three. (As of this writing, the usability-from-C is unknown for
-many libraries, and the benefit of the doubt is given for boldfacing.)
+**Public domain single-file libraries usable from C and C++ are in bold.** Other libraries are either non-public domain,
+or two files, or only usable from C++, or all three.
+
+For the API column, "C" means C only, "C++" means C++ only, and "**C**" means C/C++;
+I use this notation to keep the column a little narrower than "C/C++" would be.
+(As of this writing, the API is unknown for many libraries, and the benefit of the doubt
+is given for boldfacing.)
 
 category          | library                                                               | license              | API |files| description
 ----------------- | --------------------------------------------------------------------- | -------------------- | --- | --- | -----------
 AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 |     |  2  | pathfinding with A*
 audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |     |**1**| IMA-ADPCM audio decoder
-compression       |  [miniz.c](https://github.com/richgel999/miniz)                       |**public&nbsp;domain**|  C  |  2  | compression,decompression, zip file, png writing
+compression       |  [miniz.c](https://github.com/richgel999/miniz)                       |**public&nbsp;domain**|**C**|  2  | compression,decompression, zip file, png writing
 compression       |  [lz4](https://github.com/Cyan4973/lz4)                               | BSD                  |     |  2  | fast but larger LZ compression
 compression       |  [fastlz](https://code.google.com/p/fastlz/source/browse/#svn%2Ftrunk)| MIT                  |     |  2  | fast but larger LZ compression
 compression       |  [pithy](https://github.com/johnezang/pithy)                          | BSD                  |     |  2  | fast but larger LZ compression
@@ -67,7 +71,7 @@ parsing           |  [mm_json.h](https://github.com/vurtun/mmx)                 
 parsing           |  [mm_lexer.h](https://github.com/vurtun/mmx)                          | zlib                 |     |**1**| C-esque language lexer
 parsing           |  [json.h](https://github.com/sheredom/json.h)                         | **public domain**    |     |  2  | JSON parser
 parsing           |  [jzon.h](https://github.com/Zguy/Jzon)                               | MIT                  | C++ |  2  | JSON parser
-parsing           |  [parson](https://github.com/kgabis/parson)                           | MIT                  |  C  |  2  | JSON parser and serializer
+parsing           |  [parson](https://github.com/kgabis/parson)                           | MIT                  |**C**|  2  | JSON parser and serializer
 parsing           |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |     |  2  | two-file regex (also binary tree, etc)
 profiling         |  [Remotery](https://github.com/Celtoys/Remotery)                      | Apache 2.0           |     |  2  | CPU/GPU profiler Win/Mac/Linux, using web browser for viewer
 profiling         |  [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile)        | **unlicense**        |     | 2-4 | CPU (and GPU?) profiler, 1-3 header files, uses miniz internally
@@ -76,15 +80,15 @@ strings           |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**   
 strings           |**[utf8](https://github.com/sheredom/utf8.h)**                         | **public domain**    |     |**1**| utf8 string library
 strings           |**[strpool.h](https://github.com/mattiasgustavsson/libs)**             | **public domain**    |     |**1**| string interning
 strings           |  [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/)                 | MIT                  |     |  2  | fast utf8 decoder
-strings           |**[gb_string.h](https://github.com/gingerBill/gb)**                    | **public domain**    |  C  |**1**| dynamic strings for C
+strings           |**[gb_string.h](https://github.com/gingerBill/gb)**                    | **public domain**    |**C**|**1**| dynamic strings
 tests             |  [utest](https://github.com/evolutional/utest)                        | MIT                  |     |**1**| unit testing
 tests             |  [catch](https://github.com/philsquared/Catch)                        | Boost                |     |**1**| unit testing
 tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)                  | BSD                  |     |**1**| unit testing
-tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)               | **WTFPLv2**          | C++ |  2  | flexible assertions in C++
+tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)               | **WTFPLv2**          | C++ |  2  | flexible assertions
 user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  |     |  9  | an immediate-mode GUI formerly named "ImGui"
 _misc_            |**[MakeID.h](http://www.humus.name/3D/MakeID.h)**                      | **public domain**    |     |**1**| allocate/deallocate small integer IDs efficiently
-_misc_            |**[loguru](https://github.com/emilk/loguru)**                          | **public domain**    | C++ |**1**| flexible logging for C++
-_misc_            |  [tinyformat](https://github.com/c42f/tinyformat)                     | Boost                | C++ |**1**| C++ typesafe printf
+_misc_            |**[loguru](https://github.com/emilk/loguru)**                          | **public domain**    | C++ |**1**| flexible logging
+_misc_            |  [tinyformat](https://github.com/c42f/tinyformat)                     | Boost                | C++ |**1**| typesafe printf
 _misc_            |  [dbgtools](https://github.com/wc-duck/dbgtools)                      | zlib                 |     |  2  | cross-platform debug util libraries
 _misc_            |  [stmr](https://github.com/wooorm/stmr.c)                             | MIT                  |     |  2  | extract English word stems
 _misc_            |  [levenshtein](https://github.com/wooorm/levenshtein.c)               | MIT                  |     |  2  | compute edit distance between two strings
