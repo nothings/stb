@@ -2,25 +2,45 @@
 
 In addition to all of [my libraries](https://github.com/nothings/stb), there are other, similar libraries.
 
-People have told me about quite a few of these. However, I haven't used most of
-these libraries and can't comment on their quality. (If you use them and aren't
-their author, feel free to tell me about their quality.
+The following list is a list of small, easy-to-integrate, portable libraries
+which are usable from C and/or C++, and should be able to be compiled on both
+32-bit and 64-bit platforms.
 
-**Public domain single-file libraries usable from C and C++ are in bold.** Other libraries are either non-public domain,
-or two files, or only usable from C++, or all three. Libraries of more than two
-files are mostly forbidden.
+### Rules
+
+- Libraries must be usable from C or C++, ideally both
+- Libraries should be usable from more than one platform (ideally, all major desktops and/or all major mobile)
+- Libraries should compile and work on both 32-bit and 64-bit platforms
+- Libraries should use at most two files
+
+Exceptions will be allowed for good reasons.
+
+### New libraries and corrections
+
+Submissions of new libraries: I accept submissions (as issues or as pull requests). Please
+note that every file that must be included in a user's project counts; a header and a source
+file is 2 files, but a header file, source file, and LICENSE (if the license isn't in the
+source file) is 3 files, and won't be accepted, because it's not 2 files. But actually
+'LICENSE' is a problem for just dropping the library in a source tree anyway, since it's
+not scoped to just the library, so library authors are encouraged to include the license in the
+source file and not require a separate LICENSE.
+
+Corrections: if information for a library below is wrong, please send a correction as an
+issue, pull request, or email. Note that if the list indicates a library works from both
+C/C++, but it doesn't, this could be an error in the list or it could be a bug in the
+library. If you find a library doesn't work in 32-bit or 64-bit, the library should be
+removed from this list, unless it's a bug in the library.
+
+## Library listing
+
+**Public domain single-file libraries usable from C and C++ are in bold.** Other
+libraries are either non-public domain, or two files, or only usable from C++, or
+all three. Libraries of more than two files are mostly forbidden.
 
 For the API column, "C" means C only, "C++" means C++ only, and "**C**" means C/C++;
 I use this notation to keep the column a little narrower than "C/C++" would be.
 (As of this writing, the API is unknown for many libraries, and the benefit of the doubt
 is given for boldfacing.)
-
-Submissions: I accept submissions (as issues or as pull requests). Please note that every
-file that must be included in the project counts; a header and a source file is 2 files,
-but a header file, source file, and LICENSE (if the license isn't in the source file) is 3
-files, and won't be accepted, because it's not 2 files. But actually 'LICENSE' is a problem
-for just dropping the library in a source tree anyway, since it's not scoped to just the
-library, so authors are encouraged to include the license in the source file.
 
 category          | library                                                               | license              | API |files| description
 ----------------- | --------------------------------------------------------------------- | -------------------- | --- | --- | -----------
