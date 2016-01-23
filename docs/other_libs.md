@@ -16,7 +16,7 @@ is given for boldfacing.)
 
 category          | library                                                               | license              | API |files| description
 ----------------- | --------------------------------------------------------------------- | -------------------- | --- | --- | -----------
-AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 |     |  2  | pathfinding with A*
+AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 | C++ |  2  | pathfinding with A*
 audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |     |**1**| IMA-ADPCM audio decoder
 compression       |  [miniz.c](https://github.com/richgel999/miniz)                       |**public&nbsp;domain**|**C**|  2  | compression,decompression, zip file, png writing
 compression       |  [lz4](https://github.com/Cyan4973/lz4)                               | BSD                  |     |  2  | fast but larger LZ compression
@@ -89,7 +89,7 @@ user interface    |  [dear imgui](https://github.com/ocornut/imgui)             
 _misc_            |**[MakeID.h](http://www.humus.name/3D/MakeID.h)**                      | **public domain**    |     |**1**| allocate/deallocate small integer IDs efficiently
 _misc_            |**[loguru](https://github.com/emilk/loguru)**                          | **public domain**    | C++ |**1**| flexible logging
 _misc_            |  [tinyformat](https://github.com/c42f/tinyformat)                     | Boost                | C++ |**1**| typesafe printf
-_misc_            |  [dbgtools](https://github.com/wc-duck/dbgtools)                      | zlib                 |     |  2  | cross-platform debug util libraries
+_misc_            |  [dbgtools](https://github.com/wc-duck/dbgtools)                      | zlib                 |**C**|  2  | cross-platform debug util libraries
 _misc_            |  [stmr](https://github.com/wooorm/stmr.c)                             | MIT                  |     |  2  | extract English word stems
 _misc_            |  [levenshtein](https://github.com/wooorm/levenshtein.c)               | MIT                  |     |  2  | compute edit distance between two strings
                                                                                                                        
