@@ -45,7 +45,7 @@ graphics (2d)     |  [tigr](https://bitbucket.org/rmitton/tigr/src)             
 graphics (2d)     |  [noc_turtle](https://github.com/guillaumechereau/noc)                | **public domain**    |     |  2  | procedural graphics generator
 graphics (3-D)    |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | BSD                  |     |**1**| wavefront OBJ file loader
 graphics (3-D)    |  [mikktspace](http://tinyurl.com/z6xtucm)                             | zlib                 |     |  2  | compute tangent space for normal mapping
-hardware          |**[EasyTab](https://github.com/ApoorvaJ/EasyTab)**                     | **public domain**    |     |**1**| multi-platform tablet input
+hardware          |**[EasyTab](https://github.com/ApoorvaJ/EasyTab)**                     | **public domain**    |**C**|**1**| multi-platform tablet input
 images            |**[jo_gif.cpp](http://www.jonolick.com/home/gif-writer)**              | **public domain**    |     |**1**| animated GIF writer
 images            |**[gif.h](https://github.com/ginsweater/gif-h)**                       | **public domain**    |     |**1**| animated GIF writer
 images            |**[tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/)**              | **public domain**    |     |**1**| JPEG encoder
@@ -92,8 +92,8 @@ _misc_            |**[MakeID.h](http://www.humus.name/3D/MakeID.h)**            
 _misc_            |**[loguru](https://github.com/emilk/loguru)**                          | **public domain**    | C++ |**1**| flexible logging
 _misc_            |  [tinyformat](https://github.com/c42f/tinyformat)                     | Boost                | C++ |**1**| typesafe printf
 _misc_            |  [dbgtools](https://github.com/wc-duck/dbgtools)                      | zlib                 |**C**|  2  | cross-platform debug util libraries
-_misc_            |  [stmr](https://github.com/wooorm/stmr.c)                             | MIT                  |     |  2  | extract English word stems
-_misc_            |  [levenshtein](https://github.com/wooorm/levenshtein.c)               | MIT                  |     |  2  | compute edit distance between two strings
+_misc_            |  [stmr](https://github.com/wooorm/stmr.c)                             | MIT                  |  C  |  2  | extract English word stems
+_misc_            |  [levenshtein](https://github.com/wooorm/levenshtein.c)               | MIT                  |  C  |  2  | compute edit distance between two strings
                                                                                                                        
 There are also these XML libraries, but if you're using XML, shame on you:                                             
                                                                                                                        
