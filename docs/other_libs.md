@@ -94,6 +94,7 @@ parsing           |  [parson](https://github.com/kgabis/parson)                 
 parsing           |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |     |  2  | two-file regex (also binary tree, etc)
 profiling         |  [Remotery](https://github.com/Celtoys/Remotery)                      | Apache 2.0           |     |  2  | CPU/GPU profiler Win/Mac/Linux, using web browser for viewer
 profiling         |  [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile)        | **unlicense**        |     | 2-4 | CPU (and GPU?) profiler, 1-3 header files, uses miniz internally
+scripting         |  [LIL](http://runtimelegend.com/rep/lil/)                             | zlib                 |**C**|  2  | interpreter for a Tcl-like scripting language
 scripting         |  [lualite](https://github.com/janezz55/lualite/)                      | MIT                  | C++ |**1**| generate lua bindings in C++
 strings           |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |     |**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings         
 strings           |**[utf8](https://github.com/sheredom/utf8.h)**                         | **public domain**    |     |**1**| utf8 string library
