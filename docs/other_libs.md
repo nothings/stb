@@ -22,7 +22,7 @@ See discussion after the list.
 ## Library listing
 
 **Public domain single-file libraries usable from C and C++ are in bold.** Other
-libraries are either non-public domain, or two files, or only usable from C++, or
+libraries are either non-public domain, or two files, or not usable from both C and C++, or
 all three. Libraries of more than two files are mostly forbidden.
 
 For the API column, "C" means C only, "C++" means C++ only, and "**C**" means C/C++;
