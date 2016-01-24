@@ -45,17 +45,18 @@ data structures   |  [PackedArray](https://github.com/gpakosz/PackedArray)      
 data structures   |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |     |  2  | two-file binary tress (also regex, etc)
 files & filenames |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |**C**|**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings
 files & filenames |  [whereami](https://github.com/gpakosz/whereami)                      |**WTFPLv2**           |     |  2  | get path/filename of executable or module
-geometry          |**[nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/)**             | **public domain**    |     |**1**| find voronoi regions on lattice w/ integer inputs
-geometry          |**[sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-junk/)**    | **public domain**    |     |**1**| sobol & stratified sampling sequences
-geometry          |  [sdf.h](https://github.com/memononen/SDF)                            | MIT                  |     |**1**| compute signed-distance field from antialiased image
-geometry          |  [nanoflann](https://github.com/jlblancoc/nanoflann)                  | BSD                  |     |**1**| build KD trees for point clouds
-geometry          |  [jc_voronoi](https://github.com/JCash/voronoi)                       | MIT                  |     |**1**| find voronoi regions on float/double data
-geometry          |  [par_msquares](https://github.com/prideout/par)                      | MIT                  |     |**1**| convert (binarized) image to triangles
-geometry          |  [tk_objfile](https://github.com/joeld42/tk_objfile)                  | MIT                  |     |**1**| OBJ file loader
-geometry          |  [par_shapes](http://github.prideout.net/shapes/)                     | MIT                  |     |**1**| generate various 3d geometric shapes
-geometry          |  [Tomas Akenine-Moller snippets](http://tinyurl.com/ht79ndj)          | **public domain**    |     |  2  | various 3D intersection calculations, not lib-ified
-geometry          |  [Clipper](http://www.angusj.com/delphi/clipper.php)                  | Boost                |     |  2  | line & polygon clipping & offsetting
-geometry          |  [PolyPartition](https://github.com/ivanfratric/polypartition)        | MIT                  |     |  2  | polygon triangulation, partitioning
+geometry file     |  [tk_objfile](https://github.com/joeld42/tk_objfile)                  | MIT                  |     |**1**| OBJ file loader
+geometry file     |  [tinyply](https://github.com/ddiakopoulos/tinyply)                   | **public domain**    | C++ |  2  | PLY mesh file loader
+geometry math     |**[nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/)**             | **public domain**    |     |**1**| find voronoi regions on lattice w/ integer inputs
+geometry math     |**[sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-junk/)**    | **public domain**    |     |**1**| sobol & stratified sampling sequences
+geometry math     |  [sdf.h](https://github.com/memononen/SDF)                            | MIT                  |     |**1**| compute signed-distance field from antialiased image
+geometry math     |  [nanoflann](https://github.com/jlblancoc/nanoflann)                  | BSD                  |     |**1**| build KD trees for point clouds
+geometry math     |  [jc_voronoi](https://github.com/JCash/voronoi)                       | MIT                  |     |**1**| find voronoi regions on float/double data
+geometry math     |  [par_msquares](https://github.com/prideout/par)                      | MIT                  |     |**1**| convert (binarized) image to triangles
+geometry math     |  [par_shapes](http://github.prideout.net/shapes/)                     | MIT                  |     |**1**| generate various 3d geometric shapes
+geometry math     |  [Tomas Akenine-Moller snippets](http://tinyurl.com/ht79ndj)          | **public domain**    |     |  2  | various 3D intersection calculations, not lib-ified
+geometry math     |  [Clipper](http://www.angusj.com/delphi/clipper.php)                  | Boost                |     |  2  | line & polygon clipping & offsetting
+geometry math     |  [PolyPartition](https://github.com/ivanfratric/polypartition)        | MIT                  |     |  2  | polygon triangulation, partitioning
 graphics (2d)     |  [blendish](https://bitbucket.org/duangle/oui-blendish/src)           | MIT                  |     |**1**| blender-style widget rendering
 graphics (2d)     |  [tigr](https://bitbucket.org/rmitton/tigr/src)                       | **public domain**    |     |  2  | quick-n-dirty window text/graphics for Windows
 graphics (2d)     |  [noc_turtle](https://github.com/guillaumechereau/noc)                | **public domain**    |     |  2  | procedural graphics generator
