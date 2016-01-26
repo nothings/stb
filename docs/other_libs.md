@@ -27,9 +27,9 @@ all three. Libraries of more than two files are mostly forbidden.
 
 For the API column, "C" means C only, "C++" means C++ only, and "C/C++" means C/C++ usable
 from either; some files may require *building* as C or C++ but still qualify as "C/C++" as
-long as the header file uses ~~extern "C"~~ to make it work. (In some cases, a header-file-only
+long as the header file uses `extern "C"` to make it work. (In some cases, a header-file-only
 library may compile as both C or C++, but produce an implementation that can only be called from
-one or the other, because of a lack of use of ~~extern "C"~~; in this case we still qualify it
+one or the other, because of a lack of use of `extern "C"`; in this case we still qualify it
 as C/C++, as this is not an obstacle to most users.)
 
 category          | library                                                               | license              | API |files| description
