@@ -108,6 +108,8 @@
 //           stbtt_GetCodepointHMetrics()
 //           stbtt_GetFontVMetrics()
 //           stbtt_GetCodepointKernAdvance()
+//           stbtt_GetNumGlyphKernings()
+//           stbtt_GetGlyphKerning
 //
 //   Starting with version 1.06, the rasterizer was replaced with a new,
 //   faster and generally-more-precise rasterizer. The new rasterizer more
@@ -697,6 +699,12 @@ STBTT_DEF void stbtt_GetCodepointHMetrics(const stbtt_fontinfo *info, int codepo
 
 STBTT_DEF int  stbtt_GetCodepointKernAdvance(const stbtt_fontinfo *info, int ch1, int ch2);
 // an additional amount to add to the 'advance' value between ch1 and ch2
+
+STBTT_DEF int stbtt_GetNumGlyphKernings(const stbtt_fontinfo* info);
+// get the number of pair kerning values in the font
+
+STBTT_DEF int stbtt_GetGlyphKerning(const stbtt_fontinfo* info, int index, int* glyph1, int* glyph2, int* pairkerning);
+// gets the pair kerning given an index (0 <= index < num_pair_kernings)
 
 STBTT_DEF int stbtt_GetCodepointBox(const stbtt_fontinfo *info, int codepoint, int *x0, int *y0, int *x1, int *y1);
 // Gets the bounding box of the visible part of the glyph, in unscaled coordinates
@@ -1506,6 +1514,46 @@ STBTT_DEF int  stbtt_GetGlyphKernAdvance(const stbtt_fontinfo *info, int glyph1,
          return ttSHORT(data+22+(m*6));
    }
    return 0;
+}
+
+STBTT_DEF int stbtt_GetNumGlyphKernings(const stbtt_fontinfo* info)
+{
+   stbtt_uint8 *data = info->data + info->kern;
+   unsigned short coverage;
+
+   // we only look at the first table. it must be 'horizontal' and format 0.
+   if (!info->kern)
+      return 0;
+   if (ttUSHORT(data+2) < 1) // number of tables, need at least 1
+      return 0;
+   coverage = ttUSHORT(data+8);
+   if ((coverage & 1) != 1) // horizontal flag must be set in format
+      return 0;
+   if( (coverage >> 8) == 0 ) // format
+	   return ttUSHORT(data+10);
+   return 0;
+}
+
+STBTT_DEF int stbtt_GetGlyphKerning(const stbtt_fontinfo* info, int index, int* glyph1, int* glyph2, int* pairkerning)
+{
+   stbtt_uint8 *data = info->data + info->kern;
+   int combination;
+
+   // we only look at the first table. it must be 'horizontal' and format 0.
+   if (!info->kern)
+      return 0;
+   if (ttUSHORT(data+2) < 1) // number of tables, need at least 1
+      return 0;
+   if ((ttUSHORT(data+8) & 1) != 1) // horizontal flag must be set in format
+      return 0;
+   if( index < 0 || index >= ttUSHORT(data+10) )
+	   return 0;
+
+   combination = ttULONG(data+18+(index*6)); // note: unaligned read
+   if(pairkerning) 	*pairkerning = ttSHORT(data+22+(index*6));
+   if(glyph1)		*glyph1 = combination >> 16;
+   if(glyph2)		*glyph2 = combination & 0xFFFF;
+   return 1;
 }
 
 STBTT_DEF int  stbtt_GetCodepointKernAdvance(const stbtt_fontinfo *info, int ch1, int ch2)
