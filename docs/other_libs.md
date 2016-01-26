@@ -70,7 +70,7 @@ images            |**[gif.h](https://github.com/ginsweater/gif-h)**             
 images            |**[tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/)**              | **public domain**    |     |**1**| JPEG encoder
 images            |**[miniexr](https://github.com/aras-p/miniexr)**                       | **public domain**    |     |**1**| OpenEXR writer
 images            |  [tinyexr](https://github.com/syoyo/tinyexr)                          | BSD                  |     |**1**| EXR image read/write, uses miniz internally  
-images            |  [lodepng](http://lodev.org/lodepng/)                                 | zlib                 |C/C++|**1**| PNG encoder/decoder
+images            |  [lodepng](http://lodev.org/lodepng/)                                 | zlib                 |C/C++|  2  | PNG encoder/decoder
 images            |  [nanoSVG](https://github.com/memononen/nanosvg)                      | zlib                 |C/C++|**1**| 1-file SVG parser; 1-file SVG rasterizer
 images            |  [picopng.cpp](http://lodev.org/lodepng/picopng.cpp)                  | zlib                 | C++ |  2  | tiny PNG loader
 images            |  [jpeg-compressor](https://github.com/richgel999/jpeg-compressor)     | **public domain**    |     |  2  | 2-file jpeg compress, 2-file jpeg decompress
