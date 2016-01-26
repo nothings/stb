@@ -110,8 +110,8 @@ tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)        
 tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)               | **WTFPLv2**          | C++ |  2  | flexible assertions
 tests             |  [minctest](https://github.com/codeplea/minctest)                     | zlib                 |  C  |**1**| unit testing
 user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  |     |  9  | an immediate-mode GUI formerly named "ImGui"
-_misc_            |**[MakeID.h](http://www.humus.name/3D/MakeID.h)**                      | **public domain**    |     |**1**| allocate/deallocate small integer IDs efficiently
-_misc_            |**[loguru](https://github.com/emilk/loguru)**                          | **public domain**    | C++ |**1**| flexible logging
+_misc_            |  [MakeID.h](http://www.humus.name/3D/MakeID.h)                        | **public domain**    | C++ |**1**| allocate/deallocate small integer IDs efficiently
+_misc_            |  [loguru](https://github.com/emilk/loguru)                            | **public domain**    | C++ |**1**| flexible logging
 _misc_            |  [tinyformat](https://github.com/c42f/tinyformat)                     | Boost                | C++ |**1**| typesafe printf
 _misc_            |  [dbgtools](https://github.com/wc-duck/dbgtools)                      | zlib                 |C/C++|  2  | cross-platform debug util libraries
 _misc_            |  [stmr](https://github.com/wooorm/stmr.c)                             | MIT                  |  C  |  2  | extract English word stems
@@ -136,7 +136,7 @@ source file) is 3 files, and won't be accepted, because it's not 2 files. But ac
 not scoped to just the library, so library authors are encouraged to include the license in the
 source file and not require a separate LICENSE.
 
-Corrections: if information for a library below is wrong, please send a correction as an
+Corrections: if information for a library above is wrong, please send a correction as an
 issue, pull request, or email. Note that if the list indicates a library works from both
 C/C++, but it doesn't, this could be an error in the list or it could be a bug in the
 library. If you find a library doesn't work in 32-bit or 64-bit, the library should be
