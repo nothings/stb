@@ -2,7 +2,7 @@
 
 In addition to all of [my libraries](https://github.com/nothings/stb), there are other, similar libraries.
 
-The following list is a list of small, easy-to-integrate, portable libraries
+The following is a list of small, easy-to-integrate, portable libraries
 which are usable from C and/or C++, and should be able to be compiled on both
 32-bit and 64-bit platforms.
 
