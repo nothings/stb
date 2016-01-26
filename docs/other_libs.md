@@ -53,8 +53,8 @@ geometry math     |**[sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-ju
 geometry math     |  [sdf.h](https://github.com/memononen/SDF)                            | MIT                  |     |**1**| compute signed-distance field from antialiased image
 geometry math     |  [nanoflann](https://github.com/jlblancoc/nanoflann)                  | BSD                  |     |**1**| build KD trees for point clouds
 geometry math     |  [jc_voronoi](https://github.com/JCash/voronoi)                       | MIT                  |     |**1**| find voronoi regions on float/double data
-geometry math     |  [par_msquares](https://github.com/prideout/par)                      | MIT                  |     |**1**| convert (binarized) image to triangles
-geometry math     |  [par_shapes](http://github.prideout.net/shapes/)                     | MIT                  |     |**1**| generate various 3d geometric shapes
+geometry math     |  [par_msquares](https://github.com/prideout/par)                      | MIT                  |C/C++|**1**| convert (binarized) image to triangles
+geometry math     |  [par_shapes](http://github.prideout.net/shapes/)                     | MIT                  |C/C++|**1**| generate various 3d geometric shapes
 geometry math     |  [Tomas Akenine-Moller snippets](http://tinyurl.com/ht79ndj)          | **public domain**    |     |  2  | various 3D intersection calculations, not lib-ified
 geometry math     |  [Clipper](http://www.angusj.com/delphi/clipper.php)                  | Boost                |     |  2  | line & polygon clipping & offsetting
 geometry math     |  [PolyPartition](https://github.com/ivanfratric/polypartition)        | MIT                  |     |  2  | polygon triangulation, partitioning
@@ -81,7 +81,7 @@ math              |  [TinyExpr](https://github.com/codeplea/tinyexpr)           
 multithreading    |  [mm_sched.h](https://github.com/vurtun/mmx)                          | zlib                 |     |**1**| cross-platform multithreaded task scheduler
 network           |**[zed_net](https://github.com/ZedZull/zed_net)**                      | **public domain**    |     |**1**| cross-platform socket wrapper
 network           |  [mm_web.h](https://github.com/vurtun/mmx)                            | BSD                  |     |**1**| lightweight webserver, fork of webby
-network           |  [par_easycurl.h](https://github.com/prideout/par)                    | MIT                  |     |**1**| curl wrapper
+network           |  [par_easycurl.h](https://github.com/prideout/par)                    | MIT                  |C/C++|**1**| curl wrapper
 network           |  [yocto](https://github.com/tom-seddon/yhs)                           | **public domain**    |     |  2  | non-production-use http server
 network           |  [happyhttp](http://scumways.com/happyhttp/happyhttp.html)            | zlib                 |     |  2  | http client requests
 network           |  [mongoose](https://github.com/cesanta/mongoose)                      | GPLv2                |     |  2  | http server
