@@ -65,7 +65,7 @@ graphics (2d)     |  [noc_turtle](https://github.com/guillaumechereau/noc)      
 graphics (3-D)    |  [mikktspace](http://tinyurl.com/z6xtucm)                             | zlib                 |     |  2  | compute tangent space for normal mapping
 graphics (3-D)    |  [debug-draw](https://github.com/glampert/debug-draw)                 | **public domain**    | C++ |**1**| API-agnostic immediate-mode debug rendering
 hardware          |**[EasyTab](https://github.com/ApoorvaJ/EasyTab)**                     | **public domain**    |C/C++|**1**| multi-platform tablet input
-images            |**[jo_gif.cpp](http://www.jonolick.com/home/gif-writer)**              | **public domain**    |     |**1**| animated GIF writer
+images            |  [jo_gif.cpp](http://www.jonolick.com/home/gif-writer)                | **public domain**    | C++ |**1**| animated GIF writer (CPP file can also be used as H file)
 images            |**[gif.h](https://github.com/ginsweater/gif-h)**                       | **public domain**    |  C  |**1**| animated GIF writer (can only include once)
 images            |**[tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/)**              | **public domain**    |C/C++|**1**| JPEG encoder
 images            |  [miniexr](https://github.com/aras-p/miniexr)                         | **public domain**    | C++ | 2  | OpenEXR writer, needs header file
