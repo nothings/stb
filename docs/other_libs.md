@@ -56,10 +56,10 @@ geometry math     |  [jc_voronoi](https://github.com/JCash/voronoi)             
 geometry math     |  [par_msquares](https://github.com/prideout/par)                      | MIT                  |C/C++|**1**| convert (binarized) image to triangles
 geometry math     |  [par_shapes](http://github.prideout.net/shapes/)                     | MIT                  |C/C++|**1**| generate various 3d geometric shapes
 geometry math     |  [Tomas Akenine-Moller snippets](http://tinyurl.com/ht79ndj)          | **public domain**    |     |  2  | various 3D intersection calculations, not lib-ified
-geometry math     |  [Clipper](http://www.angusj.com/delphi/clipper.php)                  | Boost                |     |  2  | line & polygon clipping & offsetting
-geometry math     |  [PolyPartition](https://github.com/ivanfratric/polypartition)        | MIT                  |     |  2  | polygon triangulation, partitioning
-graphics (2d)     |  [blendish](https://bitbucket.org/duangle/oui-blendish/src)           | MIT                  |     |**1**| blender-style widget rendering
-graphics (2d)     |  [tigr](https://bitbucket.org/rmitton/tigr/src)                       | **public domain**    |     |  2  | quick-n-dirty window text/graphics for Windows
+geometry math     |  [Clipper](http://www.angusj.com/delphi/clipper.php)                  | Boost                | C++ |  2  | line & polygon clipping & offsetting
+geometry math     |  [PolyPartition](https://github.com/ivanfratric/polypartition)        | MIT                  | C++ |  2  | polygon triangulation, partitioning
+graphics (2d)     |  [blendish](https://bitbucket.org/duangle/oui-blendish/src)           | MIT                  |C/C++|**1**| blender-style widget rendering
+graphics (2d)     |  [tigr](https://bitbucket.org/rmitton/tigr/src)                       | **public domain**    |C/C++|  2  | quick-n-dirty window text/graphics for Windows
 graphics (2d)     |  [noc_turtle](https://github.com/guillaumechereau/noc)                | **public domain**    |     |  2  | procedural graphics generator
 graphics (3-D)    |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | BSD                  |     |**1**| wavefront OBJ file loader
 graphics (3-D)    |  [mikktspace](http://tinyurl.com/z6xtucm)                             | zlib                 |     |  2  | compute tangent space for normal mapping
@@ -82,7 +82,7 @@ multithreading    |  [mm_sched.h](https://github.com/vurtun/mmx)                
 network           |**[zed_net](https://github.com/ZedZull/zed_net)**                      | **public domain**    |     |**1**| cross-platform socket wrapper
 network           |  [mm_web.h](https://github.com/vurtun/mmx)                            | BSD                  |C/C++|**1**| lightweight webserver, fork of webby
 network           |  [par_easycurl.h](https://github.com/prideout/par)                    | MIT                  |C/C++|**1**| curl wrapper
-network           |  [yocto](https://github.com/tom-seddon/yhs)                           | **public domain**    |     |  2  | non-production-use http server
+network           |  [yocto](https://github.com/tom-seddon/yhs)                           | **public domain**    |C/C++|  2  | non-production-use http server
 network           |  [happyhttp](http://scumways.com/happyhttp/happyhttp.html)            | zlib                 |     |  2  | http client requests
 network           |  [mongoose](https://github.com/cesanta/mongoose)                      | GPLv2                |     |  2  | http server
 network           |  [LUrlParser](https://github.com/corporateshark/LUrlParser)           | MIT                  | C++ |  2  | lightweight URL & URI parser RFC 1738, RFC 3986
