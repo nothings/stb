@@ -90,7 +90,7 @@ parsing           |  [SLRE](https://github.com/cesanta/slre)                    
 parsing           |  [PicoJSON](https://github.com/kazuho/picojson)                       | BSD                  | C++ |**1**| JSON parse/serializer
 parsing           |  [mm_json.h](https://github.com/vurtun/mmx)                           | zlib                 |     |**1**| JSON parser
 parsing           |  [mm_lexer.h](https://github.com/vurtun/mmx)                          | zlib                 |     |**1**| C-esque language lexer
-parsing           |  [json.h](https://github.com/sheredom/json.h)                         | **public domain**    |     |  2  | JSON parser
+parsing           |  [json.h](https://github.com/sheredom/json.h)                         | **public domain**    |C/C++|  2  | JSON parser
 parsing           |  [jzon.h](https://github.com/Zguy/Jzon)                               | MIT                  | C++ |  2  | JSON parser
 parsing           |  [parson](https://github.com/kgabis/parson)                           | MIT                  |C/C++|  2  | JSON parser and serializer
 parsing           |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |     |  2  | two-file regex (also binary tree, etc)
@@ -100,7 +100,7 @@ scripting         |  [LIL](http://runtimelegend.com/rep/lil/)                   
 scripting         |  [lualite](https://github.com/janezz55/lualite/)                      | MIT                  | C++ |**1**| generate lua bindings in C++
 scripting         |  [Picol](https://chiselapp.com/user/dbohdan/repository/picol/)        | BSD                  |C/C++|  2  | interpreter for a Tcl-like scripting language
 strings           |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |     |**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings         
-strings           |**[utf8](https://github.com/sheredom/utf8.h)**                         | **public domain**    |     |**1**| utf8 string library
+strings           |**[utf8](https://github.com/sheredom/utf8.h)**                         | **public domain**    |C/C++|**1**| utf8 string library
 strings           |**[strpool.h](https://github.com/mattiasgustavsson/libs)**             | **public domain**    |     |**1**| string interning
 strings           |  [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/)                 | MIT                  |     |  2  | fast utf8 decoder
 strings           |**[gb_string.h](https://github.com/gingerBill/gb)**                    | **public domain**    |C/C++|**1**| dynamic strings
@@ -109,7 +109,7 @@ tests             |  [catch](https://github.com/philsquared/Catch)              
 tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)                  | BSD                  |     |**1**| unit testing
 tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)               | **WTFPLv2**          | C++ |  2  | flexible assertions
 tests             |  [minctest](https://github.com/codeplea/minctest)                     | zlib                 |  C  |**1**| unit testing
-user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  |     |  9  | an immediate-mode GUI formerly named "ImGui"
+user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  | C++*|  9  | an immediate-mode GUI formerly named "ImGui"; [3rd-party C wrapper](https://github.com/Extrawurst/cimgui) 
 _misc_            |  [MakeID.h](http://www.humus.name/3D/MakeID.h)                        | **public domain**    | C++ |**1**| allocate/deallocate small integer IDs efficiently
 _misc_            |  [loguru](https://github.com/emilk/loguru)                            | **public domain**    | C++ |**1**| flexible logging
 _misc_            |  [tinyformat](https://github.com/c42f/tinyformat)                     | Boost                | C++ |**1**| typesafe printf
