@@ -48,12 +48,12 @@ files & filenames |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**   
 files & filenames |  [whereami](https://github.com/gpakosz/whereami)                      |**WTFPLv2**           |C/C++|  2  | get path/filename of executable or module
 geometry file     |  [tk_objfile](https://github.com/joeld42/tk_objfile)                  | MIT                  |C/C++|**1**| OBJ file loader
 geometry file     |  [tinyply](https://github.com/ddiakopoulos/tinyply)                   | **public domain**    | C++ |  2  | PLY mesh file loader
-geometry file     |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | BSD                  |     |**1**| wavefront OBJ file loader
-geometry math     |**[nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/)**             | **public domain**    |     |**1**| find voronoi regions on lattice w/ integer inputs
-geometry math     |**[sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-junk/)**    | **public domain**    |     |**1**| sobol & stratified sampling sequences
-geometry math     |  [sdf.h](https://github.com/memononen/SDF)                            | MIT                  |     |**1**| compute signed-distance field from antialiased image
+geometry file     |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | BSD                  | C++ |**1**| wavefront OBJ file loader
+geometry math     |**[nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/)**             | **public domain**    |C/C++|**1**| find voronoi regions on lattice w/ integer inputs
+geometry math     |**[sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-junk/)**    | **public domain**    |C/C++|**1**| sobol & stratified sampling sequences
+geometry math     |  [sdf.h](https://github.com/memononen/SDF)                            | MIT                  |C/C++|**1**| compute signed-distance field from antialiased image
 geometry math     |  [nanoflann](https://github.com/jlblancoc/nanoflann)                  | BSD                  |     |**1**| build KD trees for point clouds
-geometry math     |  [jc_voronoi](https://github.com/JCash/voronoi)                       | MIT                  |     |**1**| find voronoi regions on float/double data
+geometry math     |  [jc_voronoi](https://github.com/JCash/voronoi)                       | MIT                  |C/C++|**1**| find voronoi regions on float/double data
 geometry math     |  [par_msquares](https://github.com/prideout/par)                      | MIT                  |C/C++|**1**| convert (binarized) image to triangles
 geometry math     |  [par_shapes](http://github.prideout.net/shapes/)                     | MIT                  |C/C++|**1**| generate various 3d geometric shapes
 geometry math     |  [Tomas Akenine-Moller snippets](http://tinyurl.com/ht79ndj)          | **public domain**    |     |  2  | various 3D intersection calculations, not lib-ified
