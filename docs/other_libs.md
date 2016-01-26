@@ -46,8 +46,9 @@ data structures   |  [PackedArray](https://github.com/gpakosz/PackedArray)      
 data structures   |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |     |  2  | two-file binary tress (also regex, etc)
 files & filenames |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |C/C++|**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings
 files & filenames |  [whereami](https://github.com/gpakosz/whereami)                      |**WTFPLv2**           |C/C++|  2  | get path/filename of executable or module
-geometry file     |  [tk_objfile](https://github.com/joeld42/tk_objfile)                  | MIT                  |     |**1**| OBJ file loader
+geometry file     |  [tk_objfile](https://github.com/joeld42/tk_objfile)                  | MIT                  |C/C++|**1**| OBJ file loader
 geometry file     |  [tinyply](https://github.com/ddiakopoulos/tinyply)                   | **public domain**    | C++ |  2  | PLY mesh file loader
+geometry file     |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | BSD                  |     |**1**| wavefront OBJ file loader
 geometry math     |**[nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/)**             | **public domain**    |     |**1**| find voronoi regions on lattice w/ integer inputs
 geometry math     |**[sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-junk/)**    | **public domain**    |     |**1**| sobol & stratified sampling sequences
 geometry math     |  [sdf.h](https://github.com/memononen/SDF)                            | MIT                  |     |**1**| compute signed-distance field from antialiased image
@@ -61,7 +62,6 @@ geometry math     |  [PolyPartition](https://github.com/ivanfratric/polypartitio
 graphics (2d)     |  [blendish](https://bitbucket.org/duangle/oui-blendish/src)           | MIT                  |C/C++|**1**| blender-style widget rendering
 graphics (2d)     |  [tigr](https://bitbucket.org/rmitton/tigr/src)                       | **public domain**    |C/C++|  2  | quick-n-dirty window text/graphics for Windows
 graphics (2d)     |  [noc_turtle](https://github.com/guillaumechereau/noc)                | **public domain**    |     |  2  | procedural graphics generator
-graphics (3-D)    |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | BSD                  |     |**1**| wavefront OBJ file loader
 graphics (3-D)    |  [mikktspace](http://tinyurl.com/z6xtucm)                             | zlib                 |     |  2  | compute tangent space for normal mapping
 graphics (3-D)    |  [debug-draw](https://github.com/glampert/debug-draw)                 | **public domain**    | C++ |**1**| API-agnostic immediate-mode debug rendering
 hardware          |**[EasyTab](https://github.com/ApoorvaJ/EasyTab)**                     | **public domain**    |C/C++|**1**| multi-platform tablet input
