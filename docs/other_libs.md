@@ -38,7 +38,7 @@ compression       |**[miniz.c](https://github.com/richgel999/miniz)**           
 compression       |  [lz4](https://github.com/Cyan4973/lz4)                               | BSD                  |**C**|  2  | fast but larger LZ compression
 compression       |  [fastlz](https://code.google.com/p/fastlz/source/browse/#svn%2Ftrunk)| MIT                  |**C**|  2  | fast but larger LZ compression
 compression       |  [pithy](https://github.com/johnezang/pithy)                          | BSD                  |**C**|  2  | fast but larger LZ compression
-crypto            |  [TweetNaCl](http://tweetnacl.cr.yp.to/software.html)                 | **public domain**    |     |  2  | high-quality tiny cryptography library
+crypto            |  [TweetNaCl](http://tweetnacl.cr.yp.to/software.html)                 | **public domain**    |  C  |  2  | high-quality tiny cryptography library
 data&nbsp;structures|[klib](http://attractivechaos.github.io/klib/)                       | MIT                  |     |  2  | many 2-file libs: hash, sort, b-tree, etc
 data structures   |  [uthash](https://github.com/troydhanson/uthash)                      | BSD                  |     |  2  | several 1-header, 1-license-file libs: generic hash, list, etc
 data structures   |  [PackedArray](https://github.com/gpakosz/PackedArray)                | **WTFPLv2**          |  C  |  2  | memory-efficient array of elements with non-pow2 bitcount
