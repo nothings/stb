@@ -41,10 +41,10 @@ compression       |  [pithy](https://github.com/johnezang/pithy)                
 crypto            |  [TweetNaCl](http://tweetnacl.cr.yp.to/software.html)                 | **public domain**    |     |  2  | high-quality tiny cryptography library
 data&nbsp;structures|[klib](http://attractivechaos.github.io/klib/)                       | MIT                  |     |  2  | many 2-file libs: hash, sort, b-tree, etc
 data structures   |  [uthash](https://github.com/troydhanson/uthash)                      | BSD                  |     |  2  | several 1-header, 1-license-file libs: generic hash, list, etc
-data structures   |  [PackedArray](https://github.com/gpakosz/PackedArray)                | **WTFPLv2**          |     |  2  | memory-efficient array of elements with non-pow2 bitcount
+data structures   |  [PackedArray](https://github.com/gpakosz/PackedArray)                | **WTFPLv2**          |  C  |  2  | memory-efficient array of elements with non-pow2 bitcount
 data structures   |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |     |  2  | two-file binary tress (also regex, etc)
 files & filenames |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |**C**|**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings
-files & filenames |  [whereami](https://github.com/gpakosz/whereami)                      |**WTFPLv2**           |     |  2  | get path/filename of executable or module
+files & filenames |  [whereami](https://github.com/gpakosz/whereami)                      |**WTFPLv2**           |**C**|  2  | get path/filename of executable or module
 geometry file     |  [tk_objfile](https://github.com/joeld42/tk_objfile)                  | MIT                  |     |**1**| OBJ file loader
 geometry file     |  [tinyply](https://github.com/ddiakopoulos/tinyply)                   | **public domain**    | C++ |  2  | PLY mesh file loader
 geometry math     |**[nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/)**             | **public domain**    |     |**1**| find voronoi regions on lattice w/ integer inputs
