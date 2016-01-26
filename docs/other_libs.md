@@ -68,8 +68,8 @@ hardware          |**[EasyTab](https://github.com/ApoorvaJ/EasyTab)**           
 images            |**[jo_gif.cpp](http://www.jonolick.com/home/gif-writer)**              | **public domain**    |     |**1**| animated GIF writer
 images            |**[gif.h](https://github.com/ginsweater/gif-h)**                       | **public domain**    |  C  |**1**| animated GIF writer (can only include once)
 images            |**[tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/)**              | **public domain**    |C/C++|**1**| JPEG encoder
-images            |**[miniexr](https://github.com/aras-p/miniexr)**                       | **public domain**    |     |**1**| OpenEXR writer
-images            |  [tinyexr](https://github.com/syoyo/tinyexr)                          | BSD                  |     |**1**| EXR image read/write, uses miniz internally  
+images            |**[miniexr](https://github.com/aras-p/miniexr)**                       | **public domain**    | C++ | 2  | OpenEXR writer, needs header file
+images            |  [tinyexr](https://github.com/syoyo/tinyexr)                          | BSD                  |C/C++|**1**| EXR image read/write, uses miniz internally  
 images            |  [lodepng](http://lodev.org/lodepng/)                                 | zlib                 |C/C++|  2  | PNG encoder/decoder
 images            |  [nanoSVG](https://github.com/memononen/nanosvg)                      | zlib                 |C/C++|**1**| 1-file SVG parser; 1-file SVG rasterizer
 images            |  [picopng.cpp](http://lodev.org/lodepng/picopng.cpp)                  | zlib                 | C++ |  2  | tiny PNG loader
