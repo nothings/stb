@@ -75,12 +75,12 @@ images            |  [nanoSVG](https://github.com/memononen/nanosvg)            
 images            |  [picopng.cpp](http://lodev.org/lodepng/picopng.cpp)                  | zlib                 | C++ |  2  | tiny PNG loader
 images            |  [jpeg-compressor](https://github.com/richgel999/jpeg-compressor)     | **public domain**    |     |  2  | 2-file jpeg compress, 2-file jpeg decompress
 images            |  [easyexif](https://github.com/mayanklahiri/easyexif)                 | MIT                  | C++ |  2  | EXIF metadata extractor for JPEG images
-math              |  [mm_vec.h](https://github.com/vurtun/mmx)                            | BSD                  |     |**1**| SIMD vector math
+math              |  [mm_vec.h](https://github.com/vurtun/mmx)                            | BSD                  |C/C++|**1**| SIMD vector math
 math              |  [ShaderFastLibs](https://github.com/michaldrobot/ShaderFastLibs)     | MIT                  |     |**1**| approximate transcendental functions optimized for shaders (esp. GCN)
 math              |  [TinyExpr](https://github.com/codeplea/tinyexpr)                     | zlib                 |  C  |  2  | evaluation of math expressions from strings
-multithreading    |  [mm_sched.h](https://github.com/vurtun/mmx)                          | zlib                 |     |**1**| cross-platform multithreaded task scheduler
+multithreading    |  [mm_sched.h](https://github.com/vurtun/mmx)                          | zlib                 |C/C++|**1**| cross-platform multithreaded task scheduler
 network           |**[zed_net](https://github.com/ZedZull/zed_net)**                      | **public domain**    |     |**1**| cross-platform socket wrapper
-network           |  [mm_web.h](https://github.com/vurtun/mmx)                            | BSD                  |     |**1**| lightweight webserver, fork of webby
+network           |  [mm_web.h](https://github.com/vurtun/mmx)                            | BSD                  |C/C++|**1**| lightweight webserver, fork of webby
 network           |  [par_easycurl.h](https://github.com/prideout/par)                    | MIT                  |C/C++|**1**| curl wrapper
 network           |  [yocto](https://github.com/tom-seddon/yhs)                           | **public domain**    |     |  2  | non-production-use http server
 network           |  [happyhttp](http://scumways.com/happyhttp/happyhttp.html)            | zlib                 |     |  2  | http client requests
@@ -88,8 +88,7 @@ network           |  [mongoose](https://github.com/cesanta/mongoose)            
 network           |  [LUrlParser](https://github.com/corporateshark/LUrlParser)           | MIT                  | C++ |  2  | lightweight URL & URI parser RFC 1738, RFC 3986
 parsing           |  [SLRE](https://github.com/cesanta/slre)                              | GPLv2                |     |**1**| regular expression matcher
 parsing           |  [PicoJSON](https://github.com/kazuho/picojson)                       | BSD                  | C++ |**1**| JSON parse/serializer
-parsing           |  [mm_json.h](https://github.com/vurtun/mmx)                           | zlib                 |     |**1**| JSON parser
-parsing           |  [mm_lexer.h](https://github.com/vurtun/mmx)                          | zlib                 |     |**1**| C-esque language lexer
+parsing           |  [mm_lexer.h](https://github.com/vurtun/mmx)                          | zlib                 |C/C++|**1**| C-esque language lexer
 parsing           |  [json.h](https://github.com/sheredom/json.h)                         | **public domain**    |C/C++|  2  | JSON parser
 parsing           |  [jzon.h](https://github.com/Zguy/Jzon)                               | MIT                  | C++ |  2  | JSON parser
 parsing           |  [parson](https://github.com/kgabis/parson)                           | MIT                  |C/C++|  2  | JSON parser and serializer
@@ -99,14 +98,14 @@ profiling         |  [MicroProfile](https://bitbucket.org/jonasmeyer/microprofil
 scripting         |  [LIL](http://runtimelegend.com/rep/lil/)                             | zlib                 |C/C++|  2  | interpreter for a Tcl-like scripting language
 scripting         |  [lualite](https://github.com/janezz55/lualite/)                      | MIT                  | C++ |**1**| generate lua bindings in C++
 scripting         |  [Picol](https://chiselapp.com/user/dbohdan/repository/picol/)        | BSD                  |C/C++|  2  | interpreter for a Tcl-like scripting language
-strings           |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |     |**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings         
+strings           |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |C/C++|**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings         
 strings           |**[utf8](https://github.com/sheredom/utf8.h)**                         | **public domain**    |C/C++|**1**| utf8 string library
 strings           |**[strpool.h](https://github.com/mattiasgustavsson/libs)**             | **public domain**    |C/C++|**1**| string interning
 strings           |  [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/)                 | MIT                  |     |  2  | fast utf8 decoder
 strings           |**[gb_string.h](https://github.com/gingerBill/gb)**                    | **public domain**    |C/C++|**1**| dynamic strings
-tests             |  [utest](https://github.com/evolutional/utest)                        | MIT                  |     |**1**| unit testing
-tests             |  [catch](https://github.com/philsquared/Catch)                        | Boost                |     |**1**| unit testing
-tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)                  | BSD                  |     |**1**| unit testing
+tests             |  [utest](https://github.com/evolutional/utest)                        | MIT                  |C/C++|**1**| unit testing
+tests             |  [catch](https://github.com/philsquared/Catch)                        | Boost                | C++ |**1**| unit testing
+tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)                  | BSD                  |C/C++|**1**| unit testing
 tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)               | **WTFPLv2**          | C++ |  2  | flexible assertions
 tests             |  [minctest](https://github.com/codeplea/minctest)                     | zlib                 |  C  |**1**| unit testing
 user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  | C++*|  9  | an immediate-mode GUI formerly named "ImGui"; [3rd-party C wrapper](https://github.com/Extrawurst/cimgui) 
