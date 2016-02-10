@@ -2,94 +2,147 @@
 
 In addition to all of [my libraries](https://github.com/nothings/stb), there are other, similar libraries.
 
-People have told me about quite a few of these. However, I haven't used most of these libraries
-and can't comment on their quality. (If you use them and aren't their author, feel
-free to tell me about their quality.) _Newest additions are in italics._
+The following is a list of small, easy-to-integrate, portable libraries
+which are usable from C and/or C++, and should be able to be compiled on both
+32-bit and 64-bit platforms.
 
-- **images** [jo_gif.cpp](http://www.jonolick.com/home/gif-writer): animated GIF writer (public domain)
-- **images** [gif.h](https://github.com/ginsweater/gif-h): animated GIF writer (public domain)
-- **images** [tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/blob/master/tiny_jpeg.h): JPEG encoder (public domain)
-- **images** [miniexr](https://github.com/aras-p/miniexr): OpenEXR writer (public domain)
-- **geometry** [nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/): find voronoi regions on lattice w/ integer inputs (public domain)
-- _**geometry** [sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-junk/blob/master/src/SFH/Sobol.h): sobol & stratified sampling sequences (public domain)_
-- **network** [zed_net](https://github.com/ZedZull/zed_net): cross-platform socket wrapper (public domain)
-- **strings**; **files & filenames** [DG_misc.h](https://github.com/DanielGibson/Snippets/): Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings (public domain)
-- **strings** [utf8](https://github.com/sheredom/utf8.h): utf8 string library (public domain)
-- **misc** [MakeID.h](http://www.humus.name/3D/MakeID.h): allocate/deallocate small integer IDs efficiently (public domain)
-- **misc** [gb_string.h](https://github.com/gingerBill/gb): dynamic strings for C (public domain)
-- _**misc** [loguru](https://github.com/emilk/loguru): flexible logging for C++ (public domain)
-- _**hardware** [EasyTab](https://github.com/ApoorvaJ/EasyTab): multi-platform tablet input (public domain)_
+### Rules
 
-Not public domain:
+- Libraries must be usable from C or C++, ideally both
+- Libraries should be usable from more than one platform (ideally, all major desktops and/or all major mobile)
+- Libraries should compile and work on both 32-bit and 64-bit platforms
+- Libraries should use at most two files
 
-- **images** [tinyexr](https://github.com/syoyo/tinyexr): EXR image read/write (BSD license)  *uses miniz internally*
-- **images** [lodepng](http://lodev.org/lodepng/): PNG encoder/decoder (zlib license)
-- **images** [nanoSVG](https://github.com/memononen/nanosvg): 1-file SVG parser; 1-file SVG rasterizer (zlib license)
-- **3D** [tinyobjloader](https://github.com/syoyo/tinyobjloader): wavefront OBJ file loader (BSD license)
-- **2D** [blendish](https://bitbucket.org/duangle/oui-blendish/src): blender-style widget rendering (MIT license)
-- **geometry** [sdf.h](https://github.com/memononen/SDF): compute signed-distance field from antialiased image (MIT license)
-- **geometry** [nanoflann](https://github.com/jlblancoc/nanoflann): build KD trees for point clouds (BSD license)
-- **geometry** [jc_voronoi](https://github.com/JCash/voronoi): find voronoi regions on float/double data (MIT license)
-- _**network** [wby](https://github.com/vurtun/wby): lightweight webserver, fork of webby (BSD license)_
-- **audio** [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h): IMA-ADPCM audio decoder (MIT license)
-- **multithreading** [mts](https://github.com/vurtun/mts): cross-platform multithreaded task scheduler (zlib license)
-- **parsing** [SLRE](https://github.com/cesanta/slre): regular expression matcher (GPL v2)
-- **parsing** [PicoJSON](https://github.com/kazuho/picojson): JSON parse/serializer for C++ (BSD license)
-- _**parsing** [zange](https://github.com/vurtun/zange): JSON parser (MIT license)_
-- **tests** [utest](https://github.com/evolutional/utest): unit testing (MIT license)
-- **tests** [catch](https://github.com/philsquared/Catch): unit testing (Boost license)
-- **tests** [SPUT](http://www.lingua-systems.com/unit-testing/): unit testing (BSD license)
-- _**misc** [lualite](https://github.com/janezz55/lualite/): generate lua bindings in C++ (MIT license)_
+Exceptions will be allowed for good reasons.
 
-There are some that have a source file and require a separate header file (which they may
-not even supply). That's twice as many files, and we at nothings/stb cannot condone
-this! But you might like them anyway:
+### New libraries and corrections
 
-- **images** [picopng.cpp](http://lodev.org/lodepng/picopng.cpp): tiny PNG loader (zlib license)
-- **images** [jpeg-compressor](https://github.com/richgel999/jpeg-compressor): 2-file jpeg compress, 2-file jpeg decompress (public domain)
-- **3D** [mikktspace](https://svn.blender.org/svnroot/bf-blender/trunk/blender/intern/mikktspace/): compute tangent space for normal mapping (zlib)
-- **2D** [tigr](https://bitbucket.org/rmitton/tigr/src): quick-n-dirty window text/graphics for Windows (public domain)
-- **2D** [noc_turtle](https://github.com/guillaumechereau/noc): procedural graphics generator (public domain)
-- **geometry** [Tomas Akenine-Moller snippets](http://fileadmin.cs.lth.se/cs/Personal/Tomas_Akenine-Moller/code/): various 3D intersection calculations, not lib-ified (public domain)
-- **geometry** [Clipper](http://www.angusj.com/delphi/clipper.php): line & polygon clipping & offsetting (Boost license)
-- **network** [yocto](https://github.com/tom-seddon/yhs): non-production-use http server (public domain)
-- **network** [happyhttp](http://scumways.com/happyhttp/happyhttp.html): http client requests (zlib license)
-- **network** [mongoose](https://github.com/cesanta/mongoose): http server (GPL v2)
-- _**crypto** [TweetNaCl](http://tweetnacl.cr.yp.to/software.html): high-quality tiny cryptography library (public domain)_
-- **AI** [micropather](http://www.grinninglizard.com/MicroPather/): pathfinding with A* (zlib license)
-- **compression** [miniz.c](https://github.com/richgel999/miniz): zlib compression,decompression, zip file, png writing (public domain)
-- **compression** [lz4](https://github.com/Cyan4973/lz4): fast but larger LZ compression (BSD license)
-- **compression** [fastlz](https://code.google.com/p/fastlz/source/browse/#svn%2Ftrunk): fast but larger LZ compression (MIT license)
-- **compression** [pithy](https://github.com/johnezang/pithy): fast but larger LZ compression (BSD license)
-- **profiling** [Remotery](https://github.com/Celtoys/Remotery): CPU/GPU profiler Win/Mac/Linux, using web browser for viewer (Apache 2.0 license)
-- **profiling** [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile): CPU (and GPU?) profiler, 1-3 header files (unlicense) *uses miniz internally*
-- **parsing** [json.h](https://github.com/sheredom/json.h): JSON parser (public domain)
-- _**parsing** [jzon.h](https://github.com/Zguy/Jzon): JSON parser, C++ (MIT license)_
-- **strings** [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/): fast utf8 decoder (MIT license)
-- **data structures** [klib](http://attractivechaos.github.io/klib/): many 2-file libs: hash, sort, b-tree, etc (MIT license)
-- _**data structures** [uthash](https://github.com/troydhanson/uthash): several 1-header, 1-license-file libs: generic hash, list, etc (BSD license)_
-- _**data structures** [PackedArray](https://github.com/gpakosz/PackedArray): memory-efficient array of elements with non-pow2 bitcount (WTFPL v2 license)_
-- **data structures**; **algorithms** [minilibs](https://github.com/ccxvii/minilibs): two-file regex, binary tree (public domain)
-- **files & filenames** [whereami](https://github.com/gpakosz/whereami): get path/filename of executable or module (WTFPL v2 license)
-- **misc** [dbgtools](https://github.com/wc-duck/dbgtools): cross-platform debug util libraries (zlib license)
-- _**misc** [stmr](https://github.com/wooorm/stmr.c): extract English word stems (MIT license)_
-- _**misc** [levenshtein](https://github.com/wooorm/levenshtein.c): compute edit distance between two strings (MIT license)_
-- **tests** [pempek_assert.cpp](https://github.com/gpakosz/Assert/tree/master/src): flexible assertions in C++ (WTFPL v2 license)
+See discussion after the list.
 
-There is also these XML libraries, but if you're using XML, shame on you:
+## Library listing
 
-- **parsing** [tinyxml2](https://github.com/leethomason/tinyxml2): XML (zlib license)
-- **parsing** [pugixml](http://pugixml.org/): XML (MIT license)
+**Public domain single-file libraries usable from C and C++ are in bold.** Other
+libraries are either non-public domain, or two files, or not usable from both C and C++, or
+all three. Libraries of more than two files are mostly forbidden.
 
-There are some libraries that are just _so_ awesome that even though they use more
-than two files we're going to give them special dispensation to appear in their own
-little list here. If you're a crazy purist, be warned, but otherwise, enjoy!
+For the API column, "C" means C only, "C++" means C++ only, and "C/C++" means C/C++ usable
+from either; some files may require *building* as C or C++ but still qualify as "C/C++" as
+long as the header file uses `extern "C"` to make it work. (In some cases, a header-file-only
+library may compile as both C or C++, but produce an implementation that can only be called from
+one or the other, because of a lack of use of `extern "C"`; in this case the table still qualifies it
+as C/C++, as this is not an obstacle to most users.)
 
-- **user interface** [ImGui](https://github.com/ocornut/imgui): an immediate-mode GUI ("imgui") named "ImGui" (MIT license)
+
+category          | library                                                               | license              | API |files| description
+----------------- | --------------------------------------------------------------------- |:--------------------:|:---:|:---:| -----------
+AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 | C++ |  2  | pathfinding with A*
+audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |C/C++|**1**| IMA-ADPCM audio decoder
+compression       |**[miniz.c](https://github.com/richgel999/miniz)**                     |**public&nbsp;domain**|C/C++|**1**| compression,decompression, zip file, png writing
+compression       |  [lz4](https://github.com/Cyan4973/lz4)                               | BSD                  |C/C++|  2  | fast but larger LZ compression
+compression       |  [fastlz](https://code.google.com/p/fastlz/source/browse/#svn%2Ftrunk)| MIT                  |C/C++|  2  | fast but larger LZ compression
+compression       |  [pithy](https://github.com/johnezang/pithy)                          | BSD                  |C/C++|  2  | fast but larger LZ compression
+crypto            |  [TweetNaCl](http://tweetnacl.cr.yp.to/software.html)                 | **public domain**    |  C  |  2  | high-quality tiny cryptography library
+data&nbsp;structures|[klib](http://attractivechaos.github.io/klib/)                       | MIT                  |C/C++|  2  | many 2-file libs: hash, sort, b-tree, etc
+data structures   |  [uthash](https://github.com/troydhanson/uthash)                      | BSD                  |C/C++|  2  | several 1-header, 1-license-file libs: generic hash, list, etc
+data structures   |  [PackedArray](https://github.com/gpakosz/PackedArray)                | **WTFPLv2**          |  C  |  2  | memory-efficient array of elements with non-pow2 bitcount
+data structures   |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |  C  |  2  | two-file binary tress (also regex, etc)
+files & filenames |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |C/C++|**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings
+files & filenames |  [whereami](https://github.com/gpakosz/whereami)                      |**WTFPLv2**           |C/C++|  2  | get path/filename of executable or module
+files & filenames |  [noc_file_dialog.h](https://github.com/guillaumechereau/noc)         | MIT                  |C/C++|  1  | file open/save dialogs (Linux/OSX/Windows)
+geometry file     |  [tk_objfile](https://github.com/joeld42/tk_objfile)                  | MIT                  |C/C++|**1**| OBJ file loader
+geometry file     |  [tinyply](https://github.com/ddiakopoulos/tinyply)                   | **public domain**    | C++ |  2  | PLY mesh file loader
+geometry file     |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | BSD                  | C++ |**1**| wavefront OBJ file loader
+geometry math     |**[nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/)**             | **public domain**    |C/C++|**1**| find voronoi regions on lattice w/ integer inputs
+geometry math     |**[sobol.h](https://github.com/Marc-B-Reynolds/Stand-alone-junk/)**    | **public domain**    |C/C++|**1**| sobol & stratified sampling sequences
+geometry math     |  [sdf.h](https://github.com/memononen/SDF)                            | MIT                  |C/C++|**1**| compute signed-distance field from antialiased image
+geometry math     |  [nanoflann](https://github.com/jlblancoc/nanoflann)                  | BSD                  | C++ |**1**| build KD trees for point clouds
+geometry math     |  [jc_voronoi](https://github.com/JCash/voronoi)                       | MIT                  |C/C++|**1**| find voronoi regions on float/double data
+geometry math     |  [par_msquares](https://github.com/prideout/par)                      | MIT                  |C/C++|**1**| convert (binarized) image to triangles
+geometry math     |  [par_shapes](http://github.prideout.net/shapes/)                     | MIT                  |C/C++|**1**| generate various 3d geometric shapes
+geometry math     |  [Tomas Akenine-Moller snippets](http://tinyurl.com/ht79ndj)          | **public domain**    |C/C++|  2  | various 3D intersection calculations, not lib-ified
+geometry math     |  [Clipper](http://www.angusj.com/delphi/clipper.php)                  | Boost                | C++ |  2  | line & polygon clipping & offsetting
+geometry math     |  [PolyPartition](https://github.com/ivanfratric/polypartition)        | MIT                  | C++ |  2  | polygon triangulation, partitioning
+graphics (2d)     |  [blendish](https://bitbucket.org/duangle/oui-blendish/src)           | MIT                  |C/C++|**1**| blender-style widget rendering
+graphics (2d)     |  [tigr](https://bitbucket.org/rmitton/tigr/src)                       | **public domain**    |C/C++|  2  | quick-n-dirty window text/graphics for Windows
+graphics (2d)     |  [noc_turtle](https://github.com/guillaumechereau/noc)                | MIT                  |C/C++|  2  | procedural graphics generator
+graphics (3-D)    |  [mikktspace](http://tinyurl.com/z6xtucm)                             | zlib                 |C/C++|  2  | compute tangent space for normal mapping
+graphics (3-D)    |  [debug-draw](https://github.com/glampert/debug-draw)                 | **public domain**    | C++ |**1**| API-agnostic immediate-mode debug rendering
+hardware          |**[EasyTab](https://github.com/ApoorvaJ/EasyTab)**                     | **public domain**    |C/C++|**1**| multi-platform tablet input
+images            |  [jo_gif.cpp](http://www.jonolick.com/home/gif-writer)                | **public domain**    | C++ |**1**| animated GIF writer (CPP file can also be used as H file)
+images            |**[gif.h](https://github.com/ginsweater/gif-h)**                       | **public domain**    |  C  |**1**| animated GIF writer (can only include once)
+images            |**[tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/)**              | **public domain**    |C/C++|**1**| JPEG encoder
+images            |  [miniexr](https://github.com/aras-p/miniexr)                         | **public domain**    | C++ | 2  | OpenEXR writer, needs header file
+images            |  [tinyexr](https://github.com/syoyo/tinyexr)                          | BSD                  |C/C++|**1**| EXR image read/write, uses miniz internally  
+images            |  [lodepng](http://lodev.org/lodepng/)                                 | zlib                 |C/C++|  2  | PNG encoder/decoder
+images            |  [nanoSVG](https://github.com/memononen/nanosvg)                      | zlib                 |C/C++|**1**| 1-file SVG parser; 1-file SVG rasterizer
+images            |  [picopng.cpp](http://lodev.org/lodepng/picopng.cpp)                  | zlib                 | C++ |  2  | tiny PNG loader
+images            |  [jpeg-compressor](https://github.com/richgel999/jpeg-compressor)     | **public domain**    | C++ |  2  | 2-file jpeg compress, 2-file jpeg decompress
+images            |  [easyexif](https://github.com/mayanklahiri/easyexif)                 | MIT                  | C++ |  2  | EXIF metadata extractor for JPEG images
+math              |  [mm_vec.h](https://github.com/vurtun/mmx)                            | BSD                  |C/C++|**1**| SIMD vector math
+math              |  [ShaderFastLibs](https://github.com/michaldrobot/ShaderFastLibs)     | MIT                  | C++ |**1**| (also HLSL) approximate transcendental functions optimized for shaders (esp. GCN)
+math              |  [TinyExpr](https://github.com/codeplea/tinyexpr)                     | zlib                 |  C  |  2  | evaluation of math expressions from strings
+multithreading    |  [mm_sched.h](https://github.com/vurtun/mmx)                          | zlib                 |C/C++|**1**| cross-platform multithreaded task scheduler
+network           |**[zed_net](https://github.com/ZedZull/zed_net)**                      | **public domain**    |C/C++|**1**| cross-platform socket wrapper
+network           |  [mm_web.h](https://github.com/vurtun/mmx)                            | BSD                  |C/C++|**1**| lightweight webserver, fork of webby
+network           |  [par_easycurl.h](https://github.com/prideout/par)                    | MIT                  |C/C++|**1**| curl wrapper
+network           |  [yocto](https://github.com/tom-seddon/yhs)                           | **public domain**    |C/C++|  2  | non-production-use http server
+network           |  [happyhttp](http://scumways.com/happyhttp/happyhttp.html)            | zlib                 | C++ |  2  | http client requests
+network           |  [mongoose](https://github.com/cesanta/mongoose)                      |_GPLv2_               |C/C++|  2  | http server
+network           |  [LUrlParser](https://github.com/corporateshark/LUrlParser)           | MIT                  | C++ |  2  | lightweight URL & URI parser RFC 1738, RFC 3986
+parsing           |  [SLRE](https://github.com/cesanta/slre)                              |_GPLv2_               |C/C++|**1**| regular expression matcher
+parsing           |  [PicoJSON](https://github.com/kazuho/picojson)                       | BSD                  | C++ |**1**| JSON parse/serializer
+parsing           |  [mm_lexer.h](https://github.com/vurtun/mmx)                          | zlib                 |C/C++|**1**| C-esque language lexer
+parsing           |  [json.h](https://github.com/sheredom/json.h)                         | **public domain**    |C/C++|  2  | JSON parser
+parsing           |  [jzon.h](https://github.com/Zguy/Jzon)                               | MIT                  | C++ |  2  | JSON parser
+parsing           |  [parson](https://github.com/kgabis/parson)                           | MIT                  |C/C++|  2  | JSON parser and serializer
+parsing           |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |  C  |  2  | two-file regex (also binary tree, etc)
+profiling         |  [Remotery](https://github.com/Celtoys/Remotery)                      | Apache 2.0           |C/C++|  2  | CPU/GPU profiler Win/Mac/Linux, using web browser for viewer
+profiling         |  [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile)        | **unlicense**        | C++ | 2-4 | CPU (and GPU?) profiler, 1-3 header files, uses miniz internally
+scripting         |  [LIL](http://runtimelegend.com/rep/lil/)                             | zlib                 |C/C++|  2  | interpreter for a Tcl-like scripting language
+scripting         |  [lualite](https://github.com/janezz55/lualite/)                      | MIT                  | C++ |**1**| generate lua bindings in C++
+scripting         |  [Picol](https://chiselapp.com/user/dbohdan/repository/picol/)        | BSD                  |C/C++|**1**| interpreter for a Tcl-like scripting language
+strings           |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |C/C++|**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings         
+strings           |**[utf8](https://github.com/sheredom/utf8.h)**                         | **public domain**    |C/C++|**1**| utf8 string library
+strings           |**[strpool.h](https://github.com/mattiasgustavsson/libs)**             | **public domain**    |C/C++|**1**| string interning
+strings           |  [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/)                 | MIT                  |C/C++|  2  | fast utf8 decoder (need a header file)
+strings           |**[gb_string.h](https://github.com/gingerBill/gb)**                    | **public domain**    |C/C++|**1**| dynamic strings
+tests             |  [utest](https://github.com/evolutional/utest)                        | MIT                  |C/C++|**1**| unit testing
+tests             |  [catch](https://github.com/philsquared/Catch)                        | Boost                | C++ |**1**| unit testing
+tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)                  | BSD                  |C/C++|**1**| unit testing
+tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)               | **WTFPLv2**          | C++ |  2  | flexible assertions
+tests             |  [minctest](https://github.com/codeplea/minctest)                     | zlib                 |  C  |**1**| unit testing
+user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  | C++*|  9  | an immediate-mode GUI formerly named "ImGui"; [3rd-party C wrapper](https://github.com/Extrawurst/cimgui) 
+_misc_            |  [MakeID.h](http://www.humus.name/3D/MakeID.h)                        | **public domain**    | C++ |**1**| allocate/deallocate small integer IDs efficiently
+_misc_            |  [loguru](https://github.com/emilk/loguru)                            | **public domain**    | C++ |**1**| flexible logging
+_misc_            |  [tinyformat](https://github.com/c42f/tinyformat)                     | Boost                | C++ |**1**| typesafe printf
+_misc_            |  [dbgtools](https://github.com/wc-duck/dbgtools)                      | zlib                 |C/C++|  2  | cross-platform debug util libraries
+_misc_            |  [stmr](https://github.com/wooorm/stmr.c)                             | MIT                  |  C  |  2  | extract English word stems
+_misc_            |  [levenshtein](https://github.com/wooorm/levenshtein.c)               | MIT                  |  C  |  2  | compute edit distance between two strings
+                                                                                                                       
+There are also these XML libraries, but if you're using XML, shame on you:                                             
+                                                                                                                       
+- parsing: [tinyxml2](https://github.com/leethomason/tinyxml2): XML                                                    
+- parsing: [pugixml](http://pugixml.org/): XML (MIT license)
 
 Also you might be interested in other related, but different lists:
 
 - [clib](https://github.com/clibs/clib/wiki/Packages): list of (mostly) small single C functions (licenses not listed)
+
+## New libraries and corrections
+
+Submissions of new libraries: I accept submissions (as issues or as pull requests). Please
+note that every file that must be included in a user's project counts; a header and a source
+file is 2 files, but a header file, source file, and LICENSE (if the license isn't in the
+source file) is 3 files, and won't be accepted, because it's not 2 files. But actually
+'LICENSE' is a problem for just dropping the library in a source tree anyway, since it's
+not scoped to just the library, so library authors are encouraged to include the license in the
+source file and not require a separate LICENSE.
+
+Corrections: if information for a library above is wrong, please send a correction as an
+issue, pull request, or email. Note that if the list indicates a library works from both
+C/C++, but it doesn't, this could be an error in the list or it could be a bug in the
+library. If you find a library doesn't work in 32-bit or 64-bit, the library should be
+removed from this list, unless it's a bug in the library.
 
 ## *List FAQ*
 

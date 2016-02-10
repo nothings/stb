@@ -1,4 +1,4 @@
-// stb_c_lexer.h - v0.06 - public domain Sean Barrett 2013
+// stb_c_lexer.h - v0.07 - public domain Sean Barrett 2013
 // lexer for making little C-like languages with recursive-descent parsers
 //
 // This file provides both the interface and the implementation.
@@ -10,6 +10,7 @@
 // suffixes on integer constants are not handled (you can override this).
 //
 // History:
+//     0.07 fix mishandling of hexadecimal constants parsed by strtol
 //     0.06 fix missing next character after ending quote mark (Andreas Fredriksson)
 //     0.05 refixed get_location because github version had lost the fix
 //     0.04 fix octal parsing bug
@@ -634,7 +635,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
                if (p[1] == 'x' || p[1] == 'X') {
                   char *q = p+2;
                   #ifdef STB__CLEX_use_stdlib
-                  lexer->int_number = strtol((char *) p, (char **) q, 16);
+                  lexer->int_number = strtol((char *) p, (char **) &q, 16);
                   #else
                   stb__clex_int n=0;
                   while (q != lexer->eof) {
