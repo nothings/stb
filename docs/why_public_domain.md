@@ -95,8 +95,8 @@ public domain declarations aren't necessary recognized
 in the USA and some other locations. For that reason,
 I recommend a declaration along these lines:
 
-// This software is in the public domain. Where that dedication is not
-// recognized, you are granted a perpetual, irrevocable license to copy
+// This software is dual-licensed to the public domain and under the following
+// license. You are granted a perpetual, irrevocable license to copy
 // and modify this file as you see fit.
 
 I typically place this declaration at the end of the initial

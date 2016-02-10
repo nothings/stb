@@ -1,8 +1,8 @@
 // stb_leakcheck.h - v0.2 - quick & dirty malloc leak-checking - public domain
 // LICENSE
 //
-//   This software is in the public domain. Where that dedication is not
-//   recognized, you are granted a perpetual, irrevocable license to copy,
+//   This software is dual-licensed to the public domain and under the following
+//   license. You are granted a perpetual, irrevocable license to copy,
 //   distribute, and modify this file as you see fit.
 
 #ifdef STB_LEAKCHECK_IMPLEMENTATION
