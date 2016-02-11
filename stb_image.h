@@ -4603,6 +4603,11 @@ typedef struct
 {
    int bpp, offset, hsz;
    unsigned int mr,mg,mb,ma, all_a;
+   // added by snagar.dev - missing initialization. Fix the channel value for 24bit BMP files
+   void init()
+   {
+     mr = mg = mb = ma = all_a = 0;
+   }
 } stbi__bmp_data;
 
 static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
@@ -4699,6 +4704,7 @@ static stbi_uc *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int 
    int flip_vertically, pad, target;
    stbi__bmp_data info;
 
+   info.init(); // added by saar
    info.all_a = 255;   
    if (stbi__bmp_parse_header(s, &info) == NULL)
       return NULL; // error code already set
