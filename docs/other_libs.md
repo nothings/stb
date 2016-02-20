@@ -62,6 +62,7 @@ geometry math     |  [par_shapes](http://github.prideout.net/shapes/)           
 geometry math     |  [Tomas Akenine-Moller snippets](http://tinyurl.com/ht79ndj)          | **public domain**    |C/C++|  2  | various 3D intersection calculations, not lib-ified
 geometry math     |  [Clipper](http://www.angusj.com/delphi/clipper.php)                  | Boost                | C++ |  2  | line & polygon clipping & offsetting
 geometry math     |  [PolyPartition](https://github.com/ivanfratric/polypartition)        | MIT                  | C++ |  2  | polygon triangulation, partitioning
+geometry math     |  [Voxelizer](https://github.com/karimnaaji/voxelizer)                 | MIT                  |C/C++|**1**| convert triangle mesh to voxel triangle mesh
 graphics (2d)     |  [blendish](https://bitbucket.org/duangle/oui-blendish/src)           | MIT                  |C/C++|**1**| blender-style widget rendering
 graphics (2d)     |  [tigr](https://bitbucket.org/rmitton/tigr/src)                       | **public domain**    |C/C++|  2  | quick-n-dirty window text/graphics for Windows
 graphics (2d)     |  [noc_turtle](https://github.com/guillaumechereau/noc)                | MIT                  |C/C++|  2  | procedural graphics generator
