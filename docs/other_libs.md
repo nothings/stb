@@ -49,6 +49,8 @@ data structures   |  [minilibs](https://github.com/ccxvii/minilibs)             
 files & filenames |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |C/C++|**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings
 files & filenames |  [whereami](https://github.com/gpakosz/whereami)                      |**WTFPLv2**           |C/C++|  2  | get path/filename of executable or module
 files & filenames |  [noc_file_dialog.h](https://github.com/guillaumechereau/noc)         | MIT                  |C/C++|  1  | file open/save dialogs (Linux/OSX/Windows)
+files & filenames |  [dirent](https://github.com/tronkko/dirent)                          | MIT                  |C/C++|**1**| dirent for windows: retrieve file & dir info
+files & filenames |  [TinyDir](https://github.com/cxong/tinydir)                          | BSD                  |  C  |**1**| cross-platform directory reader
 geometry file     |  [tk_objfile](https://github.com/joeld42/tk_objfile)                  | MIT                  |C/C++|**1**| OBJ file loader
 geometry file     |  [tinyply](https://github.com/ddiakopoulos/tinyply)                   | **public domain**    | C++ |  2  | PLY mesh file loader
 geometry file     |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | BSD                  | C++ |**1**| wavefront OBJ file loader
