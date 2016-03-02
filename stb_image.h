@@ -3442,9 +3442,12 @@ static int stbi__jpeg_info_raw(stbi__jpeg *j, int *x, int *y, int *comp)
 
 static int stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp)
 {
-   stbi__jpeg j;
-   j.s = s;
-   return stbi__jpeg_info_raw(&j, x, y, comp);
+   int result;
+   stbi__jpeg* j = (stbi__jpeg*) (stbi__malloc(sizeof(stbi__jpeg)));
+   j->s = s;
+   result = stbi__jpeg_info_raw(j, x, y, comp);
+   STBI_FREE(j);
+   return result;
 }
 #endif
 
