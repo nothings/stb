@@ -84,6 +84,7 @@ images            |  [easyexif](https://github.com/mayanklahiri/easyexif)       
 math              |  [mm_vec.h](https://github.com/vurtun/mmx)                            | BSD                  |C/C++|**1**| SIMD vector math
 math              |  [ShaderFastLibs](https://github.com/michaldrobot/ShaderFastLibs)     | MIT                  | C++ |**1**| (also HLSL) approximate transcendental functions optimized for shaders (esp. GCN)
 math              |  [TinyExpr](https://github.com/codeplea/tinyexpr)                     | zlib                 |  C  |  2  | evaluation of math expressions from strings
+math              |  [linalg.h][(https://github.com/sgorsten/linalg)                      | **unlicense**        | C++ |**1**| vector/matrix/quaternion math
 multithreading    |  [mm_sched.h](https://github.com/vurtun/mmx)                          | zlib                 |C/C++|**1**| cross-platform multithreaded task scheduler
 network           |**[zed_net](https://github.com/ZedZull/zed_net)**                      | **public domain**    |C/C++|**1**| cross-platform socket wrapper
 network           |  [mm_web.h](https://github.com/vurtun/mmx)                            | BSD                  |C/C++|**1**| lightweight webserver, fork of webby
