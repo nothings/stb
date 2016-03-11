@@ -3732,7 +3732,7 @@ static int stbi__compute_huffman_codes(stbi__zbuf *a)
    return 1;
 }
 
-static int stbi__parse_uncomperssed_block(stbi__zbuf *a)
+static int stbi__parse_uncompressed_block(stbi__zbuf *a)
 {
    stbi_uc header[4];
    int len,nlen,k;
@@ -3798,7 +3798,7 @@ static int stbi__parse_zlib(stbi__zbuf *a, int parse_header)
       final = stbi__zreceive(a,1);
       type = stbi__zreceive(a,2);
       if (type == 0) {
-         if (!stbi__parse_uncomperssed_block(a)) return 0;
+         if (!stbi__parse_uncompressed_block(a)) return 0;
       } else if (type == 3) {
          return 0;
       } else {
