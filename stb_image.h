@@ -1506,6 +1506,7 @@ typedef struct
    int            succ_high;
    int            succ_low;
    int            eob_run;
+   int            rgb;
 
    int scan_n, order[4];
    int restart_interval, todo;
@@ -2717,11 +2718,17 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
 
    if (Lf != 8+3*s->img_n) return stbi__err("bad SOF len","Corrupt JPEG");
 
+   z->rgb = 0;
    for (i=0; i < s->img_n; ++i) {
+      static unsigned char rgb[3] = { 'R', 'G', 'B' };
       z->img_comp[i].id = stbi__get8(s);
       if (z->img_comp[i].id != i+1)   // JFIF requires
-         if (z->img_comp[i].id != i)  // some version of jpegtran outputs non-JFIF-compliant files!
-            return stbi__err("bad component ID","Corrupt JPEG");
+         if (z->img_comp[i].id != i) {  // some version of jpegtran outputs non-JFIF-compliant files!
+            // somethings output this (see http://fileformats.archiveteam.org/wiki/JPEG#Color_format)
+            if (z->img_comp[i].id != rgb[i])
+               return stbi__err("bad component ID","Corrupt JPEG");
+            ++z->rgb;
+         }
       q = stbi__get8(s);
       z->img_comp[i].h = (q >> 4);  if (!z->img_comp[i].h || z->img_comp[i].h > 4) return stbi__err("bad H","Corrupt JPEG");
       z->img_comp[i].v = q & 15;    if (!z->img_comp[i].v || z->img_comp[i].v > 4) return stbi__err("bad V","Corrupt JPEG");
@@ -3383,7 +3390,17 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
          if (n >= 3) {
             stbi_uc *y = coutput[0];
             if (z->s->img_n == 3) {
-               z->YCbCr_to_RGB_kernel(out, y, coutput[1], coutput[2], z->s->img_x, n);
+               if (z->rgb == 3) {
+                  for (i=0; i < z->s->img_x; ++i) {
+                     out[0] = y[i];
+                     out[1] = coutput[1][i];
+                     out[2] = coutput[2][i];
+                     out[3] = 255;
+                     out += n;
+                  }
+               } else {
+                  z->YCbCr_to_RGB_kernel(out, y, coutput[1], coutput[2], z->s->img_x, n);
+               }
             } else
                for (i=0; i < z->s->img_x; ++i) {
                   out[0] = out[1] = out[2] = y[i];

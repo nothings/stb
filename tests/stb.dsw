@@ -123,6 +123,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "unicode"=..\tools\unicode\unicode.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "vorbseek"=.\vorbseek\vorbseek.dsp - Package Owner=<4>
 
 Package=<5>
