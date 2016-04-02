@@ -201,10 +201,11 @@
     Janez Zemva             John Bartholomew   Michal Cichon      svdijk@github
     Jonathan Blow           Ken Hamada         Tero Hanninen      Baldur Karlsson
     Laurent Gomila          Cort Stratton      Sergio Gonzalez    romigrou@github
-    Aruelien Pocheville     Thibault Reuille   Cass Everitt
+    Aruelien Pocheville     Thibault Reuille   Cass Everitt       
     Ryamond Barbiero        Paul Du Bois       Engin Manap
+    Michaelangel007@github  Oriol Ferrer Mesia
     Blazej Dariusz Roszkowski
-    Michaelangel007@github
+    Oriol Ferrer Mesia
 
 
 LICENSE
@@ -5449,6 +5450,21 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
                for (i = 0; i < pixelCount; i++, p += 4)
                   *p = stbi__get8(s);
             }
+         }
+      }
+   }
+
+   if (channelCount >= 3) {
+      for (i=0; i < w*h; ++i) {
+         unsigned char *pixel = out + 4*i;
+         if (pixel[3] != 0 && pixel[3] != 255) {
+            // remove weird white matte from PSD
+            float a = pixel[3] / 255.0f;
+            float ra = 1.0f / a;
+            float inv_a = 255.0f * (1 - ra);
+            pixel[0] = (unsigned char) (pixel[0]*ra + inv_a);
+            pixel[1] = (unsigned char) (pixel[1]*ra + inv_a);
+            pixel[2] = (unsigned char) (pixel[2]*ra + inv_a);
          }
       }
    }
