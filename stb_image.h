@@ -1,4 +1,4 @@
-/* stb_image - v2.10 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.11 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -146,6 +146,10 @@
 
 
    Latest revision history:
+      2.11  (2016-04-02) 16-bit PNGS; enable SSE2 in non-gcc x64
+                         RGB-format JPEG; remove white matting in PSD;
+                         allocate large structures on the stack; 
+                         correct channel count for PNG & BMP
       2.10  (2016-01-22) avoid warning introduced in 2.09
       2.09  (2016-01-16) 16-bit TGA; comments in PNM files; STBI_REALLOC_SIZED
       2.08  (2015-09-13) fix to 2.07 cleanup, reading RGB PSD as RGBA
@@ -167,10 +171,6 @@
                          STBI_MALLOC,STBI_REALLOC,STBI_FREE
                          STBI_NO_*, STBI_ONLY_*
                          GIF bugfix
-      1.48  (2014-12-14) fix incorrectly-named assert()
-      1.47  (2014-12-14) 1/2/4-bit PNG support (both grayscale and paletted)
-                         optimize PNG
-                         fix bug in interlaced PNG with user-specified channel count
 
    See end of file for full revision history.
 
@@ -201,11 +201,10 @@
     Janez Zemva             John Bartholomew   Michal Cichon      svdijk@github
     Jonathan Blow           Ken Hamada         Tero Hanninen      Baldur Karlsson
     Laurent Gomila          Cort Stratton      Sergio Gonzalez    romigrou@github
-    Aruelien Pocheville     Thibault Reuille   Cass Everitt       
-    Ryamond Barbiero        Paul Du Bois       Engin Manap
-    Michaelangel007@github  Oriol Ferrer Mesia
+    Aruelien Pocheville     Thibault Reuille   Cass Everitt       Matthew Gregan
+    Ryamond Barbiero        Paul Du Bois       Engin Manap        snagar@github
+    Michaelangel007@github  Oriol Ferrer Mesia socks-the-fox
     Blazej Dariusz Roszkowski
-    Oriol Ferrer Mesia
 
 
 LICENSE
@@ -6593,6 +6592,12 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.11  (2016-04-02) allocate large structures on the stack
+                         remove white matting for transparent PSD
+                         fix reported channel count for PNG & BMP
+                         re-enable SSE2 in non-gcc 64-bit
+                         support RGB-formatted JPEG
+                         read 16-bit PNGs (only as 8-bit)
       2.10  (2016-01-22) avoid warning introduced in 2.09 by STBI_REALLOC_SIZED
       2.09  (2016-01-16) allow comments in PNM files
                          16-bit-per-pixel TGA (not bit-per-component)

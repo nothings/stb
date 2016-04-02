@@ -1,4 +1,4 @@
-/* stb_image_resize - v0.90 - public domain image resizing
+/* stb_image_resize - v0.91 - public domain image resizing
    by Jorge L Rodriguez (@VinoBS) - 2014
    http://github.com/nothings/stb
 
@@ -156,6 +156,7 @@
       Sean Barrett: API design, optimizations
          
    REVISIONS
+      0.91 (2016-04-02) fix warnings; fix handling of subpixel regions
       0.90 (2014-09-17) first released version
 
    LICENSE

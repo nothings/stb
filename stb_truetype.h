@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.09 - public domain
+// stb_truetype.h - v1.10 - public domain
 // authored from 2009-2015 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -20,6 +20,10 @@
 //
 //   Mikko Mononen: compound shape support, more cmap formats
 //   Tor Andersson: kerning, subpixel rendering
+//
+//   Misc other:
+//       Ryan Gordon
+//       Simon Glass
 //
 //   Bug/warning reports/fixes:
 //       "Zer" on mollyrocket (with fix)
@@ -45,11 +49,9 @@
 //       Thomas Fields
 //       Derek Vinyard
 //
-//   Misc other:
-//       Ryan Gordon
-//
 // VERSION HISTORY
 //
+//   1.10 (2016-04-02) user-defined fabs(); rare memory leak; remove duplicate typedef
 //   1.09 (2016-01-16) warning fix; avoid crash on outofmem; use allocation userdata properly
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
@@ -3213,6 +3215,9 @@ STBTT_DEF int stbtt_FindMatchingFont(const unsigned char *font_collection, const
 
 // FULL VERSION HISTORY
 //
+//   1.10 (2016-04-02) allow user-defined fabs() replacement
+//                     fix memory leak if fontsize=0.0
+//                     fix warning from duplicate typedef
 //   1.09 (2016-01-16) warning fix; avoid crash on outofmem; use alloc userdata for PackFontRanges
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;

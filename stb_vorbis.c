@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.07 - public domain
+// Ogg Vorbis audio decoder - v1.08 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
@@ -31,11 +31,13 @@
 //    Terje Mathisen     Niklas Frykholm     Andy Hill
 //    Casey Muratori     John Bolton         Gargaj
 //    Laurent Gomila     Marc LeBlanc        Ronny Chevalier
-//    Bernhard Wodo      Evan Balster        "alxprd"@github
+//    Bernhard Wodo      Evan Balster        alxprd@github
 //    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
-//    Phillip Bennefall  Rohit
+//    Phillip Bennefall  Rohit               Thiago Goulart
+//    manxorist@github   saga musix
 //
 // Partial history:
+//    1.08    - 2016/04/02 - warnings; setup memory leaks; truncation of last frame
 //    1.07    - 2015/01/16 - fixes for crashes on invalid files; warning fixes; const
 //    1.06    - 2015/08/31 - full, correct support for seeking API (Dougall Johnson)
 //                           some crash fixes when out of memory or with corrupt files
@@ -5340,6 +5342,8 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
 #endif // STB_VORBIS_NO_PULLDATA_API
 
 /* Version history
+    1.08    - 2016/04/02 - fixed multiple warnings; fix setup memory leaks;
+                           avoid discarding last frame of audio data
     1.07    - 2015/01/16 - fixed some warnings, fix mingw, const-correct API
                            some more crash fixes when out of memory or with corrupt files 
     1.06    - 2015/08/31 - full, correct support for seeking API (Dougall Johnson)
