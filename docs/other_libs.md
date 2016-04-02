@@ -38,6 +38,7 @@ category          | library                                                     
 AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 | C++ |  2  | pathfinding with A*
 argv              |  [parg](https://github.com/jibsen/parg)                               | **public domain**    |  C  |  1  | argv parsing
 audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |C/C++|**1**| IMA-ADPCM audio decoder
+audio             |**[dr_flac](https://github.com/mackron/dr_libs)**                      |  **public domain**   |C/C++|**1**| FLAC audio decoder
 compression       |**[miniz.c](https://github.com/richgel999/miniz)**                     |**public&nbsp;domain**|C/C++|**1**| compression,decompression, zip file, png writing
 compression       |  [lz4](https://github.com/Cyan4973/lz4)                               | BSD                  |C/C++|  2  | fast but larger LZ compression
 compression       |  [fastlz](https://code.google.com/archive/p/fastlz/source/default/source) | MIT                  |C/C++|  2  | fast but larger LZ compression
