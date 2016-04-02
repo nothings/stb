@@ -68,7 +68,7 @@ No, they are just the initials for my name, Sean T. Barrett.
 This was not chosen out of egomania, but as a moderately sane
 way of namespacing the filenames and source function names.
 
-#### Will you add more image types to stb_image.c?
+#### Will you add more image types to stb_image.h?
 
 If people submit them, I generally add them, but the goal of stb_image
 is less for applications like image viewer apps (which need to support

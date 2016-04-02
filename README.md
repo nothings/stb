@@ -9,7 +9,7 @@ library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **stb_vorbis.c** | 1.08 | audio | 5395 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **stb_image.h** | 2.11 | graphics | 6753 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**stb_truetype.h** | 1.10 | graphics | 3262 | parse, decode, and rasterize characters from truetype fonts
+**stb_truetype.h** | 1.11 | graphics | 3267 | parse, decode, and rasterize characters from truetype fonts
 **stb_image_write.h** | 1.02 | graphics | 1048 | image writing to disk: PNG, TGA, BMP
 **stb_image_resize.h** | 0.91 | graphics | 2578 | resize images larger/smaller with good quality
 **stb_rect_pack.h** | 0.08 | graphics | 572 | simple 2D rectangle packer with decent quality
@@ -27,7 +27,7 @@ library    | lastest version | category | LoC | description
 **stb_leakcheck.h** | 0.2 | misc | 124 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 18  
-Total lines of C code: 46805
+Total lines of C code: 46810
 
 
 FAQ
@@ -99,7 +99,7 @@ No, they are just the initials for my name, Sean T. Barrett.
 This was not chosen out of egomania, but as a moderately sane
 way of namespacing the filenames and source function names.
 
-#### Will you add more image types to stb_image.c?
+#### Will you add more image types to stb_image.h?
 
 If people submit them, I generally add them, but the goal of stb_image
 is less for applications like image viewer apps (which need to support
