@@ -36,6 +36,7 @@ as C/C++, as this is not an obstacle to most users.)
 category          | library                                                               | license              | API |files| description
 ----------------- | --------------------------------------------------------------------- |:--------------------:|:---:|:---:| -----------
 AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 | C++ |  2  | pathfinding with A*
+argv              |  [parg](https://github.com/jibsen/parg)                               | **public domain**    |  C  |  1  | argv parsing
 audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |C/C++|**1**| IMA-ADPCM audio decoder
 compression       |**[miniz.c](https://github.com/richgel999/miniz)**                     |**public&nbsp;domain**|C/C++|**1**| compression,decompression, zip file, png writing
 compression       |  [lz4](https://github.com/Cyan4973/lz4)                               | BSD                  |C/C++|  2  | fast but larger LZ compression
@@ -117,6 +118,8 @@ tests             |  [catch](https://github.com/philsquared/Catch)              
 tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)                  | BSD                  |C/C++|**1**| unit testing
 tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)               | **WTFPLv2**          | C++ |  2  | flexible assertions
 tests             |  [minctest](https://github.com/codeplea/minctest)                     | zlib                 |  C  |**1**| unit testing
+tests             |  [greatest](https://github.com/silentbicycle/greatest)                | iSC                  |  C  |**1**| unit testing
+tests             |  [µnit](https://github.com/nemequ/munit)                              | MIT                  |  C  |**1**| unit testing
 user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  | C++*|  9  | an immediate-mode GUI formerly named "ImGui"; [3rd-party C wrapper](https://github.com/Extrawurst/cimgui) 
 _misc_            |  [MakeID.h](http://www.humus.name/3D/MakeID.h)                        | **public domain**    | C++ |**1**| allocate/deallocate small integer IDs efficiently
 _misc_            |  [loguru](https://github.com/emilk/loguru)                            | **public domain**    | C++ |**1**| flexible logging
