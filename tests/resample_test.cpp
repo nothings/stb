@@ -514,14 +514,14 @@ void test_subpixel_1()
 	stbir_resize_subpixel(image, 8, 8, 0, output_left, 8, 16, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, 2, 2, 0, 0);
 	stbir_resize_subpixel(image, 8, 8, 0, output_right, 8, 16, 0, STBIR_TYPE_UINT8, 1, STBIR_ALPHA_CHANNEL_NONE, 0, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_SRGB, &g_context, 2, 2, 8, 0);
 
-	for (int x = 0; x < 8; x++)
+	{for (int x = 0; x < 8; x++)
 	{
 		for (int y = 0; y < 16; y++)
 		{
 			STBIR_ASSERT(output_data[y * 16 + x] == output_left[y * 8 + x]);
 			STBIR_ASSERT(output_data[y * 16 + x + 8] == output_right[y * 8 + x]);
 		}
-	}
+	}}
 }
 
 // test that replicating an image and using a subtile of it produces same results as wraparound
@@ -593,11 +593,11 @@ void test_subpixel_3()
 
 	stbir_resize_subpixel(image, 8, 8, 0, output_data_1, 32, 32, 0, STBIR_TYPE_UINT8, 1, 0, STBIR_ALPHA_CHANNEL_NONE, STBIR_EDGE_CLAMP, STBIR_EDGE_CLAMP, STBIR_FILTER_CATMULLROM, STBIR_FILTER_CATMULLROM, STBIR_COLORSPACE_LINEAR, NULL, 4, 4, 0, 0);
 
-	for (int x = 0; x < 32; x++)
+	{for (int x = 0; x < 32; x++)
 	{
 		for (int y = 0; y < 32; y++)
 			STBIR_ASSERT(output_data_1[y * 32 + x] == output_data_2[y * 32 + x]);
-	}
+	}}
 }
 
 // test that 1:1 resample using s,t=0,0,1,1 with bilinear produces original image
@@ -965,19 +965,19 @@ void test_suite(int argc, char **argv)
 
 	int res = 10;
 	// Downscaling
-	for (int i = 0; i <= res; i++)
+	{for (int i = 0; i <= res; i++)
 	{
 		float t = (float)i/res;
 		float scale = 0.5;
-		float out_scale = 2.0/3;
+		float out_scale = 2.0f/3;
 		float x_shift = (barbara_width*out_scale - barbara_width*scale) * t;
 		float y_shift = (barbara_height*out_scale - barbara_height*scale) * t;
 
 		test_subpixel_command(barbara, scale, scale, out_scale, out_scale, x_shift, y_shift);
-	}
+	}}
 
 	// Upscaling
-	for (int i = 0; i <= res; i++)
+	{for (int i = 0; i <= res; i++)
 	{
 		float t = (float)i/res;
 		float scale = 2;
@@ -986,40 +986,44 @@ void test_suite(int argc, char **argv)
 		float y_shift = (barbara_height*out_scale - barbara_height*scale) * t;
 
 		test_subpixel_command(barbara, scale, scale, out_scale, out_scale, x_shift, y_shift);
-	}
+	}}
 
 	// Downscaling
-	for (int i = 0; i <= res; i++)
+	{for (int i = 0; i <= res; i++)
 	{
 		float t = (float)i/res / 2;
 		test_subpixel_region(barbara, 0.25f, 0.25f, t, t, t+0.5f, t+0.5f);
-	}
+	}}
 
 	// No scaling
-	for (int i = 0; i <= res; i++)
+	{for (int i = 0; i <= res; i++)
 	{
 		float t = (float)i/res / 2;
 		test_subpixel_region(barbara, 0.5f, 0.5f, t, t, t+0.5f, t+0.5f);
-	}
+	}}
 
 	// Upscaling
-	for (int i = 0; i <= res; i++)
+	{for (int i = 0; i <= res; i++)
 	{
 		float t = (float)i/res / 2;
 		test_subpixel_region(barbara, 1, 1, t, t, t+0.5f, t+0.5f);
-	}
+	}}
 
-	for (i = 0; i < 10; i++)
+	{for (i = 0; i < 10; i++)
 		test_subpixel(barbara, 0.5f, 0.5f, (float)i / 10, 1);
+   }
 
-	for (i = 0; i < 10; i++)
+	{for (i = 0; i < 10; i++)
 		test_subpixel(barbara, 0.5f, 0.5f, 1, (float)i / 10);
+   }
 
-	for (i = 0; i < 10; i++)
+	{for (i = 0; i < 10; i++)
 		test_subpixel(barbara, 2, 2, (float)i / 10, 1);
+   }
 
-	for (i = 0; i < 10; i++)
+	{for (i = 0; i < 10; i++)
 		test_subpixel(barbara, 2, 2, 1, (float)i / 10);
+   }
 
 	// Channels test
 	test_channels(barbara, 0.5f, 0.5f, 1);
@@ -1045,40 +1049,40 @@ void test_suite(int argc, char **argv)
 	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_CATMULLROM  , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-catmullrom.png");
 	resize_image(barbara, 0.5f, 0.5f, STBIR_FILTER_MITCHELL    , STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, "test-output/barbara-downsample-mitchell.png");
 
-	for (i = 10; i < 100; i++)
+	{for (i = 10; i < 100; i++)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
 		resize_image(barbara, (float)i / 100, 1, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
-	}
+	}}
 
-	for (i = 110; i < 500; i += 10)
+	{for (i = 110; i < 500; i += 10)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-%d.jpg", i);
 		resize_image(barbara, (float)i / 100, 1, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
-	}
+	}}
 
-	for (i = 10; i < 100; i++)
+	{for (i = 10; i < 100; i++)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
 		resize_image(barbara, 1, (float)i / 100, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
-	}
+	}}
 
-	for (i = 110; i < 500; i += 10)
+	{for (i = 110; i < 500; i += 10)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-height-%d.jpg", i);
 		resize_image(barbara, 1, (float)i / 100, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
-	}
+	}}
 
-	for (i = 50; i < 200; i += 10)
+	{for (i = 50; i < 200; i += 10)
 	{
 		char outname[200];
 		sprintf(outname, "test-output/barbara-width-height-%d.jpg", i);
 		resize_image(barbara, 100 / (float)i, (float)i / 100, STBIR_FILTER_CATMULLROM, STBIR_EDGE_CLAMP, STBIR_COLORSPACE_SRGB, outname);
-	}
+	}}
 
 	test_format<unsigned short>(barbara, 0.5, 2.0, STBIR_TYPE_UINT16, STBIR_COLORSPACE_SRGB);
 	test_format<unsigned short>(barbara, 0.5, 2.0, STBIR_TYPE_UINT16, STBIR_COLORSPACE_LINEAR);
