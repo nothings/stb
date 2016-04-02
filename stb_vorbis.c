@@ -552,6 +552,9 @@ enum STBVorbisError
 #include <math.h>
 #if !(defined(__APPLE__) || defined(MACOSX) || defined(macintosh) || defined(Macintosh))
 #include <malloc.h>
+#if defined(__linux__) || defined(__linux)
+#include <alloca.h>
+#endif
 #endif
 #else // STB_VORBIS_NO_CRT
 #define NULL 0
