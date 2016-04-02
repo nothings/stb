@@ -4724,6 +4724,7 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
    stbi__get16le(s); // discard reserved
    info->offset = stbi__get32le(s);
    info->hsz = hsz = stbi__get32le(s);
+   info->mr = info->mg = info->mb = info->ma = 0;
    
    if (hsz != 12 && hsz != 40 && hsz != 56 && hsz != 108 && hsz != 124) return stbi__errpuc("unknown BMP", "BMP type not supported: unknown");
    if (hsz == 12) {
@@ -4752,7 +4753,6 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
             stbi__get32le(s);
          }
          if (info->bpp == 16 || info->bpp == 32) {
-            info->mr = info->mg = info->mb = 0;
             if (compress == 0) {
                if (info->bpp == 32) {
                   info->mr = 0xffu << 16;
