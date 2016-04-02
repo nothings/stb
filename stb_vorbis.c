@@ -9,9 +9,9 @@
 //
 // LICENSE
 //
-//   This software is in the public domain. Where that dedication is not
-//   recognized, you are granted a perpetual, irrevocable license to copy,
-//   distribute, and modify this file as you see fit.
+//   This software is dual-licensed to the public domain and under the following
+//   license: you are granted a perpetual, irrevocable license to copy, modify,
+//   publish, and distribute this file as you see fit.
 //
 // No warranty for any purpose is expressed or implied by the author (nor
 // by RAD Game Tools). Report bugs and send enhancements to the author.
