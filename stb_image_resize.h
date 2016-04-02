@@ -2229,8 +2229,8 @@ static void stbir__calculate_transform(stbir__info *info, float s0, float t0, fl
         info->horizontal_scale = ((float)info->output_w / info->input_w) / (s1 - s0);
         info->vertical_scale = ((float)info->output_h / info->input_h) / (t1 - t0);
 
-        info->horizontal_shift = s0 * info->input_w / (s1 - s0);
-        info->vertical_shift = t0 * info->input_h / (t1 - t0);
+        info->horizontal_shift = s0 * info->output_w / (s1 - s0);
+        info->vertical_shift = t0 * info->output_h / (t1 - t0);
     }
 }
 
