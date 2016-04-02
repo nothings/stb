@@ -9,7 +9,7 @@
 - stb_image: fix reported channel count in PNG when req_comp is non-zero
 - stb_image: re-enable SSE2 in x64 (except in gcc)
 - stb_image: fix harmless typo in name (Matthew Gregan)
-- stb_image: support images coded as RGB
+- stb_image: support JPEG images coded as RGB
 - stb_image: bmp could return wrong channel count (snagar@github)
 - stb_image: read 16-bit PNGs as 8-bit (socks-the-fox)
 - stb_image_resize: fix handling of subpixel regions
