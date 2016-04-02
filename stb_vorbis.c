@@ -3804,7 +3804,6 @@ static int start_decoder(vorb *f)
                   }
                }
             }
-            setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values);
             c->lookup_type = 2;
          }
          else
@@ -3820,11 +3819,11 @@ static int start_decoder(vorb *f)
                if (c->sequence_p)
                   last = val;
             }
-            setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values);
          }
 #ifndef STB_VORBIS_DIVIDES_IN_CODEBOOK
         skip:;
 #endif
+         setup_temp_free(f, mults, sizeof(mults[0])*c->lookup_values);
 
          CHECK(f);
       }
