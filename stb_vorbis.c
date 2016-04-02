@@ -552,7 +552,7 @@ enum STBVorbisError
 #include <math.h>
 #if !(defined(__APPLE__) || defined(MACOSX) || defined(macintosh) || defined(Macintosh))
 #include <malloc.h>
-#if defined(__linux__) || defined(__linux)
+#if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__)
 #include <alloca.h>
 #endif
 #endif
