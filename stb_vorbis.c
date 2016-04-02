@@ -552,6 +552,9 @@ enum STBVorbisError
 #include <math.h>
 #if !(defined(__APPLE__) || defined(MACOSX) || defined(macintosh) || defined(Macintosh))
 #include <malloc.h>
+#if defined(__linux__) || defined(__linux)
+#include <alloca.h>
+#endif
 #endif
 #else // STB_VORBIS_NO_CRT
 #define NULL 0
@@ -2246,6 +2249,11 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
    }
   done:
    CHECK(f);
+   #ifndef STB_VORBIS_DIVIDES_IN_RESIDUE
+   temp_free(f,part_classdata);
+   #else
+   temp_free(f,classifications);
+   #endif
    temp_alloc_restore(f,temp_alloc_point);
 }
 
@@ -2891,6 +2899,7 @@ static void inverse_mdct(float *buffer, int n, vorb *f, int blocktype)
       }
    }
 
+   temp_free(f,buf2);
    temp_alloc_restore(f,save_point);
 }
 
