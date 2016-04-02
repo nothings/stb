@@ -3425,10 +3425,13 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
 
 static unsigned char *stbi__jpeg_load(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
-   stbi__jpeg j;
-   j.s = s;
-   stbi__setup_jpeg(&j);
-   return load_jpeg_image(&j, x,y,comp,req_comp);
+   unsigned char* result;
+   stbi__jpeg* j = (stbi__jpeg*) stbi__malloc(sizeof(stbi__jpeg));
+   j->s = s;
+   stbi__setup_jpeg(j);
+   result = load_jpeg_image(j, x,y,comp,req_comp);
+   STBI_FREE(j);
+   return result;
 }
 
 static int stbi__jpeg_test(stbi__context *s)
@@ -3456,9 +3459,12 @@ static int stbi__jpeg_info_raw(stbi__jpeg *j, int *x, int *y, int *comp)
 
 static int stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp)
 {
-   stbi__jpeg j;
-   j.s = s;
-   return stbi__jpeg_info_raw(&j, x, y, comp);
+   int result;
+   stbi__jpeg* j = (stbi__jpeg*) (stbi__malloc(sizeof(stbi__jpeg)));
+   j->s = s;
+   result = stbi__jpeg_info_raw(j, x, y, comp);
+   STBI_FREE(j);
+   return result;
 }
 #endif
 
@@ -5759,13 +5765,15 @@ static int stbi__gif_header(stbi__context *s, stbi__gif *g, int *comp, int is_in
 
 static int stbi__gif_info_raw(stbi__context *s, int *x, int *y, int *comp)
 {
-   stbi__gif g;
-   if (!stbi__gif_header(s, &g, comp, 1)) {
+   stbi__gif* g = (stbi__gif*) stbi__malloc(sizeof(stbi__gif));
+   if (!stbi__gif_header(s, g, comp, 1)) {
+      STBI_FREE(g);
       stbi__rewind( s );
       return 0;
    }
-   if (x) *x = g.w;
-   if (y) *y = g.h;
+   if (x) *x = g->w;
+   if (y) *y = g->h;
+   STBI_FREE(g);
    return 1;
 }
 
@@ -6018,20 +6026,20 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
 static stbi_uc *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    stbi_uc *u = 0;
-   stbi__gif g;
-   memset(&g, 0, sizeof(g));
+   stbi__gif* g = (stbi__gif*) stbi__malloc(sizeof(stbi__gif));
+   memset(g, 0, sizeof(*g));
 
-   u = stbi__gif_load_next(s, &g, comp, req_comp);
+   u = stbi__gif_load_next(s, g, comp, req_comp);
    if (u == (stbi_uc *) s) u = 0;  // end of animated gif marker
    if (u) {
-      *x = g.w;
-      *y = g.h;
+      *x = g->w;
+      *y = g->h;
       if (req_comp && req_comp != 4)
-         u = stbi__convert_format(u, 4, req_comp, g.w, g.h);
+         u = stbi__convert_format(u, 4, req_comp, g->w, g->h);
    }
-   else if (g.out)
-      STBI_FREE(g.out);
-
+   else if (g->out)
+      STBI_FREE(g->out);
+   STBI_FREE(g);
    return u;
 }
 
