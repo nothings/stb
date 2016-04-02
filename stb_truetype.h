@@ -706,6 +706,18 @@ STBTT_DEF int  stbtt_GetGlyphKernAdvance(const stbtt_fontinfo *info, int glyph1,
 STBTT_DEF int  stbtt_GetGlyphBox(const stbtt_fontinfo *info, int glyph_index, int *x0, int *y0, int *x1, int *y1);
 // as above, but takes one or more glyph indices for greater efficiency
 
+typedef struct stbtt_kerningentry
+{
+   int glyph1; // use stbtt_FindGlyphIndex
+   int glyph2;
+   int advance;
+} stbtt_kerningentry;
+
+STBTT_DEF int  stbtt_GetKerningTableLength(const stbtt_fontinfo *info);
+STBTT_DEF int  stbtt_GetKerningTable(const stbtt_fontinfo *info, stbtt_kerningentry* table, int table_length);
+// Retrieves a complete list of all of the kerning pairs provided by the font
+// stbtt_GetKerningTable never writes more than table_length entries and returns how many entries it did write.
+// The table will be sorted by (a.glyph1 == b.glyph1)?(a.glyph2 < b.glyph2):(a.glyph1 < b.glyph1)
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -1476,6 +1488,48 @@ STBTT_DEF void stbtt_GetGlyphHMetrics(const stbtt_fontinfo *info, int glyph_inde
       if (advanceWidth)     *advanceWidth    = ttSHORT(info->data + info->hmtx + 4*(numOfLongHorMetrics-1));
       if (leftSideBearing)  *leftSideBearing = ttSHORT(info->data + info->hmtx + 4*numOfLongHorMetrics + 2*(glyph_index - numOfLongHorMetrics));
    }
+}
+
+STBTT_DEF int  stbtt_GetKerningTableLength(const stbtt_fontinfo *info)
+{
+   stbtt_uint8 *data = info->data + info->kern;
+
+   // we only look at the first table. it must be 'horizontal' and format 0.
+   if (!info->kern)
+      return 0;
+   if (ttUSHORT(data+2) < 1) // number of tables, need at least 1
+      return 0;
+   if (ttUSHORT(data+8) != 1) // horizontal flag must be set in format
+      return 0;
+
+   return ttUSHORT(data+10);
+}
+
+STBTT_DEF int stbtt_GetKerningTable(const stbtt_fontinfo *info, stbtt_kerningentry* table, int table_length)
+{
+   stbtt_uint8 *data = info->data + info->kern;
+   int k, length;
+
+   // we only look at the first table. it must be 'horizontal' and format 0.
+   if (!info->kern)
+      return 0;
+   if (ttUSHORT(data+2) < 1) // number of tables, need at least 1
+      return 0;
+   if (ttUSHORT(data+8) != 1) // horizontal flag must be set in format
+      return 0;
+
+   length = ttUSHORT(data+10);
+   if (table_length < length)
+      length = table_length;
+
+   for (k = 0; k < length; k++)
+   {
+      table[k].glyph1 = ttUSHORT(data+18+(k*6));
+      table[k].glyph2 = ttUSHORT(data+20+(k*6));
+      table[k].advance = ttSHORT(data+22+(k*6));
+   }
+
+   return length;
 }
 
 STBTT_DEF int  stbtt_GetGlyphKernAdvance(const stbtt_fontinfo *info, int glyph1, int glyph2)
