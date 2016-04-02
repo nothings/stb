@@ -1,4 +1,4 @@
-/* stb_image - v2.11 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.12 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -146,6 +146,7 @@
 
 
    Latest revision history:
+      2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
       2.11  (2016-04-02) 16-bit PNGS; enable SSE2 in non-gcc x64
                          RGB-format JPEG; remove white matting in PSD;
                          allocate large structures on the stack; 
@@ -5453,7 +5454,7 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
       }
    }
 
-   if (channelCount >= 3) {
+   if (channelCount >= 4) {
       for (i=0; i < w*h; ++i) {
          unsigned char *pixel = out + 4*i;
          if (pixel[3] != 0 && pixel[3] != 255) {
@@ -6592,6 +6593,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
       2.11  (2016-04-02) allocate large structures on the stack
                          remove white matting for transparent PSD
                          fix reported channel count for PNG & BMP
