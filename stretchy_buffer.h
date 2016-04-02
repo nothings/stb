@@ -2,7 +2,7 @@
 // a vector<>-like dynamic array for C
 //
 // version history:
-//      1.02 -  compiles as C++, but untested
+//      1.02 -  tweaks to syntax for no good reason
 //      1.01 -  added a "common uses" documentation section
 //      1.0  -  fixed bug in the version I posted prematurely
 //      0.9  -  rewrite to try to avoid strict-aliasing optimization
