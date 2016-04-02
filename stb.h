@@ -11205,7 +11205,7 @@ int  stb_arith_decode_byte(stb_arith *a)
 //                         Threads
 //
 
-#ifndef WIN32
+#ifndef _WIN32
 #ifdef STB_THREADS
 #error "threads not implemented except for Windows"
 #endif
