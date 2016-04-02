@@ -6,7 +6,7 @@
 //   publish, and distribute this file as you see fit.
 
 #ifdef STB_LEAKCHECK_IMPLEMENTATION
-#undef STB_LEAKCHECK_IMPLEMENTATION // don't implenment more than once
+#undef STB_LEAKCHECK_IMPLEMENTATION // don't implement more than once
 
 // if we've already included leakcheck before, undefine the macros
 #ifdef malloc
