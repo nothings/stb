@@ -406,6 +406,11 @@ int main(int arg, char **argv)
    #define STBTT_sqrt(x)      sqrt(x)
    #endif
 
+   #ifndef STBTT_fabs
+   #include <math.h>
+   #define STBTT_fabs(x)      fabs(x)
+   #endif
+
    // #define your own functions "STBTT_malloc" / "STBTT_free" to avoid malloc.h
    #ifndef STBTT_malloc
    #include <stdlib.h>
@@ -1993,7 +1998,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                }
                y_crossing += dy * (x2 - (x1+1));
 
-               STBTT_assert(fabs(area) <= 1.01f);
+               STBTT_assert(STBTT_fabs(area) <= 1.01f);
 
                scanline[x2] += area + sign * (1-((x2-x2)+(x_bottom-x2))/2) * (sy1-y_crossing);
 
@@ -2129,7 +2134,7 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
             int m;
             sum += scanline2[i];
             k = scanline[i] + sum;
-            k = (float) fabs(k)*255 + 0.5f;
+            k = (float) STBTT_fabs(k)*255 + 0.5f;
             m = (int) k;
             if (m > 255) m = 255;
             result->pixels[j*result->stride + i] = (unsigned char) m;
