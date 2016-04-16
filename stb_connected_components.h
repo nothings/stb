@@ -1,4 +1,4 @@
-// stb_connected_components - v0.90 - public domain connected components on grids
+// stb_connected_components - v0.91 - public domain connected components on grids
 //                                                 http://github.com/nothings/stb
 //
 // Finds connected components on 2D grids for testing reachability between
@@ -23,6 +23,19 @@
 // license: you are granted a perpetual, irrevocable license to copy, modify,
 // publish, and distribute this file as you see fit.
 //
+//
+// TODO:
+//    - test C++ compile
+//    - better API documentation
+//    - internals documentation (including algorithm)
+//    - try re-integrating naive algorithm & compare performance
+//    - batching (keep data structure w/ dirty clusters)
+//    - function for setting a grid of squares at once (just use batching)
+//    - shrink data by storing only, say, 2X max exits
+//      (instead of max exits per clump), and repack cluster
+//      if it runs out (possibly by just rebuilding from scratch,
+//      could even use dirty-cluster data structure)
+//      should reduce 1Kx1K from ~66MB to ~8MB
 
 #ifndef INCLUDE_STB_CONNECTED_COMPONENTS_H
 #define INCLUDE_STB_CONNECTED_COMPONENTS_H
@@ -31,6 +44,10 @@
 #include <assert.h>
 
 typedef struct st_stbcc_grid stbcc_grid;
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
@@ -68,6 +85,10 @@ extern int stbcc_query_grid_open(stbcc_grid *g, int x, int y);
 // get a unique id for the connected component this is in; it's not necessarily
 // small, you'll need a hash table or something to remap it (or just use
 extern unsigned int stbcc_get_unique_id(stbcc_grid *g, int x, int y);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // INCLUDE_STB_CONNECTED_COMPONENTS_H
 
@@ -148,7 +169,7 @@ typedef union
 typedef struct
 {
    stbcc__global_clumpid global_label;
-   unsigned char num_adjacent;
+   unsigned short num_adjacent;
    stbcc__relative_clumpid adjacent_clumps[STBCC__MAX_EXITS_PER_CLUMP];
 } stbcc__clump;
 
