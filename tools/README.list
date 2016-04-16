@@ -14,5 +14,6 @@ stb_tilemap_editor.h        | game dev         | embeddable tilemap editor
 stb_herringbone_wang_tile.h | game dev         | herringbone Wang tile map generator
 stb_c_lexer.h               | parsing          | simplify writing parsers for C-like languages
 stb_divide.h                | math             | more useful 32-bit modulus e.g. "euclidean divide"
+stb_connected_components.h  | misc             | incrementally compute reachability on grids
 stb.h                       | misc             | helper functions for C, mostly redundant in C++; basically author's personal stuff
 stb_leakcheck.h             | misc             | quick-and-dirty malloc/free leak-checking
