@@ -41,7 +41,6 @@
 #define INCLUDE_STB_CONNECTED_COMPONENTS_H
 
 #include <stdlib.h>
-#include <assert.h>
 
 typedef struct st_stbcc_grid stbcc_grid;
 
@@ -94,6 +93,9 @@ extern unsigned int stbcc_get_unique_id(stbcc_grid *g, int x, int y);
 
 #ifdef STB_CONNECTED_COMPONENTS_IMPLEMENTATION
 
+#include <assert.h>
+#include <string.h> // memset
+
 #if !defined(STBCC_GRID_COUNT_X_LOG2) || !defined(STBCC_GRID_COUNT_Y_LOG2)
    #error "You must define STBCC_GRID_COUNT_X_LOG2 and STBCC_GRID_COUNT_Y_LOG2 to define the max grid supported."
 #endif
@@ -140,8 +142,21 @@ extern unsigned int stbcc_get_unique_id(stbcc_grid *g, int x, int y);
 typedef unsigned short stbcc__clumpid;
 typedef unsigned char stbcc__verify_max_clumps[STBCC__MAX_CLUMPS_PER_CLUSTER < (1 << (8*sizeof(stbcc__clumpid))) ? 1 : -1];
 
-#define STBCC__MAX_EXITS_PER_CLUMP    (STBCC__CLUSTER_SIZE_X + STBCC__CLUSTER_SIZE_Y)   // 64
+#define STBCC__MAX_EXITS_PER_CLUSTER   (STBCC__CLUSTER_SIZE_X + STBCC__CLUSTER_SIZE_Y)   // 64 for 32x32
+#define STBCC__MAX_EXITS_PER_CLUMP     (STBCC__CLUSTER_SIZE_X + STBCC__CLUSTER_SIZE_Y)   // 64 for 32x32
 // 2^19 * 2^6 => 2^25 exits => 2^26  => 64MB for 1024x1024
+
+// Logic for above on 4x4 grid:
+//
+// Many clumps:      One clump:
+//   + +               +  +
+//  +X.X.             +XX.X+
+//   .X.X+             .XXX
+//  +X.X.              XXX.
+//   .X.X+            +X.XX+
+//    + +              +  +
+//
+// 8 exits either way
 
 typedef unsigned char stbcc__verify_max_exits[STBCC__MAX_EXITS_PER_CLUMP <= 256];
 
@@ -168,15 +183,20 @@ typedef union
 
 typedef struct
 {
-   stbcc__global_clumpid global_label;
-   unsigned short num_adjacent;
-   stbcc__relative_clumpid adjacent_clumps[STBCC__MAX_EXITS_PER_CLUMP];
-} stbcc__clump;
+   stbcc__global_clumpid global_label;        // 4
+   unsigned char num_adjacent;                // 1
+   unsigned char max_adjacent;                // 1
+   unsigned char adjacent_clump_list_index;   // 1
+   unsigned char on_edge;                     // 1
+} stbcc__clump; // 8
 
+#define STBCC__CLUSTER_ADJACENCY_COUNT   (STBCC__MAX_EXITS_PER_CLUSTER*4)
 typedef struct
 {
    unsigned int num_clumps;
-   stbcc__clump clump[STBCC__MAX_CLUMPS_PER_CLUSTER];
+   unsigned char rebuild;
+   stbcc__clump clump[STBCC__MAX_CLUMPS_PER_CLUSTER];       // 8 * 2^9 = 4KB
+   stbcc__relative_clumpid adjacency_storage[STBCC__CLUSTER_ADJACENCY_COUNT]; // 512 bytes
 } stbcc__cluster;
 
 struct st_stbcc_grid
@@ -184,7 +204,7 @@ struct st_stbcc_grid
    int w,h,cw,ch;
    unsigned char map[STBCC__GRID_COUNT_Y][STBCC__MAP_STRIDE]; // 1K x 1K => 1K x 128 => 128KB
    stbcc__clumpid clump_for_node[STBCC__GRID_COUNT_Y][STBCC__GRID_COUNT_X];  // 1K x 1K x 2 = 2MB
-   stbcc__cluster cluster[STBCC__CLUSTER_COUNT_Y][STBCC__CLUSTER_COUNT_X]; //  1K x 1K x 0.5 x 64 x 2 = 64MB
+   stbcc__cluster cluster[STBCC__CLUSTER_COUNT_Y][STBCC__CLUSTER_COUNT_X]; //  1K x 4.5KB = 9MB
 };
 
 int stbcc_query_grid_node_connection(stbcc_grid *g, int x1, int y1, int x2, int y2)
@@ -291,13 +311,15 @@ static void stbcc__build_connected_components_for_clumps(stbcc_grid *g)
          for (k=0; k < (int) cluster->num_clumps; ++k) {
             stbcc__clump *clump = &cluster->clump[k];
             stbcc__unpacked_clumpid m;
+            stbcc__relative_clumpid *adj;
             m.clump_index = k;
             m.cluster_x = i;
             m.cluster_y = j;
+            adj = &cluster->adjacency_storage[clump->adjacent_clump_list_index];
             for (h=0; h < clump->num_adjacent; ++h) {
-               unsigned int clump_index = clump->adjacent_clumps[h].clump_index;
-               unsigned int x = clump->adjacent_clumps[h].cluster_dx + i;
-               unsigned int y = clump->adjacent_clumps[h].cluster_dy + j;
+               unsigned int clump_index = adj[h].clump_index;
+               unsigned int x = adj[h].cluster_dx + i;
+               unsigned int y = adj[h].cluster_dy + j;
                stbcc__clump_union(g, m, x, y, clump_index);
             }
          }
@@ -315,6 +337,106 @@ static void stbcc__build_connected_components_for_clumps(stbcc_grid *g)
             stbcc__clump_find(g, m);
          }
       }
+   }
+}
+
+static void stbcc__build_all_connections_for_cluster(stbcc_grid *g, int cx, int cy)
+{
+   // in this particular case, we are fully non-incremental. that means we
+   // can discover the correct sizes for the arrays, but requires we build
+   // the data into temporary data structures, or just count the sizes, so
+   // for simplicity we do the latter
+   stbcc__cluster *cluster = &g->cluster[cy][cx];
+   unsigned char connected[STBCC__MAX_CLUMPS_PER_CLUSTER/8];
+   unsigned char num_adj[STBCC__MAX_CLUMPS_PER_CLUSTER] = { 0 };
+   int x = cx * STBCC__CLUSTER_SIZE_X;
+   int y = cy * STBCC__CLUSTER_SIZE_Y;
+   int step_x, step_y=0, i, j, k, n, m, dx, dy, total;
+
+   g->cluster[cy][cx].rebuild = 0;
+
+   total = 0;
+   for (m=0; m < 4; ++m) {
+      switch (m) {
+         case 0:
+            dx = 1, dy = 0;
+            step_x = 0, step_y = 1;
+            i = STBCC__CLUSTER_SIZE_X-1;
+            j = 0;
+            n = STBCC__CLUSTER_SIZE_Y;
+            break;
+         case 1:
+            dx = -1, dy = 0;
+            i = 0;
+            j = 0;
+            step_x = 0;
+            step_y = 1;  
+            n = STBCC__CLUSTER_SIZE_Y;
+            break;
+         case 2:
+            dy = -1, dx = 0;
+            i = 0;
+            j = 0;
+            step_x = 1;
+            step_y = 0;
+            n = STBCC__CLUSTER_SIZE_X;
+            break;
+         case 3:
+            dy = 1, dx = 0;
+            i = 0;
+            j = STBCC__CLUSTER_SIZE_Y-1;
+            step_x = 1;
+            step_y = 0;
+            n = STBCC__CLUSTER_SIZE_X;
+            break;
+      }
+
+      if (cx+dx < 0 || cx+dx >= g->cw || cy+dy < 0 || cy+dy >= g->ch)
+         continue;
+
+      memset(connected, 0, sizeof(connected));
+      for (k=0; k < n; ++k) {
+         if (STBCC__MAP_OPEN(g, x+i, y+j) && STBCC__MAP_OPEN(g, x+i+dx, y+j+dy)) {
+            stbcc__clumpid c = g->clump_for_node[y+j+dy][x+i+dx];
+            if (0 == (connected[c>>3] & (1 << (c & 7)))) {
+               connected[c>>3] |= 1 << (c & 7);
+               ++num_adj[g->clump_for_node[y+j][x+i]];
+               ++total;
+            }
+         }
+         i += step_x;
+         j += step_y;
+      }
+   }
+
+   // decide how to apportion leftover... would be better if we knew WHICH clumps
+   // were along the edge, but we should compute this at initial time, not above
+   // to minimize recompoutation
+   total = 0;
+   for (i=0; i < (int) cluster->num_clumps; ++i) {
+      int alloc = num_adj[i]*2; // every cluster gets room for 2x current adjacency
+      assert(total < 256); // must fit in byte
+      cluster->clump[i].adjacent_clump_list_index = (unsigned char) total;
+      cluster->clump[i].max_adjacent = alloc;
+      cluster->clump[i].num_adjacent = 0;
+      total += alloc;
+   }
+   assert(total <= STBCC__CLUSTER_ADJACENCY_COUNT);
+
+   stbcc__add_connections_to_adjacent_cluster(g, cx, cy, -1, 0);
+   stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  1, 0);
+   stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  0,-1);
+   stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  0, 1);
+   // make sure all of the above succeeded.
+   assert(g->cluster[cy][cx].rebuild == 0);
+}
+
+static void stbcc__add_connections_to_adjacent_cluster_with_rebuild(stbcc_grid *g, int cx, int cy, int dx, int dy)
+{
+   if (cx >= 0 && cx < g->cw && cy >= 0 && cy < g->ch) {
+      stbcc__add_connections_to_adjacent_cluster(g, cx, cy, dx, dy);
+      if (g->cluster[cy][cx].rebuild)
+         stbcc__build_all_connections_for_cluster(g, cx, cy);
    }
 }
 
@@ -344,16 +466,12 @@ void stbcc_update_grid(stbcc_grid *g, int x, int y, int solid)
       STBCC__MAP_BYTE(g,x,y) &= ~STBCC__MAP_BYTE_MASK(x,y);
 
    stbcc__build_clumps_for_cluster(g, cx, cy);
+   stbcc__build_all_connections_for_cluster(g, cx, cy);
 
-   stbcc__add_connections_to_adjacent_cluster(g, cx, cy, -1, 0);
-   stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  1, 0);
-   stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  0,-1);
-   stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  0, 1);
-
-   stbcc__add_connections_to_adjacent_cluster(g, cx-1, cy,  1, 0);
-   stbcc__add_connections_to_adjacent_cluster(g, cx+1, cy, -1, 0);
-   stbcc__add_connections_to_adjacent_cluster(g, cx, cy-1,  0, 1);
-   stbcc__add_connections_to_adjacent_cluster(g, cx, cy+1,  0,-1);
+   stbcc__add_connections_to_adjacent_cluster_with_rebuild(g, cx-1, cy,  1, 0);
+   stbcc__add_connections_to_adjacent_cluster_with_rebuild(g, cx+1, cy, -1, 0);
+   stbcc__add_connections_to_adjacent_cluster_with_rebuild(g, cx, cy-1,  0, 1);
+   stbcc__add_connections_to_adjacent_cluster_with_rebuild(g, cx, cy+1,  0,-1);
 
    stbcc__build_connected_components_for_clumps(g);
 }
@@ -389,14 +507,9 @@ void stbcc_init_grid(stbcc_grid *g, unsigned char *map, int w, int h)
       for (i=0; i < g->cw; ++i)
          stbcc__build_clumps_for_cluster(g, i, j);
 
-   for (j=0; j < g->ch; ++j) {
-      for (i=0; i < g->cw; ++i) {
-         stbcc__add_connections_to_adjacent_cluster(g, i, j, -1, 0);
-         stbcc__add_connections_to_adjacent_cluster(g, i, j,  1, 0);
-         stbcc__add_connections_to_adjacent_cluster(g, i, j,  0,-1);
-         stbcc__add_connections_to_adjacent_cluster(g, i, j,  0, 1);
-      }
-   }
+   for (j=0; j < g->ch; ++j)
+      for (i=0; i < g->cw; ++i)
+         stbcc__build_all_connections_for_cluster(g, i, j);
 
    stbcc__build_connected_components_for_clumps(g);
 
@@ -408,6 +521,7 @@ void stbcc_init_grid(stbcc_grid *g, unsigned char *map, int w, int h)
 
 static void stbcc__add_clump_connection(stbcc_grid *g, int x1, int y1, int x2, int y2)
 {
+   stbcc__cluster *cluster;
    stbcc__clump *clump;
 
    int cx1 = STBCC__CLUSTER_X_FOR_COORD_X(x1);
@@ -429,14 +543,22 @@ static void stbcc__add_clump_connection(stbcc_grid *g, int x1, int y1, int x2, i
    rc.cluster_dx = x2-x1;
    rc.cluster_dy = y2-y1;
 
-   clump = &g->cluster[cy1][cx1].clump[c1];
-   assert(clump->num_adjacent < STBCC__MAX_EXITS_PER_CLUMP);
-   clump->adjacent_clumps[clump->num_adjacent++] = rc;
+   cluster = &g->cluster[cy1][cx1];
+   clump = &cluster->clump[c1];
+   if (clump->num_adjacent == clump->max_adjacent)
+      g->cluster[cy1][cx1].rebuild = 1;
+   else {
+      stbcc__relative_clumpid *adj = &cluster->adjacency_storage[clump->adjacent_clump_list_index];
+      assert(clump->num_adjacent < STBCC__MAX_EXITS_PER_CLUMP);
+      adj[clump->num_adjacent++] = rc;
+   }
 }
 
 static void stbcc__remove_clump_connection(stbcc_grid *g, int x1, int y1, int x2, int y2)
 {
+   stbcc__cluster *cluster;
    stbcc__clump *clump;
+   stbcc__relative_clumpid *adj;
    int i;
 
    int cx1 = STBCC__CLUSTER_X_FOR_COORD_X(x1);
@@ -458,16 +580,18 @@ static void stbcc__remove_clump_connection(stbcc_grid *g, int x1, int y1, int x2
    rc.cluster_dx = x2-x1;
    rc.cluster_dy = y2-y1;
 
-   clump = &g->cluster[cy1][cx1].clump[c1];
+   cluster = &g->cluster[cy1][cx1];
+   clump = &cluster->clump[c1];
+   adj = &cluster->adjacency_storage[clump->adjacent_clump_list_index];
 
    for (i=0; i < clump->num_adjacent; ++i)
-      if (rc.clump_index == clump->adjacent_clumps[i].clump_index &&
-          rc.cluster_dx  == clump->adjacent_clumps[i].cluster_dx  &&
-          rc.cluster_dy  == clump->adjacent_clumps[i].cluster_dy) 
+      if (rc.clump_index == adj[i].clump_index &&
+          rc.cluster_dx  == adj[i].cluster_dx  &&
+          rc.cluster_dy  == adj[i].cluster_dy) 
          break;
 
    if (i < clump->num_adjacent)
-      clump->adjacent_clumps[i] = clump->adjacent_clumps[--clump->num_adjacent];
+      adj[i] = adj[--clump->num_adjacent];
    else
       assert(0);
 }
@@ -483,6 +607,9 @@ static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, in
       return;
 
    if (cx+dx < 0 || cx+dx >= g->cw || cy+dy < 0 || cy+dy >= g->ch)
+      return;
+
+   if (g->cluster[cy][cx].rebuild)
       return;
 
    assert(abs(dx) + abs(dy) == 1);
@@ -521,6 +648,8 @@ static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, in
          if (0 == (connected[c>>3] & (1 << (c & 7)))) {
             connected[c>>3] |= 1 << (c & 7);
             stbcc__add_clump_connection(g, x+i, y+j, x+i+dx, y+j+dy);
+            if (g->cluster[cy][cx].rebuild)
+               break;
          }
       }
       i += step_x;
@@ -669,6 +798,8 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
          g->clump_for_node[y+j][x+i] = cbi.label[j][i]; // @OPTIMIZE: remove cbi.label entirely
          assert(g->clump_for_node[y+j][x+i] <= STBCC__NULL_CLUMPID);
       }
+
+   c->rebuild = 1; // flag that it has no valid data
 }
 
 #endif // STB_CONNECTED_COMPONENTS_IMPLEMENTATION
