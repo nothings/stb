@@ -21,6 +21,7 @@
 // MEMORY USAGE
 //
 //   Uses about 6-7 bytes per grid square (e.g. 7MB for a 1024x1024 grid).
+//   Uses a single worst-case allocation which you pass in.
 //
 // PERFORMANCE
 //
