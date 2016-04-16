@@ -33,7 +33,7 @@
 //    - better API documentation
 //    - more comments
 //    - try re-integrating naive algorithm & compare performance
-//    - more optimized batching (current approach still recomputes clumps many times)
+//    - more optimized batching (current approach still recomputes local clumps many times)
 //    - function for setting a grid of squares at once (just use batching)
 //    - shrink data by storing only, say, 2X max exits
 //      (instead of max exits per clump), and repack cluster
