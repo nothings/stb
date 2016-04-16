@@ -3,12 +3,12 @@
 #include "stb_truetype.h"
 #include "stb_image_write.h"
 
+#ifdef TT_TEST
+
 #include <stdio.h>
 
 char ttf_buffer[1<<25];
 unsigned char output[512*100];
-
-#ifdef TT_TEST
 
 void debug(void)
 {

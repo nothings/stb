@@ -8,6 +8,7 @@
 #define STB_HERRINGBONE_WANG_TILE_IMPLEMENTATION
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_VOXEL_RENDER_IMPLEMENTATION
+#define STB_CONNECTED_COMPONENTS_IMPLEMENTATION
 
 #define STBI_MALLOC     my_malloc
 #define STBI_FREE       my_free
@@ -26,6 +27,10 @@ void my_free(void *) { }
 #include "stb_c_lexer.h"
 #include "stb_divide.h"
 #include "stb_herringbone_wang_tile.h"
+
+#define STBCC_GRID_COUNT_X_LOG2  10
+#define STBCC_GRID_COUNT_Y_LOG2  10
+#include "stb_connected_components.h"
 
 #define STBVOX_CONFIG_MODE 1
 #include "stb_voxel_render.h"
