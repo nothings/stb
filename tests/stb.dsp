@@ -106,6 +106,10 @@ SOURCE=..\stb_c_lexer.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_connected_components.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_divide.h
 # End Source File
 # Begin Source File

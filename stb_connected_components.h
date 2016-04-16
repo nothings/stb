@@ -24,18 +24,49 @@
 // publish, and distribute this file as you see fit.
 //
 //
+// CHANGELOG
+//
+//    0.92  (2016-04-16)  Compute sqrt(N) cluster size by default
+//    0.91  (2016-04-15)  Initial release
+//
 // TODO:
-//    - test C++ compile
 //    - better API documentation
-//    - internals documentation (including algorithm)
+//    - more comments
 //    - try re-integrating naive algorithm & compare performance
-//    - batching (keep data structure w/ dirty clusters)
+//    - more optimized batching (current approach still recomputes clumps many times)
 //    - function for setting a grid of squares at once (just use batching)
 //    - shrink data by storing only, say, 2X max exits
 //      (instead of max exits per clump), and repack cluster
 //      if it runs out (possibly by just rebuilding from scratch,
 //      could even use dirty-cluster data structure)
 //      should reduce 1Kx1K from ~66MB to ~8MB
+//
+//  ALGORITHM
+//
+//      The NxN grid map is split into sqrt(N) x sqrt(N) blocks called
+//     "clusters". Each cluster independently computes a set of connected
+//      components within that cluster (ignoring all connectivity out of
+//      that cluster) using a union-find disjoint set forest. This produces a bunch
+//      of locally connected components called "clumps". Each clump is (a) connected
+//      within its cluster, (b) does not directly connect to any other clumps in the
+//      cluster (though it may connect to them by paths that lead outside the cluster,
+//      but those are ignored at this step), and (c) maintains an adjacency list of
+//      all clumps in adjacent clusters that it _is_ connected to. Then a second
+//      union-find disjoint set forest is used to compute connected clumps
+//      globally, across the whole map. Reachability is then computed by
+//      finding which clump each input point belongs to, and checking whether
+//      those clumps are in the same "global" connected component.
+//
+//      The above data structure can be updated efficiently; on a change
+//      of a single grid square on the map, only one cluster changes its
+//      purely-local state, so only one cluster needs its clumps fully
+//      recomputed. Clumps in adjacent clusters need their adjacency lists
+//      updated: first to remove all references to the old clumps in the
+//      rebuilt cluster, then to add new references to the new clumps. Both
+//      of these operations can use the existing "find which clump each input
+//      point belongs to" query to compute that adjacency information rapidly.
+//      In one 1024x1024 test on a specific machine, a one-tile update was
+//      about 250 times faster than a full disjoint-set-forest on the full map.
 
 #ifndef INCLUDE_STB_CONNECTED_COMPONENTS_H
 #define INCLUDE_STB_CONNECTED_COMPONENTS_H
@@ -79,12 +110,18 @@ extern int stbcc_query_grid_node_connection(stbcc_grid *g, int x1, int y1, int x
 //  bonus functions
 //
 
+// wrap multiple stbcc_update_grid calls in these function to compute
+// multiple updates more efficiently; cannot make queries inside batch
+extern void stbcc_update_batch_begin(stbcc_grid *g);
+extern void stbcc_update_batch_end(stbcc_grid *g);
+
 // query the grid data structure for whether a given square is open or not
 extern int stbcc_query_grid_open(stbcc_grid *g, int x, int y);
 
 // get a unique id for the connected component this is in; it's not necessarily
 // small, you'll need a hash table or something to remap it (or just use
 extern unsigned int stbcc_get_unique_id(stbcc_grid *g, int x, int y);
+#define STBCC_NULL_UNIQUE_ID 0xffffffff // returned for closed map squares
 
 #ifdef __cplusplus
 }
@@ -104,11 +141,19 @@ extern unsigned int stbcc_get_unique_id(stbcc_grid *g, int x, int y);
 #define STBCC__MAP_STRIDE   (1 << (STBCC_GRID_COUNT_X_LOG2-3))
 
 #ifndef STBCC_CLUSTER_SIZE_X_LOG2
-#define STBCC_CLUSTER_SIZE_X_LOG2   5
+   #define STBCC_CLUSTER_SIZE_X_LOG2   (STBCC_GRID_COUNT_X_LOG2/2) // log2(sqrt(2^N)) = 1/2 * log2(2^N)) = 1/2 * N
+   #if STBCC_CLUSTER_SIZE_X_LOG2 > 6
+   #undef STBCC_CLUSTER_SIZE_X_LOG2
+   #define STBCC_CLUSTER_SIZE_X_LOG2 6
+   #endif
 #endif
 
 #ifndef STBCC_CLUSTER_SIZE_Y_LOG2
-#define STBCC_CLUSTER_SIZE_Y_LOG2   5
+   #define STBCC_CLUSTER_SIZE_Y_LOG2   (STBCC_GRID_COUNT_Y_LOG2/2)
+   #if STBCC_CLUSTER_SIZE_Y_LOG2 > 6
+   #undef STBCC_CLUSTER_SIZE_Y_LOG2
+   #define STBCC_CLUSTER_SIZE_Y_LOG2 6
+   #endif
 #endif
 
 #define STBCC__CLUSTER_SIZE_X   (1 << STBCC_CLUSTER_SIZE_X_LOG2)
@@ -182,6 +227,8 @@ typedef struct
 struct st_stbcc_grid
 {
    int w,h,cw,ch;
+   int in_batched_update;
+   //unsigned char cluster_dirty[STBCC__CLUSTER_COUNT_Y][STBCC__CLUSTER_COUNT_X]; // could bitpack, but: 1K x 1K => 1KB
    unsigned char map[STBCC__GRID_COUNT_Y][STBCC__MAP_STRIDE]; // 1K x 1K => 1K x 128 => 128KB
    stbcc__clumpid clump_for_node[STBCC__GRID_COUNT_Y][STBCC__GRID_COUNT_X];  // 1K x 1K x 2 = 2MB
    stbcc__cluster cluster[STBCC__CLUSTER_COUNT_Y][STBCC__CLUSTER_COUNT_X]; //  1K x 1K x 0.5 x 64 x 2 = 64MB
@@ -196,6 +243,7 @@ int stbcc_query_grid_node_connection(stbcc_grid *g, int x1, int y1, int x2, int 
    int cy1 = STBCC__CLUSTER_Y_FOR_COORD_Y(y1);
    int cx2 = STBCC__CLUSTER_X_FOR_COORD_X(x2);
    int cy2 = STBCC__CLUSTER_Y_FOR_COORD_Y(y2);
+   assert(!g->in_batched_update);
    if (c1 == STBCC__NULL_CLUMPID || c2 == STBCC__NULL_CLUMPID)
       return 0;
    label1 = g->cluster[cy1][cx1].clump[c1].global_label;
@@ -215,6 +263,8 @@ unsigned int stbcc_get_unique_id(stbcc_grid *g, int x, int y)
    stbcc__clumpid c = g->clump_for_node[y][x];
    int cx = STBCC__CLUSTER_X_FOR_COORD_X(x);
    int cy = STBCC__CLUSTER_Y_FOR_COORD_Y(y);
+   assert(!g->in_batched_update);
+   if (c == STBCC__NULL_CLUMPID) return STBCC_NULL_UNIQUE_ID;
    return g->cluster[cy][cx].clump[c].global_label.c;
 }
 
@@ -355,7 +405,25 @@ void stbcc_update_grid(stbcc_grid *g, int x, int y, int solid)
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy-1,  0, 1);
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy+1,  0,-1);
 
-   stbcc__build_connected_components_for_clumps(g);
+   if (!g->in_batched_update)
+      stbcc__build_connected_components_for_clumps(g);
+   #if 0
+   else
+      g->cluster_dirty[cy][cx] = 1;
+   #endif
+}
+
+void stbcc_update_batch_begin(stbcc_grid *g)
+{
+   assert(!g->in_batched_update);
+   g->in_batched_update = 1;
+}
+
+void stbcc_update_batch_end(stbcc_grid *g)
+{
+   assert(g->in_batched_update);
+   g->in_batched_update =  0;
+   stbcc__build_connected_components_for_clumps(g); // @OPTIMIZE: only do this if update was non-empty
 }
 
 size_t stbcc_grid_sizeof(void)
@@ -374,6 +442,13 @@ void stbcc_init_grid(stbcc_grid *g, unsigned char *map, int w, int h)
    g->h = h;
    g->cw = w >> STBCC_CLUSTER_SIZE_X_LOG2;
    g->ch = h >> STBCC_CLUSTER_SIZE_Y_LOG2;
+   g->in_batched_update = 0;
+
+   #if 0
+   for (j=0; j < STBCC__CLUSTER_COUNT_Y; ++j)
+      for (i=0; i < STBCC__CLUSTER_COUNT_X; ++i) 
+         g->cluster_dirty[j][i] = 0;
+   #endif
 
    for (j=0; j < h; ++j) {
       for (i=0; i < w; i += 8) {
