@@ -1,4 +1,4 @@
-// stb_connected_components - v0.91 - public domain connected components on grids
+// stb_connected_components - v0.93 - public domain connected components on grids
 //                                                 http://github.com/nothings/stb
 //
 // Finds connected components on 2D grids for testing reachability between
@@ -15,17 +15,25 @@
 //   #include "stb_connected_components.h"
 //
 // The above creates an implementation that can run on maps up to 1024x1024.
-// Map sizes must be a multiple of 32 on each axis.
+// Map sizes must be a multiple of (1<<(LOG2/2)) on each axis (e.g. 32 if LOG2=10,
+// 16 if LOG2=8, etc.) (You can just pad your map with untraversable space.)
 // 
-// LICENSE
-// 
-// This software is dual-licensed to the public domain and under the following
-// license: you are granted a perpetual, irrevocable license to copy, modify,
-// publish, and distribute this file as you see fit.
+// MEMORY USAGE
 //
+//   Uses about 6-7 bytes per grid square (e.g. 7MB for a 1024x1024 grid).
+//
+// PERFORMANCE
+//
+//   On a core i7-2700K at 3.5 Ghz, for a particular 1024x1024 map (map_03.png):
+//
+//       Creating map                   : 44.85 ms
+//       Making one square   traversable:  0.27 ms    (average over 29,448 calls)
+//       Making one square untraversable:  0.23 ms    (average over 30,123 calls)
+//       Reachability query:               0.00001 ms (average over 4,000,000 calls)
 //
 // CHANGELOG
 //
+//    0.93  (2016-04-16)  Reduce memory by 10x for 1Kx1K map; small speedup
 //    0.92  (2016-04-16)  Compute sqrt(N) cluster size by default
 //    0.91  (2016-04-15)  Initial release
 //
@@ -35,38 +43,37 @@
 //    - try re-integrating naive algorithm & compare performance
 //    - more optimized batching (current approach still recomputes local clumps many times)
 //    - function for setting a grid of squares at once (just use batching)
-//    - shrink data by storing only, say, 2X max exits
-//      (instead of max exits per clump), and repack cluster
-//      if it runs out (possibly by just rebuilding from scratch,
-//      could even use dirty-cluster data structure)
-//      should reduce 1Kx1K from ~66MB to ~8MB
 //
-//  ALGORITHM
+// LICENSE
+// 
+//   This software is dual-licensed to the public domain and under the following
+//   license: you are granted a perpetual, irrevocable license to copy, modify,
+//   publish, and distribute this file as you see fit.
 //
-//      The NxN grid map is split into sqrt(N) x sqrt(N) blocks called
-//     "clusters". Each cluster independently computes a set of connected
-//      components within that cluster (ignoring all connectivity out of
-//      that cluster) using a union-find disjoint set forest. This produces a bunch
-//      of locally connected components called "clumps". Each clump is (a) connected
-//      within its cluster, (b) does not directly connect to any other clumps in the
-//      cluster (though it may connect to them by paths that lead outside the cluster,
-//      but those are ignored at this step), and (c) maintains an adjacency list of
-//      all clumps in adjacent clusters that it _is_ connected to. Then a second
-//      union-find disjoint set forest is used to compute connected clumps
-//      globally, across the whole map. Reachability is then computed by
-//      finding which clump each input point belongs to, and checking whether
-//      those clumps are in the same "global" connected component.
+// ALGORITHM
 //
-//      The above data structure can be updated efficiently; on a change
-//      of a single grid square on the map, only one cluster changes its
-//      purely-local state, so only one cluster needs its clumps fully
-//      recomputed. Clumps in adjacent clusters need their adjacency lists
-//      updated: first to remove all references to the old clumps in the
-//      rebuilt cluster, then to add new references to the new clumps. Both
-//      of these operations can use the existing "find which clump each input
-//      point belongs to" query to compute that adjacency information rapidly.
-//      In one 1024x1024 test on a specific machine, a one-tile update was
-//      about 250 times faster than a full disjoint-set-forest on the full map.
+//   The NxN grid map is split into sqrt(N) x sqrt(N) blocks called
+//  "clusters". Each cluster independently computes a set of connected
+//   components within that cluster (ignoring all connectivity out of
+//   that cluster) using a union-find disjoint set forest. This produces a bunch
+//   of locally connected components called "clumps". Each clump is (a) connected
+//   within its cluster, (b) does not directly connect to any other clumps in the
+//   cluster (though it may connect to them by paths that lead outside the cluster,
+//   but those are ignored at this step), and (c) maintains an adjacency list of
+//   all clumps in adjacent clusters that it _is_ connected to. Then a second
+//   union-find disjoint set forest is used to compute connected clumps
+//   globally, across the whole map. Reachability is then computed by
+//   finding which clump each input point belongs to, and checking whether
+//   those clumps are in the same "global" connected component.
+//
+//   The above data structure can be updated efficiently; on a change
+//   of a single grid square on the map, only one cluster changes its
+//   purely-local state, so only one cluster needs its clumps fully
+//   recomputed. Clumps in adjacent clusters need their adjacency lists
+//   updated: first to remove all references to the old clumps in the
+//   rebuilt cluster, then to add new references to the new clumps. Both
+//   of these operations can use the existing "find which clump each input
+//   point belongs to" query to compute that adjacency information rapidly.
 
 #ifndef INCLUDE_STB_CONNECTED_COMPONENTS_H
 #define INCLUDE_STB_CONNECTED_COMPONENTS_H
@@ -235,13 +242,14 @@ typedef struct
    unsigned char on_edge;                     // 1
 } stbcc__clump; // 8
 
-#define STBCC__CLUSTER_ADJACENCY_COUNT   (STBCC__MAX_EXITS_PER_CLUSTER*4)
+#define STBCC__CLUSTER_ADJACENCY_COUNT   (STBCC__MAX_EXITS_PER_CLUSTER*2)
 typedef struct
 {
-   unsigned int num_clumps;
-   unsigned char rebuild;
+   short num_clumps;
+   unsigned char num_edge_clumps;
+   unsigned char rebuild_adjacency;
    stbcc__clump clump[STBCC__MAX_CLUMPS_PER_CLUSTER];       // 8 * 2^9 = 4KB
-   stbcc__relative_clumpid adjacency_storage[STBCC__CLUSTER_ADJACENCY_COUNT]; // 512 bytes
+   stbcc__relative_clumpid adjacency_storage[STBCC__CLUSTER_ADJACENCY_COUNT]; // 256 bytes
 } stbcc__cluster;
 
 struct st_stbcc_grid
@@ -251,7 +259,7 @@ struct st_stbcc_grid
    //unsigned char cluster_dirty[STBCC__CLUSTER_COUNT_Y][STBCC__CLUSTER_COUNT_X]; // could bitpack, but: 1K x 1K => 1KB
    unsigned char map[STBCC__GRID_COUNT_Y][STBCC__MAP_STRIDE]; // 1K x 1K => 1K x 128 => 128KB
    stbcc__clumpid clump_for_node[STBCC__GRID_COUNT_Y][STBCC__GRID_COUNT_X];  // 1K x 1K x 2 = 2MB
-   stbcc__cluster cluster[STBCC__CLUSTER_COUNT_Y][STBCC__CLUSTER_COUNT_X]; //  1K x 4.5KB = 9MB
+   stbcc__cluster cluster[STBCC__CLUSTER_COUNT_Y][STBCC__CLUSTER_COUNT_X]; //  1K x 4.5KB = 4.5MB
 };
 
 int stbcc_query_grid_node_connection(stbcc_grid *g, int x1, int y1, int x2, int y2)
@@ -402,8 +410,9 @@ static void stbcc__build_all_connections_for_cluster(stbcc_grid *g, int cx, int 
    int x = cx * STBCC__CLUSTER_SIZE_X;
    int y = cy * STBCC__CLUSTER_SIZE_Y;
    int step_x, step_y=0, i, j, k, n, m, dx, dy, total;
+   int extra;
 
-   g->cluster[cy][cx].rebuild = 0;
+   g->cluster[cy][cx].rebuild_adjacency = 0;
 
    total = 0;
    for (m=0; m < 4; ++m) {
@@ -459,12 +468,36 @@ static void stbcc__build_all_connections_for_cluster(stbcc_grid *g, int cx, int 
       }
    }
 
-   // decide how to apportion leftover... would be better if we knew WHICH clumps
-   // were along the edge, but we should compute this at initial time, not above
-   // to minimize recompoutation
+   assert(total <= STBCC__CLUSTER_ADJACENCY_COUNT);
+
+   // decide how to apportion unused adjacency slots; only clumps that lie
+   // on the edges of the cluster need adjacency slots, so divide them up
+   // evenly between those clumps
+
+   // we want:
+   //    extra = (STBCC__CLUSTER_ADJACENCY_COUNT - total) / cluster->num_edge_clumps;
+   // but we efficiently approximate this without a divide, because
+   // ignoring edge-vs-non-edge with 'num_adj[i]*2' was faster than
+   // 'num_adj[i]+extra' with the divide
+   if      (total + (cluster->num_edge_clumps<<2) <= STBCC__CLUSTER_ADJACENCY_COUNT)
+      extra = 4;
+   else if (total + (cluster->num_edge_clumps<<1) <= STBCC__CLUSTER_ADJACENCY_COUNT)
+      extra = 2;
+   else if (total + (cluster->num_edge_clumps<<0) <= STBCC__CLUSTER_ADJACENCY_COUNT)
+      extra = 1;
+   else
+      extra = 0;
+
    total = 0;
    for (i=0; i < (int) cluster->num_clumps; ++i) {
-      int alloc = num_adj[i]*2; // every cluster gets room for 2x current adjacency
+      int alloc=0;
+      if (cluster->clump[i].on_edge) {
+         alloc = num_adj[i]+extra;
+         if (alloc > STBCC__MAX_EXITS_PER_CLUSTER)
+            alloc = STBCC__MAX_EXITS_PER_CLUSTER;
+      }
+      else
+         assert(num_adj[i] == 0);
       assert(total < 256); // must fit in byte
       cluster->clump[i].adjacent_clump_list_index = (unsigned char) total;
       cluster->clump[i].max_adjacent = alloc;
@@ -478,14 +511,14 @@ static void stbcc__build_all_connections_for_cluster(stbcc_grid *g, int cx, int 
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  0,-1);
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  0, 1);
    // make sure all of the above succeeded.
-   assert(g->cluster[cy][cx].rebuild == 0);
+   assert(g->cluster[cy][cx].rebuild_adjacency == 0);
 }
 
 static void stbcc__add_connections_to_adjacent_cluster_with_rebuild(stbcc_grid *g, int cx, int cy, int dx, int dy)
 {
    if (cx >= 0 && cx < g->cw && cy >= 0 && cy < g->ch) {
       stbcc__add_connections_to_adjacent_cluster(g, cx, cy, dx, dy);
-      if (g->cluster[cy][cx].rebuild)
+      if (g->cluster[cy][cx].rebuild_adjacency)
          stbcc__build_all_connections_for_cluster(g, cx, cy);
    }
 }
@@ -621,7 +654,7 @@ static void stbcc__add_clump_connection(stbcc_grid *g, int x1, int y1, int x2, i
    cluster = &g->cluster[cy1][cx1];
    clump = &cluster->clump[c1];
    if (clump->num_adjacent == clump->max_adjacent)
-      g->cluster[cy1][cx1].rebuild = 1;
+      g->cluster[cy1][cx1].rebuild_adjacency = 1;
    else {
       stbcc__relative_clumpid *adj = &cluster->adjacency_storage[clump->adjacent_clump_list_index];
       assert(clump->num_adjacent < STBCC__MAX_EXITS_PER_CLUMP);
@@ -684,7 +717,7 @@ static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, in
    if (cx+dx < 0 || cx+dx >= g->cw || cy+dy < 0 || cy+dy >= g->ch)
       return;
 
-   if (g->cluster[cy][cx].rebuild)
+   if (g->cluster[cy][cx].rebuild_adjacency)
       return;
 
    assert(abs(dx) + abs(dy) == 1);
@@ -723,7 +756,7 @@ static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, in
          if (0 == (connected[c>>3] & (1 << (c & 7)))) {
             connected[c>>3] |= 1 << (c & 7);
             stbcc__add_clump_connection(g, x+i, y+j, x+i+dx, y+j+dy);
-            if (g->cluster[cy][cx].rebuild)
+            if (g->cluster[cy][cx].rebuild_adjacency)
                break;
          }
       }
@@ -815,7 +848,7 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
    stbcc__cluster *c;
    stbcc__cluster_build_info cbi;
    int label=0;
-   int i,j;
+   int i,j, num_on_edge;
    int x = cx * STBCC__CLUSTER_SIZE_X;
    int y = cy * STBCC__CLUSTER_SIZE_Y;
 
@@ -874,7 +907,30 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
          assert(g->clump_for_node[y+j][x+i] <= STBCC__NULL_CLUMPID);
       }
 
-   c->rebuild = 1; // flag that it has no valid data
+   for (i=0; i < STBCC__CLUSTER_SIZE_X; ++i) {
+      int d = cbi.label[0][i];
+      if (d != STBCC__NULL_CLUMPID)
+         c->clump[d].on_edge = 1;
+      d = cbi.label[STBCC__CLUSTER_SIZE_Y-1][i];
+      if (d != STBCC__NULL_CLUMPID)
+         c->clump[d].on_edge = 1;
+   }
+
+   for (j=0; j < STBCC__CLUSTER_SIZE_Y; ++j) {
+      int d = cbi.label[j][0];
+      if (d != STBCC__NULL_CLUMPID)
+         c->clump[d].on_edge = 1;
+      d = cbi.label[j][STBCC__CLUSTER_SIZE_X-1];
+      if (d != STBCC__NULL_CLUMPID)
+         c->clump[d].on_edge = 1;
+   }
+
+   num_on_edge = 0;
+   for (i=0; i < (int) c->num_clumps; ++i)
+      num_on_edge += c->clump[i].on_edge;
+   c->num_edge_clumps = num_on_edge;
+
+   c->rebuild_adjacency = 1; // flag that it has no valid adjacency data
 }
 
 #endif // STB_CONNECTED_COMPONENTS_IMPLEMENTATION

@@ -133,11 +133,12 @@ void end_timer(void)
    printf("%6.4lf ms: %s\n", tm * 1000, message);
 }
 
+int loc[5000][2];
 int main(int argc, char **argv)
 {
    stbcc_grid *g;
 
-   int w,h, i,j,k=0, count=0;
+   int w,h, i,j,k=0, count=0, r;
    uint8 *map = stbi_load("data/map_03.png", &w, &h, 0, 1);
 
    assert(map);
@@ -159,6 +160,25 @@ int main(int argc, char **argv)
    stbcc_init_grid(g, map, w, h);
    end_timer();
    write_map(g, w, h, "tests/output/stbcc/base.png");
+
+   for (i=0; i < 5000;) {
+      loc[i][0] = stb_rand() % w;
+      loc[i][1] = stb_rand() % h;
+      if (stbcc_query_grid_open(g, loc[i][0], loc[i][1]))
+         ++i;
+   }
+
+   r = 0;
+   start_timer("reachable");
+   for (i=0; i < 2000; ++i) {
+      for (j=0; j < 2000; ++j) {
+         int x1 = loc[i][0], y1 = loc[i][1];
+         int x2 = loc[2000+j][0], y2 = loc[2000+j][1];
+         r += stbcc_query_grid_node_connection(g, x1,y1, x2,y2);
+      }
+   }
+   end_timer();
+   printf("%d reachable\n", r);
 
    printf("Cluster size: %d,%d\n", STBCC__CLUSTER_SIZE_X, STBCC__CLUSTER_SIZE_Y);
 
@@ -191,6 +211,20 @@ int main(int argc, char **argv)
    end_timer();
    printf("Removed %d grid spaces\n", count);
    write_map(g, w, h, stb_sprintf("tests/output/stbcc/open_random_%d.png", i));
+
+
+   r = 0;
+   start_timer("reachable");
+   for (i=0; i < 1000; ++i) {
+      for (j=0; j < 1000; ++j) {
+         int x1 = loc[i][0], y1 = loc[i][1];
+         int x2 = loc[j][0], y2 = loc[j][1];
+         r += stbcc_query_grid_node_connection(g, x1,y1, x2,y2);
+      }
+   }
+   end_timer();
+   printf("%d reachable\n", r);
+
    start_timer("adding");
    count = 0;
    for (i=0; i < 1800; ++i) {
@@ -220,6 +254,7 @@ int main(int argc, char **argv)
    write_map(g, w, h, stb_sprintf("tests/output/stbcc/close_random_%d.png", i));
    printf("Added %d grid spaces\n", count);
    #endif
+
 
    #if 0  // for map_02.png
    start_timer("process");
