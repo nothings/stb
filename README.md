@@ -23,12 +23,12 @@ library    | lastest version | category | LoC | description
 **stb_herringbone_wa...** | 0.6 | game&nbsp;dev | 1220 | herringbone Wang tile map generator
 **stb_c_lexer.h** | 0.07 | parsing | 816 | simplify writing parsers for C-like languages
 **stb_divide.h** | 0.91 | math | 379 | more useful 32-bit modulus e.g. "euclidean divide"
-**stb_connected_comp...** | 0.91 | misc | 674 | incrementally compute reachability on grids
+**stb_connected_comp...** | 0.93 | misc | 936 | incrementally compute reachability on grids
 **stb.h** | 2.27 | misc | 14185 | helper functions for C, mostly redundant in C++; basically author's personal stuff
 **stb_leakcheck.h** | 0.2 | misc | 124 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 19  
-Total lines of C code: 47488
+Total lines of C code: 47750
 
 
 FAQ
