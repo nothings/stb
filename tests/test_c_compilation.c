@@ -9,7 +9,6 @@
 #define STB_RECT_PACK_IMPLEMENTATION
 #define STB_VOXEL_RENDER_IMPLEMENTATION
 #define STB_EASY_FONT_IMPLEMENTATION
-#define STB_CONNECTED_COMPONENTS_IMPLEMENTATION
 
 #include "stb_easy_font.h"
 #include "stb_herringbone_wang_tile.h"
@@ -21,10 +20,6 @@
 #include "stb_divide.h"
 #include "stb_image_resize.h"
 #include "stb_rect_pack.h"
-
-#define STBCC_GRID_COUNT_X_LOG2  10
-#define STBCC_GRID_COUNT_Y_LOG2  10
-#include "stb_connected_components.h"
 
 #define STBVOX_CONFIG_MODE 1
 #include "stb_voxel_render.h"
