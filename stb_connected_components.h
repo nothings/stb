@@ -240,7 +240,7 @@ typedef struct
    unsigned char num_adjacent;                // 1
    unsigned char max_adjacent;                // 1
    unsigned char adjacent_clump_list_index;   // 1
-   unsigned char on_edge;                     // 1
+   unsigned char reserved;
 } stbcc__clump; // 8
 
 #define STBCC__CLUSTER_ADJACENCY_COUNT   (STBCC__MAX_EXITS_PER_CLUSTER*2)
@@ -332,7 +332,6 @@ typedef struct
    unsigned int clump_index;
 } stbcc__unpacked_clumpid;
 
-// @OPTIMIZE: pass in these parameters unpacked, not packed
 static void stbcc__clump_union(stbcc_grid *g, stbcc__unpacked_clumpid m, int x, int y, int idx)
 {
    stbcc__clump *mc = &g->cluster[m.cluster_y][m.cluster_x].clump[m.clump_index];
@@ -490,15 +489,10 @@ static void stbcc__build_all_connections_for_cluster(stbcc_grid *g, int cx, int 
       extra = 0;
 
    total = 0;
-   for (i=0; i < (int) cluster->num_clumps; ++i) {
-      int alloc=0;
-      if (cluster->clump[i].on_edge) {
-         alloc = num_adj[i]+extra;
-         if (alloc > STBCC__MAX_EXITS_PER_CLUSTER)
-            alloc = STBCC__MAX_EXITS_PER_CLUSTER;
-      }
-      else
-         assert(num_adj[i] == 0);
+   for (i=0; i < (int) cluster->num_edge_clumps; ++i) {
+      int alloc = num_adj[i]+extra;
+      if (alloc > STBCC__MAX_EXITS_PER_CLUSTER)
+         alloc = STBCC__MAX_EXITS_PER_CLUSTER;
       assert(total < 256); // must fit in byte
       cluster->clump[i].adjacent_clump_list_index = (unsigned char) total;
       cluster->clump[i].max_adjacent = alloc;
@@ -507,15 +501,10 @@ static void stbcc__build_all_connections_for_cluster(stbcc_grid *g, int cx, int 
    }
    assert(total <= STBCC__CLUSTER_ADJACENCY_COUNT);
 
-   assert(g->w);
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy, -1, 0);
-   assert(g->w);
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  1, 0);
-   assert(g->w);
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  0,-1);
-   assert(g->w);
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  0, 1);
-   assert(g->w);
    // make sure all of the above succeeded.
    assert(g->cluster[cy][cx].rebuild_adjacency == 0);
 }
@@ -865,7 +854,7 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
    stbcc__cluster *c;
    stbcc__cluster_build_info cbi;
    int label=0;
-   int i,j, num_on_edge;
+   int i,j;
    int x = cx * STBCC__CLUSTER_SIZE_X;
    int y = cy * STBCC__CLUSTER_SIZE_Y;
 
@@ -950,6 +939,9 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
       }
    }
 
+   c = &g->cluster[cy][cx];
+   c->num_edge_clumps = label;
+
    // label any internal clusters
    for (j=1; j < STBCC__CLUSTER_SIZE_Y-1; ++j) {
       for (i=1; i < STBCC__CLUSTER_SIZE_X-1; ++i) {
@@ -975,11 +967,11 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
       }
    }
 
-   c = &g->cluster[cy][cx];
    c->num_clumps = label;
+
    for (i=0; i < label; ++i) {
       c->clump[i].num_adjacent = 0;
-      c->clump[i].on_edge = 0;
+      c->clump[i].max_adjacent = 0;
    }
 
    for (j=0; j < STBCC__CLUSTER_SIZE_Y; ++j)
@@ -987,38 +979,6 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
          g->clump_for_node[y+j][x+i] = cbi.label[j][i]; // @OPTIMIZE: remove cbi.label entirely
          assert(g->clump_for_node[y+j][x+i] <= STBCC__NULL_CLUMPID);
       }
-
-   for (i=0; i < STBCC__CLUSTER_SIZE_X; ++i) {
-      int d = cbi.label[0][i];
-      if (d != STBCC__NULL_CLUMPID) {
-         c->clump[d].on_edge = 1;
-      }
-      d = cbi.label[STBCC__CLUSTER_SIZE_Y-1][i];
-      if (d != STBCC__NULL_CLUMPID) {
-         c->clump[d].on_edge = 1;
-      }
-   }
-
-   for (j=1; j < STBCC__CLUSTER_SIZE_Y-1; ++j) {
-      int d = cbi.label[j][0];
-      if (d != STBCC__NULL_CLUMPID) {
-         c->clump[d].on_edge = 1;
-      }
-      d = cbi.label[j][STBCC__CLUSTER_SIZE_X-1];
-      if (d != STBCC__NULL_CLUMPID) {
-         c->clump[d].on_edge = 1;
-      }
-   }
-
-   num_on_edge = 0;
-   for (i=0; i < (int) c->num_clumps; ++i)
-      num_on_edge += c->clump[i].on_edge;
-   c->num_edge_clumps = num_on_edge;
-
-   for (i=0; i < (int) c->num_edge_clumps; ++i)
-      assert(c->clump[i].on_edge);
-   for (; i < (int) c->num_clumps; ++i)
-      assert(!c->clump[i].on_edge);
 
    // set the global label for all interior clumps since they can't have connections, so we don't have to do this on the global pass
    for (i=(int) c->num_edge_clumps; i < (int) c->num_clumps; ++i) {

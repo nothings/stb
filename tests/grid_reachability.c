@@ -99,7 +99,7 @@ void write_map(stbcc_grid *g, int w, int h, char *filename)
          if (c == STBCC_NULL_UNIQUE_ID)
             c = 0xff000000;
          else
-            c = ~c;
+            c = (~c)^0x555555;
          color[j][i] = c;
       }
    }
@@ -149,7 +149,14 @@ int main(int argc, char **argv)
 
    for (i=0; i < w; ++i)
       for (j=0; j < h; ++j)
-         map[j*w+i] = (i ^ j) & 1 ? 255 : 0;
+         map[j*w+i] = (((i+1) ^ (j+1)) >> 1) & 1 ? 255 : 0;
+         //map[j*w+i] = (((i ^ j) >> 5) ^ (i ^ j)) & 1 ? 255 : 0;
+         //map[j*w+i] = stb_rand() & 1 ? 255 : 0;
+
+   #if 0
+   for (i=0; i < 100000; ++i)
+      map[(stb_rand()%h)*w + stb_rand()%w] ^= 255;
+   #endif
             
    stbi_write_png("tests/output/stbcc/reference.png", w, h, 1, map, 0);
 
@@ -192,8 +199,8 @@ int main(int argc, char **argv)
          loc[i][0] = stb_rand() % w;
          loc[i][1] = stb_rand() % h;
       }
-      start_timer("updating 500");
-      for (i=0; i < 500; ++i) {
+      start_timer("updating 2500");
+      for (i=0; i < 2500; ++i) {
          if (stbcc_query_grid_open(g, loc[i][0], loc[i][1]))
             stbcc_update_grid(g, loc[i][0], loc[i][1], 1);
          else
