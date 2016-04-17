@@ -1,4 +1,4 @@
-// stb_connected_components - v0.93 - public domain connected components on grids
+// stb_connected_components - v0.94 - public domain connected components on grids
 //                                                 http://github.com/nothings/stb
 //
 // Finds connected components on 2D grids for testing reachability between
@@ -32,8 +32,12 @@
 //       Making one square untraversable:  0.23 ms    (average over 30,123 calls)
 //       Reachability query:               0.00001 ms (average over 4,000,000 calls)
 //
+//   On non-degenerate maps update time is O(N^0.5), but on degenerate maps like
+//   checkerboards or 50% random, update time is O(N^0.75) (~2ms on above machine).
+//
 // CHANGELOG
 //
+//    0.94  (2016-04-17)  Bugfix & optimize worst case (checkerboard & random)
 //    0.93  (2016-04-16)  Reduce memory by 10x for 1Kx1K map; small speedup
 //    0.92  (2016-04-16)  Compute sqrt(N) cluster size by default
 //    0.91  (2016-04-15)  Initial release
@@ -980,7 +984,8 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
          assert(g->clump_for_node[y+j][x+i] <= STBCC__NULL_CLUMPID);
       }
 
-   // set the global label for all interior clumps since they can't have connections, so we don't have to do this on the global pass
+   // set the global label for all interior clumps since they can't have connections,
+   // so we don't have to do this on the global pass (brings from O(N) to O(N^0.75))
    for (i=(int) c->num_edge_clumps; i < (int) c->num_clumps; ++i) {
       stbcc__global_clumpid gc;
       gc.f.cluster_x = cx;

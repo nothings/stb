@@ -149,11 +149,12 @@ int main(int argc, char **argv)
 
    for (i=0; i < w; ++i)
       for (j=0; j < h; ++j)
-         map[j*w+i] = (((i+1) ^ (j+1)) >> 1) & 1 ? 255 : 0;
+         //map[j*w+i] = (((i+1) ^ (j+1)) >> 1) & 1 ? 255 : 0;
+         map[j*w+i] = stb_max(abs(i-w/2),abs(j-h/2)) & 1 ? 255 : 0;
          //map[j*w+i] = (((i ^ j) >> 5) ^ (i ^ j)) & 1 ? 255 : 0;
          //map[j*w+i] = stb_rand() & 1 ? 255 : 0;
 
-   #if 0
+   #if 1
    for (i=0; i < 100000; ++i)
       map[(stb_rand()%h)*w + stb_rand()%w] ^= 255;
    #endif
