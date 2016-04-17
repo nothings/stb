@@ -143,11 +143,15 @@ int main(int argc, char **argv)
 
    assert(map);
 
-   stbi_write_png("tests/output/stbcc/reference.png", w, h, 1, map, 0);
-
    for (j=0; j < h; ++j)
       for (i=0; i < w; ++i)
          map[j*w+i] = ~map[j*w+i];
+
+   for (i=0; i < w; ++i)
+      for (j=0; j < h; ++j)
+         map[j*w+i] = (i ^ j) & 1 ? 255 : 0;
+            
+   stbi_write_png("tests/output/stbcc/reference.png", w, h, 1, map, 0);
 
    //reference(map, w, h);
 
@@ -183,6 +187,24 @@ int main(int argc, char **argv)
    printf("Cluster size: %d,%d\n", STBCC__CLUSTER_SIZE_X, STBCC__CLUSTER_SIZE_Y);
 
    #if 1
+   for (j=0; j < 10; ++j) {
+      for (i=0; i < 5000; ++i) {
+         loc[i][0] = stb_rand() % w;
+         loc[i][1] = stb_rand() % h;
+      }
+      start_timer("updating 500");
+      for (i=0; i < 500; ++i) {
+         if (stbcc_query_grid_open(g, loc[i][0], loc[i][1]))
+            stbcc_update_grid(g, loc[i][0], loc[i][1], 1);
+         else
+            stbcc_update_grid(g, loc[i][0], loc[i][1], 0);
+      }
+      end_timer();
+      write_map(g, w, h, stb_sprintf("tests/output/stbcc/update_random_%d.png", j*i));
+   }
+   #endif
+
+   #if 0
    start_timer("removing");
    count = 0;
    for (i=0; i < 1800; ++i) {

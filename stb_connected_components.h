@@ -353,7 +353,7 @@ static void stbcc__build_connected_components_for_clumps(stbcc_grid *g)
    for (j=0; j < STBCC__CLUSTER_COUNT_Y; ++j) {
       for (i=0; i < STBCC__CLUSTER_COUNT_X; ++i) {
          stbcc__cluster *cluster = &g->cluster[j][i];
-         for (k=0; k < (int) cluster->num_clumps; ++k) {
+         for (k=0; k < (int) cluster->num_edge_clumps; ++k) {
             stbcc__global_clumpid m;
             m.f.clump_index = k;
             m.f.cluster_x = i;
@@ -367,7 +367,7 @@ static void stbcc__build_connected_components_for_clumps(stbcc_grid *g)
    for (j=0; j < STBCC__CLUSTER_COUNT_Y; ++j) {
       for (i=0; i < STBCC__CLUSTER_COUNT_X; ++i) {
          stbcc__cluster *cluster = &g->cluster[j][i];
-         for (k=0; k < (int) cluster->num_clumps; ++k) {
+         for (k=0; k < (int) cluster->num_edge_clumps; ++k) {
             stbcc__clump *clump = &cluster->clump[k];
             stbcc__unpacked_clumpid m;
             stbcc__relative_clumpid *adj;
@@ -388,7 +388,7 @@ static void stbcc__build_connected_components_for_clumps(stbcc_grid *g)
    for (j=0; j < STBCC__CLUSTER_COUNT_Y; ++j) {
       for (i=0; i < STBCC__CLUSTER_COUNT_X; ++i) {
          stbcc__cluster *cluster = &g->cluster[j][i];
-         for (k=0; k < (int) cluster->num_clumps; ++k) {
+         for (k=0; k < (int) cluster->num_edge_clumps; ++k) {
             stbcc__global_clumpid m;
             m.f.clump_index = k;
             m.f.cluster_x = i;
@@ -507,10 +507,15 @@ static void stbcc__build_all_connections_for_cluster(stbcc_grid *g, int cx, int 
    }
    assert(total <= STBCC__CLUSTER_ADJACENCY_COUNT);
 
+   assert(g->w);
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy, -1, 0);
+   assert(g->w);
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  1, 0);
+   assert(g->w);
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  0,-1);
+   assert(g->w);
    stbcc__add_connections_to_adjacent_cluster(g, cx, cy,  0, 1);
+   assert(g->w);
    // make sure all of the above succeeded.
    assert(g->cluster[cy][cx].rebuild_adjacency == 0);
 }
@@ -654,11 +659,13 @@ static void stbcc__add_clump_connection(stbcc_grid *g, int x1, int y1, int x2, i
 
    cluster = &g->cluster[cy1][cx1];
    clump = &cluster->clump[c1];
+   assert(clump->num_adjacent <= clump->max_adjacent);
    if (clump->num_adjacent == clump->max_adjacent)
       g->cluster[cy1][cx1].rebuild_adjacency = 1;
    else {
       stbcc__relative_clumpid *adj = &cluster->adjacency_storage[clump->adjacent_clump_list_index];
       assert(clump->num_adjacent < STBCC__MAX_EXITS_PER_CLUMP);
+      assert(clump->adjacent_clump_list_index + clump->num_adjacent <= STBCC__CLUSTER_ADJACENCY_COUNT);
       adj[clump->num_adjacent++] = rc;
    }
 }
@@ -755,6 +762,7 @@ static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, in
       if (STBCC__MAP_OPEN(g, x+i, y+j) && STBCC__MAP_OPEN(g, x+i+dx, y+j+dy)) {
          stbcc__clumpid c = g->clump_for_node[y+j+dy][x+i+dx];
          if (0 == (connected[c>>3] & (1 << (c & 7)))) {
+            assert((c>>3) < sizeof(connected));
             connected[c>>3] |= 1 << (c & 7);
             stbcc__add_clump_connection(g, x+i, y+j, x+i+dx, y+j+dy);
             if (g->cluster[cy][cx].rebuild_adjacency)
@@ -844,6 +852,14 @@ static void stbcc__incluster_union(stbcc__cluster_build_info *cbi, int x1, int y
    cbi->parent[p.y][p.x] = q;
 }
 
+static void stbcc__switch_root(stbcc__cluster_build_info *cbi, int x, int y, stbcc__tinypoint p)
+{
+   cbi->parent[p.y][p.x].x = x;
+   cbi->parent[p.y][p.x].y = y;
+   cbi->parent[y][x].x = x;
+   cbi->parent[y][x].y = y;
+}
+
 static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
 {
    stbcc__cluster *c;
@@ -874,9 +890,69 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
             stbcc__incluster_union(&cbi, i,j, i+1,j);
    }
 
-   // label all non-empty leaders
+   // label all non-empty clumps along edges so that all edge clumps are first
+   // in list; this means in degenerate case we can skip traversing non-edge clumps.
+   // because in the first pass we only label leaders, we swap the leader to the
+   // edge first
+
+   // first put solid labels on all the edges; these will get overwritten if they're open
+   for (j=0; j < STBCC__CLUSTER_SIZE_Y; ++j)
+      cbi.label[j][0] = cbi.label[j][STBCC__CLUSTER_SIZE_X-1] = STBCC__NULL_CLUMPID;
+   for (i=0; i < STBCC__CLUSTER_SIZE_X; ++i)
+      cbi.label[0][i] = cbi.label[STBCC__CLUSTER_SIZE_Y-1][i] = STBCC__NULL_CLUMPID;
+
    for (j=0; j < STBCC__CLUSTER_SIZE_Y; ++j) {
-      for (i=0; i < STBCC__CLUSTER_SIZE_X; ++i) {
+      i = 0;
+      if (STBCC__MAP_OPEN(g, x+i, y+j)) {
+         stbcc__tinypoint p = stbcc__incluster_find(&cbi, i,j);
+         if (p.x == i && p.y == j)
+            // if this is the leader, give it a label
+            cbi.label[j][i] = label++;
+         else if (!(p.x == 0 || p.x == STBCC__CLUSTER_SIZE_X-1 || p.y == 0 || p.y == STBCC__CLUSTER_SIZE_Y-1)) {
+            // if leader is in interior, promote this edge node to leader and label
+            stbcc__switch_root(&cbi, i, j, p);
+            cbi.label[j][i] = label++;
+         }
+         // else if leader is on edge, do nothing (it'll get labelled when we reach it)
+      }
+      i = STBCC__CLUSTER_SIZE_X-1;
+      if (STBCC__MAP_OPEN(g, x+i, y+j)) {
+         stbcc__tinypoint p = stbcc__incluster_find(&cbi, i,j);
+         if (p.x == i && p.y == j)
+            cbi.label[j][i] = label++;
+         else if (!(p.x == 0 || p.x == STBCC__CLUSTER_SIZE_X-1 || p.y == 0 || p.y == STBCC__CLUSTER_SIZE_Y-1)) {
+            stbcc__switch_root(&cbi, i, j, p);
+            cbi.label[j][i] = label++;
+         }
+      }
+   }
+
+   for (i=1; i < STBCC__CLUSTER_SIZE_Y-1; ++i) {
+      j = 0;
+      if (STBCC__MAP_OPEN(g, x+i, y+j)) {
+         stbcc__tinypoint p = stbcc__incluster_find(&cbi, i,j);
+         if (p.x == i && p.y == j)
+            cbi.label[j][i] = label++;
+         else if (!(p.x == 0 || p.x == STBCC__CLUSTER_SIZE_X-1 || p.y == 0 || p.y == STBCC__CLUSTER_SIZE_Y-1)) {
+            stbcc__switch_root(&cbi, i, j, p);
+            cbi.label[j][i] = label++;
+         }
+      }
+      j = STBCC__CLUSTER_SIZE_Y-1;
+      if (STBCC__MAP_OPEN(g, x+i, y+j)) {
+         stbcc__tinypoint p = stbcc__incluster_find(&cbi, i,j);
+         if (p.x == i && p.y == j)
+            cbi.label[j][i] = label++;
+         else if (!(p.x == 0 || p.x == STBCC__CLUSTER_SIZE_X-1 || p.y == 0 || p.y == STBCC__CLUSTER_SIZE_Y-1)) {
+            stbcc__switch_root(&cbi, i, j, p);
+            cbi.label[j][i] = label++;
+         }
+      }
+   }
+
+   // label any internal clusters
+   for (j=1; j < STBCC__CLUSTER_SIZE_Y-1; ++j) {
+      for (i=1; i < STBCC__CLUSTER_SIZE_X-1; ++i) {
          stbcc__tinypoint p = cbi.parent[j][i];
          if (p.x == i && p.y == j)
             if (STBCC__MAP_OPEN(g,x+i,y+j))
@@ -894,13 +970,17 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
             if (STBCC__MAP_OPEN(g,x+i,y+j))
                cbi.label[j][i] = cbi.label[p.y][p.x];
          }
+         if (STBCC__MAP_OPEN(g,x+i,y+j))
+            assert(cbi.label[j][i] != STBCC__NULL_CLUMPID);
       }
    }
 
    c = &g->cluster[cy][cx];
    c->num_clumps = label;
-   for (i=0; i < label; ++i)
+   for (i=0; i < label; ++i) {
       c->clump[i].num_adjacent = 0;
+      c->clump[i].on_edge = 0;
+   }
 
    for (j=0; j < STBCC__CLUSTER_SIZE_Y; ++j)
       for (i=0; i < STBCC__CLUSTER_SIZE_X; ++i) {
@@ -910,26 +990,44 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
 
    for (i=0; i < STBCC__CLUSTER_SIZE_X; ++i) {
       int d = cbi.label[0][i];
-      if (d != STBCC__NULL_CLUMPID)
+      if (d != STBCC__NULL_CLUMPID) {
          c->clump[d].on_edge = 1;
+      }
       d = cbi.label[STBCC__CLUSTER_SIZE_Y-1][i];
-      if (d != STBCC__NULL_CLUMPID)
+      if (d != STBCC__NULL_CLUMPID) {
          c->clump[d].on_edge = 1;
+      }
    }
 
-   for (j=0; j < STBCC__CLUSTER_SIZE_Y; ++j) {
+   for (j=1; j < STBCC__CLUSTER_SIZE_Y-1; ++j) {
       int d = cbi.label[j][0];
-      if (d != STBCC__NULL_CLUMPID)
+      if (d != STBCC__NULL_CLUMPID) {
          c->clump[d].on_edge = 1;
+      }
       d = cbi.label[j][STBCC__CLUSTER_SIZE_X-1];
-      if (d != STBCC__NULL_CLUMPID)
+      if (d != STBCC__NULL_CLUMPID) {
          c->clump[d].on_edge = 1;
+      }
    }
 
    num_on_edge = 0;
    for (i=0; i < (int) c->num_clumps; ++i)
       num_on_edge += c->clump[i].on_edge;
    c->num_edge_clumps = num_on_edge;
+
+   for (i=0; i < (int) c->num_edge_clumps; ++i)
+      assert(c->clump[i].on_edge);
+   for (; i < (int) c->num_clumps; ++i)
+      assert(!c->clump[i].on_edge);
+
+   // set the global label for all interior clumps since they can't have connections, so we don't have to do this on the global pass
+   for (i=(int) c->num_edge_clumps; i < (int) c->num_clumps; ++i) {
+      stbcc__global_clumpid gc;
+      gc.f.cluster_x = cx;
+      gc.f.cluster_y = cy;
+      gc.f.clump_index = i;
+      c->clump[i].global_label = gc;
+   }
 
    c->rebuild_adjacency = 1; // flag that it has no valid adjacency data
 }
