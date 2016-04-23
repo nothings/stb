@@ -51,7 +51,7 @@ static int stb__perlin_fastfloor(float a) {
 // not same permutation table as Perlin's reference to avoid copyright issues;
 // Perlin's table can be found at http://mrl.nyu.edu/~perlin/noise/
 // @OPTIMIZE: should this be unsigned char instead of int for cache?
-static int stb__perlin_randtab[512] =
+static unsigned char stb__perlin_randtab[512] =
 {
    23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123, 
    152, 238, 145, 45, 171, 114, 253, 10, 192, 136, 4, 157, 249, 30, 35, 72, 
