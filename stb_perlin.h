@@ -15,12 +15,8 @@
 
 // Documentation:
 //
-// float  stb_perlin_noise3( float x,
-//                           float y,
-//                           float z,
-//                           int   x_wrap=0,
-//                           int   y_wrap=0,
-//                           int   z_wrap=0)
+// float  stb_perlin_noise3(float x, float y, float z,
+//                          int x_wrap=0, int y_wrap=0, int z_wrap=0)
 //
 // This function computes a random value at the coordinate (x,y,z).
 // Adjacent random values are continuous but the noise fluctuates
@@ -33,16 +29,43 @@
 // 0 to mean "don't care". (The noise always wraps every 256 due
 // details of the implementation, even if you ask for larger or no
 // wrapping.)
-
+//
+// Fractal Noise:
+//
+// Three common fractal noise functions are included, which produce 
+// a wide variety of nice effects depending on the parameters 
+// provided. Note that each function will call stb_perlin_noise3 
+// # octaves times, so this parameter will affect runtime.
+//
+// float stb_ridge_noise3(float x, float y, float z,
+//		        		  float lacunarity, float gain, float offset, int octaves,
+//					      int x_wrap, int y_wrap, int z_wrap);
+//
+// float stb_fbm_noise3(float x, float y, float z,
+//          			float lacunarity, float gain,int octaves,
+//					    int x_wrap, int y_wrap, int z_wrap);
+//
+// float stb_turbulence_noise3(float x, float y, float z,
+//  	        			   float lacunarity, float gain,int octaves,
+//							   int x_wrap, int y_wrap, int z_wrap);
+ 
 
 #ifdef __cplusplus
 extern "C" float stb_perlin_noise3(float x, float y, float z, int x_wrap=0, int y_wrap=0, int z_wrap=0);
+extern "C" float stb_ridge_noise3(float x, float y, float z,float lacunarity, float gain, float offset, int octaves, int x_wrap=0, int y_wrap=0, int z_wrap=0);
+extern "C" float stb_fbm_noise3(float x, float y, float z,float lacunarity, float gain, int octaves, int x_wrap=0, int y_wrap=0, int z_wrap=0);
+extern "C" float stb_turbulence_noise3(float x, float y, float z,float lacunarity, float gain, int octaves, int x_wrap=0, int y_wrap=0, int z_wrap=0);
 #else
-extern float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap);
+extern float stb_perlin_noise3(float x, float y, float z,int x_wrap, int y_wrap, int z_wrap);
+extern float stb_ridge_noise3(float x, float y, float z,float lacunarity, float gain, float offset, int octaves,int x_wrap, int y_wrap, int z_wrap);
+extern float stb_fbm_noise3(float x, float y, float z,float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap);
+extern float stb_turbulence_noise3(float x, float y,float z,float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap);
 #endif
 
 #ifdef STB_PERLIN_IMPLEMENTATION
 
+// fast floor, leads to ~14% faster execution time.
+// does not handle overflow (when float is too large to represent as an int)
 static int stb__perlin_fastfloor(float a) {
 	int ai = (int)a;
 	return a<ai ? ai - 1 : ai;
@@ -50,7 +73,6 @@ static int stb__perlin_fastfloor(float a) {
 
 // not same permutation table as Perlin's reference to avoid copyright issues;
 // Perlin's table can be found at http://mrl.nyu.edu/~perlin/noise/
-// @OPTIMIZE: should this be unsigned char instead of int for cache?
 static unsigned char stb__perlin_randtab[512] =
 {
    23, 125, 161, 52, 103, 117, 70, 37, 247, 101, 203, 169, 124, 126, 44, 123, 
@@ -182,4 +204,60 @@ float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z
 
    return stb__perlin_lerp(n0,n1,u);
 }
+
+
+float stb_ridge_noise3(float x, float y, float z,float lacunarity, float gain, float offset, int octaves,int x_wrap, int y_wrap, int z_wrap)
+{
+	float frequency = 1.0f;
+	float prev = 1.0f;
+	float amplitude = 0.5f;
+	float sum = 0.0f;
+
+	for (int i = octaves; i != 0; i--)
+	{
+		float r = (float)(stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap));
+		r = r<0 ? -r : r; //abs
+		r = offset - r;
+		r = r*r;
+		sum += r*amplitude*prev;
+		prev = r;
+		frequency *= lacunarity;
+		amplitude *= gain;
+	}
+	return sum;
+}
+
+
+float stb_fbm_noise3(float x, float y, float z,float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap)
+{
+	float frequency = 1.0f;
+	float amplitude = 1.0f;
+	float sum = 0.0f;
+	
+	for (int i = 0; i < octaves; i++)
+	{
+		sum += stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap)*amplitude;
+		frequency *= lacunarity;
+		amplitude *= gain;
+	}
+	return sum;
+}
+
+float stb_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves,int x_wrap, int y_wrap, int z_wrap)
+{
+	float frequency = 1.0f;
+	float amplitude = 1.0f;
+	float sum = 0.0f;
+	
+	for (int i = 0; i < octaves; i++)
+	{
+		float r = stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap)*amplitude;
+		r = r<0 ? -r : r; //abs
+		sum += r;
+		frequency *= lacunarity;
+		amplitude *= gain;
+	}
+	return sum;
+}
+
 #endif  // STB_PERLIN_IMPLEMENTATION
