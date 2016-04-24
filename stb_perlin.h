@@ -213,7 +213,7 @@ float stb_ridge_noise3(float x, float y, float z,float lacunarity, float gain, f
 	float amplitude = 0.5f;
 	float sum = 0.0f;
 
-	for (int i = octaves; i != 0; i--)
+	for (int i = 0; i < octaves; i++)
 	{
 		float r = (float)(stb_perlin_noise3(x*frequency,y*frequency,z*frequency,x_wrap,y_wrap,z_wrap));
 		r = r<0 ? -r : r; //abs
