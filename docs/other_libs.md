@@ -36,7 +36,7 @@ as C/C++, as this is not an obstacle to most users.)
 category          | library                                                               | license              | API |files| description
 ----------------- | --------------------------------------------------------------------- |:--------------------:|:---:|:---:| -----------
 AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 | C++ |  2  | pathfinding with A*
-argv              |  [parg](https://github.com/jibsen/parg)                               | **public domain**    |  C  |  1  | argv parsing
+argv              |  [parg](https://github.com/jibsen/parg)                               | **public domain**    |  C  |  1  | command-line argument parsing
 audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |C/C++|**1**| IMA-ADPCM audio decoder
 audio             |**[dr_flac](https://github.com/mackron/dr_libs)**                      |  **public domain**   |C/C++|**1**| FLAC audio decoder
 compression       |**[miniz.c](https://github.com/richgel999/miniz)**                     |**public&nbsp;domain**|C/C++|**1**| compression,decompression, zip file, png writing
