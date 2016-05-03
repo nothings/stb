@@ -148,7 +148,7 @@ enum
 {
    STBRP_HEURISTIC_Skyline_default=0,
    STBRP_HEURISTIC_Skyline_BL_sortHeight = STBRP_HEURISTIC_Skyline_default,
-   STBRP_HEURISTIC_Skyline_BF_sortHeight,
+   STBRP_HEURISTIC_Skyline_BF_sortHeight
 };
 
 
@@ -198,9 +198,15 @@ struct stbrp_context
 #define STBRP_ASSERT assert
 #endif
 
+#ifdef _MSC_VER
+#define STBRP__NOTUSED(v)  (void)(v)
+#else
+#define STBRP__NOTUSED(v)  (void)sizeof(v)
+#endif
+
 enum
 {
-   STBRP__INIT_skyline = 1,
+   STBRP__INIT_skyline = 1
 };
 
 STBRP_DEF void stbrp_setup_heuristic(stbrp_context *context, int heuristic)
@@ -273,6 +279,9 @@ static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0
    stbrp_node *node = first;
    int x1 = x0 + width;
    int min_y, visited_width, waste_area;
+   
+   STBRP__NOTUSED(c);
+   
    STBRP_ASSERT(first->x <= x0);
 
    #if 0
