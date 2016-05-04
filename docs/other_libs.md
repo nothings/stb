@@ -72,7 +72,7 @@ geometry math     |  [yocto_bvh.h](https://github.com/xelatihy/yocto-gl)        
 geometry math     |  [yocto_shape.h](https://github.com/xelatihy/yocto-gl)                | MIT                  |C/C++|**1**| shape generation, tesselation, normals, etc.
 geometry math     |  [yocto_trace.h](https://github.com/xelatihy/yocto-gl)                | MIT                  |C/C++|**1**| physically-based unidirectional path tracer w/ MIS for direct lights
 graphics (2d)     |  [blendish](https://bitbucket.org/duangle/oui-blendish/src)           | MIT                  |C/C++|**1**| blender-style widget rendering
-graphics (2d)     |  [tigr](https://bitbucket.org/rmitton/tigr/src)                       | **public domain**    |C/C++|  2  | quick-n-dirty window text/graphics for Windows
+graphics (2d)     |  [tigr](https://bitbucket.org/rmitton/tigr/src)                       | **public domain**    |C/C++|  2  | quick-n-dirty window text/graphics for Windows and OSX
 graphics (2d)     |  [noc_turtle](https://github.com/guillaumechereau/noc)                | MIT                  |C/C++|  2  | procedural graphics generator
 graphics (3-D)    |  [mikktspace](http://tinyurl.com/z6xtucm)                             | zlib                 |C/C++|  2  | compute tangent space for normal mapping
 graphics (3-D)    |  [debug-draw](https://github.com/glampert/debug-draw)                 | **public domain**    | C++ |**1**| API-agnostic immediate-mode debug rendering
