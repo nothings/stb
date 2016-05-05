@@ -19,7 +19,12 @@ Exceptions will be allowed for good reasons.
 
 See discussion after the list.
 
-## Library listing
+### JSON Parsing
+
+There are a lot of JSON parsers listed here. For some analysis and performance
+results, check out https://github.com/miloyip/nativejson-benchmark
+
+### Library listing
 
 **Public domain single-file libraries usable from C and C++ are in bold.** Other
 libraries are either non-public domain, or two files, or not usable from both C and C++, or
