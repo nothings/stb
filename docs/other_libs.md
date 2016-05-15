@@ -114,6 +114,7 @@ parsing           |  [mm_lexer.h](https://github.com/vurtun/mmx)                
 parsing           |  [json.h](https://github.com/sheredom/json.h)                         | **public domain**    |C/C++|  2  | JSON parser
 parsing           |  [jzon.h](https://github.com/Zguy/Jzon)                               | MIT                  | C++ |  2  | JSON parser
 parsing           |  [parson](https://github.com/kgabis/parson)                           | MIT                  |C/C++|  2  | JSON parser and serializer
+parsing           |  [jsonxx](https://github.com/hjiang/jsonxx)                           | MIT                  | C++ |  2  | JSON parser and serializer
 parsing           |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |  C  |  2  | two-file regex (also binary tree, etc)
 profiling         |  [Remotery](https://github.com/Celtoys/Remotery)                      | Apache 2.0           |C/C++|  2  | CPU/GPU profiler Win/Mac/Linux, using web browser for viewer
 profiling         |  [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile)        | **unlicense**        | C++ | 2-4 | CPU (and GPU?) profiler, 1-3 header files, uses miniz internally
