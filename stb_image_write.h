@@ -57,6 +57,10 @@ USAGE:
 
       void stbi_write_set_flip_vertically_on_save(int flag_true_if_should_flip)
 
+   Please note that this function modifies the data parameter you pass to any
+   of the stb_write functions. Copy it using memcpy or likewise if you want to
+   preserve or reuse it later.
+   
    Each function except stbi_write_set_flip_vertically_on_save returns 0 on
    failure and non-0 on success.
 
