@@ -6913,9 +6913,9 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
 
    has_slash = (path[0] && path[strlen(path)-1] == '/'); 
    if (has_slash)
-      swprintf((wchar_t *)full_path, L"%s*", stb__from_utf8(path));
+      swprintf((wchar_t *)full_path, 1024, L"%s*", stb__from_utf8(path));
    else
-      swprintf((wchar_t *)full_path, L"%s/*", stb__from_utf8(path));
+      swprintf((wchar_t *)full_path, 1024, L"%s/*", stb__from_utf8(path));
 
    // it's possible this directory is already present: that means it was in the
    // cache, but its parent wasn't... in that case, we're done with it
