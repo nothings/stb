@@ -293,9 +293,7 @@ static void stbiw__write_pixel(stbi__write_context *s, int rgb_dir, int comp, in
       s->func(s->context, &d[comp - 1], 1);
 
    switch (comp) {
-      case 1:
-         s->func(s->context,d,1);
-         break;
+      case 1: /* fall-through wanted */
       case 2:
          if (expand_mono)
             stbiw__write3(s, d[0], d[0], d[0]); // monochrome bmp
