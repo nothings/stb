@@ -147,6 +147,50 @@
 //          sb_push(arr, new_one);
 //       }
 //
+// Using with C++:
+// 	
+// 		#define STB_STRETCHY_BUFFER_CPP 
+//
+// 	If this is defined, then the following
+// 	macros are changed to include the type of the buffer to fix
+// 	the problem with C++ not allowing void* assignment.
+// 	
+//		stb_sb_push(TYPE, TYPE* a, TYPE v)
+//		stb_sb_add(TYPE, TYPE* a, int n)
+//
+//		All the other macros remain unchanged.
+//
+//       SomeStruct *arr = NULL;
+//       while (something)
+//       {
+//          SomeStruct new_one;
+//          new_one.whatever = whatever;
+//          new_one.whatup   = whatup;
+//          new_one.foobar   = barfoo;
+//          sb_push(SomeStruct, arr, new_one);
+//       }
+//
+//       while (something)
+//       {
+//          if (case_A) {
+//             sb_push(SomeStruct, arr, some_func1());
+//          } else if (case_B) {
+//             sb_push(SomeStruct, arr, some_func2());
+//          } else {
+//             sb_push(SomeStruct, arr, some_func3());
+//          }
+//       }
+//
+//       SomeStruct **arr = NULL;
+//       while (something)
+//       {
+//          SomeStruct *new_one = malloc(sizeof(*new_one));
+//          new_one->whatever = whatever;
+//          new_one->whatup   = whatup;
+//          new_one->foobar   = barfoo;
+//          sb_push(SomeStruct*, arr, new_one);
+//       }
+//
 // How it works:
 //
 //    A long-standing tradition in things like malloc implementations
@@ -171,6 +215,18 @@
 #ifndef STB_STRETCHY_BUFFER_H_INCLUDED
 #define STB_STRETCHY_BUFFER_H_INCLUDED
 
+#ifdef  STB_STRETCHY_BUFFER_CPP
+#define stb_sb_push(t,a,v)      (stb__sbmaybegrow(t,a,1), (a)[stb__sbn(a)++] = (v))
+#define stb_sb_add(t,a,n)       (stb__sbmaybegrow(t,a,n), stb__sbn(a)+=(n), &(a)[stb__sbn(a)-(n)])
+#define stb__sbmaybegrow(t,a,n) (stb__sbneedgrow(a,(n)) ? stb__sbgrow(t,a,n) : 0)
+#define stb__sbgrow(t,a,n)      ((a) = (t*)stb__sbgrowf((void*)(a), (n), sizeof(t)))
+#else
+#define stb_sb_push(a,v)        (stb__sbmaybegrow(a,1), (a)[stb__sbn(a)++] = (v))
+#define stb_sb_add(a,n)         (stb__sbmaybegrow(a,n), stb__sbn(a)+=(n), &(a)[stb__sbn(a)-(n)])
+#define stb__sbmaybegrow(a,n)   (stb__sbneedgrow(a,(n)) ? stb__sbgrow(a,n) : 0)
+#define stb__sbgrow(a,n)        ((a) = stb__sbgrowf((a), (n), sizeof(*(a))))
+#endif
+
 #ifndef NO_STRETCHY_BUFFER_SHORT_NAMES
 #define sb_free   stb_sb_free
 #define sb_push   stb_sb_push
@@ -179,19 +235,15 @@
 #define sb_last   stb_sb_last
 #endif
 
-#define stb_sb_free(a)         ((a) ? free(stb__sbraw(a)),0 : 0)
-#define stb_sb_push(a,v)       (stb__sbmaybegrow(a,1), (a)[stb__sbn(a)++] = (v))
-#define stb_sb_count(a)        ((a) ? stb__sbn(a) : 0)
-#define stb_sb_add(a,n)        (stb__sbmaybegrow(a,n), stb__sbn(a)+=(n), &(a)[stb__sbn(a)-(n)])
-#define stb_sb_last(a)         ((a)[stb__sbn(a)-1])
+#define stb_sb_free(a)          ((a) ? free(stb__sbraw(a)),0 : 0)
+#define stb_sb_count(a)         ((a) ? stb__sbn(a) : 0)
+#define stb_sb_last(a)          ((a)[stb__sbn(a)-1])
 
 #define stb__sbraw(a) ((int *) (a) - 2)
 #define stb__sbm(a)   stb__sbraw(a)[0]
 #define stb__sbn(a)   stb__sbraw(a)[1]
 
 #define stb__sbneedgrow(a,n)  ((a)==0 || stb__sbn(a)+(n) >= stb__sbm(a))
-#define stb__sbmaybegrow(a,n) (stb__sbneedgrow(a,(n)) ? stb__sbgrow(a,n) : 0)
-#define stb__sbgrow(a,n)      ((a) = stb__sbgrowf((a), (n), sizeof(*(a))))
 
 #include <stdlib.h>
 
