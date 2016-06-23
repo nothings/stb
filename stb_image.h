@@ -1406,6 +1406,7 @@ static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp)
 static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp)
 {
    int i,k,n;
+   if (data == NULL) { return NULL; }
    stbi_uc *output = (stbi_uc *) stbi__malloc(x * y * comp);
    if (output == NULL) { STBI_FREE(data); return stbi__errpuc("outofmem", "Out of memory"); }
    // compute number of non-alpha components
