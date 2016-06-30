@@ -1239,11 +1239,11 @@ static void stbir__decode_scanline(stbir__info* stbir_info, int n)
     int type = stbir_info->type;
     int colorspace = stbir_info->colorspace;
     int input_w = stbir_info->input_w;
-    int input_stride_bytes = stbir_info->input_stride_bytes;
+    size_t input_stride_bytes = stbir_info->input_stride_bytes;
     float* decode_buffer = stbir__get_decode_buffer(stbir_info);
     stbir_edge edge_horizontal = stbir_info->edge_horizontal;
     stbir_edge edge_vertical = stbir_info->edge_vertical;
-    int in_buffer_row_offset = stbir__edge_wrap(edge_vertical, n, stbir_info->input_h) * input_stride_bytes;
+    size_t in_buffer_row_offset = stbir__edge_wrap(edge_vertical, n, stbir_info->input_h) * input_stride_bytes;
     const void* input_data = (char *) stbir_info->input_data + in_buffer_row_offset;
     int max_x = input_w + stbir_info->horizontal_filter_pixel_margin;
     int decode = STBIR__DECODE(type, colorspace);
