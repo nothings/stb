@@ -2777,6 +2777,28 @@ static int stbi__process_scan_header(stbi__jpeg *z)
    return 1;
 }
 
+static int stbi__free_jpeg_components(stbi__jpeg *z, int ncomp, int why)
+{
+   int i;
+   for (i=0; i < ncomp; ++i) {
+      if (z->img_comp[i].raw_data) {
+         STBI_FREE(z->img_comp[i].raw_data);
+         z->img_comp[i].raw_data = NULL;
+         z->img_comp[i].data = NULL;
+      }
+      if (z->img_comp[i].raw_coeff) {
+         STBI_FREE(z->img_comp[i].raw_coeff);
+         z->img_comp[i].raw_coeff = 0;
+         z->img_comp[i].coeff = 0;
+      }
+      if (z->img_comp[i].linebuf) {
+         STBI_FREE(z->img_comp[i].linebuf);
+         z->img_comp[i].linebuf = NULL;
+      }
+   }
+   return why;
+}
+
 static int stbi__process_frame_header(stbi__jpeg *z, int scan)
 {
    stbi__context *s = z->s;
@@ -2843,27 +2865,22 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
       // so these muls can't overflow with 32-bit ints (which we require)
       z->img_comp[i].w2 = z->img_mcu_x * z->img_comp[i].h * 8;
       z->img_comp[i].h2 = z->img_mcu_y * z->img_comp[i].v * 8;
+      z->img_comp[i].coeff = 0;
+      z->img_comp[i].raw_coeff = 0;
+      z->img_comp[i].linebuf = NULL;
       z->img_comp[i].raw_data = stbi__malloc_mad2(z->img_comp[i].w2, z->img_comp[i].h2, 15);
-
-      if (z->img_comp[i].raw_data == NULL) {
-         for(--i; i >= 0; --i) {
-            STBI_FREE(z->img_comp[i].raw_data);
-            z->img_comp[i].raw_data = NULL;
-         }
-         return stbi__err("outofmem", "Out of memory");
-      }
+      if (z->img_comp[i].raw_data == NULL)
+         return stbi__free_jpeg_components(z, i+1, stbi__err("outofmem", "Out of memory"));
       // align blocks for idct using mmx/sse
       z->img_comp[i].data = (stbi_uc*) (((size_t) z->img_comp[i].raw_data + 15) & ~15);
-      z->img_comp[i].linebuf = NULL;
       if (z->progressive) {
          // w2, h2 are multiples of 8 (see above)
          z->img_comp[i].coeff_w = z->img_comp[i].w2 / 8;
          z->img_comp[i].coeff_h = z->img_comp[i].h2 / 8;
          z->img_comp[i].raw_coeff = stbi__malloc_mad3(z->img_comp[i].w2, z->img_comp[i].h2, sizeof(short), 15);
+         if (z->img_comp[i].raw_coeff == NULL)
+            return stbi__free_jpeg_components(z, i+1, stbi__err("outofmem", "Out of memory"));
          z->img_comp[i].coeff = (short*) (((size_t) z->img_comp[i].raw_coeff + 15) & ~15);
-      } else {
-         z->img_comp[i].coeff = 0;
-         z->img_comp[i].raw_coeff = 0;
       }
    }
 
@@ -3369,23 +3386,7 @@ static void stbi__setup_jpeg(stbi__jpeg *j)
 // clean up the temporary component buffers
 static void stbi__cleanup_jpeg(stbi__jpeg *j)
 {
-   int i;
-   for (i=0; i < j->s->img_n; ++i) {
-      if (j->img_comp[i].raw_data) {
-         STBI_FREE(j->img_comp[i].raw_data);
-         j->img_comp[i].raw_data = NULL;
-         j->img_comp[i].data = NULL;
-      }
-      if (j->img_comp[i].raw_coeff) {
-         STBI_FREE(j->img_comp[i].raw_coeff);
-         j->img_comp[i].raw_coeff = 0;
-         j->img_comp[i].coeff = 0;
-      }
-      if (j->img_comp[i].linebuf) {
-         STBI_FREE(j->img_comp[i].linebuf);
-         j->img_comp[i].linebuf = NULL;
-      }
-   }
+   stbi__free_jpeg_components(j, j->s->img_n, 0);
 }
 
 typedef struct
