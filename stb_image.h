@@ -5392,11 +5392,49 @@ static int stbi__psd_test(stbi__context *s)
    return r;
 }
 
+static int stbi__psd_decode_rle(stbi__context *s, stbi_uc *p, int pixelCount)
+{
+   int count, nleft, len;
+
+   count = 0;
+   while ((nleft = pixelCount - count) > 0) {
+      len = stbi__get8(s);
+      if (len == 128) {
+         // No-op.
+      } else if (len < 128) {
+         // Copy next len+1 bytes literally.
+         len++;
+         if (len > nleft) return 0; // corrupt data
+         count += len;
+         while (len) {
+            *p = stbi__get8(s);
+            p += 4;
+            len--;
+         }
+      } else if (len > 128) {
+         stbi_uc   val;
+         // Next -len+1 bytes in the dest are replicated from next source byte.
+         // (Interpret len as a negative 8-bit int.)
+         len = 257 - len;
+         if (len > nleft) return 0; // corrupt data
+         val = stbi__get8(s);
+         count += len;
+         while (len) {
+            *p = val;
+            p += 4;
+            len--;
+         }
+      }
+   }
+
+   return 1;
+}
+
 static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
-   int   pixelCount;
+   int pixelCount;
    int channelCount, compression;
-   int channel, i, count, len;
+   int channel, i;
    int bitdepth;
    int w,h;
    stbi_uc *out;
@@ -5493,34 +5531,9 @@ static stbi_uc *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int 
                *p = (channel == 3 ? 255 : 0);
          } else {
             // Read the RLE data.
-            count = 0;
-            while (count < pixelCount) {
-               len = stbi__get8(s);
-               if (len == 128) {
-                  // No-op.
-               } else if (len < 128) {
-                  // Copy next len+1 bytes literally.
-                  len++;
-                  count += len;
-                  while (len) {
-                     *p = stbi__get8(s);
-                     p += 4;
-                     len--;
-                  }
-               } else if (len > 128) {
-                  stbi_uc   val;
-                  // Next -len+1 bytes in the dest are replicated from next source byte.
-                  // (Interpret len as a negative 8-bit int.)
-                  len ^= 0x0FF;
-                  len += 2;
-                  val = stbi__get8(s);
-                  count += len;
-                  while (len) {
-                     *p = val;
-                     p += 4;
-                     len--;
-                  }
-               }
+            if (!stbi__psd_decode_rle(s, p, pixelCount)) {
+               STBI_FREE(out);
+               return stbi__errpuc("corrupt", "bad RLE data");
             }
          }
       }
@@ -6325,20 +6338,29 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
          len <<= 8;
          len |= stbi__get8(s);
          if (len != width) { STBI_FREE(hdr_data); STBI_FREE(scanline); return stbi__errpf("invalid decoded scanline length", "corrupt HDR"); }
-         if (scanline == NULL) scanline = (stbi_uc *) stbi__malloc(width * 4);
+         if (scanline == NULL) {
+            scanline = (stbi_uc *) stbi__malloc_mad2(width, 4, 0);
+            if (!scanline) {
+               STBI_FREE(hdr_data);
+               return stbi__errpf("outofmem", "Out of memory");
+            }
+         }
 
          for (k = 0; k < 4; ++k) {
+            int nleft;
             i = 0;
-            while (i < width) {
+            while ((nleft = width - i) > 0) {
                count = stbi__get8(s);
                if (count > 128) {
                   // Run
                   value = stbi__get8(s);
                   count -= 128;
+                  if (count > nleft) { STBI_FREE(hdr_data); STBI_FREE(scanline); return stbi__errpf("corrupt", "bad RLE data in HDR"); }
                   for (z = 0; z < count; ++z)
                      scanline[i++ * 4 + k] = value;
                } else {
                   // Dump
+                  if (count > nleft) { STBI_FREE(hdr_data); STBI_FREE(scanline); return stbi__errpf("corrupt", "bad RLE data in HDR"); }
                   for (z = 0; z < count; ++z)
                      scanline[i++ * 4 + k] = stbi__get8(s);
                }
@@ -6347,7 +6369,8 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
          for (i=0; i < width; ++i)
             stbi__hdr_convert(hdr_data+(j*width + i)*req_comp, scanline + i*4, req_comp);
       }
-      STBI_FREE(scanline);
+      if (scanline)
+         STBI_FREE(scanline);
    }
 
    return hdr_data;
