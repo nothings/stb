@@ -45,7 +45,8 @@
 #define STB_C_LEX_C_DECIMAL_INTS    Y   //  "0|[1-9][0-9]*"                        CLEX_intlit
 #define STB_C_LEX_C_HEX_INTS        Y   //  "0x[0-9a-fA-F]+"                       CLEX_intlit
 #define STB_C_LEX_C_OCTAL_INTS      Y   //  "[0-7]+"                               CLEX_intlit
-#define STB_C_LEX_C_DECIMAL_FLOATS  Y   //  "[0-9]*(.[0-9]*([eE]-?[0-9]+)?)        CLEX_floatlit
+#define STB_C_LEX_C_DECIMAL_FLOATS  Y   //  "[0-9]*(.[0-9]*([eE][-+]?[0-9]+)?)     CLEX_floatlit
+#define STB_C_LEX_C99_HEX_FLOATS    N   //  "0x{hex}+(.{hex}*)?[pP][-+]?{hex}+     CLEX_floatlit
 #define STB_C_LEX_C_IDENTIFIERS     Y   //  "[_a-zA-Z][_a-zA-Z0-9]*"               CLEX_id
 #define STB_C_LEX_C_DQ_STRINGS      Y   //  double-quote-delimited strings with escapes  CLEX_dqstring
 #define STB_C_LEX_C_SQ_STRINGS      N   //  single-quote-delimited strings with escapes  CLEX_ssstring
@@ -171,11 +172,6 @@ extern void stb_c_lexer_get_location(const stb_lexer *lexer, const char *where, 
 #define Y(x) 1
 #define N(x) 0
 
-#if STB_C_LEX_USE_STDLIB(x)
-#define STB__CLEX_use_stdlib
-#include <stdlib.h>
-#endif
-
 #if STB_C_LEX_INTEGERS_AS_DOUBLES(x)
 typedef double     stb__clex_int;
 #define intfield   real_number
@@ -200,6 +196,10 @@ typedef long       stb__clex_int;
 #define STB__clex_define_shifts
 #endif
 
+#if STB_C_LEX_C99_HEX_FLOATS(x)
+#define STB__clex_hex_floats
+#endif
+
 #if STB_C_LEX_C_HEX_INTS(x)
 #define STB__clex_hex_ints
 #endif
@@ -218,6 +218,11 @@ typedef long       stb__clex_int;
 
 #if STB_C_LEX_DISCARD_PREPROCESSOR(x)
 #define STB__clex_discard_preprocessor
+#endif
+
+#if STB_C_LEX_USE_STDLIB(x) && (!defined(STB__clex_hex_floats) || __STDC_VERSION__ >= 199901L)
+#define STB__CLEX_use_stdlib
+#include <stdlib.h>
 #endif
 
 // Now pick a definition of Y/N that's conducive to
@@ -364,34 +369,95 @@ static int stb__clex_parse_suffixes(stb_lexer *lexer, long tokenid, char *start,
 }
 
 #ifndef STB__CLEX_use_stdlib
+static double stb__clex_pow(double base, unsigned int exponent)
+{
+   double value=1;
+   for ( ; exponent; exponent >>= 1) {
+      if (exponent & 1)
+         value *= base;
+      base *= base;
+   }
+   return value;
+}
+
 static double stb__clex_parse_float(char *p, char **q)
 {
+   char *s = p;
    double value=0;
-   while (*p >= '0' && *p <= '9')
-      value = value*10 + (*p++ - '0');
-   if (*p == '.') {
-      double powten=1, addend = 0;
-      ++p;
-      while (*p >= '0' && *p <= '9') {
-         addend = addend*10 + (*p++ - '0');
-         powten *= 10;
+   int base=10;
+   int exponent=0;
+
+#ifdef STB__clex_hex_floats
+   if (*p == '0') {
+      if (p[1] == 'x' || p[1] == 'X') {
+         base=16;
+         p += 2;
       }
-      value += addend / powten;
    }
-   if (*p == 'e' || *p == 'E') {
+#endif
+
+   for (;;) {
+      if (*p >= '0' && *p <= '9')
+         value = value*base + (*p++ - '0');
+#ifdef STB__clex_hex_floats
+      else if (base == 16 && *p >= 'a' && *p <= 'f')
+         value = value*base + 10 + (*p++ - 'a');
+      else if (base == 16 && *p >= 'A' && *p <= 'F')
+         value = value*base + 10 + (*p++ - 'A');
+#endif
+      else
+         break;
+   }
+
+   if (*p == '.') {
+      double pow, addend = 0;
+      ++p;
+      for (pow=1; ; pow*=base) {
+         if (*p >= '0' && *p <= '9')
+            addend = addend*base + (*p++ - '0');
+#ifdef STB__clex_hex_floats
+         else if (base == 16 && *p >= 'a' && *p <= 'f')
+            addend = addend*base + 10 + (*p++ - 'a');
+         else if (base == 16 && *p >= 'A' && *p <= 'F')
+            addend = addend*base + 10 + (*p++ - 'A');
+#endif
+         else
+            break;
+      }
+      value += addend / pow;
+   }
+#ifdef STB__clex_hex_floats
+   if (base == 16) {
+      // exponent required for hex float literal
+      if (*p != 'p' && *p != 'P') {
+         *q = s;
+         return 0;
+      }
+      exponent = 1;
+   } else
+#endif
+      exponent = (*p == 'e' || *p == 'E');
+
+   if (exponent) {
       int sign = p[1] == '-';
-      int exponent=0;
-      double pow10=1;
-      p += 1+sign;
+      unsigned int exponent=0;
+      double power=1;
+      ++p;
+      if (*p == '-' || *p == '+')
+         ++p;
       while (*p >= '0' && *p <= '9')
          exponent = exponent*10 + (*p++ - '0');
-      // can't use pow() from stdlib, so do it slow way
-      while (exponent-- > 0)
-         pow10 *= 10;
-      if (sign)
-         value /= pow10;
+
+#ifdef STB__clex_hex_floats
+      if (base == 16)
+         power = stb__clex_pow(2, exponent);
       else
-         value *= pow10;
+#endif
+         power = stb__clex_pow(10, exponent);
+      if (sign)
+         value /= power;
+      else
+         value *= power;
    }
    *q = p;
    return value;
@@ -630,15 +696,37 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
          goto single_char;
 
       case '0':
-         #ifdef STB__clex_hex_ints
+         #if defined(STB__clex_hex_ints) || defined(STB__clex_hex_floats)
             if (p+1 != lexer->eof) {
                if (p[1] == 'x' || p[1] == 'X') {
-                  char *q = p+2;
+                  char *q;
+
+                  #ifdef STB__clex_hex_floats
+                  for (q=p+2;
+                       q != lexer->eof && ((*q >= '0' && *q <= '9') || (*q >= 'a' && *q <= 'f') || (*q >= 'A' && *q <= 'F'));
+                       ++q);
+                  if (q != lexer->eof) {
+                     if (*q == '.' STB_C_LEX_FLOAT_NO_DECIMAL(|| *q == 'p' || *q == 'P')) {
+                        #ifdef STB__CLEX_use_stdlib
+                        lexer->real_number = strtod((char *) p, (char**) &q);
+                        #else
+                        lexer->real_number = stb__clex_parse_float(p, &q);
+                        #endif
+
+                        if (p == q)
+                           return stb__clex_token(lexer, CLEX_parse_error, p,q);
+                        return stb__clex_parse_suffixes(lexer, CLEX_floatlit, p,q, STB_C_LEX_FLOAT_SUFFIXES);
+
+                     }
+                  }
+                  #endif   // STB__CLEX_hex_floats
+
+                  #ifdef STB__clex_hex_ints
                   #ifdef STB__CLEX_use_stdlib
                   lexer->int_number = strtol((char *) p, (char **) &q, 16);
                   #else
                   stb__clex_int n=0;
-                  while (q != lexer->eof) {
+                  for (q=p+2; q != lexer->eof; ++q) {
                      if (*q >= '0' && *q <= '9')
                         n = n*16 + (*q - '0');
                      else if (*q >= 'a' && *q <= 'f')
@@ -647,16 +735,16 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
                         n = n*16 + (*q - 'A') + 10;
                      else
                         break;
-                     ++q;
                   }
                   lexer->int_number = n;
                   #endif
                   if (q == p+2)
                      return stb__clex_token(lexer, CLEX_parse_error, p-2,p-1);
                   return stb__clex_parse_suffixes(lexer, CLEX_intlit, p,q, STB_C_LEX_HEX_SUFFIXES);
+                  #endif
                }
             }
-         #endif // STB__clex_hex_ints
+         #endif // defined(STB__clex_hex_ints) || defined(STB__clex_hex_floats)
          // can't test for octal because we might parse '0.0' as float or as '0' '.' '0',
          // so have to do float first
 
@@ -788,6 +876,14 @@ multiline comments */
 
 void dummy(void)
 {
+   double some_floats[] = {
+      1.0501, -10.4e12, 5E+10,
+#ifdef STB__clex_hex_floats
+      0x1.0p+24, 0xff.FP-8, 0x1p-23,
+#endif
+      4.
+   };
+
    printf("test %d",1); // https://github.com/nothings/stb/issues/13
 }
 
@@ -803,7 +899,7 @@ int main(int argc, char **argv)
    }
    fclose(f);
 
-   stb_c_lexer_init(&lex, text, text+len, (char *) malloc(1<<16), 1<<16);
+   stb_c_lexer_init(&lex, text, text+len, (char *) malloc(0x10000), 0x10000);
    while (stb_c_lexer_get_token(&lex)) {
       if (lex.token == CLEX_parse_error) {
          printf("\n<<<PARSE ERROR>>>\n");
