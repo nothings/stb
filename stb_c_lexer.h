@@ -373,7 +373,7 @@ static double stb__clex_parse_float(char *p, char **q)
       double powten=1, addend = 0;
       ++p;
       while (*p >= '0' && *p <= '9') {
-         addend = addend + 10*(*p++ - '0');
+         addend = addend*10 + (*p++ - '0');
          powten *= 10;
       }
       value += addend / powten;
@@ -649,7 +649,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
                         break;
                      ++q;
                   }
-                  lexer->int_field = n; // int_field is macro that expands to real_number/int_number depending on type of n
+                  lexer->int_number = n;
                   #endif
                   if (q == p+2)
                      return stb__clex_token(lexer, CLEX_parse_error, p-2,p-1);
@@ -692,14 +692,14 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
             stb__clex_int n=0;
             while (q != lexer->eof) {
                if (*q >= '0' && *q <= '7')
-                  n = n*8 + (q - '0');
+                  n = n*8 + (*q - '0');
                else
                   break;
                ++q;
             }
             if (q != lexer->eof && (*q == '8' || *q=='9'))
-               return stb__clex_token(tok, CLEX_parse_error, p, q);
-            lexer->int_field = n;
+               return stb__clex_token(lexer, CLEX_parse_error, p, q);
+            lexer->int_number = n;
             #endif
             return stb__clex_parse_suffixes(lexer, CLEX_intlit, p,q, STB_C_LEX_OCTAL_SUFFIXES);
          }
@@ -714,12 +714,12 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
             stb__clex_int n=0;
             while (q != lexer->eof) {
                if (*q >= '0' && *q <= '9')
-                  n = n*10 + (q - '0');
+                  n = n*10 + (*q - '0');
                else
                   break;
                ++q;
             }
-            lexer->int_field = n;
+            lexer->int_number = n;
             #endif
             return stb__clex_parse_suffixes(lexer, CLEX_intlit, p,q, STB_C_LEX_OCTAL_SUFFIXES);
          }
@@ -732,6 +732,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
 #ifdef STB_C_LEXER_SELF_TEST
 
 #include <stdio.h>
+#include <stdlib.h>
 
 static void print_token(stb_lexer *lexer)
 {
@@ -787,7 +788,7 @@ multiline comments */
 
 void dummy(void)
 {
-   printf("test",1); // https://github.com/nothings/stb/issues/13
+   printf("test %d",1); // https://github.com/nothings/stb/issues/13
 }
 
 int main(int argc, char **argv)
