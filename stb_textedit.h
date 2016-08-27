@@ -417,10 +417,9 @@ static int stb_text_locate_coord(STB_TEXTEDIT_STRING *str, float x, float y)
    // check if it's before the end of the line
    if (x < r.x1) {
       // search characters in row for one that straddles 'x'
-      k = i;
       prev_x = r.x0;
-      for (i=0; i < r.num_chars; ++i) {
-         float w = STB_TEXTEDIT_GETWIDTH(str, k, i);
+      for (k=0; k < r.num_chars; ++k) {
+         float w = STB_TEXTEDIT_GETWIDTH(str, i, k);
          if (x < prev_x+w) {
             if (x < prev_x+w/2)
                return k+i;
