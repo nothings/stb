@@ -549,21 +549,23 @@ enum STBVorbisError
 #endif
 
 #ifndef STB_VORBIS_NO_CRT
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <math.h>
-#ifdef _MSC_VER
-#include <malloc.h>
-#endif
-#if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__)
-#include <alloca.h>
-#endif
+   #include <stdlib.h>
+   #include <string.h>
+   #include <assert.h>
+   #include <math.h>
+
+   // find definition of alloca if it's not in stdlib.h:
+   #ifdef _MSC_VER
+      #include <malloc.h>
+   #endif
+   #if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__)
+      #include <alloca.h>
+   #endif
 #else // STB_VORBIS_NO_CRT
-#define NULL 0
-#define malloc(s)   0
-#define free(s)     ((void) 0)
-#define realloc(s)  0
+   #define NULL 0
+   #define malloc(s)   0
+   #define free(s)     ((void) 0)
+   #define realloc(s)  0
 #endif // STB_VORBIS_NO_CRT
 
 #include <limits.h>
