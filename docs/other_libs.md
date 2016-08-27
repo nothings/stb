@@ -44,6 +44,7 @@ AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)  
 argv              |  [parg](https://github.com/jibsen/parg)                               | **public domain**    |  C  |  1  | command-line argument parsing
 audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |C/C++|**1**| IMA-ADPCM audio decoder
 audio             |**[dr_flac](https://github.com/mackron/dr_libs)**                      |  **public domain**   |C/C++|**1**| FLAC audio decoder
+audio             |**[sts_mixer](https://github.com/kieselsteini/sts)**                   |  **public domain**   |C/C++|**1**| simple stereo audio mixer
 compression       |**[miniz.c](https://github.com/richgel999/miniz)**                     |**public&nbsp;domain**|C/C++|**1**| compression,decompression, zip file, png writing
 compression       |  [lz4](https://github.com/Cyan4973/lz4)                               | BSD                  |C/C++|  2  | fast but larger LZ compression
 compression       |  [fastlz](https://code.google.com/archive/p/fastlz/source/default/source) | MIT              |C/C++|  2  | fast but larger LZ compression
@@ -104,6 +105,7 @@ math              |  [PoissonGenerator.h](https://github.com/corporateshark/pois
 math              |  [prns.h](http://marc-b-reynolds.github.io/shf/2016/04/19/prns.html)  | **public domain**    |C/C++|**1**| seekable pseudo-random number sequences
 multithreading    |  [mm_sched.h](https://github.com/vurtun/mmx)                          | zlib                 |C/C++|**1**| cross-platform multithreaded task scheduler
 network           |**[zed_net](https://github.com/ZedZull/zed_net)**                      | **public domain**    |C/C++|**1**| cross-platform socket wrapper
+network           |**[sts_net](https://github.com/kieselsteini/sts)**                     | **public domain**    |C/C++|**1**| cross-platform socket wrapper (socket sets and packet API)
 network           |  [mm_web.h](https://github.com/vurtun/mmx)                            | BSD                  |C/C++|**1**| lightweight webserver, fork of webby
 network           |  [par_easycurl.h](https://github.com/prideout/par)                    | MIT                  |C/C++|**1**| curl wrapper
 network           |  [yocto](https://github.com/tom-seddon/yhs)                           | **public domain**    |C/C++|  2  | non-production-use http server
@@ -142,9 +144,9 @@ _misc_            |  [tinyformat](https://github.com/c42f/tinyformat)           
 _misc_            |  [dbgtools](https://github.com/wc-duck/dbgtools)                      | zlib                 |C/C++|  2  | cross-platform debug util libraries
 _misc_            |  [stmr](https://github.com/wooorm/stmr.c)                             | MIT                  |  C  |  2  | extract English word stems
 _misc_            |  [levenshtein](https://github.com/wooorm/levenshtein.c)               | MIT                  |  C  |  2  | compute edit distance between two strings
-                                                                                                                       
+
 There are also these XML libraries, but if you're using XML, shame on you:                                             
-                                                                                                                       
+
 - parsing: [tinyxml2](https://github.com/leethomason/tinyxml2): XML                                                    
 - parsing: [pugixml](http://pugixml.org/): XML (MIT license)
 
@@ -192,4 +194,3 @@ about what is 'lightweight'.
 ### Why isn't SQLite's amalgamated build on this list?
 
 Come on.
-
