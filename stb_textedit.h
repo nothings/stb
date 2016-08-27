@@ -611,15 +611,16 @@ static void stb_textedit_move_to_last(STB_TEXTEDIT_STRING *str, STB_TexteditStat
 }
 
 #ifdef STB_TEXTEDIT_IS_SPACE
-static int is_word_boundary( STB_TEXTEDIT_STRING *_str, int _idx )
+static int is_word_boundary( STB_TEXTEDIT_STRING *str, int idx )
 {
-   return _idx > 0 ? (STB_TEXTEDIT_IS_SPACE( STB_TEXTEDIT_GETCHAR(_str,_idx-1) ) && !STB_TEXTEDIT_IS_SPACE( STB_TEXTEDIT_GETCHAR(_str, _idx) ) ) : 1;
+   return idx > 0 ? (STB_TEXTEDIT_IS_SPACE( STB_TEXTEDIT_GETCHAR(str,idx-1) ) && !STB_TEXTEDIT_IS_SPACE( STB_TEXTEDIT_GETCHAR(str, idx) ) ) : 1;
 }
 
 #ifndef STB_TEXTEDIT_MOVEWORDLEFT
-static int stb_textedit_move_to_word_previous( STB_TEXTEDIT_STRING *_str, int c )
+static int stb_textedit_move_to_word_previous( STB_TEXTEDIT_STRING *str, int c )
 {
-   while( c >= 0 && !is_word_boundary( _str, c ) )
+   --c; // always move at least one character
+   while( c >= 0 && !is_word_boundary( str, c ) )
       --c;
 
    if( c < 0 )
@@ -631,10 +632,11 @@ static int stb_textedit_move_to_word_previous( STB_TEXTEDIT_STRING *_str, int c 
 #endif
 
 #ifndef STB_TEXTEDIT_MOVEWORDRIGHT
-static int stb_textedit_move_to_word_next( STB_TEXTEDIT_STRING *_str, int c )
+static int stb_textedit_move_to_word_next( STB_TEXTEDIT_STRING *str, int c )
 {
    const int len = STB_TEXTEDIT_STRINGLEN(_str);
-   while( c < len && !is_word_boundary( _str, c ) )
+   ++c; // always move at least one character
+   while( c < len && !is_word_boundary( str, c ) )
       ++c;
 
    if( c > len )
@@ -771,7 +773,7 @@ retry:
          if (STB_TEXT_HAS_SELECTION(state))
             stb_textedit_move_to_first(state);
          else {
-            state->cursor = STB_TEXTEDIT_MOVEWORDLEFT(str, state->cursor-1);
+            state->cursor = STB_TEXTEDIT_MOVEWORDLEFT(str, state->cursor);
             stb_textedit_clamp( str, state );
          }
          break;
@@ -780,7 +782,7 @@ retry:
          if( !STB_TEXT_HAS_SELECTION( state ) )
             stb_textedit_prep_selection_at_cursor(state);
 
-         state->cursor = STB_TEXTEDIT_MOVEWORDLEFT(str, state->cursor-1);
+         state->cursor = STB_TEXTEDIT_MOVEWORDLEFT(str, state->cursor);
          state->select_end = state->cursor;
 
          stb_textedit_clamp( str, state );
@@ -792,7 +794,7 @@ retry:
          if (STB_TEXT_HAS_SELECTION(state)) 
             stb_textedit_move_to_last(str, state);
          else {
-            state->cursor = STB_TEXTEDIT_MOVEWORDRIGHT(str, state->cursor+1);
+            state->cursor = STB_TEXTEDIT_MOVEWORDRIGHT(str, state->cursor);
             stb_textedit_clamp( str, state );
          }
          break;
@@ -801,7 +803,7 @@ retry:
          if( !STB_TEXT_HAS_SELECTION( state ) )
             stb_textedit_prep_selection_at_cursor(state);
 
-         state->cursor = STB_TEXTEDIT_MOVEWORDRIGHT(str, state->cursor+1);
+         state->cursor = STB_TEXTEDIT_MOVEWORDRIGHT(str, state->cursor);
          state->select_end = state->cursor;
 
          stb_textedit_clamp( str, state );
