@@ -60,7 +60,7 @@ files & filenames |  [dirent](https://github.com/tronkko/dirent)                
 files & filenames |  [TinyDir](https://github.com/cxong/tinydir)                          | BSD                  |  C  |**1**| cross-platform directory reader
 geometry file     |  [tk_objfile](https://github.com/joeld42/tk_objfile)                  | MIT                  |C/C++|**1**| OBJ file loader
 geometry file     |  [tinyply](https://github.com/ddiakopoulos/tinyply)                   | **public domain**    | C++ |  2  | PLY mesh file loader
-geometry file     |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | BSD                  | C++ |**1**| wavefront OBJ file loader
+geometry file     |  [tinyobjloader](https://github.com/syoyo/tinyobjloader)              | MIT                  | C++ |**1**| wavefront OBJ file loader
 geometry file     |  [tinyobjloader_c](https://github.com/syoyo/tinyobjloader_c)          | MIT                  |  C  |**1**| wavefront OBJ file loader
 geometry file     |  [yocto_obj.h](https://github.com/xelatihy/yocto-gl)                  | MIT                  |C/C++|**1**| wavefront OBJ file loader
 geometry math     |**[nv_voronoi.h](http://www.icculus.org/~mordred/nvlib/)**             | **public domain**    |C/C++|**1**| find voronoi regions on lattice w/ integer inputs
