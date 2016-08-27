@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.8  - public domain - Sean Barrett
+// stb_textedit.h - v1.9  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -31,6 +31,7 @@
 //
 // VERSION HISTORY
 //
+//   1.9  (2016-08-27) customizable move-by-word
 //   1.8  (2016-04-02) better keyboard handling when mouse button is down
 //   1.7  (2015-09-13) change y range handling in case baseline is non-0
 //   1.6  (2015-04-15) allow STB_TEXTEDIT_memmove
