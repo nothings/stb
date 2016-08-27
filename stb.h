@@ -5189,7 +5189,18 @@ int stb_filewrite(char *filename, void *data, size_t length)
 {
    FILE *f = stb_fopen(filename, "wb");
    if (f) {
-      fwrite(data, 1, length, f);
+      unsigned char *data_ptr = (unsigned char *) data;
+      size_t remaining = length;
+      while (remaining > 0) {
+         size_t len2 = remaining > 65536 ? 65536 : remaining;
+         size_t len3 = fwrite(data_ptr, 1, len2, f);
+         if (len2 != len3) {
+            fprintf(stderr, "Failed while writing %s\n", filename);
+            break;
+         }
+         remaining -= len2;
+         data_ptr += len2;
+      }
       stb_fclose(f, stb_keep_if_different);
    }
    return f != NULL;
@@ -5784,6 +5795,19 @@ char *stb_strip_final_slash(char *t)
       if (*z == '\\' || *z == '/')
          if (z != t+2 || t[1] != ':') // but don't strip it if it's e.g. "c:/"
             *z = 0;
+      if (*z == '\\')
+         *z = '/'; // canonicalize to make sure it matches db
+   }
+   return t;
+}
+
+char *stb_strip_final_slash_regardless(char *t)
+{
+   if (t[0]) {
+      char *z = t + strlen(t) - 1;
+      // *z is the last character
+      if (*z == '\\' || *z == '/')
+         *z = 0;
       if (*z == '\\')
          *z = '/'; // canonicalize to make sure it matches db
    }
@@ -6746,14 +6770,16 @@ typedef struct
    char   * path;           // full path from passed-in root
    time_t   last_modified;
    int      num_files;
+   int      flag;
 } stb_dirtree_dir;
 
 typedef struct
 {
    char *name;              // name relative to path
    int   dir;               // index into dirs[] array
-   unsigned long size;      // size, max 4GB
+   stb_int64 size;      // size, max 4GB
    time_t   last_modified;
+   int      flag;
 } stb_dirtree_file;
 
 typedef struct
@@ -6781,6 +6807,14 @@ extern stb_dirtree *stb_dirtree_get_with_file ( char *dir, char *cache_file);
 // do a call to stb_dirtree_get() with the same cache file at about the same
 // time, but I _think_ it might just work.
 
+// i needed to build an identical data structure representing the state of
+// a mirrored copy WITHOUT bothering to rescan it (i.e. we're mirroring to
+// it WITHOUT scanning it, e.g. it's over the net), so this requires access
+// to all of the innards.
+extern void stb_dirtree_db_add_dir(stb_dirtree *active, char *path, time_t last);
+extern void stb_dirtree_db_add_file(stb_dirtree *active, char *name, int dir, stb_int64 size, time_t last);
+extern void stb_dirtree_db_read(stb_dirtree *target, char *filename, char *dir);
+extern void stb_dirtree_db_write(stb_dirtree *target, char *filename, char *dir);
 
 #ifdef STB_DEFINE
 static void stb__dirtree_add_dir(char *path, time_t last, stb_dirtree *active)
@@ -6792,7 +6826,7 @@ static void stb__dirtree_add_dir(char *path, time_t last, stb_dirtree *active)
    stb_arr_push(active->dirs, d);
 }
 
-static void stb__dirtree_add_file(char *name, int dir, unsigned long size, time_t last, stb_dirtree *active)
+static void stb__dirtree_add_file(char *name, int dir, stb_int64 size, time_t last, stb_dirtree *active)
 {
    stb_dirtree_file f;
    f.dir = dir;
@@ -6803,23 +6837,25 @@ static void stb__dirtree_add_file(char *name, int dir, unsigned long size, time_
    stb_arr_push(active->files, f);
 }
 
-static char stb__signature[12] = { 's', 'T', 'b', 'D', 'i', 'R', 't', 'R', 'e', 'E', '0', '1' };
+// version 02 supports > 4GB files
+static char stb__signature[12] = { 's', 'T', 'b', 'D', 'i', 'R', 't', 'R', 'e', 'E', '0', '2' };
 
 static void stb__dirtree_save_db(char *filename, stb_dirtree *data, char *root)
 {
    int i, num_dirs_final=0, num_files_final;
+   char *info = root ? root : "";
    int *remap;
    FILE *f = fopen(filename, "wb");
    if (!f) return;
 
    fwrite(stb__signature, sizeof(stb__signature), 1, f);
-   fwrite(root, strlen(root)+1, 1, f);
+   fwrite(info, strlen(info)+1, 1, f);
    // need to be slightly tricky and not write out NULLed directories, nor the root
 
    // build remapping table of all dirs we'll be writing out
    remap = (int *) malloc(sizeof(remap[0]) * stb_arr_len(data->dirs));
    for (i=0; i < stb_arr_len(data->dirs); ++i) {
-      if (data->dirs[i].path == NULL || 0==stb_stricmp(data->dirs[i].path, root)) {
+      if (data->dirs[i].path == NULL || (root && 0==stb_stricmp(data->dirs[i].path, root))) {
          remap[i] = -1;
       } else {
          remap[i] = num_dirs_final++;
@@ -6836,14 +6872,14 @@ static void stb__dirtree_save_db(char *filename, stb_dirtree *data, char *root)
 
    num_files_final = 0;
    for (i=0; i < stb_arr_len(data->files); ++i)
-      if (remap[data->files[i].dir] >= 0)
+      if (remap[data->files[i].dir] >= 0 && data->files[i].name)
          ++num_files_final;
 
    fwrite(&num_files_final, 4, 1, f);
    for (i=0; i < stb_arr_len(data->files); ++i) {
-      if (remap[data->files[i].dir] >= 0) {
+      if (remap[data->files[i].dir] >= 0 && data->files[i].name) {
          stb_fput_ranged(f, remap[data->files[i].dir], 0, num_dirs_final);
-         stb_fput_varlenu(f, data->files[i].size);
+         stb_fput_varlen64(f, data->files[i].size);
          fwrite(&data->files[i].last_modified, 4, 1, f);
          stb_fput_string(f, data->files[i].name);
       }
@@ -6880,7 +6916,7 @@ static void stb__dirtree_load_db(char *filename, stb_dirtree *data, char *dir)
    stb_arr_setlen(data->files, n);
    for (i=0; i < stb_arr_len(data->files); ++i) {
       data->files[i].dir  = stb_fget_ranged(f, 0, stb_arr_len(data->dirs));
-      data->files[i].size = stb_fget_varlenu(f);
+      data->files[i].size = stb_fget_varlen64(f);
       fread(&data->files[i].last_modified, 4, 1, f);
       data->files[i].name = stb_fget_string(f, data->string_pool);
       if (data->files[i].name == NULL) goto bail;
@@ -6894,6 +6930,7 @@ static void stb__dirtree_load_db(char *filename, stb_dirtree *data, char *dir)
    fclose(f);
 }
 
+static int stb__dircount, stb__dircount_mask, stb__showfile;
 static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *active)
 {
    // this is dumb depth first; theoretically it might be faster
@@ -6902,52 +6939,66 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
 
    int n;
 
-   struct _wfinddata_t c_file;
-   #ifdef STB_PTR64
-   intptr_t hFile;
-   #else
+   struct _wfinddatai64_t c_file;
    long hFile;
-   #endif
    stb__wchar full_path[1024];
    int has_slash;
+   if (stb__showfile) printf("<");
 
    has_slash = (path[0] && path[strlen(path)-1] == '/'); 
    if (has_slash)
-      swprintf((wchar_t *)full_path, L"%s*", stb__from_utf8(path));
+      swprintf(full_path, L"%s*", stb__from_utf8(path));
    else
-      swprintf((wchar_t *)full_path, L"%s/*", stb__from_utf8(path));
+      swprintf(full_path, L"%s/*", stb__from_utf8(path));
 
    // it's possible this directory is already present: that means it was in the
    // cache, but its parent wasn't... in that case, we're done with it
+   if (stb__showfile) printf("C[%d]", stb_arr_len(active->dirs));
    for (n=0; n < stb_arr_len(active->dirs); ++n)
-      if (0 == stb_stricmp(active->dirs[n].path, path))
+      if (0 == stb_stricmp(active->dirs[n].path, path)) {
+         if (stb__showfile) printf("D");
          return;
+      }
+   if (stb__showfile) printf("E");
 
    // otherwise, we need to add it
    stb__dirtree_add_dir(path, last_time, active);
    n = stb_arr_lastn(active->dirs);
 
-   if( (hFile = _wfindfirst((const wchar_t *)full_path, &c_file )) != -1L ) {
+   if (stb__showfile) printf("[");
+   if( (hFile = _wfindfirsti64( full_path, &c_file )) != -1L ) {
       do {
+         if (stb__showfile) printf(")");
          if (c_file.attrib & _A_SUBDIR) {
             // ignore subdirectories starting with '.', e.g. "." and ".."
             if (c_file.name[0] != '.') {
                char *new_path = (char *) full_path;
-               char *temp = stb__to_utf8((stb__wchar *)c_file.name);
+               char *temp = stb__to_utf8(c_file.name);
+
                if (has_slash)
                   sprintf(new_path, "%s%s", path, temp);
                else
                   sprintf(new_path, "%s/%s", path, temp);
+
+               if (stb__dircount_mask) {
+                  ++stb__dircount;
+                  if (!(stb__dircount & stb__dircount_mask)) {
+                     printf("%s\r", new_path);
+                  }
+               }
+
                stb__dirtree_scandir(new_path, c_file.time_write, active);
             }
          } else {
-            char *temp = stb__to_utf8((stb__wchar *)c_file.name);
+            char *temp = stb__to_utf8(c_file.name);
             stb__dirtree_add_file(temp, n, c_file.size, c_file.time_write, active);
          }
-      } while( _wfindnext( hFile, &c_file ) == 0 );
-
+         if (stb__showfile) printf("(");
+      } while( _wfindnexti64( hFile, &c_file ) == 0 );
+      if (stb__showfile) printf("]");
       _findclose( hFile );
    }
+   if (stb__showfile) printf(">\n");
 }
 
 // scan the database and see if it's all valid
@@ -6963,13 +7014,21 @@ static int stb__dirtree_update_db(stb_dirtree *db, stb_dirtree *active)
 
    for (i=0; i < stb_arr_len(db->dirs); ++i) {
       struct _stat info;
+      if (stb__dircount_mask) {
+         ++stb__dircount;
+         if (!(stb__dircount & stb__dircount_mask)) {
+            printf(".");
+         }
+      }
       if (0 == _stat(db->dirs[i].path, &info)) {
          if (info.st_mode & _S_IFDIR) {
             // it's still a directory, as expected
-            if (info.st_mtime > db->dirs[i].last_modified) {
+            int n = abs(info.st_mtime - db->dirs[i].last_modified);
+            if (n > 1 && n != 3600) {  // the 3600 is a hack because sometimes this jumps for no apparent reason, even when no time zone or DST issues are at play
                // it's changed! force a rescan
                // we don't want to scan it until we've stat()d its
                // subdirs, though, so we queue it
+               if (stb__showfile) printf("Changed: %s - %08x:%08x\n", db->dirs[i].path, db->dirs[i].last_modified, info.st_mtime);
                stb_arr_push(rescan, i);
                // update the last_mod time
                db->dirs[i].last_modified = info.st_mtime;
@@ -7047,6 +7106,8 @@ stb_dirtree *stb_dirtree_get_with_file(char *dir, char *cache_file)
 
    if (cache_file != NULL)
       stb__dirtree_load_db(cache_file, &db, stripped_dir);
+   else if (stb__showfile)
+      printf("No cache file\n");
 
    active.files = NULL;
    active.dirs = NULL;
@@ -7060,6 +7121,9 @@ stb_dirtree *stb_dirtree_get_with_file(char *dir, char *cache_file)
    prev_dir_count = stb_arr_len(active.dirs);  // record how many directories we've seen
 
    stb__dirtree_scandir(stripped_dir, 0, &active);  // no last_modified time available for root
+
+   if (stb__dircount_mask)
+      printf("                                                                              \r");
 
    // done with the DB; write it back out if any changes, i.e. either
    //      1. any inconsistency found between cached information and actual disk
@@ -7089,7 +7153,7 @@ stb_dirtree *stb_dirtree_get_dir(char *dir, char *cache_dir)
    stb_sha1(sha, (unsigned char *) dir_lower, strlen(dir_lower));
    strcpy(cache_file, cache_dir);
    s = cache_file + strlen(cache_file);
-   if (s[-1] != '/' && s[-1] != '\\') *s++ = '/';
+   if (s[-1] != '//' && s[-1] != '\\') *s++ = '/';
    strcpy(s, "dirtree_");
    s += strlen(s);
    for (i=0; i < 8; ++i) {
@@ -7123,6 +7187,32 @@ void stb_dirtree_free(stb_dirtree *d)
    stb__dirtree_free_raw(d);
    free(d);
 }
+
+void stb_dirtree_db_add_dir(stb_dirtree *active, char *path, time_t last)
+{
+   stb__dirtree_add_dir(path, last, active);
+}
+
+void stb_dirtree_db_add_file(stb_dirtree *active, char *name, int dir, stb_int64 size, time_t last)
+{
+   stb__dirtree_add_file(name, dir, size, last, active);
+}
+
+void stb_dirtree_db_read(stb_dirtree *target, char *filename, char *dir)
+{
+   char *s = stb_strip_final_slash(strdup(dir));
+   target->dirs = 0;
+   target->files = 0;
+   target->string_pool = 0;
+   stb__dirtree_load_db(filename, target, s);
+   free(s);
+}
+
+void stb_dirtree_db_write(stb_dirtree *target, char *filename, char *dir)
+{
+   stb__dirtree_save_db(filename, target, 0); // don't strip out any directories
+}
+
 #endif // STB_DEFINE
 
 #endif // _WIN32
