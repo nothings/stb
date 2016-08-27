@@ -634,7 +634,7 @@ static int stb_textedit_move_to_word_previous( STB_TEXTEDIT_STRING *str, int c )
 #ifndef STB_TEXTEDIT_MOVEWORDRIGHT
 static int stb_textedit_move_to_word_next( STB_TEXTEDIT_STRING *str, int c )
 {
-   const int len = STB_TEXTEDIT_STRINGLEN(_str);
+   const int len = STB_TEXTEDIT_STRINGLEN(str);
    ++c; // always move at least one character
    while( c < len && !is_word_boundary( str, c ) )
       ++c;

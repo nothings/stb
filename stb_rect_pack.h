@@ -279,9 +279,9 @@ static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0
    stbrp_node *node = first;
    int x1 = x0 + width;
    int min_y, visited_width, waste_area;
-   
+
    STBRP__NOTUSED(c);
-   
+
    STBRP_ASSERT(first->x <= x0);
 
    #if 0
