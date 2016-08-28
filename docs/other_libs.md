@@ -91,8 +91,8 @@ hardware          |**[EasyTab](https://github.com/ApoorvaJ/EasyTab)**           
 images            |  [jo_gif.cpp](http://www.jonolick.com/home/gif-writer)                | **public domain**    | C++ |**1**| animated GIF writer (CPP file can also be used as H file)
 images            |**[gif.h](https://github.com/ginsweater/gif-h)**                       | **public domain**    |  C  |**1**| animated GIF writer (can only include once)
 images            |**[tiny_jpeg.h](https://github.com/serge-rgb/TinyJPEG/)**              | **public domain**    |C/C++|**1**| JPEG encoder
+images            |**[gif_load](https://github.com/hidefromkgb/gif_load)**              | **public domain**    |C/C++|**1**| (animated) GIF reader
 images            |  [miniexr](https://github.com/aras-p/miniexr)                         | **public domain**    | C++ |  2  | OpenEXR writer, needs header file
-images            |  [gif_load](https://github.com/hidefromkgb/gif_load)                  | ???                  |C/C++|**1**| (animated) GIF reader
 images            |  [tinyexr](https://github.com/syoyo/tinyexr)                          | BSD                  |C/C++|**1**| EXR image read/write, uses miniz internally  
 images            |  [lodepng](http://lodev.org/lodepng/)                                 | zlib                 |C/C++|  2  | PNG encoder/decoder
 images            |  [nanoSVG](https://github.com/memononen/nanosvg)                      | zlib                 |C/C++|**1**| 1-file SVG parser; 1-file SVG rasterizer
