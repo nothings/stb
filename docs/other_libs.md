@@ -40,7 +40,7 @@ as C/C++, as this is not an obstacle to most users.)
 
 category          | library                                                               | license              | API |files| description
 ----------------- | --------------------------------------------------------------------- |:--------------------:|:---:|:---:| -----------
-AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 | C++ |  2  | pathfinding with A*
+AI                |  [micropather](http://www.grinninglizard.com/MicroPather/)            | zlib                 | C++ |  2  | pathfinding with A\*
 argv              |  [parg](https://github.com/jibsen/parg)                               | **public domain**    |  C  |  1  | command-line argument parsing
 audio             |  [aw_ima.h](https://github.com/afterwise/aw-ima/blob/master/aw-ima.h) | MIT                  |C/C++|**1**| IMA-ADPCM audio decoder
 audio             |**[dr_flac](https://github.com/mackron/dr_libs)**                      | **public domain**    |C/C++|**1**| FLAC audio decoder
@@ -109,7 +109,7 @@ math              |  [TinyExpr](https://github.com/codeplea/tinyexpr)           
 math              |  [linalg.h](https://github.com/sgorsten/linalg)                      | **unlicense**         | C++ |**1**| vector/matrix/quaternion math
 math              |  [PoissonGenerator.h](https://github.com/corporateshark/poisson-disk-generator) | MIT        | C++ |**1**| Poisson disk points generator (disk or rect)
 math              |  [prns.h](http://marc-b-reynolds.github.io/shf/2016/04/19/prns.html)  | **public domain**    |C/C++|**1**| seekable pseudo-random number sequences
-math              |**[aomeba](https://github.com/starwing/amoeba)                         | MIT                  |C/C++|**1**| constraint solver (Cassowary) w/Lua binding
+math              |  [aomeba](https://github.com/starwing/amoeba)                         | MIT                  |C/C++|**1**| constraint solver (Cassowary) w/Lua binding
 multithreading    |  [mm_sched.h](https://github.com/vurtun/mmx)                          | zlib                 |C/C++|**1**| cross-platform multithreaded task scheduler
 network           |**[zed_net](https://github.com/ZedZull/zed_net)**                      | **public domain**    |C/C++|**1**| cross-platform socket wrapper
 network           |**[sts_net](https://github.com/kieselsteini/sts)**                     | **public domain**    |C/C++|**1**| cross-platform socket wrapper (socket sets and packet API)
@@ -146,6 +146,7 @@ tests             |  [greatest](https://github.com/silentbicycle/greatest)      
 tests             |  [µnit](https://github.com/nemequ/munit)                              | MIT                  |  C  |**1**| unit testing
 user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  | C++ |  9  | an immediate-mode GUI formerly named "ImGui"; [3rd-party C wrapper](https://github.com/Extrawurst/cimgui)
 user interface    |  [nuklear](https://github.com/vurtun/nuklear)                         | **public domain**    |C/C++|**1**| minimal GUI toolkit
+video             |**[jo_mpeg](http://www.jonolick.com/home/mpeg-video-writer)**          | **public domain**    |C/C++|**1**| mpeg file writer
 _misc_            |  [MakeID.h](http://www.humus.name/3D/MakeID.h)                        | **public domain**    | C++ |**1**| allocate/deallocate small integer IDs efficiently
 _misc_            |  [loguru](https://github.com/emilk/loguru)                            | **public domain**    | C++ |**1**| flexible logging
 _misc_            |  [tinyformat](https://github.com/c42f/tinyformat)                     | Boost                | C++ |**1**| typesafe printf
