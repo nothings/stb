@@ -144,6 +144,7 @@ tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)     
 tests             |  [minctest](https://github.com/codeplea/minctest)                     | zlib                 |  C  |**1**| unit testing
 tests             |  [greatest](https://github.com/silentbicycle/greatest)                | iSC                  |  C  |**1**| unit testing
 tests             |  [µnit](https://github.com/nemequ/munit)                              | MIT                  |  C  |**1**| unit testing
+tests             |  [labrat](https://github.com/squarewave/labrat)                       | **unlicense**        |C/C++|**1**| unit testing
 user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  | C++ |  9  | an immediate-mode GUI formerly named "ImGui"; [3rd-party C wrapper](https://github.com/Extrawurst/cimgui)
 user interface    |  [nuklear](https://github.com/vurtun/nuklear)                         | **public domain**    |C/C++|**1**| minimal GUI toolkit
 video             |  [jo_mpeg](http://www.jonolick.com/home/mpeg-video-writer)            | **public domain**    | C++ |**1**| mpeg file writer
