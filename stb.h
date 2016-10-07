@@ -1,4 +1,4 @@
-/* stb.h - v2.27 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.28 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
@@ -25,6 +25,7 @@
 
 Version History
 
+   2.28   various new functionality
    2.27   test _WIN32 not WIN32 in STB_THREADS
    2.26   various warning & bugfixes
    2.25   various warning & bugfixes
