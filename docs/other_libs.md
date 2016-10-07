@@ -59,7 +59,6 @@ data structures   |  [minilibs](https://github.com/ccxvii/minilibs)             
 data structures   |**[DG_dynarr.h](https://github.com/DanielGibson/Snippets/)**           | **public domain**    |C/C++|**1**| typesafe dynamic arrays (like std::vector) for plain C
 files & filenames |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |C/C++|**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings
 files & filenames |  [whereami](https://github.com/gpakosz/whereami)                      | **WTFPLv2**          |C/C++|  2  | get path/filename of executable or module
-files & filenames |  [noc_file_dialog.h](https://github.com/guillaumechereau/noc)         | MIT                  |C/C++|  1  | file open/save dialogs (Linux/OSX/Windows)
 files & filenames |  [dirent](https://github.com/tronkko/dirent)                          | MIT                  |C/C++|**1**| dirent for windows: retrieve file & dir info
 files & filenames |  [TinyDir](https://github.com/cxong/tinydir)                          | BSD                  |  C  |**1**| cross-platform directory reader
 geometry file     |  [tk_objfile](https://github.com/joeld42/tk_objfile)                  | MIT                  |C/C++|**1**| OBJ file loader
@@ -130,7 +129,7 @@ parsing           |  [parson](https://github.com/kgabis/parson)                 
 parsing           |  [minilibs](https://github.com/ccxvii/minilibs)                       | **public domain**    |  C  |  2  | two-file regex (also binary tree, etc)
 profiling         |  [Remotery](https://github.com/Celtoys/Remotery)                      | Apache 2.0           |C/C++|  2  | CPU/GPU profiler Win/Mac/Linux, using web browser for viewer
 profiling         |  [MicroProfile](https://bitbucket.org/jonasmeyer/microprofile)        | **unlicense**        | C++ | 2-4 | CPU (and GPU?) profiler, 1-3 header files, uses miniz internally
-scripting         |  [LIL](http://runtimeterror.com/tech/lil/)                             | zlib                 |C/C++|  2  | interpreter for a Tcl-like scripting language
+scripting         |  [LIL](http://runtimeterror.com/tech/lil/)                            | zlib                 |C/C++|  2  | interpreter for a Tcl-like scripting language
 scripting         |  [lualite](https://github.com/janezz55/lualite/)                      | MIT                  | C++ |**1**| generate lua bindings in C++
 scripting         |  [Picol](https://chiselapp.com/user/dbohdan/repository/picol/)        | BSD                  |C/C++|**1**| interpreter for a Tcl-like scripting language
 strings           |**[DG_misc.h](https://github.com/DanielGibson/Snippets/)**             | **public domain**    |C/C++|**1**| Daniel Gibson's stb.h-esque cross-platform helpers: path/file, strings         
@@ -145,9 +144,11 @@ tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)        
 tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)               | **WTFPLv2**          | C++ |  2  | flexible assertions
 tests             |  [minctest](https://github.com/codeplea/minctest)                     | zlib                 |  C  |**1**| unit testing
 tests             |  [greatest](https://github.com/silentbicycle/greatest)                | iSC                  |  C  |**1**| unit testing
-tests             |  [µnit](https://github.com/nemequ/munit)                              | MIT                  |  C  |**1**| unit testing
+tests             |  [µnit](https://github.com/nemequ/munit)                             | MIT                  |  C  |**1**| unit testing
 user interface    |  [dear imgui](https://github.com/ocornut/imgui)                       | MIT                  | C++ |  9  | an immediate-mode GUI formerly named "ImGui"; [3rd-party C wrapper](https://github.com/Extrawurst/cimgui)
 user interface    |  [nuklear](https://github.com/vurtun/nuklear)                         | **public domain**    |C/C++|**1**| minimal GUI toolkit
+user interface    |  [noc_file_dialog.h](https://github.com/guillaumechereau/noc)         | MIT                  |C/C++|  1  | file open/save dialogs (Linux/OSX/Windows)
+user interface    |  [tinyfiledialogs](https://sourceforge.net/projects/tinyfiledialogs/) | ZLIB                 |C/C++|  2  | modal dialogs inc. file open/save (Linux/OSX/Windows)
 video             |  [jo_mpeg](http://www.jonolick.com/home/mpeg-video-writer)            | **public domain**    | C++ |**1**| mpeg file writer
 _misc_            |  [MakeID.h](http://www.humus.name/3D/MakeID.h)                        | **public domain**    | C++ |**1**| allocate/deallocate small integer IDs efficiently
 _misc_            |  [loguru](https://github.com/emilk/loguru)                            | **public domain**    | C++ |**1**| flexible logging
