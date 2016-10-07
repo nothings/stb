@@ -2902,7 +2902,9 @@ static void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, in
 
    if (mm->input.selector)
       mesh = mm->input.selector[v_off];
-
+   else if (mm->input.block_selector)
+      mesh = mm->input.block_selector[mm->input.blocktype[v_off]];
+  
    // check if we're going off the end
    if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
       mm->full = 1;
@@ -3008,6 +3010,18 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
             nrot[5] = (mm->input.selector[v_off -      1] >> 4) & 3;
          }
          #endif
+      } else if (mm->input.block_selector) {
+         #ifndef STBVOX_CONFIG_ROTATION_IN_LIGHTING
+         if (mm->input.packed_compact == NULL) {
+            rot     = (mm->input.block_selector[bt    ] >> 4) & 3;
+            nrot[0] = (mm->input.block_selector[nbt[0]] >> 4) & 3;
+            nrot[1] = (mm->input.block_selector[nbt[1]] >> 4) & 3;
+            nrot[2] = (mm->input.block_selector[nbt[2]] >> 4) & 3;
+            nrot[3] = (mm->input.block_selector[nbt[3]] >> 4) & 3;
+            nrot[4] = (mm->input.block_selector[nbt[4]] >> 4) & 3;
+            nrot[5] = (mm->input.block_selector[nbt[5]] >> 4) & 3;
+         }
+         #endif
       } else {
          #ifndef STBVOX_CONFIG_ROTATION_IN_LIGHTING
          if (mm->input.packed_compact == NULL) {
@@ -3111,7 +3125,9 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
    mesh = mm->default_mesh;
    if (mm->input.selector)
       mesh = mm->input.selector[v_off];
-
+   else if (mm->input.block_selector)
+      mesh = mm->input.block_selector[bt];
+  
    if (geo <= STBVOX_GEOM_ceil_slope_north_is_bottom) {
       // this is the simple case, we can just use regular block gen with special vmesh calculated with vheight
       stbvox_mesh_vertex basevert;
@@ -3132,7 +3148,9 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       basevert = stbvox_vertex_encode(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z, 0,0);
       if (mm->input.selector) {
          mesh = mm->input.selector[v_off];
-      }
+      } else if (mm->input.block_selector)
+         mesh = mm->input.block_selector[bt];
+
 
       // check if we're going off the end
       if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
@@ -3328,7 +3346,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          rotate.overlay = (val >> 2) & 3;
          //rotate.tex2    = (val >> 4) & 3;
          rotate.ecolor  = (val >> 6) & 3;
-      } else if (mm->input.selector) {
+      } else if (mm->input.selector || mm->input.block_selector) {
          rotate.block = rotate.overlay = rotate.ecolor = simple_rot;
       }
 
@@ -3352,6 +3370,10 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          mesh = mm->input.selector[v_off];
          simple_rot = mesh >> 4;
          mesh &= 15;
+      } else if (mm->input.block_selector) {
+         mesh = mm->input.block_selector[bt];
+         simple_rot = mesh >> 4;
+         mesh &= 15;
       }
 
       // check if we're going off the end
@@ -3366,7 +3388,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          rot.overlay = (val >> 2) & 3;
          //rot.tex2    = (val >> 4) & 3;
          rot.ecolor  = (val >> 6) & 3;
-      } else if (mm->input.selector) {
+      } else if (mm->input.selector || mm->input.block_selector) {
          rot.block = rot.overlay = rot.ecolor = simple_rot;
       }
       rot.facerot = 0;
