@@ -7,14 +7,14 @@ single-file public domain libraries for C/C++ <a name="stb_libs"></a>
 
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
-**[stb_vorbis.c](stb_vorbis.c)** | 1.09 | audio | 5397 | decode ogg vorbis files from file/memory to float/16-bit signed output
+**[stb_vorbis.c](stb_vorbis.c)** | 1.09 | audio | 5399 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **[stb_image.h](stb_image.h)** | 2.12 | graphics | 6755 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **[stb_truetype.h](stb_truetype.h)** | 1.11 | graphics | 3267 | parse, decode, and rasterize characters from truetype fonts
 **[stb_image_write.h](stb_image_write.h)** | 1.02 | graphics | 1048 | image writing to disk: PNG, TGA, BMP
 **[stb_image_resize.h](stb_image_resize.h)** | 0.91 | graphics | 2578 | resize images larger/smaller with good quality
-**[stb_rect_pack.h](stb_rect_pack.h)** | 0.08 | graphics | 572 | simple 2D rectangle packer with decent quality
+**[stb_rect_pack.h](stb_rect_pack.h)** | 0.09 | graphics | 582 | simple 2D rectangle packer with decent quality
 **[stretchy_buffer.h](stretchy_buffer.h)** | 1.02 | utility | 216 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
-**[stb_textedit.h](stb_textedit.h)** | 1.8 | user&nbsp;interface | 1304 | guts of a text editor for games etc implementing them from scratch
+**[stb_textedit.h](stb_textedit.h)** | 1.9 | user&nbsp;interface | 1315 | guts of a text editor for games etc implementing them from scratch
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.84 | 3D&nbsp;graphics | 3752 | Minecraft-esque voxel rendering "engine" with many more features
 **[stb_dxt.h](stb_dxt.h)** | 1.04 | 3D&nbsp;graphics | 630 | Fabian "ryg" Giesen's real-time DXT compressor
 **[stb_perlin.h](stb_perlin.h)** | 0.2 | 3D&nbsp;graphics | 182 | revised Perlin noise (3D input, 1D output)
@@ -24,11 +24,11 @@ library    | lastest version | category | LoC | description
 **[stb_c_lexer.h](stb_c_lexer.h)** | 0.07 | parsing | 816 | simplify writing parsers for C-like languages
 **[stb_divide.h](stb_divide.h)** | 0.91 | math | 379 | more useful 32-bit modulus e.g. "euclidean divide"
 **[stb_connected_comp...](stb_connected_components.h)** | 0.94 | misc | 1000 | incrementally compute reachability on grids
-**[stb.h](stb.h)** | 2.27 | misc | 14185 | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**[stb.h](stb.h)** | 2.28 | misc | 14276 | helper functions for C, mostly redundant in C++; basically author's personal stuff
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.2 | misc | 124 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 19  
-Total lines of C code: 47814
+Total lines of C code: 47928
 
 
 FAQ
