@@ -134,7 +134,7 @@ strings           |  [dfa](http://bjoern.hoehrmann.de/utf-8/decoder/dfa/)       
 strings           |**[gb_string.h](https://github.com/gingerBill/gb)**                    | **public domain**    |C/C++|**1**| dynamic strings
 tests             |  [utest](https://github.com/evolutional/utest)                        | MIT                  |C/C++|**1**| unit testing
 tests             |  [catch](https://github.com/philsquared/Catch)                        | Boost                | C++ |**1**| unit testing
-tests             |  [doctest](https://github.com/onqtam/doctest)                         | MIT                  | C++ |**1**| the lightest feature rich C++ single header testing framework
+tests             |  [doctest](https://github.com/onqtam/doctest)                         | MIT                  | C++ |**1**| unit testing
 tests             |  [SPUT](http://www.lingua-systems.com/unit-testing/)                  | BSD                  |C/C++|**1**| unit testing
 tests             |  [pempek_assert.cpp](https://github.com/gpakosz/Assert)               | **WTFPLv2**          | C++ |  2  | flexible assertions
 tests             |  [minctest](https://github.com/codeplea/minctest)                     | zlib                 |  C  |**1**| unit testing
