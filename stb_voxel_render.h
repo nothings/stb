@@ -3358,10 +3358,9 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          mesh = mm->input.selector[v_off];
          simple_rot = mesh >> 4;
          mesh &= 15;
-      } else if (mm->input.block_selector) {
+      } 
+      if (mm->input.block_selector) {
          mesh = mm->input.block_selector[bt];
-         simple_rot = mesh >> 4;
-         mesh &= 15;
       }
 
       // check if we're going off the end
