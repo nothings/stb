@@ -1,5 +1,5 @@
-// stb_truetype.h - v1.11 - public domain
-// authored from 2009-2015 by Sean Barrett / RAD Game Tools
+// stb_truetype.h - v1.12 - public domain
+// authored from 2009-2016 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
 //        parse files
@@ -51,6 +51,7 @@
 //
 // VERSION HISTORY
 //
+//   1.12 (2016-10-25) suppress warnings about casting away const with -Wcast-qual
 //   1.11 (2016-04-02) fix unused-variable warning
 //   1.10 (2016-04-02) user-defined fabs(); rare memory leak; remove duplicate typedef
 //   1.09 (2016-01-16) warning fix; avoid crash on outofmem; use allocation userdata properly
@@ -60,12 +61,6 @@
 //                     fix stbtt_GetFontOFfsetForIndex (never worked for non-0 input?);
 //                     fixed an assert() bug in the new rasterizer
 //                     replace assert() with STBTT_assert() in new rasterizer
-//   1.06 (2015-07-14) performance improvements (~35% faster on x86 and x64 on test machine)
-//                     also more precise AA rasterizer, except if shapes overlap
-//                     remove need for STBTT_sort
-//   1.05 (2015-04-15) fix misplaced definitions for STBTT_STATIC
-//   1.04 (2015-04-15) typo in example
-//   1.03 (2015-04-12) STBTT_STATIC, fix memory leak in new packing, various fixes
 //
 //   Full history can be found at the end of this file.
 //
@@ -3243,6 +3238,7 @@ STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char *s1, int len1, const
 
 // FULL VERSION HISTORY
 //
+//   1.12 (2016-10-25) suppress warnings about casting away const with -Wcast-qual
 //   1.11 (2016-04-02) fix unused-variable warning
 //   1.10 (2016-04-02) allow user-defined fabs() replacement
 //                     fix memory leak if fontsize=0.0

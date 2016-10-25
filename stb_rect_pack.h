@@ -1,4 +1,4 @@
-// stb_rect_pack.h - v0.09 - public domain - rectangle packing
+// stb_rect_pack.h - v0.10 - public domain - rectangle packing
 // Sean Barrett 2014
 //
 // Useful for e.g. packing rectangular textures into an atlas.
@@ -32,6 +32,7 @@
 //
 // Version history:
 //
+//     0.10  (2016-10-25)  remove cast-away-const to avoid warnings
 //     0.09  (2016-08-27)  fix compiler warnings
 //     0.08  (2015-09-13)  really fix bug with empty rects (w=0 or h=0)
 //     0.07  (2015-09-13)  fix bug with empty rects (w=0 or h=0)
