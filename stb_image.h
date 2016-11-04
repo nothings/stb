@@ -4351,7 +4351,7 @@ static int stbi__reduce_png(stbi__png *p)
    if (p->depth != 16) return 1; // don't need to do anything if not 16-bit data
 
    reduced = (stbi_uc *)stbi__malloc(img_len);
-   if (p == NULL) return stbi__err("outofmem", "Out of memory");
+   if (reduced == NULL) return stbi__err("outofmem", "Out of memory");
 
    for (i = 0; i < img_len; ++i) reduced[i] = (stbi_uc)((orig[i] >> 8) & 0xFF); // top half of each byte is a decent approx of 16->8 bit scaling
 
