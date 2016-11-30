@@ -77,7 +77,7 @@ typedef int            stbrp_coord;
 typedef unsigned short stbrp_coord;
 #endif
 
-STBRP_DEF void stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int num_rects);
+STBRP_DEF int stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int num_rects);
 // Assign packed locations to rectangles. The rectangles are of type
 // 'stbrp_rect' defined below, stored in the array 'rects', and there
 // are 'num_rects' many of them.
@@ -98,6 +98,9 @@ STBRP_DEF void stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int 
 // arrays will probably produce worse packing results than calling it
 // a single time with the full rectangle array, but the option is
 // available.
+//
+// The function returns 1 if all of the rectangles were successfully
+// packed and 0 otherwise.
 
 struct stbrp_rect
 {
@@ -544,9 +547,9 @@ static int rect_original_order(const void *a, const void *b)
 #define STBRP__MAXVAL  0xffff
 #endif
 
-STBRP_DEF void stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)
+STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)
 {
-   int i;
+   int i, all_rects_packed = 1;
 
    // we use the 'was_packed' field internally to allow sorting/unsorting
    for (i=0; i < num_rects; ++i) {
@@ -576,8 +579,14 @@ STBRP_DEF void stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int n
    // unsort
    STBRP_SORT(rects, num_rects, sizeof(rects[0]), rect_original_order);
 
-   // set was_packed flags
+   // set was_packed flags and all_rects_packed status
    for (i=0; i < num_rects; ++i)
-      rects[i].was_packed = !(rects[i].x == STBRP__MAXVAL && rects[i].y == STBRP__MAXVAL);
+   {
+      if (!(rects[i].was_packed = !(rects[i].x == STBRP__MAXVAL && rects[i].y == STBRP__MAXVAL)))
+         all_rects_packed = 0;
+   }
+
+   // return the all_rects_packed status
+   return all_rects_packed;
 }
 #endif
