@@ -146,7 +146,7 @@
 
 
    Latest revision history:
-      2.13  (2016-11-29) experimental 16-bit API, only for PNG so far
+      2.13  (2016-12-04) experimental 16-bit API, only for PNG so far; fixes
       2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
       2.11  (2016-04-02) 16-bit PNGS; enable SSE2 in non-gcc x64
                          RGB-format JPEG; remove white matting in PSD;
