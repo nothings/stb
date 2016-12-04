@@ -843,6 +843,7 @@ enum
 typedef struct
 {
    int bits_per_channel;
+   int num_channels;
    int channel_order;
 } stbi__result_info;
 
@@ -872,7 +873,7 @@ static int      stbi__tga_info(stbi__context *s, int *x, int *y, int *comp);
 
 #ifndef STBI_NO_PSD
 static int      stbi__psd_test(stbi__context *s);
-static void    *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
+static void    *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc);
 static int      stbi__psd_info(stbi__context *s, int *x, int *y, int *comp);
 #endif
 
@@ -954,11 +955,12 @@ STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip)
     stbi__vertically_flip_on_load = flag_true_if_should_flip;
 }
 
-static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
+static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc)
 {
    memset(ri, 0, sizeof(*ri)); // make sure it's initialized if we add new fields
    ri->bits_per_channel = 8; // default is 8 so most paths don't have to be changed
    ri->channel_order = STBI_ORDER_RGB; // all current input & output are this, but this is here so we can add BGR order
+   ri->num_channels = 0;
 
    #ifndef STBI_NO_JPEG
    if (stbi__jpeg_test(s)) return stbi__jpeg_load(s,x,y,comp,req_comp, ri);
@@ -973,7 +975,7 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    if (stbi__gif_test(s))  return stbi__gif_load(s,x,y,comp,req_comp, ri);
    #endif
    #ifndef STBI_NO_PSD
-   if (stbi__psd_test(s))  return stbi__psd_load(s,x,y,comp,req_comp, ri);
+   if (stbi__psd_test(s))  return stbi__psd_load(s,x,y,comp,req_comp, ri, bpc);
    #endif
    #ifndef STBI_NO_PIC
    if (stbi__pic_test(s))  return stbi__pic_load(s,x,y,comp,req_comp, ri);
@@ -1033,7 +1035,7 @@ static stbi__uint16 *stbi__convert_8_to_16(stbi_uc *orig, int w, int h, int chan
 static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    stbi__result_info ri;
-   void *result = stbi__load_main(s, x, y, comp, req_comp, &ri);
+   void *result = stbi__load_main(s, x, y, comp, req_comp, &ri, 8);
 
    if (result == NULL)
       return NULL;
@@ -1045,7 +1047,6 @@ static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, 
    }
 
    // @TODO: move stbi__convert_format to here
-   // @TODO: special case RGB-to-Y for 8-bit-to-16-bit case in postprocess_16bit
 
    if (stbi__vertically_flip_on_load) {
       int w = *x, h = *y;
@@ -1071,7 +1072,7 @@ static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, 
 static stbi__uint16 *stbi__load_and_postprocess_16bit(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    stbi__result_info ri;
-   void *result = stbi__load_main(s, x, y, comp, req_comp, &ri);
+   void *result = stbi__load_main(s, x, y, comp, req_comp, &ri, 16);
 
    if (result == NULL)
       return NULL;
@@ -1083,7 +1084,7 @@ static stbi__uint16 *stbi__load_and_postprocess_16bit(stbi__context *s, int *x, 
    }
 
    // @TODO: move stbi__convert_format16 to here
-   // @TODO: special case RGB-to-Y for 8-bit-to-16-bit case to keep more precision (look at function, discards 8 bits)
+   // @TODO: special case RGB-to-Y (and RGBA-to-YA) for 8-bit-to-16-bit case to keep more precision
 
    if (stbi__vertically_flip_on_load) {
       int w = *x, h = *y;
@@ -5461,7 +5462,7 @@ static int stbi__psd_test(stbi__context *s)
 }
 
 // @TODO: return 16-bit PSD data to 16-bit interface
-static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
+static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc)
 {
    int   pixelCount;
    int channelCount, compression;
@@ -5527,7 +5528,13 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
       return stbi__errpuc("bad compression", "PSD has an unknown compression format");
 
    // Create the destination image.
-   out = (stbi_uc *) stbi__malloc(4 * w*h);
+
+   if (!compression && bitdepth == 16 && bpc == 16) {
+      out = (stbi_uc *) stbi__malloc(4 * w*h * 2);
+      ri->bits_per_channel = 16;
+   } else
+      out = (stbi_uc *) stbi__malloc(4 * w*h);
+
    if (!out) return stbi__errpuc("outofmem", "Out of memory");
    pixelCount = w*h;
 
@@ -5597,44 +5604,73 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
 
       // Read the data by channel.
       for (channel = 0; channel < 4; channel++) {
-         stbi_uc *p;
-
-         p = out + channel;
          if (channel >= channelCount) {
             // Fill this channel with default data.
-            stbi_uc val = channel == 3 ? 255 : 0;
-            for (i = 0; i < pixelCount; i++, p += 4)
-               *p = val;
-         } else {
-            // Read the data.
-            if (bitdepth == 16) {
-               for (i = 0; i < pixelCount; i++, p += 4)
-                  *p = (stbi_uc) (stbi__get16be(s) >> 8);
+            if (bitdepth == 16 && bpc == 16) {
+               stbi__uint16 *q = ((stbi__uint16 *) out) + channel;
+               stbi_uc val = channel == 3 ? 65535 : 0;
+               for (i = 0; i < pixelCount; i++, q += 4)
+                  *q = val;
             } else {
+               stbi_uc *p = out+channel;
+               stbi_uc val = channel == 3 ? 255 : 0;
                for (i = 0; i < pixelCount; i++, p += 4)
-                  *p = stbi__get8(s);
+                  *p = val;
+            }
+         } else {
+            if (ri->bits_per_channel == 16) {    // output bpc
+               stbi__uint16 *q = ((stbi__uint16 *) out) + channel;
+               for (i = 0; i < pixelCount; i++, q += 4)
+                  *q = (stbi__uint16) stbi__get16be(s);
+            } else {
+               stbi_uc *p = out+channel;
+               if (bitdepth == 16) {  // input bpc
+                  for (i = 0; i < pixelCount; i++, p += 4)
+                     *p = (stbi_uc) (stbi__get16be(s) >> 8);
+               } else {
+                  for (i = 0; i < pixelCount; i++, p += 4)
+                     *p = stbi__get8(s);
+               }
             }
          }
       }
    }
 
+   // remove weird white matte from PSD
    if (channelCount >= 4) {
-      for (i=0; i < w*h; ++i) {
-         unsigned char *pixel = out + 4*i;
-         if (pixel[3] != 0 && pixel[3] != 255) {
-            // remove weird white matte from PSD
-            float a = pixel[3] / 255.0f;
-            float ra = 1.0f / a;
-            float inv_a = 255.0f * (1 - ra);
-            pixel[0] = (unsigned char) (pixel[0]*ra + inv_a);
-            pixel[1] = (unsigned char) (pixel[1]*ra + inv_a);
-            pixel[2] = (unsigned char) (pixel[2]*ra + inv_a);
+      if (ri->bits_per_channel == 16) {
+         for (i=0; i < w*h; ++i) {
+            stbi__uint16 *pixel = (stbi__uint16 *) out + 4*i;
+            if (pixel[3] != 0 && pixel[3] != 65535) {
+               float a = pixel[3] / 65535.0f;
+               float ra = 1.0f / a;
+               float inv_a = 65535.0f * (1 - ra);
+               pixel[0] = (stbi__uint16) (pixel[0]*ra + inv_a);
+               pixel[1] = (stbi__uint16) (pixel[1]*ra + inv_a);
+               pixel[2] = (stbi__uint16) (pixel[2]*ra + inv_a);
+            }
+         }
+      } else {
+         for (i=0; i < w*h; ++i) {
+            unsigned char *pixel = out + 4*i;
+            if (pixel[3] != 0 && pixel[3] != 255) {
+               float a = pixel[3] / 255.0f;
+               float ra = 1.0f / a;
+               float inv_a = 255.0f * (1 - ra);
+               pixel[0] = (unsigned char) (pixel[0]*ra + inv_a);
+               pixel[1] = (unsigned char) (pixel[1]*ra + inv_a);
+               pixel[2] = (unsigned char) (pixel[2]*ra + inv_a);
+            }
          }
       }
    }
 
+   // convert to desired output format
    if (req_comp && req_comp != 4) {
-      out = stbi__convert_format(out, 4, req_comp, w, h);
+      if (ri->bits_per_channel == 16)
+         out = (stbi_uc *) stbi__convert_format16((stbi__uint16 *) out, 4, req_comp, w, h);
+      else
+         out = stbi__convert_format(out, 4, req_comp, w, h);
       if (out == NULL) return out; // stbi__convert_format frees input on failure
    }
 
