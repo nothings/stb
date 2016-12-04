@@ -90,10 +90,6 @@ SOURCE=.\grid_reachability.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\docs\other_libs.md
-# End Source File
-# Begin Source File
-
 SOURCE=.\stb.c
 # End Source File
 # Begin Source File
