@@ -190,8 +190,9 @@
     Laurent Gomila          Cort Stratton      Sergio Gonzalez    romigrou@github
     Aruelien Pocheville     Thibault Reuille   Cass Everitt       Matthew Gregan
     Ryamond Barbiero        Paul Du Bois       Engin Manap        snagar@github
-    Michaelangel007@github  Oriol Ferrer Mesia socks-the-fox
-    Blazej Dariusz Roszkowski
+    Michaelangel007@github  Oriol Ferrer Mesia socks-the-fox      Zelex@github
+    Philipp Wiesemann       Josh Tobin         rlyeh@github       grim210@github
+    Blazej Dariusz Roszkowski                  
 
 
 LICENSE
@@ -4749,7 +4750,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                if (c.length != (stbi__uint32) s->img_n*2) return stbi__err("bad tRNS len","Corrupt PNG");
                has_trans = 1;
                if (z->depth == 16) {
-                  for (k = 0; k < s->img_n; ++k) tc16[k] = stbi__get16be(s); // copy the values as-is
+                  for (k = 0; k < s->img_n; ++k) tc16[k] = (stbi__uint16)stbi__get16be(s); // copy the values as-is
                } else {
                   for (k = 0; k < s->img_n; ++k) tc[k] = (stbi_uc)(stbi__get16be(s) & 255) * stbi__depth_scale_table[z->depth]; // non 8-bit images will be larger
                }
@@ -5330,18 +5331,18 @@ errorEnd:
 }
 
 // read 16bit value and convert to 24bit RGB
-void stbi__tga_read_rgb16(stbi__context *s, stbi_uc* out)
+static void stbi__tga_read_rgb16(stbi__context *s, stbi_uc* out)
 {
-   stbi__uint16 px = stbi__get16le(s);
+   stbi__uint16 px = (stbi__uint16)stbi__get16le(s);
    stbi__uint16 fiveBitMask = 31;
    // we have 3 channels with 5bits each
    int r = (px >> 10) & fiveBitMask;
    int g = (px >> 5) & fiveBitMask;
    int b = px & fiveBitMask;
    // Note that this saves the data in RGB(A) order, so it doesn't need to be swapped later
-   out[0] = (r * 255)/31;
-   out[1] = (g * 255)/31;
-   out[2] = (b * 255)/31;
+   out[0] = (stbi_uc)((r * 255)/31);
+   out[1] = (stbi_uc)((g * 255)/31);
+   out[2] = (stbi_uc)((b * 255)/31);
 
    // some people claim that the most significant bit might be used for alpha
    // (possibly if an alpha-bit is set in the "image descriptor byte")
@@ -6384,20 +6385,24 @@ static int stbi__gif_info(stbi__context *s, int *x, int *y, int *comp)
 // Radiance RGBE HDR loader
 // originally by Nicolas Schulz
 #ifndef STBI_NO_HDR
-static int stbi__hdr_test_core(stbi__context *s)
+static int stbi__hdr_test_core(stbi__context *s, const char *signature)
 {
-   const char *signature = "#?RADIANCE\n";
    int i;
    for (i=0; signature[i]; ++i)
       if (stbi__get8(s) != signature[i])
-         return 0;
+          return 0;
+   stbi__rewind(s);
    return 1;
 }
 
 static int stbi__hdr_test(stbi__context* s)
 {
-   int r = stbi__hdr_test_core(s);
+   int r = stbi__hdr_test_core(s, "#?RADIANCE\n");
    stbi__rewind(s);
+   if(!r) {
+       r = stbi__hdr_test_core(s, "#?RGBE\n");
+       stbi__rewind(s);
+   }
    return r;
 }
 
@@ -6462,10 +6467,12 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    int len;
    unsigned char count, value;
    int i, j, k, c1,c2, z;
+   const char *headerToken;
    STBI_NOTUSED(ri);
 
    // Check identifier
-   if (strcmp(stbi__hdr_gettoken(s,buffer), "#?RADIANCE") != 0)
+   headerToken = stbi__hdr_gettoken(s,buffer);
+   if (strcmp(headerToken, "#?RADIANCE") != 0 && strcmp(headerToken, "#?RGBE") != 0)
       return stbi__errpf("not HDR", "Corrupt HDR image");
 
    // Parse header
