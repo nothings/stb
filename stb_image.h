@@ -5330,7 +5330,7 @@ errorEnd:
 }
 
 // read 16bit value and convert to 24bit RGB
-void stbi__tga_read_rgb16(stbi__context *s, stbi_uc* out)
+static void stbi__tga_read_rgb16(stbi__context *s, stbi_uc* out)
 {
    stbi__uint16 px = stbi__get16le(s);
    stbi__uint16 fiveBitMask = 31;
