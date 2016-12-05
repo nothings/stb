@@ -79,7 +79,7 @@ doesn't either).
 If you don't need float or doubles at all, define STB_SPRINTF_NOFLOAT
 and you'll save 4K of code space.
 
-64-STBSP__INTMAXT INTS:
+64-BIT INTS:
 ============
 This library also supports 64-bit integers and you can use MSVC style or
 GCC style indicators (%I64d or %lld).  It supports the C99 specifiers
