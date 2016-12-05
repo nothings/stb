@@ -95,7 +95,8 @@
 //
 //   "Load" a font file from a memory buffer (you have to keep the buffer loaded)
 //           stbtt_InitFont()
-//           stbtt_GetFontOffsetForIndex()        -- use for TTC font collections
+//           stbtt_GetFontOffsetForIndex()        -- indexing for TTC font collections
+//           stbtt_GetNumberOfFonts()             -- number of fonts for TTC font collections
 //
 //   Render a unicode codepoint to a bitmap
 //           stbtt_GetCodepointBitmap()           -- allocates and returns a bitmap
@@ -629,6 +630,12 @@ STBTT_DEF int stbtt_GetFontOffsetForIndex(const unsigned char *data, int index);
 // return '0' for index 0, and -1 for all other indices. You can just skip
 // this step if you know it's that kind of font.
 
+STBTT_DEF int stbtt_GetNumberOfFonts(const unsigned char *data);
+// This function will determine the number of fonts in a font file.  TrueType
+// collection (.ttc) files may contain multiple fonts, while TrueType font
+// (.ttf) files only contain one font. The number of fonts can be used for
+// indexing with the previous function where the index is between zero and one
+// less than the total fonts. If an error occurs, -1 is returned.
 
 // The following structure is defined publically so you can declare one on
 // the stack or as a global or etc, but you should treat it as opaque.
@@ -1009,6 +1016,22 @@ static int stbtt_GetFontOffsetForIndex_internal(unsigned char *font_collection, 
          if (index >= n)
             return -1;
          return ttULONG(font_collection+12+index*4);
+      }
+   }
+   return -1;
+}
+
+static int stbtt_GetNumberOfFonts_internal(unsigned char *font_collection)
+{
+   // if it's just a font, there's only one valid font
+   if (stbtt__isfont(font_collection))
+      return 1;
+
+   // check if it's a TTC
+   if (stbtt_tag(font_collection, "ttcf")) {
+      // version 1?
+      if (ttULONG(font_collection+4) == 0x00010000 || ttULONG(font_collection+4) == 0x00020000) {
+         return ttLONG(font_collection+8);
       }
    }
    return -1;
@@ -3212,6 +3235,11 @@ STBTT_DEF int stbtt_BakeFontBitmap(const unsigned char *data, int offset,
 STBTT_DEF int stbtt_GetFontOffsetForIndex(const unsigned char *data, int index)
 {
    return stbtt_GetFontOffsetForIndex_internal((unsigned char *) data, index);   
+}
+
+STBTT_DEF int stbtt_GetNumberOfFonts(const unsigned char *data)
+{
+   return stbtt_GetNumberOfFonts_internal((unsigned char *) data);
 }
 
 STBTT_DEF int stbtt_InitFont(stbtt_fontinfo *info, const unsigned char *data, int offset)
