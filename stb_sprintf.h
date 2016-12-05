@@ -59,7 +59,7 @@ int stbsp_vsprintfcb( STBSP_SPRINTFCB * callback, void * user, char * buf, char 
   The buffer you pass in must hold at least STB_SPRINTF_MIN characters.
     // you return the next buffer to use or 0 to stop converting
 
-void stbsp_set_seperators( char comma, char period )
+void stbsp_set_separators( char comma, char period )
   Set the comma and period characters to use.
 
 FLOATS/DOUBLES:
