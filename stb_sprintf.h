@@ -43,12 +43,12 @@ API:
 ====
 int stbsp_sprintf( char * buf, char const * fmt, ... )
 int stbsp_snprintf( char * buf, int count, char const * fmt, ... )
-  Convert an arg list into a buffer.  rrsnprintf always returns
+  Convert an arg list into a buffer.  stbsp_snprintf always returns
   a zero-terminated string (unlike regular snprintf).
 
 int stbsp_vsprintf( char * buf, char const * fmt, va_list va )
 int stbsp_vsnprintf( char * buf, int count, char const * fmt, va_list va )
-  Convert a va_list arg list into a buffer.  rrvsnprintf always returns
+  Convert a va_list arg list into a buffer.  stbsp_vsnprintf always returns
   a zero-terminated string (unlike regular snprintf).
 
 int stbsp_vsprintfcb( STBSP_SPRINTFCB * callback, void * user, char * buf, char const * fmt, va_list va )
@@ -182,7 +182,7 @@ STBSP__PUBLICDEF void STB_SPRINTF_DECORATE( set_separators )( char comma, char p
 #endif
 #endif
 
-#ifdef STB_SPRINTF_NOUNALIGNED  // define this before inclusion to force rrsprint to always use aligned accesses
+#ifdef STB_SPRINTF_NOUNALIGNED  // define this before inclusion to force stbsp_sprintf to always use aligned accesses
 #define STBSP__UNALIGNED(code)
 #else
 #define STBSP__UNALIGNED(code) code
