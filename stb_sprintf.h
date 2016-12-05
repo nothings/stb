@@ -1,4 +1,4 @@
-// stb_sprintf - v1.00 - public domain snprintf() implementation
+// stb_sprintf - v1.01 - public domain snprintf() implementation
 // originally by Jeff Roberts / RAD Game Tools, 2015/10/20
 // http://github.com/nothings/stb
 //
@@ -152,7 +152,7 @@ STBSP__PUBLICDEF void STB_SPRINTF_DECORATE( set_separators )( char comma, char p
 
 #endif // STB_SPRINTF_H_INCLUDE
 
-#ifndef STB_SPRINTF_IMPLEMENTATION
+#ifdef STB_SPRINTF_IMPLEMENTATION
 
 #include <stdlib.h>  // for va_arg()
 
