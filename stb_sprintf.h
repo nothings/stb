@@ -555,7 +555,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
         pr = 0;
         
         // handle k,m,g,t
-        if (fl&STBSP__METRIC_SUFFIX) { tail[0]=1; tail[1]=' '; { if (fl>>24) { tail[2]="_kmgt"[fl>>24]; tail[0]=2; } } };
+        if (fl&STBSP__METRIC_SUFFIX) { tail[0]=1; tail[1]=' '; { if (fl>>24) { tail[2]="_kMGT"[fl>>24]; tail[0]=2; } } };
 
         flt_lead:
         // get the length that we copied
