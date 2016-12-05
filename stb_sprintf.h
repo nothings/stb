@@ -5,8 +5,6 @@
 // allowed types:  sc uidBboXx p AaGgEef n
 // lengths      :  h ll j z t I64 I32 I
 
-
-
 #ifndef STB_SPRINTF_H_INCLUDE
 #define STB_SPRINTF_H_INCLUDE
 
