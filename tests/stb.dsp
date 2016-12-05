@@ -154,6 +154,10 @@ SOURCE=..\stb_rect_pack.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_sprintf.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_textedit.h
 # End Source File
 # Begin Source File

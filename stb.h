@@ -730,6 +730,7 @@ STB_EXTERN int  stb_snprintf(char *s, size_t n, const char *fmt, ...);
 STB_EXTERN int  stb_vsnprintf(char *s, size_t n, const char *fmt, va_list v);
 
 #ifdef STB_DEFINE
+
 int stb_vsnprintf(char *s, size_t n, const char *fmt, va_list v)
 {
    int res;

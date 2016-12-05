@@ -143,6 +143,8 @@ void end_timer(void)
    printf("%6.4lf ms: %s\n", tm * 1000, message);
 }
 
+extern void quicktest(void);
+
 int loc[5000][2];
 int main(int argc, char **argv)
 {
@@ -152,6 +154,7 @@ int main(int argc, char **argv)
    uint8 *map = stbi_load("data/map_03.png", &w, &h, 0, 1);
 
    assert(map);
+   quicktest();
 
    for (j=0; j < h; ++j)
       for (i=0; i < w; ++i)
