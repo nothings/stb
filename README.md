@@ -13,6 +13,7 @@ library    | lastest version | category | LoC | description
 **[stb_image_write.h](stb_image_write.h)** | 1.02 | graphics | 1048 | image writing to disk: PNG, TGA, BMP
 **[stb_image_resize.h](stb_image_resize.h)** | 0.91 | graphics | 2578 | resize images larger/smaller with good quality
 **[stb_rect_pack.h](stb_rect_pack.h)** | 0.10 | graphics | 583 | simple 2D rectangle packer with decent quality
+**[stb_sprintf.h](stb_sprintf.h)** | 1.00 | utility | 1066 | fast sprintf, snprintf for C/C++
 **[stretchy_buffer.h](stretchy_buffer.h)** | 1.02 | utility | 216 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **[stb_textedit.h](stb_textedit.h)** | 1.10 | user&nbsp;interface | 1330 | guts of a text editor for games etc implementing them from scratch
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.84 | 3D&nbsp;graphics | 3752 | Minecraft-esque voxel rendering "engine" with many more features
@@ -24,11 +25,11 @@ library    | lastest version | category | LoC | description
 **[stb_c_lexer.h](stb_c_lexer.h)** | 0.07 | parsing | 816 | simplify writing parsers for C-like languages
 **[stb_divide.h](stb_divide.h)** | 0.91 | math | 379 | more useful 32-bit modulus e.g. "euclidean divide"
 **[stb_connected_comp...](stb_connected_components.h)** | 0.95 | misc | 1006 | incrementally compute reachability on grids
-**[stb.h](stb.h)** | 2.28 | misc | 14276 | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**[stb.h](stb.h)** | 2.28 | misc | 14277 | helper functions for C, mostly redundant in C++; basically author's personal stuff
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.2 | misc | 124 | quick-and-dirty malloc/free leak-checking
 
-Total libraries: 19  
-Total lines of C code: 48314
+Total libraries: 20  
+Total lines of C code: 49381
 
 
 FAQ
