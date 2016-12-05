@@ -133,6 +133,9 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 
 #include <stdarg.h>  // for va_list()
 
+// Uncomment for old-school prefixes (KB, MB instead of KiB, MiB) with the $ format
+//#define STBSP__JEDEC_PREFIX
+
 #ifndef STB_SPRINTF_MIN
 #define STB_SPRINTF_MIN 512 // how many characters per callback
 #endif
@@ -555,7 +558,23 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
         pr = 0;
         
         // handle k,m,g,t
-        if (fl&STBSP__METRIC_SUFFIX) { tail[0]=1; tail[1]=' '; { if (fl>>24) { tail[2]="_kMGT"[fl>>24]; tail[0]=2; } } };
+        if (fl&STBSP__METRIC_SUFFIX) 
+        { 
+            tail[0]=1; 
+            tail[1]=' '; 
+            { 
+                if (fl>>24) 
+                { 
+                    tail[2]="_KMGT"[fl>>24]; 
+#ifdef STBSP__JEDEC_PREFIX
+                    tail[0]=2;
+#else // SI prefix                    
+                    tail[3]='i'; 
+                    tail[0]=3; 
+#endif                    
+                } 
+            } 
+        };
 
         flt_lead:
         // get the length that we copied
