@@ -235,6 +235,18 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
     #define stbsp__chk_cb_buf(bytes) { if ( callback ) { stbsp__chk_cb_bufL(bytes); } }
     #define stbsp__flush_cb() { stbsp__chk_cb_bufL(STB_SPRINTF_MIN-1); } //flush if there is even one byte in the buffer
     #define stbsp__cb_buf_clamp(cl,v) cl = v; if ( callback ) { int lg = STB_SPRINTF_MIN-(int)(bf-buf); if (cl>lg) cl=lg; }
+    #define stbsp__lead_sign(fl, lead) \
+    lead[0] = 0;\
+    if (fl&STBSP__NEGATIVE) {\
+        lead[0]=1;\
+        lead[1]='-';\
+    } else if (fl&STBSP__LEADINGSPACE) {\
+        lead[0]=1;\
+        lead[1]=' ';\
+    } else if (fl&STBSP__LEADINGPLUS) {\
+        lead[0]=1;\
+        lead[1]='+';\
+    }
 
     // fast copy everything up to the next % (or end of string)
     for(;;)
@@ -396,8 +408,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
   
         s = num+64;
 
-        // sign
-        lead[0]=0; if (fl&STBSP__NEGATIVE) { lead[0]=1; lead[1]='-'; } else if (fl&STBSP__LEADINGSPACE) { lead[0]=1; lead[1]=' '; } else if (fl&STBSP__LEADINGPLUS) { lead[0]=1; lead[1]='+'; };
+        stbsp__lead_sign(fl, lead);
 
         if (dp==-1023) dp=(n64)?-1022:0; else n64|=(((stbsp__uint64)1)<<52);
         n64<<=(64-56);
@@ -471,7 +482,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
           fl |= STBSP__NEGATIVE;
        doexpfromg: 
         tail[0]=0; 
-        lead[0]=0; if (fl&STBSP__NEGATIVE) { lead[0]=1; lead[1]='-'; } else if (fl&STBSP__LEADINGSPACE) { lead[0]=1; lead[1]=' '; } else if (fl&STBSP__LEADINGPLUS) { lead[0]=1; lead[1]='+'; };
+        stbsp__lead_sign(fl, lead);
         if ( dp == STBSP__SPECIAL ) { s=(char*)sn; cs=0; pr=0; goto scopy; }
         s=num+64; 
         // handle leading chars
@@ -509,8 +520,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
           fl |= STBSP__NEGATIVE;
         dofloatfromg:
         tail[0]=0;
-        // sign
-        lead[0]=0; if (fl&STBSP__NEGATIVE) { lead[0]=1; lead[1]='-'; } else if (fl&STBSP__LEADINGSPACE) { lead[0]=1; lead[1]=' '; } else if (fl&STBSP__LEADINGPLUS) { lead[0]=1; lead[1]='+'; };
+        stbsp__lead_sign(fl, lead);
         if ( dp == STBSP__SPECIAL ) { s=(char*)sn; cs=0; pr=0; goto scopy; }
         s=num+64; 
 
@@ -649,8 +659,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
         }
 
         tail[0]=0;
-        // sign
-        lead[0]=0; if (fl&STBSP__NEGATIVE) { lead[0]=1; lead[1]='-'; } else if (fl&STBSP__LEADINGSPACE) { lead[0]=1; lead[1]=' '; } else if (fl&STBSP__LEADINGPLUS) { lead[0]=1; lead[1]='+'; };
+        stbsp__lead_sign(fl, lead);
 
         // get the length that we copied
         l = (stbsp__uint32) ( (num+STBSP__NUMSZ) - s ); if ( l == 0 ) { *--s='0'; l = 1; }
