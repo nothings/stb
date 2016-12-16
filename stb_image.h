@@ -5719,7 +5719,7 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
             // Fill this channel with default data.
             if (bitdepth == 16 && bpc == 16) {
                stbi__uint16 *q = ((stbi__uint16 *) out) + channel;
-               stbi_uc val = channel == 3 ? 65535 : 0;
+               stbi__uint16 val = channel == 3 ? 65535 : 0;
                for (i = 0; i < pixelCount; i++, q += 4)
                   *q = val;
             } else {
