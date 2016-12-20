@@ -1,3 +1,7 @@
+#include "stb_sprintf.h"
+#define STB_SPRINTF_IMPLEMENTATION
+#include "stb_sprintf.h"
+
 #define STB_TRUETYPE_IMPLEMENTATION
 #define STB_PERLIN_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION

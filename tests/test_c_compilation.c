@@ -1,3 +1,7 @@
+#include "stb_sprintf.h"
+#define STB_SPRINTF_IMPLEMENTATION
+#include "stb_sprintf.h"
+
 #define STB_PERLIN_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_DXT_IMPLEMENATION
@@ -28,3 +32,11 @@
 #define STBTE_DRAW_TILE(x,y,id,highlight,data)  0
 #define STB_TILEMAP_EDITOR_IMPLEMENTATION
 #include "stb_tilemap_editor.h"
+
+
+int quicktest(void)
+{
+   char buffer[999];
+   stbsp_sprintf(buffer, "test%%test");
+   return 0;
+}
