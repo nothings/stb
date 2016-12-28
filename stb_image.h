@@ -3703,11 +3703,12 @@ static void *stbi__jpeg_load(stbi__context *s, int *x, int *y, int *comp, int re
 static int stbi__jpeg_test(stbi__context *s)
 {
    int r;
-   stbi__jpeg j;
-   j.s = s;
-   stbi__setup_jpeg(&j);
-   r = stbi__decode_jpeg_header(&j, STBI__SCAN_type);
+   stbi__jpeg* j = (stbi__jpeg*)stbi__malloc(sizeof(stbi__jpeg));
+   j->s = s;
+   stbi__setup_jpeg(j);
+   r = stbi__decode_jpeg_header(j, STBI__SCAN_type);
    stbi__rewind(s);
+   STBI_FREE(j);
    return r;
 }
 
