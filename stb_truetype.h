@@ -49,10 +49,11 @@
 //       Higor Euripedes
 //       Thomas Fields
 //       Derek Vinyard
+//       github:IntellectualKitty
 //
 // VERSION HISTORY
 //
-//   1.13 (2017-01-02) support OpenType fonts
+//   1.13 (2017-01-02) support OpenType fonts, certain Apple fonts,
 //   1.12 (2016-10-25) suppress warnings about casting away const with -Wcast-qual
 //   1.11 (2016-04-02) fix unused-variable warning
 //   1.10 (2016-04-02) user-defined fabs(); rare memory leak; remove duplicate typedef
