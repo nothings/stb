@@ -96,14 +96,24 @@ void write_map(stbcc_grid *g, int w, int h, char *filename)
       for (i=0; i < w; ++i) {
          unsigned int c;
          c = stbcc_get_unique_id(g,i,j);
+         c = stb_rehash_improved(c)&0xffffff;
          if (c == STBCC_NULL_UNIQUE_ID)
             c = 0xff000000;
          else
             c = (~c)^0x555555;
+         if (i % 32 == 0 || j %32 == 0) {
+            int r = (c >> 16) & 255;
+            int g = (c >> 8) & 255;
+            int b = c & 255;
+            r = (r+130)/2;
+            g = (g+130)/2;
+            b = (b+130)/2;
+            c = 0xff000000 + (r<<16) + (g<<8) + b;
+         }
          color[j][i] = c;
       }
    }
-   stbi_write_png(filename, w, h, 4, color, 0);
+   stbi_write_png(filename, w, h, 4, color, 4*w);
 }
 
 void test_connected(stbcc_grid *g)
@@ -133,6 +143,8 @@ void end_timer(void)
    printf("%6.4lf ms: %s\n", tm * 1000, message);
 }
 
+extern void quicktest(void);
+
 int loc[5000][2];
 int main(int argc, char **argv)
 {
@@ -142,6 +154,7 @@ int main(int argc, char **argv)
    uint8 *map = stbi_load("data/map_03.png", &w, &h, 0, 1);
 
    assert(map);
+   quicktest();
 
    for (j=0; j < h; ++j)
       for (i=0; i < w; ++i)
@@ -159,18 +172,43 @@ int main(int argc, char **argv)
       map[(stb_rand()%h)*w + stb_rand()%w] ^= 255;
    #endif
             
+   _mkdir("tests/output/stbcc");
+
    stbi_write_png("tests/output/stbcc/reference.png", w, h, 1, map, 0);
 
    //reference(map, w, h);
 
-   _mkdir("tests/output/stbcc");
-
    g = malloc(stbcc_grid_sizeof());
    printf("Size: %d\n", stbcc_grid_sizeof());
+
+#if 0
+   memset(map, 0, w*h);
+   stbcc_init_grid(g, map, w, h);
+   {
+      int n;
+      char **s = stb_stringfile("c:/x/clockwork_update.txt", &n);
+      write_map(g, w, h, "tests/output/stbcc/base.png");
+      for (i=1; i < n; i += 1) {
+         int x,y,t;
+         sscanf(s[i], "%d %d %d", &x, &y, &t);
+         if (i == 571678)
+            write_map(g, w, h, stb_sprintf("tests/output/stbcc/clockwork_good.png", i));
+         stbcc_update_grid(g, x, y, t);
+         if (i == 571678)
+            write_map(g, w, h, stb_sprintf("tests/output/stbcc/clockwork_bad.png", i));
+         //if (i > 571648 && i <= 571712)
+            //write_map(g, w, h, stb_sprintf("tests/output/stbcc/clockwork_%06d.png", i));
+      }
+      write_map(g, w, h, stb_sprintf("tests/output/stbcc/clockwork_%06d.png", i-1));
+   }
+   return 0;
+#endif
+
 
    start_timer("init");
    stbcc_init_grid(g, map, w, h);
    end_timer();
+   //g = stb_file("c:/x/clockwork_path.bin", 0);
    write_map(g, w, h, "tests/output/stbcc/base.png");
 
    for (i=0; i < 5000;) {

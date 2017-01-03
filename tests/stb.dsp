@@ -90,10 +90,6 @@ SOURCE=.\grid_reachability.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\docs\other_libs.md
-# End Source File
-# Begin Source File
-
 SOURCE=.\stb.c
 # End Source File
 # Begin Source File
@@ -150,7 +146,15 @@ SOURCE=..\stb_perlin.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_pg.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_rect_pack.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\stb_sprintf.h
 # End Source File
 # Begin Source File
 

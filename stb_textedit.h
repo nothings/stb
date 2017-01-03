@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.8  - public domain - Sean Barrett
+// stb_textedit.h - v1.10  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -31,6 +31,8 @@
 //
 // VERSION HISTORY
 //
+//   1.10 (2016-10-25) supress warnings about casting away const with -Wcast-qual
+//   1.9  (2016-08-27) customizable move-by-word
 //   1.8  (2016-04-02) better keyboard handling when mouse button is down
 //   1.7  (2015-09-13) change y range handling in case baseline is non-0
 //   1.6  (2015-04-15) allow STB_TEXTEDIT_memmove
@@ -148,15 +150,17 @@
 //    STB_TEXTEDIT_K_REDO        keyboard input to perform redo
 //
 // Optional:
-//    STB_TEXTEDIT_K_INSERT      keyboard input to toggle insert mode
-//    STB_TEXTEDIT_IS_SPACE(ch)  true if character is whitespace (e.g. 'isspace'),
-//                                 required for WORDLEFT/WORDRIGHT
-//    STB_TEXTEDIT_K_WORDLEFT    keyboard input to move cursor left one word // e.g. ctrl-LEFT
-//    STB_TEXTEDIT_K_WORDRIGHT   keyboard input to move cursor right one word // e.g. ctrl-RIGHT
-//    STB_TEXTEDIT_K_LINESTART2  secondary keyboard input to move cursor to start of line
-//    STB_TEXTEDIT_K_LINEEND2    secondary keyboard input to move cursor to end of line
-//    STB_TEXTEDIT_K_TEXTSTART2  secondary keyboard input to move cursor to start of text
-//    STB_TEXTEDIT_K_TEXTEND2    secondary keyboard input to move cursor to end of text
+//    STB_TEXTEDIT_K_INSERT              keyboard input to toggle insert mode
+//    STB_TEXTEDIT_IS_SPACE(ch)          true if character is whitespace (e.g. 'isspace'),
+//                                          required for default WORDLEFT/WORDRIGHT handlers
+//    STB_TEXTEDIT_MOVEWORDLEFT(obj,i)   custom handler for WORDLEFT, returns index to move cursor to
+//    STB_TEXTEDIT_MOVEWORDRIGHT(obj,i)  custom handler for WORDRIGHT, returns index to move cursor to
+//    STB_TEXTEDIT_K_WORDLEFT            keyboard input to move cursor left one word // e.g. ctrl-LEFT
+//    STB_TEXTEDIT_K_WORDRIGHT           keyboard input to move cursor right one word // e.g. ctrl-RIGHT
+//    STB_TEXTEDIT_K_LINESTART2          secondary keyboard input to move cursor to start of line
+//    STB_TEXTEDIT_K_LINEEND2            secondary keyboard input to move cursor to end of line
+//    STB_TEXTEDIT_K_TEXTSTART2          secondary keyboard input to move cursor to start of text
+//    STB_TEXTEDIT_K_TEXTEND2            secondary keyboard input to move cursor to end of text
 //
 // Todo:
 //    STB_TEXTEDIT_K_PGUP        keyboard input to move cursor up a page
@@ -417,10 +421,9 @@ static int stb_text_locate_coord(STB_TEXTEDIT_STRING *str, float x, float y)
    // check if it's before the end of the line
    if (x < r.x1) {
       // search characters in row for one that straddles 'x'
-      k = i;
       prev_x = r.x0;
-      for (i=0; i < r.num_chars; ++i) {
-         float w = STB_TEXTEDIT_GETWIDTH(str, k, i);
+      for (k=0; k < r.num_chars; ++k) {
+         float w = STB_TEXTEDIT_GETWIDTH(str, i, k);
          if (x < prev_x+w) {
             if (x < prev_x+w/2)
                return k+i;
@@ -610,15 +613,16 @@ static void stb_textedit_move_to_last(STB_TEXTEDIT_STRING *str, STB_TexteditStat
 }
 
 #ifdef STB_TEXTEDIT_IS_SPACE
-static int is_word_boundary( STB_TEXTEDIT_STRING *_str, int _idx )
+static int is_word_boundary( STB_TEXTEDIT_STRING *str, int idx )
 {
-   return _idx > 0 ? (STB_TEXTEDIT_IS_SPACE( STB_TEXTEDIT_GETCHAR(_str,_idx-1) ) && !STB_TEXTEDIT_IS_SPACE( STB_TEXTEDIT_GETCHAR(_str, _idx) ) ) : 1;
+   return idx > 0 ? (STB_TEXTEDIT_IS_SPACE( STB_TEXTEDIT_GETCHAR(str,idx-1) ) && !STB_TEXTEDIT_IS_SPACE( STB_TEXTEDIT_GETCHAR(str, idx) ) ) : 1;
 }
 
-static int stb_textedit_move_to_word_previous( STB_TEXTEDIT_STRING *_str, STB_TexteditState *_state )
+#ifndef STB_TEXTEDIT_MOVEWORDLEFT
+static int stb_textedit_move_to_word_previous( STB_TEXTEDIT_STRING *str, int c )
 {
-   int c = _state->cursor - 1;
-   while( c >= 0 && !is_word_boundary( _str, c ) )
+   --c; // always move at least one character
+   while( c >= 0 && !is_word_boundary( str, c ) )
       --c;
 
    if( c < 0 )
@@ -626,12 +630,15 @@ static int stb_textedit_move_to_word_previous( STB_TEXTEDIT_STRING *_str, STB_Te
 
    return c;
 }
+#define STB_TEXTEDIT_MOVEWORDLEFT stb_textedit_move_to_word_previous
+#endif
 
-static int stb_textedit_move_to_word_next( STB_TEXTEDIT_STRING *_str, STB_TexteditState *_state )
+#ifndef STB_TEXTEDIT_MOVEWORDRIGHT
+static int stb_textedit_move_to_word_next( STB_TEXTEDIT_STRING *str, int c )
 {
-   const int len = STB_TEXTEDIT_STRINGLEN(_str);
-   int c = _state->cursor+1;
-   while( c < len && !is_word_boundary( _str, c ) )
+   const int len = STB_TEXTEDIT_STRINGLEN(str);
+   ++c; // always move at least one character
+   while( c < len && !is_word_boundary( str, c ) )
       ++c;
 
    if( c > len )
@@ -639,6 +646,9 @@ static int stb_textedit_move_to_word_next( STB_TEXTEDIT_STRING *_str, STB_Texted
 
    return c;
 }
+#define STB_TEXTEDIT_MOVEWORDRIGHT stb_textedit_move_to_word_next
+#endif
+
 #endif
 
 // update selection and cursor to match each other
@@ -662,9 +672,8 @@ static int stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
 }
 
 // API paste: replace existing selection with passed-in text
-static int stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE const *ctext, int len)
+static int stb_textedit_paste_internal(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len)
 {
-   STB_TEXTEDIT_CHARTYPE *text = (STB_TEXTEDIT_CHARTYPE *) ctext;
    // if there's a selection, the paste should delete it
    stb_textedit_clamp(str, state);
    stb_textedit_delete_selection(str,state);
@@ -760,21 +769,12 @@ retry:
          state->has_preferred_x = 0;
          break;
 
-#ifdef STB_TEXTEDIT_IS_SPACE
+#ifdef STB_TEXTEDIT_MOVEWORDLEFT
       case STB_TEXTEDIT_K_WORDLEFT:
          if (STB_TEXT_HAS_SELECTION(state))
             stb_textedit_move_to_first(state);
          else {
-            state->cursor = stb_textedit_move_to_word_previous(str, state);
-            stb_textedit_clamp( str, state );
-         }
-         break;
-
-      case STB_TEXTEDIT_K_WORDRIGHT:
-         if (STB_TEXT_HAS_SELECTION(state)) 
-            stb_textedit_move_to_last(str, state);
-         else {
-            state->cursor = stb_textedit_move_to_word_next(str, state);
+            state->cursor = STB_TEXTEDIT_MOVEWORDLEFT(str, state->cursor);
             stb_textedit_clamp( str, state );
          }
          break;
@@ -783,17 +783,28 @@ retry:
          if( !STB_TEXT_HAS_SELECTION( state ) )
             stb_textedit_prep_selection_at_cursor(state);
 
-         state->cursor = stb_textedit_move_to_word_previous(str, state);
+         state->cursor = STB_TEXTEDIT_MOVEWORDLEFT(str, state->cursor);
          state->select_end = state->cursor;
 
          stb_textedit_clamp( str, state );
+         break;
+#endif
+
+#ifdef STB_TEXTEDIT_MOVEWORDRIGHT
+      case STB_TEXTEDIT_K_WORDRIGHT:
+         if (STB_TEXT_HAS_SELECTION(state)) 
+            stb_textedit_move_to_last(str, state);
+         else {
+            state->cursor = STB_TEXTEDIT_MOVEWORDRIGHT(str, state->cursor);
+            stb_textedit_clamp( str, state );
+         }
          break;
 
       case STB_TEXTEDIT_K_WORDRIGHT | STB_TEXTEDIT_K_SHIFT:
          if( !STB_TEXT_HAS_SELECTION( state ) )
             stb_textedit_prep_selection_at_cursor(state);
 
-         state->cursor = stb_textedit_move_to_word_next(str, state);
+         state->cursor = STB_TEXTEDIT_MOVEWORDRIGHT(str, state->cursor);
          state->select_end = state->cursor;
 
          stb_textedit_clamp( str, state );
@@ -1301,4 +1312,19 @@ static void stb_textedit_initialize_state(STB_TexteditState *state, int is_singl
 {
    stb_textedit_clear_state(state, is_single_line);
 }
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
+
+static int stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE const *ctext, int len)
+{
+   return stb_textedit_paste_internal(str, state, (STB_TEXTEDIT_CHARTYPE *) ctext, len);
+}
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
 #endif//STB_TEXTEDIT_IMPLEMENTATION
