@@ -7,6 +7,7 @@
 //
 // Contributors (bugfixes):
 //    github:d26435
+//    github:trex78
 
 #ifndef STB_SPRINTF_H_INCLUDE
 #define STB_SPRINTF_H_INCLUDE

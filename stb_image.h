@@ -172,9 +172,9 @@
     Tom Seddon (pic)                       Omar Cornut (1/2/4-bit PNG)
     Thatcher Ulrich (psd)                  Nicolas Guillemot (vertical flip)
     Ken Miller (pgm, ppm)                  Richard Mitton (16-bit PSD)
-    urraka@github (animated gif)           Junggon Kim (PNM comments)
+    github:urraka (animated gif)           Junggon Kim (PNM comments)
                                            Daniel Gibson (16-bit TGA)
-
+                                           socks-the-fox (16-bit TGA)
  Optimizations & bugfixes
     Fabian "ryg" Giesen
     Arseny Kapoulkine
@@ -185,14 +185,14 @@
     Dave Moore              Roy Eltham         Hayaki Saito       Phil Jordan
     Won Chun                Luke Graham        Johan Duparc       Nathan Reed
     the Horde3D community   Thomas Ruf         Ronny Chevalier    Nick Verigakis
-    Janez Zemva             John Bartholomew   Michal Cichon      svdijk@github
+    Janez Zemva             John Bartholomew   Michal Cichon      github:svdijk
     Jonathan Blow           Ken Hamada         Tero Hanninen      Baldur Karlsson
-    Laurent Gomila          Cort Stratton      Sergio Gonzalez    romigrou@github
+    Laurent Gomila          Cort Stratton      Sergio Gonzalez    github:romigrou
     Aruelien Pocheville     Thibault Reuille   Cass Everitt       Matthew Gregan
-    Ryamond Barbiero        Paul Du Bois       Engin Manap        snagar@github
-    Michaelangel007@github  Oriol Ferrer Mesia socks-the-fox      Zelex@github
-    Philipp Wiesemann       Josh Tobin         rlyeh@github       grim210@github
-    Blazej Dariusz Roszkowski                  Dale Weiler
+    Ryamond Barbiero        Paul Du Bois       Engin Manap        github:snagar
+    Michaelangel007@github  Oriol Ferrer Mesia Dale Weiler        github:Zelex
+    Philipp Wiesemann       Josh Tobin         github:rlyeh       github:grim210@github
+    Blazej Dariusz Roszkowski                  github:sammyhw
 
 
 LICENSE
