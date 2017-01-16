@@ -1,4 +1,4 @@
-// stb_easy_font.h - v0.7 - bitmap font for 3D rendering - public domain
+// stb_easy_font.h - v1.0 - bitmap font for 3D rendering - public domain
 // Sean Barrett, Feb 2015
 //
 //    Easy-to-deploy,
@@ -73,9 +73,14 @@
 //
 // VERSION HISTORY
 //
+//   (2017-01-15)  1.0   space character takes same space as numbers; fix bad spacing of 'f'
 //   (2016-01-22)  0.7   width() supports multiline text; add height()
 //   (2015-09-13)  0.6   #include <math.h>; updated license
 //   (2015-02-01)  0.5   First release
+//
+// CONTRIBUTORS
+//
+//   github:vassvik  --  bug report
 
 #if 0
 // SAMPLE CODE:
@@ -109,7 +114,7 @@ struct {
     unsigned char h_seg;
     unsigned char v_seg;
 } stb_easy_font_charinfo[96] = {
-    {  5,  0,  0 },  {  3,  0,  0 },  {  5,  1,  1 },  {  7,  1,  4 },
+    {  6,  0,  0 },  {  3,  0,  0 },  {  5,  1,  1 },  {  7,  1,  4 },
     {  7,  3,  7 },  {  7,  6, 12 },  {  7,  8, 19 },  {  4, 16, 21 },
     {  4, 17, 22 },  {  4, 19, 23 },  { 23, 21, 24 },  { 23, 22, 31 },
     { 20, 23, 34 },  { 22, 23, 36 },  { 19, 24, 36 },  { 21, 25, 36 },
@@ -126,7 +131,7 @@ struct {
     {  7,109,165 },  {  7,118,167 },  {  6,118,172 },  {  4,120,176 },
     {  6,122,177 },  {  4,122,181 },  { 23,124,182 },  { 22,129,182 },
     {  4,130,182 },  { 22,131,183 },  {  6,133,187 },  { 22,135,191 },
-    {  6,137,192 },  { 22,139,196 },  {  5,144,197 },  { 22,147,198 },
+    {  6,137,192 },  { 22,139,196 },  {  6,144,197 },  { 22,147,198 },
     {  6,150,202 },  { 19,151,206 },  { 21,152,207 },  {  6,155,209 },
     {  3,160,210 },  { 23,160,211 },  { 22,164,216 },  { 22,165,220 },
     { 22,167,224 },  { 22,169,228 },  { 21,171,232 },  { 21,173,233 },

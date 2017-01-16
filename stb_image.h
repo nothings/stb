@@ -192,7 +192,7 @@
     Ryamond Barbiero        Paul Du Bois       Engin Manap        snagar@github
     Michaelangel007@github  Oriol Ferrer Mesia socks-the-fox      Zelex@github
     Philipp Wiesemann       Josh Tobin         rlyeh@github       grim210@github
-    Blazej Dariusz Roszkowski                  
+    Blazej Dariusz Roszkowski                  Dale Weiler
 
 
 LICENSE
@@ -4842,7 +4842,10 @@ static void *stbi__do_png(stbi__png *p, int *x, int *y, int *n, int req_comp, st
    void *result=NULL;
    if (req_comp < 0 || req_comp > 4) return stbi__errpuc("bad req_comp", "Internal error");
    if (stbi__parse_png_file(p, STBI__SCAN_load, req_comp)) {
-      ri->bits_per_channel = p->depth;
+      if (p->depth < 8)
+         ri->bits_per_channel = 8;
+      else
+         ri->bits_per_channel = p->depth;
       result = p->out;
       p->out = NULL;
       if (req_comp && req_comp != p->s->img_out_n) {

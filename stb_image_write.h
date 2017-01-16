@@ -103,6 +103,7 @@ CREDITS:
       Jonas Karlsson
       Filip Wasil
       Thatcher Ulrich
+      github:poppolopoppo
       
 LICENSE
 

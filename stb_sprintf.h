@@ -4,6 +4,9 @@
 //
 // allowed types:  sc uidBboXx p AaGgEef n
 // lengths      :  h ll j z t I64 I32 I
+//
+// Contributors (bugfixes):
+//    github:d26435
 
 #ifndef STB_SPRINTF_H_INCLUDE
 #define STB_SPRINTF_H_INCLUDE
@@ -118,16 +121,25 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 "...512 char string..." ( 35.0x/32.5x faster!)
 */
 
+#if defined(__has_feature)
+ #if __has_feature(address_sanitizer)
+  #define STBI__ASAN __attribute__((no_sanitize("address")))
+ #endif
+#endif
+#ifndef STBI__ASAN
+#define STBI__ASAN
+#endif
+
 #ifdef STB_SPRINTF_STATIC
 #define STBSP__PUBLICDEC static
-#define STBSP__PUBLICDEF static
+#define STBSP__PUBLICDEF static STBI__ASAN
 #else
 #ifdef __cplusplus
 #define STBSP__PUBLICDEC extern "C"
-#define STBSP__PUBLICDEF extern "C"
+#define STBSP__PUBLICDEF extern "C" STBI__ASAN
 #else
-#define STBSP__PUBLICDEC extern 
-#define STBSP__PUBLICDEF
+#define STBSP__PUBLICDEC extern
+#define STBSP__PUBLICDEF STBI__ASAN
 #endif
 #endif
 
