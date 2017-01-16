@@ -1,0 +1,6 @@
+language: C
+install: true
+script:
+  - cd tests
+  - make 32
+  - make 64
