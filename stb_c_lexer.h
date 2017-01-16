@@ -30,6 +30,9 @@
 //     - haven't implemented support for unicode CLEX_char
 //     - need to expand error reporting so you don't just get "CLEX_parse_error"
 //
+// Contributors:
+//   Arpad Goretity (bugfix)
+//
 // LICENSE
 //
 //   This software is dual-licensed to the public domain and under the following
@@ -84,7 +87,7 @@
 #define STB_C_LEX_DISCARD_PREPROCESSOR    Y   // discard C-preprocessor directives (e.g. after prepocess
                                               // still have #line, #pragma, etc)
 
-//#define STB_C_LEX_ISWHITE(str)    ... // return length in bytes of first character if it is whitespace
+//#define STB_C_LEX_ISWHITE(str)    ... // return length in bytes of whitespace characters if first char is whitespace
 
 #define STB_C_LEXER_DEFINITIONS         // This line prevents the header file from replacing your definitions
 // --END--
@@ -459,7 +462,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
          int n;
          n = STB_C_LEX_ISWHITE(p);
          if (n == 0) break;
-         if (lexer->eof && lexer+n > lexer->eof)
+         if (lexer->eof && lexer->eof - lexer->parse_point < n)
             return stb__clex_token(tok, CLEX_parse_error, p,lexer->eof-1);
          p += n;
       }

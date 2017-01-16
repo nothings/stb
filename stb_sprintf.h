@@ -769,9 +769,12 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( sprintf )( char * buf, char const * fmt, ... )
 {
+  int result;
   va_list va;
   va_start( va, fmt );
-  return STB_SPRINTF_DECORATE( vsprintfcb )( 0, 0, buf, fmt, va );
+  result = STB_SPRINTF_DECORATE( vsprintfcb )( 0, 0, buf, fmt, va );
+  va_end(va);
+  return result;
 }
 
 typedef struct stbsp__context
@@ -827,10 +830,14 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsnprintf )( char * buf, int count, c
 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( snprintf )( char * buf, int count, char const * fmt, ... )
 {
+  int result;
   va_list va;
   va_start( va, fmt );
 
-  return STB_SPRINTF_DECORATE( vsnprintf )( buf, count, fmt, va );
+  result = STB_SPRINTF_DECORATE( vsnprintf )( buf, count, fmt, va );
+  va_end(va);
+
+  return result;
 }
 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintf )( char * buf, char const * fmt, va_list va )

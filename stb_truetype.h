@@ -534,7 +534,7 @@ typedef struct stbrp_rect stbrp_rect;
 STBTT_DEF int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, int width, int height, int stride_in_bytes, int padding, void *alloc_context);
 // Initializes a packing context stored in the passed-in stbtt_pack_context.
 // Future calls using this context will pack characters into the bitmap passed
-// in here: a 1-channel bitmap that is weight x height. stride_in_bytes is
+// in here: a 1-channel bitmap that is width * height. stride_in_bytes is
 // the distance from one row to the next (or 0 to mean they are packed tightly
 // together). "padding" is the amount of padding to leave between each
 // character (normally you want '1' for bitmaps you'll use as textures with
