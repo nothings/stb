@@ -1,4 +1,4 @@
-// stb_leakcheck.h - v0.2 - quick & dirty malloc leak-checking - public domain
+// stb_leakcheck.h - v0.3 - quick & dirty malloc leak-checking - public domain
 // LICENSE
 //
 //   This software is dual-licensed to the public domain and under the following

@@ -2,4 +2,4 @@ language: C
 install: true
 script:
   - cd tests
-  - make 64
+  - make all
