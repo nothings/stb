@@ -24,16 +24,16 @@ library    | lastest version | category | LoC | description
 **[stb_dxt.h](stb_dxt.h)** | 1.04 | 3D&nbsp;graphics | 630 | Fabian "ryg" Giesen's real-time DXT compressor
 **[stb_perlin.h](stb_perlin.h)** | 0.2 | 3D&nbsp;graphics | 182 | revised Perlin noise (3D input, 1D output)
 **[stb_easy_font.h](stb_easy_font.h)** | 1.0 | 3D&nbsp;graphics | 263 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
-**[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.37 | game&nbsp;dev | 4131 | embeddable tilemap editor
+**[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.38 | game&nbsp;dev | 4132 | embeddable tilemap editor
 **[stb_herringbone_wa...](stb_herringbone_wang_tile.h)** | 0.6 | game&nbsp;dev | 1220 | herringbone Wang tile map generator
 **[stb_c_lexer.h](stb_c_lexer.h)** | 0.08 | parsing | 820 | simplify writing parsers for C-like languages
 **[stb_divide.h](stb_divide.h)** | 0.91 | math | 379 | more useful 32-bit modulus e.g. "euclidean divide"
 **[stb_connected_comp...](stb_connected_components.h)** | 0.95 | misc | 1006 | incrementally compute reachability on grids
 **[stb.h](stb.h)** | 2.28 | misc | 14277 | helper functions for C, mostly redundant in C++; basically author's personal stuff
-**[stb_leakcheck.h](stb_leakcheck.h)** | 0.2 | misc | 124 | quick-and-dirty malloc/free leak-checking
+**[stb_leakcheck.h](stb_leakcheck.h)** | 0.3 | misc | 124 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 20  
-Total lines of C code: 50148
+Total lines of C code: 50149
 
 
 FAQ
