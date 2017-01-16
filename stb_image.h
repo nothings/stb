@@ -89,6 +89,7 @@
             STBI_NO_HDR
             STBI_NO_PIC
             STBI_NO_PNM   (.ppm and .pgm)
+            STBI_NO_PAM
 
       - You can request *only* certain decoders and suppress all other ones
         (this will be more forward-compatible, as addition of new decoders
@@ -103,6 +104,7 @@
             STBI_ONLY_HDR
             STBI_ONLY_PIC
             STBI_ONLY_PNM   (.ppm and .pgm)
+            STBI_ONLY_PAM
 
          Note that you can define multiples of these, and you will get all
          of them ("only x" and "only y" is interpreted to mean "only x&y").
@@ -147,6 +149,7 @@
 
    Latest revision history:
       2.13  (2016-12-04) experimental 16-bit API, only for PNG so far; fixes
+      2.12a (2016-05-24) PAM support
       2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
       2.11  (2016-04-02) 16-bit PNGS; enable SSE2 in non-gcc x64
                          RGB-format JPEG; remove white matting in PSD;
@@ -535,7 +538,7 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 #if defined(STBI_ONLY_JPEG) || defined(STBI_ONLY_PNG) || defined(STBI_ONLY_BMP) \
   || defined(STBI_ONLY_TGA) || defined(STBI_ONLY_GIF) || defined(STBI_ONLY_PSD) \
   || defined(STBI_ONLY_HDR) || defined(STBI_ONLY_PIC) || defined(STBI_ONLY_PNM) \
-  || defined(STBI_ONLY_ZLIB)
+  || defined(STBI_ONLY_PAM) || defined(STBI_ONLY_ZLIB)
    #ifndef STBI_ONLY_JPEG
    #define STBI_NO_JPEG
    #endif
@@ -562,6 +565,9 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
    #endif
    #ifndef STBI_ONLY_PNM
    #define STBI_NO_PNM
+   #endif
+   #ifndef STBI_ONLY_PAM
+   #define STBI_NO_PAM
    #endif
 #endif
 
@@ -903,6 +909,12 @@ static void    *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int 
 static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp);
 #endif
 
+#ifndef STBI_NO_PAM
+static int      stbi__pam_test(stbi__context *s);
+static stbi_uc *stbi__pam_load(stbi__context *s, int *x, int *y, int *comp, int req_comp);
+static int      stbi__pam_info(stbi__context *s, int *x, int *y, int *comp);
+#endif
+
 // this is not threadsafe
 static const char *stbi__g_failure_reason;
 
@@ -1055,6 +1067,9 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    #endif
    #ifndef STBI_NO_PNM
    if (stbi__pnm_test(s))  return stbi__pnm_load(s,x,y,comp,req_comp, ri);
+   #endif
+   #ifndef STBI_NO_PAM
+   if (stbi__pam_test(s))  return stbi__pam_load(s,x,y,comp,req_comp);
    #endif
 
    #ifndef STBI_NO_HDR
@@ -6856,6 +6871,167 @@ static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
 }
 #endif
 
+// *************************************************************************************************
+// Portable Arbitrary Map loader
+// by Wesley Griffin
+//
+// PAM: http://netpbm.sourceforge.net/doc/pam.html
+//
+// Known limitations:
+//    Ignores TUPLETYPE header lines and reads component count from DEPTH
+//    Does not support 16-bit-per-channel
+
+#ifndef STBI_NO_PAM
+
+static int      stbi__pam_test(stbi__context *s)
+{
+   char p, t;
+   p = (char) stbi__get8(s);
+   t = (char) stbi__get8(s);
+   if (p != 'P' || t != '7') {
+       stbi__rewind( s );
+       return 0;
+   }
+   return 1;
+}
+
+static stbi_uc *stbi__pam_load(stbi__context *s, int *x, int *y, int *comp, int req_comp)
+{
+   stbi_uc *out;
+   if (!stbi__pam_info(s, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n))
+      return 0;
+   *x = s->img_x;
+   *y = s->img_y;
+   *comp = s->img_n;
+
+   out = (stbi_uc *) stbi__malloc(s->img_n * s->img_x * s->img_y);
+   if (!out) return stbi__errpuc("outofmem", "Out of memory");
+   stbi__getn(s, out, s->img_n * s->img_x * s->img_y);
+
+   if (req_comp && req_comp != s->img_n) {
+      out = stbi__convert_format(out, s->img_n, req_comp, s->img_x, s->img_y);
+      if (out == NULL) return out; // stbi__convert_format frees input on failure
+   }
+   return out;
+}
+
+static int      stbi__pam_isspace(char c)
+{
+   return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
+}
+
+static void     stbi__pam_skip_whitespace(stbi__context *s, char *c)
+{
+   for (;;) {
+      while (!stbi__at_eof(s) && stbi__pam_isspace(*c))
+         *c = (char) stbi__get8(s);
+
+      if (stbi__at_eof(s) || *c != '#')
+         break;
+
+      while (!stbi__at_eof(s) && *c != '\n' && *c != '\r' )
+         *c = (char) stbi__get8(s);
+   }
+}
+
+static void     stbi__pam_next_whitespace(stbi__context *s, char *c)
+{
+    while (!stbi__at_eof(s) && !stbi__pam_isspace(*c))
+        *c = (char) stbi__get8(s);
+}
+
+static void     stbi__pam_skip_restofline(stbi__context *s, char *c)
+{
+    while (!stbi__at_eof(s) && *c != '\n' && *c != '\r' )
+        *c = (char) stbi__get8(s);
+}
+
+static int      stbi__pam_isdigit(char c)
+{
+   return c >= '0' && c <= '9';
+}
+
+static int      stbi__pam_getinteger(stbi__context *s, char *c)
+{
+   int value = 0;
+
+   while (!stbi__at_eof(s) && stbi__pam_isdigit(*c)) {
+      value = value*10 + (*c - '0');
+      *c = (char) stbi__get8(s);
+   }
+
+   return value;
+}
+
+static int      stbi__pam_info(stbi__context *s, int *x, int *y, int *comp)
+{
+   int maxv;
+   char c, p, t;
+
+   stbi__rewind( s );
+
+   // Get identifier
+   p = (char) stbi__get8(s);
+   t = (char) stbi__get8(s);
+   if (p != 'P' || t != '7') {
+       stbi__rewind( s );
+       return 0;
+   }
+
+   c = (char) stbi__get8(s); // read header tag delimiter
+   stbi__pam_skip_whitespace(s, &c);
+
+   while (c != 'E' && c != 'e') {
+       switch (c) {
+       case 'H': // fallthrough
+       case 'h': // read height
+           stbi__pam_next_whitespace(s, &c);
+           stbi__pam_skip_whitespace(s, &c);
+           *y = stbi__pam_getinteger(s, &c);
+           break;
+
+       case 'W': // fallthrough
+       case 'w': // read width
+           stbi__pam_next_whitespace(s, &c);
+           stbi__pam_skip_whitespace(s, &c);
+           *x = stbi__pam_getinteger(s, &c);
+           break;
+
+       case 'D': // fallthrough
+       case 'd': // read depth
+           stbi__pam_next_whitespace(s, &c);
+           stbi__pam_skip_whitespace(s, &c);
+           *comp = stbi__pam_getinteger(s, &c);
+           break;
+
+       case 'M': // fallthrough
+       case 'm': // read max value
+           stbi__pam_next_whitespace(s, &c);
+           stbi__pam_skip_whitespace(s, &c);
+           maxv = stbi__pam_getinteger(s, &c);
+           break;
+
+       case 'T': // fallthrough
+       case 't': // ignore TUPLETYPE
+           stbi__pam_skip_restofline(s, &c);
+           break;
+
+       default:
+           return stbi__err("unrecognized header token", "PAM image bad header");
+       }
+
+       stbi__pam_skip_whitespace(s, &c);
+   }
+
+   stbi__pam_skip_restofline(s, &c); // read rest of ENDHDR token
+
+   if (maxv > 255)
+      return stbi__err("max value > 255", "PAM image not 8-bit");
+   else
+      return 1;
+}
+#endif
+
 static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 {
    #ifndef STBI_NO_JPEG
@@ -6884,6 +7060,10 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 
    #ifndef STBI_NO_PNM
    if (stbi__pnm_info(s, x, y, comp))  return 1;
+   #endif
+
+   #ifndef STBI_NO_PAM
+   if (stbi__pam_info(s, x, y, comp))  return 1;
    #endif
 
    #ifndef STBI_NO_HDR
@@ -6940,6 +7120,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 /*
    revision history:
       2.13  (2016-11-29) add 16-bit API, only supported for PNG right now
+      2.13a (2016-05-24) PAM support
       2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
       2.11  (2016-04-02) allocate large structures on the stack
                          remove white matting for transparent PSD
