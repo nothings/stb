@@ -109,7 +109,7 @@ void print_string(float x, float y, char *text, float r, float g, float b)
 #include <stdlib.h>
 #include <math.h>
 
-struct {
+struct stb_easy_font_info_struct {
     unsigned char advance;
     unsigned char h_seg;
     unsigned char v_seg;

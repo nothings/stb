@@ -95,14 +95,14 @@ void stb_leakcheck_dumpmem(void)
    stb_leakcheck_malloc_info *mi = mi_head;
    while (mi) {
       if ((ptrdiff_t) mi->size >= 0)
-         printf("LEAKED: %s (%4d): %8z bytes at %p\n", mi->file, mi->line, mi->size, mi+1);
+         printf("LEAKED: %s (%4d): %8d bytes at %p\n", mi->file, mi->line, (int) mi->size, mi+1);
       mi = mi->next;
    }
    #ifdef STB_LEAKCHECK_SHOWALL
    mi = mi_head;
    while (mi) {
       if ((ptrdiff_t) mi->size < 0)
-         printf("FREED : %s (%4d): %8z bytes at %p\n", mi->file, mi->line, ~mi->size, mi+1);
+         printf("FREED : %s (%4d): %8d bytes at %p\n", mi->file, mi->line, (int) ~mi->size, mi+1);
       mi = mi->next;
    }
    #endif

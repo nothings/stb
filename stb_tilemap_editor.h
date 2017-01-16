@@ -3356,7 +3356,7 @@ static void stbte__toolbar(stbte_tilemap *tm, int x0, int y0, int w, int h)
 
 #define STBTE__TEXTCOLOR(n)  stbte__color_table[n][STBTE__text][STBTE__idle]
 
-static int stbte__info_value(char *label, int x, int y, int val, int digits, int id)
+static int stbte__info_value(const char *label, int x, int y, int val, int digits, int id)
 {
    if (stbte__ui.event == STBTE__paint) {
       int off = 9-stbte__get_char_width(label[0]);
