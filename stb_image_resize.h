@@ -533,10 +533,11 @@ typedef struct
     int horizontal_num_contributors;
     int vertical_num_contributors;
 
-    int ring_buffer_length_bytes; // The length of an individual entry in the ring buffer. The total number of ring buffers is stbir__get_filter_pixel_width(filter)
+    int ring_buffer_length_bytes;   // The length of an individual entry in the ring buffer. The total number of ring buffers is stbir__get_filter_pixel_width(filter)
+    int ring_buffer_num_entries;    // Total number of entries in the ring buffer.
     int ring_buffer_first_scanline;
     int ring_buffer_last_scanline;
-    int ring_buffer_begin_index;
+    int ring_buffer_begin_index;    // first_scanline is at this index in the ring buffer
     float* ring_buffer;
 
     float* encode_buffer; // A temporary buffer to store floats so we don't lose precision while we do multiply-adds.
@@ -1411,6 +1412,8 @@ static float* stbir__add_empty_ring_buffer_entry(stbir__info* stbir_info, int n)
     int ring_buffer_index;
     float* ring_buffer;
 
+    stbir_info->ring_buffer_last_scanline = n;
+
     if (stbir_info->ring_buffer_begin_index < 0)
     {
         ring_buffer_index = stbir_info->ring_buffer_begin_index = 0;
@@ -1418,14 +1421,12 @@ static float* stbir__add_empty_ring_buffer_entry(stbir__info* stbir_info, int n)
     }
     else
     {
-        ring_buffer_index = (stbir_info->ring_buffer_begin_index + (stbir_info->ring_buffer_last_scanline - stbir_info->ring_buffer_first_scanline) + 1) % stbir_info->vertical_filter_pixel_width;
+        ring_buffer_index = (stbir_info->ring_buffer_begin_index + (stbir_info->ring_buffer_last_scanline - stbir_info->ring_buffer_first_scanline)) % stbir_info->ring_buffer_num_entries;
         STBIR_ASSERT(ring_buffer_index != stbir_info->ring_buffer_begin_index);
     }
 
     ring_buffer = stbir__get_ring_buffer_entry(stbir_info->ring_buffer, ring_buffer_index, stbir_info->ring_buffer_length_bytes / sizeof(float));
     memset(ring_buffer, 0, stbir_info->ring_buffer_length_bytes);
-
-    stbir_info->ring_buffer_last_scanline = n;
 
     return ring_buffer;
 }
@@ -1678,9 +1679,9 @@ static void stbir__decode_and_resample_downsample(stbir__info* stbir_info, int n
 }
 
 // Get the specified scan line from the ring buffer.
-static float* stbir__get_ring_buffer_scanline(int get_scanline, float* ring_buffer, int begin_index, int first_scanline, int ring_buffer_size, int ring_buffer_length)
+static float* stbir__get_ring_buffer_scanline(int get_scanline, float* ring_buffer, int begin_index, int first_scanline, int ring_buffer_num_entries, int ring_buffer_length)
 {
-    int ring_buffer_index = (begin_index + (get_scanline - first_scanline)) % ring_buffer_size;
+    int ring_buffer_index = (begin_index + (get_scanline - first_scanline)) % ring_buffer_num_entries;
     return stbir__get_ring_buffer_entry(ring_buffer, ring_buffer_index, ring_buffer_length);
 }
 
@@ -1865,7 +1866,7 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
     int alpha_channel = stbir_info->alpha_channel;
     int type = stbir_info->type;
     int colorspace = stbir_info->colorspace;
-    int kernel_pixel_width = stbir_info->vertical_filter_pixel_width;
+    int ring_buffer_entries = stbir_info->ring_buffer_num_entries;
     void* output_data = stbir_info->output_data;
     float* encode_buffer = stbir_info->encode_buffer;
     int decode = STBIR__DECODE(type, colorspace);
@@ -1900,7 +1901,7 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
             for (k = n0; k <= n1; k++)
             {
                 int coefficient_index = coefficient_counter++;
-                float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
+                float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, ring_buffer_entries, ring_buffer_length);
                 float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
                 for (x = 0; x < output_w; ++x)
                 {
@@ -1913,7 +1914,7 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
             for (k = n0; k <= n1; k++)
             {
                 int coefficient_index = coefficient_counter++;
-                float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
+                float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, ring_buffer_entries, ring_buffer_length);
                 float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
                 for (x = 0; x < output_w; ++x)
                 {
@@ -1927,7 +1928,7 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
             for (k = n0; k <= n1; k++)
             {
                 int coefficient_index = coefficient_counter++;
-                float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
+                float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, ring_buffer_entries, ring_buffer_length);
                 float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
                 for (x = 0; x < output_w; ++x)
                 {
@@ -1942,7 +1943,7 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
             for (k = n0; k <= n1; k++)
             {
                 int coefficient_index = coefficient_counter++;
-                float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
+                float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, ring_buffer_entries, ring_buffer_length);
                 float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
                 for (x = 0; x < output_w; ++x)
                 {
@@ -1958,7 +1959,7 @@ static void stbir__resample_vertical_upsample(stbir__info* stbir_info, int n, in
             for (k = n0; k <= n1; k++)
             {
                 int coefficient_index = coefficient_counter++;
-                float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
+                float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, ring_buffer_entries, ring_buffer_length);
                 float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
                 for (x = 0; x < output_w; ++x)
                 {
@@ -1981,7 +1982,7 @@ static void stbir__resample_vertical_downsample(stbir__info* stbir_info, int n, 
     stbir__contributors* vertical_contributors = stbir_info->vertical_contributors;
     float* vertical_coefficients = stbir_info->vertical_coefficients;
     int channels = stbir_info->channels;
-    int kernel_pixel_width = stbir_info->vertical_filter_pixel_width;
+    int ring_buffer_entries = stbir_info->ring_buffer_num_entries;
     void* output_data = stbir_info->output_data;
     float* horizontal_buffer = stbir_info->horizontal_buffer;
     int coefficient_width = stbir_info->vertical_coefficient_width;
@@ -2005,7 +2006,7 @@ static void stbir__resample_vertical_downsample(stbir__info* stbir_info, int n, 
         int coefficient_group = coefficient_width * contributor;
         float coefficient = vertical_coefficients[coefficient_group + coefficient_index];
 
-        float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, kernel_pixel_width, ring_buffer_length);
+        float* ring_buffer_entry = stbir__get_ring_buffer_scanline(k, ring_buffer, ring_buffer_begin_index, ring_buffer_first_scanline, ring_buffer_entries, ring_buffer_length);
 
         switch (channels) {
             case 1:
@@ -2071,7 +2072,7 @@ static void stbir__buffer_loop_upsample(stbir__info* stbir_info)
 
         stbir__calculate_sample_range_upsample(y, out_scanlines_radius, scale_ratio, stbir_info->vertical_shift, &in_first_scanline, &in_last_scanline, &in_center_of_out);
 
-        STBIR_ASSERT(in_last_scanline - in_first_scanline <= stbir_info->vertical_filter_pixel_width);
+        STBIR_ASSERT(in_last_scanline - in_first_scanline + 1 <= stbir_info->ring_buffer_num_entries);
 
         if (stbir_info->ring_buffer_begin_index >= 0)
         {
@@ -2090,7 +2091,7 @@ static void stbir__buffer_loop_upsample(stbir__info* stbir_info)
                 else
                 {
                     stbir_info->ring_buffer_first_scanline++;
-                    stbir_info->ring_buffer_begin_index = (stbir_info->ring_buffer_begin_index + 1) % stbir_info->vertical_filter_pixel_width;
+                    stbir_info->ring_buffer_begin_index = (stbir_info->ring_buffer_begin_index + 1) % stbir_info->ring_buffer_num_entries;
                 }
             }
         }
@@ -2148,7 +2149,7 @@ static void stbir__empty_ring_buffer(stbir__info* stbir_info, int first_necessar
             else
             {
                 stbir_info->ring_buffer_first_scanline++;
-                stbir_info->ring_buffer_begin_index = (stbir_info->ring_buffer_begin_index + 1) % stbir_info->vertical_filter_pixel_width;
+                stbir_info->ring_buffer_begin_index = (stbir_info->ring_buffer_begin_index + 1) % stbir_info->ring_buffer_num_entries;
             }
         }
     }
@@ -2172,7 +2173,7 @@ static void stbir__buffer_loop_downsample(stbir__info* stbir_info)
 
         stbir__calculate_sample_range_downsample(y, in_pixels_radius, scale_ratio, stbir_info->vertical_shift, &out_first_scanline, &out_last_scanline, &out_center_of_in);
 
-        STBIR_ASSERT(out_last_scanline - out_first_scanline <= stbir_info->vertical_filter_pixel_width);
+        STBIR_ASSERT(out_last_scanline - out_first_scanline + 1 <= stbir_info->ring_buffer_num_entries);
 
         if (out_last_scanline < 0 || out_first_scanline >= output_h)
             continue;
@@ -2246,13 +2247,16 @@ static stbir_uint32 stbir__calculate_memory(stbir__info *info)
     info->horizontal_num_contributors = stbir__get_contributors(info->horizontal_scale, info->horizontal_filter, info->input_w, info->output_w);
     info->vertical_num_contributors   = stbir__get_contributors(info->vertical_scale  , info->vertical_filter  , info->input_h, info->output_h);
 
+    // One extra entry because floating point precision problems sometimes cause an extra to be necessary.
+    info->ring_buffer_num_entries = filter_height + 1;
+
     info->horizontal_contributors_size = info->horizontal_num_contributors * sizeof(stbir__contributors);
     info->horizontal_coefficients_size = stbir__get_total_horizontal_coefficients(info) * sizeof(float);
     info->vertical_contributors_size = info->vertical_num_contributors * sizeof(stbir__contributors);
     info->vertical_coefficients_size = stbir__get_total_vertical_coefficients(info) * sizeof(float);
     info->decode_buffer_size = (info->input_w + pixel_margin * 2) * info->channels * sizeof(float);
     info->horizontal_buffer_size = info->output_w * info->channels * sizeof(float);
-    info->ring_buffer_size = info->output_w * info->channels * filter_height * sizeof(float);
+    info->ring_buffer_size = info->output_w * info->channels * info->ring_buffer_num_entries * sizeof(float);
     info->encode_buffer_size = info->output_w * info->channels * sizeof(float);
 
     STBIR_ASSERT(info->horizontal_filter != 0);
