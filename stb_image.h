@@ -48,7 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
-      2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD
+      2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD; fixes for Imagenet JPGs
       2.13  (2016-12-04) experimental 16-bit API, only for PNG so far; fixes
       2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
       2.11  (2016-04-02) 16-bit PNGS; enable SSE2 in non-gcc x64
@@ -78,6 +78,7 @@ RECENT REVISION HISTORY:
     github:urraka (animated gif)           Junggon Kim (PNM comments)
                                            Daniel Gibson (16-bit TGA)
                                            socks-the-fox (16-bit TGA)
+                                           Jeremy Sawicki (handle all ImageNet JPGs)
  Optimizations & bugfixes
     Fabian "ryg" Giesen
     Arseny Kapoulkine
@@ -95,7 +96,7 @@ RECENT REVISION HISTORY:
     Ryamond Barbiero        Paul Du Bois       Engin Manap        github:snagar
     Michaelangel007@github  Oriol Ferrer Mesia Dale Weiler        github:Zelex
     Philipp Wiesemann       Josh Tobin         github:rlyeh       github:grim210@github
-    Blazej Dariusz Roszkowski                  github:sammyhw     Jeremy Sawicki
+    Blazej Dariusz Roszkowski                  github:sammyhw
 
 */
 
@@ -3565,10 +3566,14 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
                }
          } else {
             if (z->rgb == 3) {
-               for (i=0; i < z->s->img_x; ++i) {
-                  out[0] = stbi__compute_y(coutput[0][i], coutput[1][i], coutput[2][i]);
-                  out[1] = 255;
-                  out += n;
+               if (n == 1)
+                  for (i=0; i < z->s->img_x; ++i)
+                     *out++ = stbi__compute_y(coutput[0][i], coutput[1][i], coutput[2][i]);
+               else {
+                  for (i=0; i < z->s->img_x; ++i, out += 2) {
+                     out[0] = stbi__compute_y(coutput[0][i], coutput[1][i], coutput[2][i]);
+                     out[1] = 255;
+                  }
                }
             } else {
                stbi_uc *y = coutput[0];
