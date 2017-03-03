@@ -192,7 +192,7 @@
     Ryamond Barbiero        Paul Du Bois       Engin Manap        github:snagar
     Michaelangel007@github  Oriol Ferrer Mesia Dale Weiler        github:Zelex
     Philipp Wiesemann       Josh Tobin         github:rlyeh       github:grim210@github
-    Blazej Dariusz Roszkowski                  github:sammyhw
+    Blazej Dariusz Roszkowski                  github:sammyhw     Jeremy Sawicki
 
 
 LICENSE
