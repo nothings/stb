@@ -1,4 +1,4 @@
-// stb_rect_pack.h - v0.10 - public domain - rectangle packing
+// stb_rect_pack.h - v0.11 - public domain - rectangle packing
 // Sean Barrett 2014
 //
 // Useful for e.g. packing rectangular textures into an atlas.
@@ -27,11 +27,14 @@
 //    Sean Barrett
 //  Minor features
 //    Martins Mozeiko
+//    github:IntellectualKitty
+//    
 //  Bugfixes / warning fixes
 //    Jeremy Jaussaud
 //
 // Version history:
 //
+//     0.11  (2017-03-03)  return packing success/fail result
 //     0.10  (2016-10-25)  remove cast-away-const to avoid warnings
 //     0.09  (2016-08-27)  fix compiler warnings
 //     0.08  (2015-09-13)  really fix bug with empty rects (w=0 or h=0)
@@ -75,7 +78,7 @@ typedef int            stbrp_coord;
 typedef unsigned short stbrp_coord;
 #endif
 
-STBRP_DEF void stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int num_rects);
+STBRP_DEF int stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int num_rects);
 // Assign packed locations to rectangles. The rectangles are of type
 // 'stbrp_rect' defined below, stored in the array 'rects', and there
 // are 'num_rects' many of them.
@@ -96,6 +99,9 @@ STBRP_DEF void stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int 
 // arrays will probably produce worse packing results than calling it
 // a single time with the full rectangle array, but the option is
 // available.
+//
+// The function returns 1 if all of the rectangles were successfully
+// packed and 0 otherwise.
 
 struct stbrp_rect
 {
@@ -542,9 +548,9 @@ static int rect_original_order(const void *a, const void *b)
 #define STBRP__MAXVAL  0xffff
 #endif
 
-STBRP_DEF void stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)
+STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)
 {
-   int i;
+   int i, all_rects_packed = 1;
 
    // we use the 'was_packed' field internally to allow sorting/unsorting
    for (i=0; i < num_rects; ++i) {
@@ -574,9 +580,15 @@ STBRP_DEF void stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int n
    // unsort
    STBRP_SORT(rects, num_rects, sizeof(rects[0]), rect_original_order);
 
-   // set was_packed flags
-   for (i=0; i < num_rects; ++i)
+   // set was_packed flags and all_rects_packed status
+   for (i=0; i < num_rects; ++i) {
       rects[i].was_packed = !(rects[i].x == STBRP__MAXVAL && rects[i].y == STBRP__MAXVAL);
+      if (!rects[i].was_packed)
+         all_rects_packed = 0;
+   }
+
+   // return the all_rects_packed status
+   return all_rects_packed;
 }
 #endif
 
