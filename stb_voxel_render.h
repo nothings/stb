@@ -1,4 +1,4 @@
-// stb_voxel_render.h - v0.84 - Sean Barrett, 2015 - public domain
+// stb_voxel_render.h - v0.85 - Sean Barrett, 2015 - public domain
 //
 // This library helps render large-scale "voxel" worlds for games,
 // in this case, one with blocks that can have textures and that
@@ -13,7 +13,7 @@
 // It works by creating triangle meshes. The library includes
 //
 //    - converter from dense 3D arrays of block info to vertex mesh
-//    - shader for the vertex mesh
+//    - vertex & fragment shaders for the vertex mesh
 //    - assistance in setting up shader state
 //
 // For portability, none of the library code actually accesses
@@ -24,8 +24,9 @@
 // yourself. However, you could also try making a game with
 // a small enough world that it's fully loaded rather than
 // streaming. Currently the preferred vertex format is 20 bytes
-// per quad. There are plans to allow much more compact formats
-// with a slight reduction in shader features.
+// per quad. There are designs to allow much more compact formats
+// with a slight reduction in shader features, but no roadmap
+// for actually implementing them.
 //
 //
 // USAGE
@@ -108,7 +109,7 @@
 //        and avoids a potential slow path (gathering non-uniform
 //        data from uniforms) on some hardware.
 //
-//   In the future I hope to add additional modes that have significantly
+//   In the future I might add additional modes that have significantly
 //   smaller meshes but reduce features, down as small as 6 bytes per quad.
 //   See elsewhere in this file for a table of candidate modes. Switching
 //   to a mode will require changing some of your mesh creation code, but
@@ -187,10 +188,11 @@
 //  Sean Barrett                          github:r-leyh   Jesus Fernandez
 //                                        Miguel Lechon   github:Arbeiterunfallversicherungsgesetz
 //                                        Thomas Frase    James Hofmann
-//                                        Stephen Olsen
+//                                        Stephen Olsen   github:guitarfreak
 //
 // VERSION HISTORY
 //
+//   0.85   (2017-03-03)  add block_selector (by guitarfreak)
 //   0.84   (2016-04-02)  fix GLSL syntax error on glModelView path
 //   0.83   (2015-09-13)  remove non-constant struct initializers to support more compilers
 //   0.82   (2015-08-01)  added input.packed_compact to store rot, vheight & texlerp efficiently
@@ -262,7 +264,7 @@ extern "C" {
 //     modes 0,1,20,21, Z in the mesh can extend to 511 instead
 //     of 255. However, half-height blocks cannot be used.
 //
-// All of the following just #ifdef tested so need no values, and are optional.
+// All of the following are just #ifdef tested so need no values, and are optional.
 //
 //    STBVOX_CONFIG_BLOCKTYPE_SHORT
 //        use unsigned 16-bit values for 'blocktype' in the input instead of 8-bit values
@@ -302,7 +304,7 @@ extern "C" {
 //
 //    STBVOX_CONFIG_DISABLE_TEX2
 //        This disables all processing of texture 2 in the shader in case
-//        you don't use it. Eventually this will be replaced with a mode
+//        you don't use it. Eventually this could be replaced with a mode
 //        that omits the unused data entirely.
 //
 //    STBVOX_CONFIG_TEX1_EDGE_CLAMP
