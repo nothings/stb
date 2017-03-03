@@ -8,13 +8,18 @@ These libraries are in the public domain (or the equivalent where that is not
 possible). You can do anything you want with them. You have no legal obligation
 to do anything else, although I appreciate attribution.
 
+They are also licensed under the MIT open source license, if you have lawyers
+who are unhappy with public domain. Every source file includes an explicit
+dual-license for you to choose from.
+
 #### <a name="other_libs"></a> Are there other single-file public-domain/open source libraries with minimal dependencies out there?
 
 [Yes.](https://github.com/nothings/single_file_libs)
 
-#### If I wrap an stb library in a new library, does the new library have to be public domain?
+#### If I wrap an stb library in a new library, does the new library have to be public domain/MIT?
 
-No.
+No, because it's public domain you can freely relicense it to whatever license your new
+library wants to be.
 
 #### Some of these libraries seem redundant to existing open source libraries. Are they better somehow?
 
