@@ -1,4 +1,4 @@
-/* stb_image_resize - v0.92 - public domain image resizing
+/* stb_image_resize - v0.93 - public domain image resizing
    by Jorge L Rodriguez (@VinoBS) - 2014
    http://github.com/nothings/stb
 
@@ -157,6 +157,7 @@
       Aras Pranckevicius: bugfix
          
    REVISIONS
+      0.93 (2017-03-03) fixed bug with certain combinations of heights
       0.92 (2017-01-02) fix integer overflow on large (>2GB) images
       0.91 (2016-04-02) fix warnings; fix handling of subpixel regions
       0.90 (2014-09-17) first released version
