@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.05 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.06 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -9,6 +9,7 @@
 //     and "high quality" using mode.
 //
 // version history:
+//   v1.06  - (stb) fix to known-broken 1.05
 //   v1.05  - (stb) support bc5/3dc (Arvids Kokins), use extern "C" in C++ (Pavel Krajcevski)
 //   v1.04  - (ryg) default to no rounding bias for lerped colors (as per S3TC/DX10 spec);
 //            single color match fix (allow for inexact color interpolation);
@@ -35,7 +36,7 @@ extern "C" {
 #endif
 
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
-void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel, int mode);
+void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel);
 
 #ifdef __cplusplus
 }
@@ -553,12 +554,12 @@ static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int 
 
    // find min/max color
    int mn,mx;
-   mn = mx = src[3];
+   mn = mx = src[0];
 
    for (i=1;i<16;i++)
    {
-      if (src[i*4+3] < mn) mn = src[i*4+3];
-      else if (src[i*4+3] > mx) mx = src[i*4+3];
+      if (src[i*stride] < mn) mn = src[i*stride];
+      else if (src[i*stride] > mx) mx = src[i*stride];
    }
 
    // encode them
