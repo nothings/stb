@@ -2900,7 +2900,9 @@ static void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, in
 
    if (mm->input.selector)
       mesh = mm->input.selector[v_off];
-
+   else if (mm->input.block_selector)
+      mesh = mm->input.block_selector[mm->input.blocktype[v_off]];
+  
    // check if we're going off the end
    if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
       mm->full = 1;
@@ -3109,7 +3111,9 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
    mesh = mm->default_mesh;
    if (mm->input.selector)
       mesh = mm->input.selector[v_off];
-
+   else if (mm->input.block_selector)
+      mesh = mm->input.block_selector[bt];
+  
    if (geo <= STBVOX_GEOM_ceil_slope_north_is_bottom) {
       // this is the simple case, we can just use regular block gen with special vmesh calculated with vheight
       stbvox_mesh_vertex basevert;
@@ -3130,7 +3134,9 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       basevert = stbvox_vertex_encode(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z, 0,0);
       if (mm->input.selector) {
          mesh = mm->input.selector[v_off];
-      }
+      } else if (mm->input.block_selector)
+         mesh = mm->input.block_selector[bt];
+
 
       // check if we're going off the end
       if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
@@ -3350,6 +3356,9 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          mesh = mm->input.selector[v_off];
          simple_rot = mesh >> 4;
          mesh &= 15;
+      } 
+      if (mm->input.block_selector) {
+         mesh = mm->input.block_selector[bt];
       }
 
       // check if we're going off the end
