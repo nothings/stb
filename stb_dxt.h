@@ -30,6 +30,7 @@
 #define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
 
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode);
+void stb_compress_3dc_block_rgxx8(unsigned char *dest, const unsigned char *src, int mode);
 #define STB_COMPRESS_DXT_BLOCK
 
 #ifdef STB_DXT_IMPLEMENTATION
@@ -622,6 +623,12 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
    }
 
    stb__CompressColorBlock(dest,(unsigned char*) src,mode);
+}
+
+void stb_compress_3dc_block_rgxx8(unsigned char *dest, const unsigned char *src, int mode)
+{
+   stb__CompressAlphaBlock(dest,(unsigned char*) src - 3,mode);
+   stb__CompressAlphaBlock(dest + 8,(unsigned char*) src - 2,mode);
 }
 #endif // STB_DXT_IMPLEMENTATION
 #endif // STB_INCLUDE_STB_DXT_H
