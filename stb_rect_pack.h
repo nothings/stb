@@ -1,4 +1,4 @@
-// stb_rect_pack.h - v0.10 - public domain - rectangle packing
+// stb_rect_pack.h - v0.11 - public domain - rectangle packing
 // Sean Barrett 2014
 //
 // Useful for e.g. packing rectangular textures into an atlas.
@@ -27,11 +27,14 @@
 //    Sean Barrett
 //  Minor features
 //    Martins Mozeiko
+//    github:IntellectualKitty
+//    
 //  Bugfixes / warning fixes
 //    Jeremy Jaussaud
 //
 // Version history:
 //
+//     0.11  (2017-03-03)  return packing success/fail result
 //     0.10  (2016-10-25)  remove cast-away-const to avoid warnings
 //     0.09  (2016-08-27)  fix compiler warnings
 //     0.08  (2015-09-13)  really fix bug with empty rects (w=0 or h=0)
@@ -578,9 +581,9 @@ STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int nu
    STBRP_SORT(rects, num_rects, sizeof(rects[0]), rect_original_order);
 
    // set was_packed flags and all_rects_packed status
-   for (i=0; i < num_rects; ++i)
-   {
-      if (!(rects[i].was_packed = !(rects[i].x == STBRP__MAXVAL && rects[i].y == STBRP__MAXVAL)))
+   for (i=0; i < num_rects; ++i) {
+      rects[i].was_packed = !(rects[i].x == STBRP__MAXVAL && rects[i].y == STBRP__MAXVAL);
+      if (!rects[i].was_packed)
          all_rects_packed = 0;
    }
 
