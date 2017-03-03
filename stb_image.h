@@ -1776,7 +1776,7 @@ static void stbi__grow_buffer_unsafe(stbi__jpeg *j)
       int b = j->nomore ? 0 : stbi__get8(j->s);
       if (b == 0xff) {
          int c = stbi__get8(j->s);
-         while (c == 0xff) c = stbi__get8(j->s);
+         while (c == 0xff) c = stbi__get8(j->s); // consume fill bytes
          if (c != 0) {
             j->marker = (unsigned char) c;
             j->nomore = 1;
@@ -2610,7 +2610,7 @@ static stbi_uc stbi__get_marker(stbi__jpeg *j)
    x = stbi__get8(j->s);
    if (x != 0xff) return STBI__MARKER_none;
    while (x == 0xff)
-      x = stbi__get8(j->s);
+      x = stbi__get8(j->s); // consume repeated 0xff fill bytes
    return x;
 }
 
