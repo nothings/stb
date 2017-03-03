@@ -800,6 +800,8 @@ int main(int argc, char **argv)
    stb_lexer lex;
    if (len < 0) {
       fprintf(stderr, "Error opening file\n");
+      free(text);
+      fclose(f);
       return 1;
    }
    fclose(f);
