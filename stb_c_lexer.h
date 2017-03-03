@@ -727,18 +727,20 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
                   #ifdef STB__CLEX_use_stdlib
                   lexer->int_number = strtol((char *) p, (char **) &q, 16);
                   #else
-                  stb__clex_int n=0;
-                  for (q=p+2; q != lexer->eof; ++q) {
-                     if (*q >= '0' && *q <= '9')
-                        n = n*16 + (*q - '0');
-                     else if (*q >= 'a' && *q <= 'f')
-                        n = n*16 + (*q - 'a') + 10;
-                     else if (*q >= 'A' && *q <= 'F')
-                        n = n*16 + (*q - 'A') + 10;
-                     else
-                        break;
+                  {
+                     stb__clex_int n=0;
+                     for (q=p+2; q != lexer->eof; ++q) {
+                        if (*q >= '0' && *q <= '9')
+                           n = n*16 + (*q - '0');
+                        else if (*q >= 'a' && *q <= 'f')
+                           n = n*16 + (*q - 'a') + 10;
+                        else if (*q >= 'A' && *q <= 'F')
+                           n = n*16 + (*q - 'A') + 10;
+                        else
+                           break;
+                     }
+                     lexer->int_number = n;
                   }
-                  lexer->int_number = n;
                   #endif
                   if (q == p+2)
                      return stb__clex_token(lexer, CLEX_parse_error, p-2,p-1);
@@ -880,7 +882,7 @@ void dummy(void)
 {
    double some_floats[] = {
       1.0501, -10.4e12, 5E+10,
-#ifdef STB__clex_hex_floats
+#if 0   // not support in C++ or C-pre-99, so don't try to compile it
       0x1.0p+24, 0xff.FP-8, 0x1p-23,
 #endif
       4.
