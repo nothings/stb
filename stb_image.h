@@ -2844,7 +2844,7 @@ static int stbi__process_marker(stbi__jpeg *z, int m)
       stbi__skip(z->s, stbi__get16be(z->s)-2);
       return 1;
    }
-   return 0;
+   return stbi__err("unknown marker","Corrupt JPEG");
 }
 
 // after we see SOS
