@@ -8,6 +8,7 @@
 // Contributors (bugfixes):
 //    github:d26435
 //    github:trex78
+//    Jari Komppa (SI suffixes)
 //
 // LICENSE:
 //
@@ -99,8 +100,11 @@ would print 12,345.
 
 For integers and floats, you can use a "$" specifier and the number 
 will be converted to float and then divided to get kilo, mega, giga or
-tera and then printed, so "%$d" 1024 is "1.0 k", "%$.2d" 2536000 is 
-"2.42 m", etc.
+tera and then printed, so "%$d" 1000 is "1.0 k", "%$.2d" 2536000 is 
+"2.53 M", etc. For byte values, use two $:s, like "%$$d" to turn 
+2536000 to "2.42 Mi". If you prefer JEDEC suffixes to SI ones, use three
+$:s: "%$$$d" -> "2.42 M". To remove the space between the number and the
+suffix, add "_" specifier: "%_$d" -> "2.53M".
 
 In addition to octal and hexadecimal conversions, you can print 
 integers in binary: "%b" for 256 would print 100.
@@ -222,6 +226,35 @@ STBSP__PUBLICDEF void STB_SPRINTF_DECORATE( set_separators )( char pcomma, char 
   stbsp__comma=pcomma;
 }
 
+#define STBSP__LEFTJUST 1
+#define STBSP__LEADINGPLUS 2
+#define STBSP__LEADINGSPACE 4
+#define STBSP__LEADING_0X 8
+#define STBSP__LEADINGZERO 16
+#define STBSP__INTMAX 32
+#define STBSP__TRIPLET_COMMA 64
+#define STBSP__NEGATIVE 128
+#define STBSP__METRIC_SUFFIX 256
+#define STBSP__HALFWIDTH 512
+#define STBSP__METRIC_NOSPACE 1024
+#define STBSP__METRIC_1024 2048
+#define STBSP__METRIC_JEDEC 4096
+
+static void stbsp__lead_sign(stbsp__uint32 fl, char *sign)
+{
+  sign[0] = 0;
+  if (fl&STBSP__NEGATIVE) {
+    sign[0]=1;
+    sign[1]='-';
+  } else if (fl&STBSP__LEADINGSPACE) {
+    sign[0]=1;
+    sign[1]=' ';
+  } else if (fl&STBSP__LEADINGPLUS) {
+    sign[0]=1;
+    sign[1]='+';
+  }
+}
+  
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callback, void * user, char * buf, char const * fmt, va_list va )
 {
   static char hex[]="0123456789abcdefxp";
@@ -236,17 +269,6 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
   {
     stbsp__int32 fw,pr,tz; stbsp__uint32 fl;
 
-    #define STBSP__LEFTJUST 1
-    #define STBSP__LEADINGPLUS 2
-    #define STBSP__LEADINGSPACE 4
-    #define STBSP__LEADING_0X 8
-    #define STBSP__LEADINGZERO 16
-    #define STBSP__INTMAX 32
-    #define STBSP__TRIPLET_COMMA 64
-    #define STBSP__NEGATIVE 128
-    #define STBSP__METRIC_SUFFIX 256
-    #define STBSP__HALFWIDTH 512
- 
     // macros for the callback buffer stuff
     #define stbsp__chk_cb_bufL(bytes) { int len = (int)(bf-buf); if ((len+(bytes))>=STB_SPRINTF_MIN) { tlen+=len; if (0==(bf=buf=callback(buf,user,len))) goto done; } }
     #define stbsp__chk_cb_buf(bytes) { if ( callback ) { stbsp__chk_cb_bufL(bytes); } }
@@ -296,8 +318,26 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
         case '#': fl|=STBSP__LEADING_0X; ++f; continue; 
         // if we have thousand commas
         case '\'': fl|=STBSP__TRIPLET_COMMA; ++f; continue; 
-        // if we have kilo marker
-        case '$': fl|=STBSP__METRIC_SUFFIX; ++f; continue; 
+        // if we have kilo marker (none->kilo->kibi->jedec)
+        case '$': 
+            if (fl&STBSP__METRIC_SUFFIX)
+            {
+                if (fl&STBSP__METRIC_1024)
+                {
+                    fl|=STBSP__METRIC_JEDEC;
+                }
+                else
+                {
+                    fl|=STBSP__METRIC_1024;
+                }
+            }
+            else
+            {
+                fl|=STBSP__METRIC_SUFFIX; 
+            }
+            ++f; continue; 
+        // if we don't want space between metric suffix and number
+        case '_': fl|=STBSP__METRIC_NOSPACE; ++f; continue;
         // if we have leading zero
         case '0': fl|=STBSP__LEADINGZERO; ++f; goto flags_done; 
         default: goto flags_done;
@@ -416,8 +456,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
   
         s = num+64;
 
-        // sign
-        lead[0]=0; if (fl&STBSP__NEGATIVE) { lead[0]=1; lead[1]='-'; } else if (fl&STBSP__LEADINGSPACE) { lead[0]=1; lead[1]=' '; } else if (fl&STBSP__LEADINGPLUS) { lead[0]=1; lead[1]='+'; };
+        stbsp__lead_sign(fl, lead);
 
         if (dp==-1023) dp=(n64)?-1022:0; else n64|=(((stbsp__uint64)1)<<52);
         n64<<=(64-56);
@@ -491,7 +530,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
           fl |= STBSP__NEGATIVE;
        doexpfromg: 
         tail[0]=0; 
-        lead[0]=0; if (fl&STBSP__NEGATIVE) { lead[0]=1; lead[1]='-'; } else if (fl&STBSP__LEADINGSPACE) { lead[0]=1; lead[1]=' '; } else if (fl&STBSP__LEADINGPLUS) { lead[0]=1; lead[1]='+'; };
+        stbsp__lead_sign(fl, lead);
         if ( dp == STBSP__SPECIAL ) { s=(char*)sn; cs=0; pr=0; goto scopy; }
         s=num+64; 
         // handle leading chars
@@ -522,15 +561,20 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
         fv = va_arg(va,double);
        doafloat: 
         // do kilos
-        if (fl&STBSP__METRIC_SUFFIX) {while(fl<0x4000000) { if ((fv<1024.0) && (fv>-1024.0)) break; fv/=1024.0; fl+=0x1000000; }} 
+        if (fl&STBSP__METRIC_SUFFIX) 
+        {
+            double divisor;
+            divisor=1000.0f;
+            if (fl&STBSP__METRIC_1024) divisor = 1024.0;
+            while(fl<0x4000000) { if ((fv<divisor) && (fv>-divisor)) break; fv/=divisor; fl+=0x1000000; }
+        }
         if (pr==-1) pr=6; // default is 6
         // read the double into a string
         if ( stbsp__real_to_str( &sn, &l, num, &dp, fv, pr ) )
           fl |= STBSP__NEGATIVE;
         dofloatfromg:
         tail[0]=0;
-        // sign
-        lead[0]=0; if (fl&STBSP__NEGATIVE) { lead[0]=1; lead[1]='-'; } else if (fl&STBSP__LEADINGSPACE) { lead[0]=1; lead[1]=' '; } else if (fl&STBSP__LEADINGPLUS) { lead[0]=1; lead[1]='+'; };
+        stbsp__lead_sign(fl, lead);
         if ( dp == STBSP__SPECIAL ) { s=(char*)sn; cs=0; pr=0; goto scopy; }
         s=num+64; 
 
@@ -575,7 +619,32 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
         pr = 0;
         
         // handle k,m,g,t
-        if (fl&STBSP__METRIC_SUFFIX) { tail[0]=1; tail[1]=' '; { if (fl>>24) { tail[2]="_kmgt"[fl>>24]; tail[0]=2; } } };
+        if (fl&STBSP__METRIC_SUFFIX) 
+        { 
+            char idx;
+            idx=1;
+            if (fl&STBSP__METRIC_NOSPACE)
+                idx=0;
+            tail[0]=idx; 
+            tail[1]=' '; 
+            { 
+                if (fl>>24) 
+                {   // SI kilo is 'k', JEDEC and SI kibits are 'K'.
+                    if (fl&STBSP__METRIC_1024)
+                        tail[idx+1]="_KMGT"[fl>>24]; 
+                    else
+                        tail[idx+1]="_kMGT"[fl>>24]; 
+                    idx++;
+                    // If printing kibits and not in jedec, add the 'i'.
+                    if (fl&STBSP__METRIC_1024&&!(fl&STBSP__METRIC_JEDEC))
+                    {
+                        tail[idx+1]='i';
+                        idx++;
+                    }
+                    tail[0]=idx;
+                } 
+            } 
+        };
 
         flt_lead:
         // get the length that we copied
@@ -669,8 +738,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
         }
 
         tail[0]=0;
-        // sign
-        lead[0]=0; if (fl&STBSP__NEGATIVE) { lead[0]=1; lead[1]='-'; } else if (fl&STBSP__LEADINGSPACE) { lead[0]=1; lead[1]=' '; } else if (fl&STBSP__LEADINGPLUS) { lead[0]=1; lead[1]='+'; };
+        stbsp__lead_sign(fl, lead);
 
         // get the length that we copied
         l = (stbsp__uint32) ( (num+STBSP__NUMSZ) - s ); if ( l == 0 ) { *--s='0'; l = 1; }
