@@ -52,7 +52,7 @@
 //
 // LICENSE
 // 
-//   See end of file for licensing information.
+//   See end of file for license information.
 //
 // ALGORITHM
 //

@@ -78,7 +78,7 @@
 //
 // LICENSE
 //
-//   See end of file for licensing information.
+//   See end of file for license information.
 
 
 #ifndef INCLUDE_STB_DIVIDE_H

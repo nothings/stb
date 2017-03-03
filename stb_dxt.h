@@ -19,7 +19,7 @@
 //
 // LICENSE
 //
-//   See end of file for licensing information.
+//   See end of file for license information.
 
 #ifndef STB_INCLUDE_STB_DXT_H
 #define STB_INCLUDE_STB_DXT_H

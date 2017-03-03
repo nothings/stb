@@ -36,7 +36,7 @@
 //
 // LICENSE
 //
-//   See end of file for licensing information.
+//   See end of file for license information.
 
 #ifndef STB_C_LEXER_DEFINITIONS
 // to change the default parsing rules, copy the following lines
