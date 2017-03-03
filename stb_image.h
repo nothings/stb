@@ -95,7 +95,7 @@ RECENT REVISION HISTORY:
     Ryamond Barbiero        Paul Du Bois       Engin Manap        github:snagar
     Michaelangel007@github  Oriol Ferrer Mesia Dale Weiler        github:Zelex
     Philipp Wiesemann       Josh Tobin         github:rlyeh       github:grim210@github
-    Blazej Dariusz Roszkowski                  github:sammyhw
+    Blazej Dariusz Roszkowski                  github:sammyhw     Jeremy Sawicki
 
 */
 
@@ -3486,7 +3486,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
    // determine actual number of components to generate
    n = req_comp ? req_comp : z->s->img_n;
 
-   if (z->s->img_n == 3 && n < 3)
+   if (z->s->img_n == 3 && n < 3 && z->rgb != 3)
       decode_n = 1;
    else
       decode_n = z->s->img_n;
@@ -3564,11 +3564,19 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
                   out += n;
                }
          } else {
-            stbi_uc *y = coutput[0];
-            if (n == 1)
-               for (i=0; i < z->s->img_x; ++i) out[i] = y[i];
-            else
-               for (i=0; i < z->s->img_x; ++i) *out++ = y[i], *out++ = 255;
+            if (z->rgb == 3) {
+               for (i=0; i < z->s->img_x; ++i) {
+                  out[0] = stbi__compute_y(coutput[0][i], coutput[1][i], coutput[2][i]);
+                  out[1] = 255;
+                  out += n;
+               }
+            } else {
+               stbi_uc *y = coutput[0];
+               if (n == 1)
+                  for (i=0; i < z->s->img_x; ++i) out[i] = y[i];
+               else
+                  for (i=0; i < z->s->img_x; ++i) *out++ = y[i], *out++ = 255;
+            }
          }
       }
       stbi__cleanup_jpeg(z);
@@ -5266,7 +5274,7 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    unsigned char *tga_data;
    unsigned char *tga_palette = NULL;
    int i, j;
-   unsigned char raw_data[4];
+   unsigned char raw_data[4] = {0};
    int RLE_count = 0;
    int RLE_repeating = 0;
    int read_next_pixel = 1;
