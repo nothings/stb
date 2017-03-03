@@ -4987,6 +4987,7 @@ stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len, int *err
       if (f) {
          *f = p;
          vorbis_pump_first_frame(f);
+         if (error) *error = VORBIS__no_error;
          return f;
       }
    }
