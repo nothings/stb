@@ -1730,7 +1730,7 @@ typedef struct
    stbi__context *s;
    stbi__huffman huff_dc[4];
    stbi__huffman huff_ac[4];
-   stbi_uc dequant[4][64];
+   stbi__uint16 dequant[4][64];
    stbi__int16 fast_ac[4][1 << FAST_BITS];
 
 // sizes for components, interleaved MCUs
@@ -1975,7 +1975,7 @@ static stbi_uc stbi__jpeg_dezigzag[64+15] =
 };
 
 // decode one 64-entry block--
-static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman *hdc, stbi__huffman *hac, stbi__int16 *fac, int b, stbi_uc *dequant)
+static int stbi__jpeg_decode_block(stbi__jpeg *j, short data[64], stbi__huffman *hdc, stbi__huffman *hac, stbi__int16 *fac, int b, stbi__uint16 *dequant)
 {
    int diff,dc,k;
    int t;
@@ -2831,7 +2831,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
    }
 }
 
-static void stbi__jpeg_dequantize(short *data, stbi_uc *dequant)
+static void stbi__jpeg_dequantize(short *data, stbi__uint16 *dequant)
 {
    int i;
    for (i=0; i < 64; ++i)
@@ -2875,11 +2875,11 @@ static int stbi__process_marker(stbi__jpeg *z, int m)
             int q = stbi__get8(z->s);
             int p = q >> 4;
             int t = q & 15,i;
-            if (p != 0) return stbi__err("bad DQT type","Corrupt JPEG");
+            if (p != 0 && p != 1) return stbi__err("bad DQT type","Corrupt JPEG");
             if (t > 3) return stbi__err("bad DQT table","Corrupt JPEG");
             for (i=0; i < 64; ++i)
-               z->dequant[t][stbi__jpeg_dezigzag[i]] = stbi__get8(z->s);
-            L -= 65;
+               z->dequant[t][stbi__jpeg_dezigzag[i]] = p == 0 ? stbi__get8(z->s) : stbi__get16be(z->s);
+            L -= p == 0 ? 65 : 129;
          }
          return L==0;
 
