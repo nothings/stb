@@ -275,7 +275,7 @@ extern int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
 // do not need to seek to EXACTLY the target sample when using get_samples_*,
 // you can also use seek_frame().
 
-extern void stb_vorbis_seek_start(stb_vorbis *f);
+extern int stb_vorbis_seek_start(stb_vorbis *f);
 // this function is equivalent to stb_vorbis_seek(f,0)
 
 extern unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f);
@@ -3484,11 +3484,13 @@ static int vorbis_finish_frame(stb_vorbis *f, int len, int left, int right)
    return right - left;
 }
 
-static void vorbis_pump_first_frame(stb_vorbis *f)
+static int vorbis_pump_first_frame(stb_vorbis *f)
 {
-   int len, right, left;
-   if (vorbis_decode_packet(f, &len, &left, &right))
+   int len, right, left, res;
+   res = vorbis_decode_packet(f, &len, &left, &right);
+   if (res)
       vorbis_finish_frame(f, len, left, right);
+   return res;
 }
 
 #ifndef STB_VORBIS_NO_PUSHDATA_API
@@ -4615,8 +4617,9 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
 
    // starting from the start is handled differently
    if (sample_number <= left.last_decoded_sample) {
-      stb_vorbis_seek_start(f);
-      return 1;
+      if (stb_vorbis_seek_start(f))
+         return 1;
+      return 0;
    }
 
    while (left.page_end != right.page_start) {
@@ -4717,7 +4720,10 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
       skip(f, f->segments[i]);
 
    // start decoding (optimizable - this frame is generally discarded)
-   vorbis_pump_first_frame(f);
+   if (!vorbis_pump_first_frame(f))
+      return 0;
+   if (f->current_loc > sample_number)
+      return error(f, VORBIS_seek_failed);
    return 1;
 
 error:
@@ -4808,14 +4814,14 @@ int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number)
    return 1;
 }
 
-void stb_vorbis_seek_start(stb_vorbis *f)
+int stb_vorbis_seek_start(stb_vorbis *f)
 {
-   if (IS_PUSH_MODE(f)) { error(f, VORBIS_invalid_api_mixing); return; }
+   if (IS_PUSH_MODE(f)) { return error(f, VORBIS_invalid_api_mixing); }
    set_file_offset(f, f->first_audio_page_offset);
    f->previous_length = 0;
    f->first_decode = TRUE;
    f->next_seg = -1;
-   vorbis_pump_first_frame(f);
+   return vorbis_pump_first_frame(f);
 }
 
 unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f)
