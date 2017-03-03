@@ -3129,6 +3129,11 @@ static int stbi__decode_jpeg_image(stbi__jpeg *j)
             }
             // if we reach eof without hitting a marker, stbi__get_marker() below will fail and we'll eventually return 0
          }
+      } else if (stbi__DNL(m)) {
+         int Ld = stbi__get16be(j->s);
+         stbi__uint32 NL = stbi__get16be(j->s);
+         if (Ld != 4) stbi__err("bad DNL len", "Corrupt JPEG");
+         if (NL != j->s->img_y) stbi__err("bad DNL height", "Corrupt JPEG");
       } else {
          if (!stbi__process_marker(j, m)) return 0;
       }
