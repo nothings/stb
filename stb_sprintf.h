@@ -226,6 +226,35 @@ STBSP__PUBLICDEF void STB_SPRINTF_DECORATE( set_separators )( char pcomma, char 
   stbsp__comma=pcomma;
 }
 
+#define STBSP__LEFTJUST 1
+#define STBSP__LEADINGPLUS 2
+#define STBSP__LEADINGSPACE 4
+#define STBSP__LEADING_0X 8
+#define STBSP__LEADINGZERO 16
+#define STBSP__INTMAX 32
+#define STBSP__TRIPLET_COMMA 64
+#define STBSP__NEGATIVE 128
+#define STBSP__METRIC_SUFFIX 256
+#define STBSP__HALFWIDTH 512
+#define STBSP__METRIC_NOSPACE 1024
+#define STBSP__METRIC_1024 2048
+#define STBSP__METRIC_JEDEC 4096
+
+static void stbsp__lead_sign(stbsp__uint32 fl, char *sign)
+{
+  sign[0] = 0;
+  if (fl&STBSP__NEGATIVE) {
+    sign[0]=1;
+    sign[1]='-';
+  } else if (fl&STBSP__LEADINGSPACE) {
+    sign[0]=1;
+    sign[1]=' ';
+  } else if (fl&STBSP__LEADINGPLUS) {
+    sign[0]=1;
+    sign[1]='+';
+  }
+}
+  
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callback, void * user, char * buf, char const * fmt, va_list va )
 {
   static char hex[]="0123456789abcdefxp";
@@ -240,37 +269,11 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
   {
     stbsp__int32 fw,pr,tz; stbsp__uint32 fl;
 
-    #define STBSP__LEFTJUST 1
-    #define STBSP__LEADINGPLUS 2
-    #define STBSP__LEADINGSPACE 4
-    #define STBSP__LEADING_0X 8
-    #define STBSP__LEADINGZERO 16
-    #define STBSP__INTMAX 32
-    #define STBSP__TRIPLET_COMMA 64
-    #define STBSP__NEGATIVE 128
-    #define STBSP__METRIC_SUFFIX 256
-    #define STBSP__HALFWIDTH 512
-    #define STBSP__METRIC_NOSPACE 1024
-    #define STBSP__METRIC_1024 2048
-    #define STBSP__METRIC_JEDEC 4096
- 
     // macros for the callback buffer stuff
     #define stbsp__chk_cb_bufL(bytes) { int len = (int)(bf-buf); if ((len+(bytes))>=STB_SPRINTF_MIN) { tlen+=len; if (0==(bf=buf=callback(buf,user,len))) goto done; } }
     #define stbsp__chk_cb_buf(bytes) { if ( callback ) { stbsp__chk_cb_bufL(bytes); } }
     #define stbsp__flush_cb() { stbsp__chk_cb_bufL(STB_SPRINTF_MIN-1); } //flush if there is even one byte in the buffer
     #define stbsp__cb_buf_clamp(cl,v) cl = v; if ( callback ) { int lg = STB_SPRINTF_MIN-(int)(bf-buf); if (cl>lg) cl=lg; }
-    #define stbsp__lead_sign(fl, lead) \
-    lead[0] = 0;\
-    if (fl&STBSP__NEGATIVE) {\
-        lead[0]=1;\
-        lead[1]='-';\
-    } else if (fl&STBSP__LEADINGSPACE) {\
-        lead[0]=1;\
-        lead[1]=' ';\
-    } else if (fl&STBSP__LEADINGPLUS) {\
-        lead[0]=1;\
-        lead[1]='+';\
-    }
 
     // fast copy everything up to the next % (or end of string)
     for(;;)
