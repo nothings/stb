@@ -443,6 +443,15 @@ static int stb_text_locate_coord(STB_TEXTEDIT_STRING *str, float x, float y)
 // API click: on mouse down, move the cursor to the clicked location, and reset the selection
 static void stb_textedit_click(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, float x, float y)
 {
+   // In single-line mode, just always make y = 0. This lets the drag keep working if the mouse
+   // goes off the top or bottom of the text
+   if( state->single_line )
+   {
+      StbTexteditRow r;
+      STB_TEXTEDIT_LAYOUTROW(&r, str, 0);
+      y = r.ymin;
+   }
+
    state->cursor = stb_text_locate_coord(str, x, y);
    state->select_start = state->cursor;
    state->select_end = state->cursor;
@@ -452,9 +461,21 @@ static void stb_textedit_click(STB_TEXTEDIT_STRING *str, STB_TexteditState *stat
 // API drag: on mouse drag, move the cursor and selection endpoint to the clicked location
 static void stb_textedit_drag(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, float x, float y)
 {
-   int p = stb_text_locate_coord(str, x, y);
+   int p = 0;
+
+   // In single-line mode, just always make y = 0. This lets the drag keep working if the mouse
+   // goes off the top or bottom of the text
+   if( state->single_line )
+   {
+      StbTexteditRow r;
+      STB_TEXTEDIT_LAYOUTROW(&r, str, 0);
+      y = r.ymin;
+   }
+
    if (state->select_start == state->select_end)
       state->select_start = state->cursor;
+
+   p = stb_text_locate_coord(str, x, y);
    state->cursor = state->select_end = p;
 }
 
