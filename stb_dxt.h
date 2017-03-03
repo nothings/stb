@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.04 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.05 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -9,6 +9,7 @@
 //     and "high quality" using mode.
 //
 // version history:
+//   v1.05  - (stb) support bc5/3dc (Arvids Kokins)
 //   v1.04  - (ryg) default to no rounding bias for lerped colors (as per S3TC/DX10 spec);
 //            single color match fix (allow for inexact color interpolation);
 //            optimal DXT5 index finder; "high quality" mode that runs multiple refinement steps.
@@ -30,7 +31,7 @@
 #define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
 
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode);
-void stb_compress_3dc_block_rgxx8(unsigned char *dest, const unsigned char *src, int mode);
+void stb_compress_bc5_block_rg88(unsigned char *dest, const unsigned char *src, int mode);
 #define STB_COMPRESS_DXT_BLOCK
 
 #ifdef STB_DXT_IMPLEMENTATION
@@ -537,7 +538,7 @@ static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, i
 }
 
 // Alpha block compression (this is easy for a change)
-static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src,int mode)
+static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int stride)
 {
    int i,dist,bias,dist4,dist2,bits,mask;
 
@@ -567,7 +568,7 @@ static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src,int m
    bits = 0,mask=0;
    
    for (i=0;i<16;i++) {
-      int a = src[i*4+3]*7 + bias;
+      int a = src[i*stride]*7 + bias;
       int ind,t;
 
       // select index. this is a "linear scale" lerp factor between 0 (val=min) and 7 (val=max).
@@ -618,17 +619,17 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
    }
 
    if (alpha) {
-      stb__CompressAlphaBlock(dest,(unsigned char*) src,mode);
+      stb__CompressAlphaBlock(dest,(unsigned char*) src+3, 4);
       dest += 8;
    }
 
    stb__CompressColorBlock(dest,(unsigned char*) src,mode);
 }
 
-void stb_compress_3dc_block_rgxx8(unsigned char *dest, const unsigned char *src, int mode)
+void stb_compress_bc5_block_rg88(unsigned char *dest, const unsigned char *src)
 {
-   stb__CompressAlphaBlock(dest,(unsigned char*) src - 3,mode);
-   stb__CompressAlphaBlock(dest + 8,(unsigned char*) src - 2,mode);
+   stb__CompressAlphaBlock(dest,(unsigned char*) src,2);
+   stb__CompressAlphaBlock(dest + 8,(unsigned char*) src+1,2);
 }
 #endif // STB_DXT_IMPLEMENTATION
 #endif // STB_INCLUDE_STB_DXT_H
