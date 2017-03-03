@@ -21,7 +21,7 @@ library    | lastest version | category | LoC | description
 **[stretchy_buffer.h](stretchy_buffer.h)** | 1.02 | utility | 257 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **[stb_textedit.h](stb_textedit.h)** | 1.10 | user&nbsp;interface | 1370 | guts of a text editor for games etc implementing them from scratch
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.84 | 3D&nbsp;graphics | 3792 | Minecraft-esque voxel rendering "engine" with many more features
-**[stb_dxt.h](stb_dxt.h)** | 1.04 | 3D&nbsp;graphics | 669 | Fabian "ryg" Giesen's real-time DXT compressor
+**[stb_dxt.h](stb_dxt.h)** | 1.05 | 3D&nbsp;graphics | 686 | Fabian "ryg" Giesen's real-time DXT compressor
 **[stb_perlin.h](stb_perlin.h)** | 0.2 | 3D&nbsp;graphics | 222 | revised Perlin noise (3D input, 1D output)
 **[stb_easy_font.h](stb_easy_font.h)** | 1.0 | 3D&nbsp;graphics | 303 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
 **[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.38 | game&nbsp;dev | 4172 | embeddable tilemap editor
@@ -33,7 +33,7 @@ library    | lastest version | category | LoC | description
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.3 | misc | 165 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 20  
-Total lines of C code: 50793
+Total lines of C code: 50810
 
 
 FAQ
