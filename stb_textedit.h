@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.10  - public domain - Sean Barrett
+// stb_textedit.h - v1.11  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -17,7 +17,7 @@
 //
 // LICENSE
 //
-//   See end of file for license information.
+// See end of file for license information.
 //
 //
 // DEPENDENCIES
@@ -29,6 +29,7 @@
 //
 // VERSION HISTORY
 //
+//   1.11 (2017-03-03) fix HOME on last line, dragging off single-line textfield
 //   1.10 (2016-10-25) supress warnings about casting away const with -Wcast-qual
 //   1.9  (2016-08-27) customizable move-by-word
 //   1.8  (2016-04-02) better keyboard handling when mouse button is down
@@ -48,12 +49,13 @@
 //
 //   Ulf Winklemann: move-by-word in 1.1
 //   Fabian Giesen: secondary key inputs in 1.5
-//   Martins Mozeiko: STB_TEXTEDIT_memmove
+//   Martins Mozeiko: STB_TEXTEDIT_memmove in 1.6
 //
 //   Bugfixes:
 //      Scott Graham
 //      Daniel Keller
 //      Omar Cornut
+//      Dan Thompson
 //
 // USAGE
 //
