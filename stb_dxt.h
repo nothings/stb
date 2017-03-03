@@ -9,7 +9,7 @@
 //     and "high quality" using mode.
 //
 // version history:
-//   v1.05  - (stb) support bc5/3dc (Arvids Kokins)
+//   v1.05  - (stb) support bc5/3dc (Arvids Kokins), use extern "C" in C++ (Pavel Krajcevski)
 //   v1.04  - (ryg) default to no rounding bias for lerped colors (as per S3TC/DX10 spec);
 //            single color match fix (allow for inexact color interpolation);
 //            optimal DXT5 index finder; "high quality" mode that runs multiple refinement steps.
@@ -30,8 +30,17 @@
 #define STB_DXT_DITHER    1   // use dithering. dubious win. never use for normal maps and the like!
 #define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
 void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel, int mode);
+
+#ifdef __cplusplus
+}
+#endif
+
 #define STB_COMPRESS_DXT_BLOCK
 
 #ifdef STB_DXT_IMPLEMENTATION
