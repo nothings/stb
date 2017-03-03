@@ -4,8 +4,8 @@ FAQ
 
 #### What's the license?
 
-These libraries are in the public domain (or the equivalent where that is not
-possible). You can do anything you want with them. You have no legal obligation
+These libraries are in the public domain. You can do anything you
+want with them. You have no legal obligation
 to do anything else, although I appreciate attribution.
 
 They are also licensed under the MIT open source license, if you have lawyers
@@ -29,7 +29,7 @@ attribution requirement). They may be less featureful, slower,
 and/or use more memory. If you're already using an equivalent
 library, there's probably no good reason to switch.
 
-###### Can I link directly to the table of stb libraries?
+#### Can I link directly to the table of stb libraries?
 
 You can use [this URL](https://github.com/nothings/stb#stb_libs) to link directly to that list.
 
