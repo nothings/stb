@@ -3123,8 +3123,6 @@ static int stbi__decode_jpeg_image(stbi__jpeg *j)
                if (x == 255) {
                   j->marker = stbi__get8(j->s);
                   break;
-               } else if (x != 0) {
-                  return stbi__err("junk before marker", "Corrupt JPEG");
                }
             }
             // if we reach eof without hitting a marker, stbi__get_marker() below will fail and we'll eventually return 0
