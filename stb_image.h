@@ -1691,6 +1691,7 @@ typedef struct
    int            succ_high;
    int            succ_low;
    int            eob_run;
+   int            app14;
    int            rgb;
 
    int scan_n, order[4];
@@ -2625,7 +2626,7 @@ static void stbi__jpeg_reset(stbi__jpeg *j)
    j->code_bits = 0;
    j->code_buffer = 0;
    j->nomore = 0;
-   j->img_comp[0].dc_pred = j->img_comp[1].dc_pred = j->img_comp[2].dc_pred = 0;
+   j->img_comp[0].dc_pred = j->img_comp[1].dc_pred = j->img_comp[2].dc_pred = j->img_comp[3].dc_pred = 0;
    j->marker = STBI__MARKER_none;
    j->todo = j->restart_interval ? j->restart_interval : 0x7fffffff;
    j->eob_run = 0;
@@ -2839,11 +2840,39 @@ static int stbi__process_marker(stbi__jpeg *z, int m)
          }
          return L==0;
    }
+
    // check for comment block or APP blocks
    if ((m >= 0xE0 && m <= 0xEF) || m == 0xFE) {
-      stbi__skip(z->s, stbi__get16be(z->s)-2);
+      L = stbi__get16be(z->s);
+      if (L < 2) {
+         if (m == 0xFE)
+            return stbi__err("bad COM len","Corrupt JPEG");
+         else
+            return stbi__err("bad APP len","Corrupt JPEG");
+      }
+      L -= 2;
+
+      if (m == 0xEE && L >= 12) { // Adobe APP14 segment
+         static const unsigned char tag[6] = {'A','d','o','b','e','\0'};
+         int ok = 1;
+         int i;
+         for (i=0; i < 6; ++i)
+            if (stbi__get8(z->s) != tag[i])
+               ok = 0;
+         L -= 6;
+         if (ok) {
+            stbi__get8(z->s); // version
+            stbi__get16be(z->s); // flags0
+            stbi__get16be(z->s); // flags1
+            z->app14 = stbi__get8(z->s); // color transform
+            L -= 6;
+         }
+      }
+
+      stbi__skip(z->s, L);
       return 1;
    }
+
    return stbi__err("unknown marker","Corrupt JPEG");
 }
 
@@ -2918,7 +2947,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
    s->img_y = stbi__get16be(s);   if (s->img_y == 0) return stbi__err("no header height", "JPEG format not supported: delayed height"); // Legal, but we don't handle it--but neither does IJG
    s->img_x = stbi__get16be(s);   if (s->img_x == 0) return stbi__err("0 width","Corrupt JPEG"); // JPEG requires
    c = stbi__get8(s);
-   if (c != 3 && c != 1) return stbi__err("bad component count","Corrupt JPEG");    // JFIF requires
+   if (c != 3 && c != 1 && c != 4) return stbi__err("bad component count","Corrupt JPEG");
    s->img_n = c;
    for (i=0; i < c; ++i) {
       z->img_comp[i].data = NULL;
@@ -2931,7 +2960,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
    for (i=0; i < s->img_n; ++i) {
       static unsigned char rgb[3] = { 'R', 'G', 'B' };
       z->img_comp[i].id = stbi__get8(s);
-      if (z->img_comp[i].id == rgb[i])
+      if (s->img_n == 3 && z->img_comp[i].id == rgb[i])
          ++z->rgb;
       q = stbi__get8(s);
       z->img_comp[i].h = (q >> 4);  if (!z->img_comp[i].h || z->img_comp[i].h > 4) return stbi__err("bad H","Corrupt JPEG");
@@ -3004,6 +3033,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
 static int stbi__decode_jpeg_header(stbi__jpeg *z, int scan)
 {
    int m;
+   z->app14 = -1;
    z->marker = STBI__MARKER_none; // initialize cached marker to empty
    m = stbi__get_marker(z);
    if (!stbi__SOI(m)) return stbi__err("no SOI","Corrupt JPEG");
@@ -3485,7 +3515,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
    if (!stbi__decode_jpeg_image(z)) { stbi__cleanup_jpeg(z); return NULL; }
 
    // determine actual number of components to generate
-   n = req_comp ? req_comp : z->s->img_n;
+   n = req_comp ? req_comp : z->s->img_n >= 3 ? 3 : 1;
 
    if (z->s->img_n == 3 && n < 3 && z->rgb != 3)
       decode_n = 1;
@@ -3558,6 +3588,28 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
                } else {
                   z->YCbCr_to_RGB_kernel(out, y, coutput[1], coutput[2], z->s->img_x, n);
                }
+            } else if (z->s->img_n == 4) {
+               if (z->app14 == 0) { // CMYK
+                  for (i=0; i < z->s->img_x; ++i) {
+                     stbi_uc k = coutput[3][i];
+                     out[0] = (coutput[0][i] * k + 128) / 255;
+                     out[1] = (coutput[1][i] * k + 128) / 255;
+                     out[2] = (coutput[2][i] * k + 128) / 255;
+                     out[3] = 255;
+                     out += n;
+                  }
+               } else if (z->app14 == 2) { // YCCK
+                  z->YCbCr_to_RGB_kernel(out, y, coutput[1], coutput[2], z->s->img_x, n);
+                  for (i=0; i < z->s->img_x; ++i) {
+                     stbi_uc k = coutput[3][i];
+                     out[0] = ((255 - out[0]) * k + 128) / 255;
+                     out[1] = ((255 - out[1]) * k + 128) / 255;
+                     out[2] = ((255 - out[2]) * k + 128) / 255;
+                     out += n;
+                  }
+               } else { // YCbCr + alpha?  Ignore the fourth channel for now
+                  z->YCbCr_to_RGB_kernel(out, y, coutput[1], coutput[2], z->s->img_x, n);
+               }
             } else
                for (i=0; i < z->s->img_x; ++i) {
                   out[0] = out[1] = out[2] = y[i];
@@ -3575,6 +3627,22 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
                      out[1] = 255;
                   }
                }
+            } else if (z->s->img_n == 4 && z->app14 == 0) {
+               for (i=0; i < z->s->img_x; ++i) {
+                  stbi_uc k = coutput[3][i];
+                  stbi_uc r = (coutput[0][i] * k + 128) / 255;
+                  stbi_uc g = (coutput[1][i] * k + 128) / 255;
+                  stbi_uc b = (coutput[2][i] * k + 128) / 255;
+                  out[0] = stbi__compute_y(r, g, b);
+                  out[1] = 255;
+                  out += n;
+               }
+            } else if (z->s->img_n == 4 && z->app14 == 2) {
+               for (i=0; i < z->s->img_x; ++i) {
+                  out[0] = ((255 - coutput[0][i]) * coutput[3][i] + 128) / 255;
+                  out[1] = 255;
+                  out += n;
+               }
             } else {
                stbi_uc *y = coutput[0];
                if (n == 1)
@@ -3587,7 +3655,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
       stbi__cleanup_jpeg(z);
       *out_x = z->s->img_x;
       *out_y = z->s->img_y;
-      if (comp) *comp  = z->s->img_n; // report original components, not output
+      if (comp) *comp = z->s->img_n >= 3 ? 3 : 1; // report original components, not output
       return output;
    }
 }
@@ -3623,7 +3691,7 @@ static int stbi__jpeg_info_raw(stbi__jpeg *j, int *x, int *y, int *comp)
    }
    if (x) *x = j->s->img_x;
    if (y) *y = j->s->img_y;
-   if (comp) *comp = j->s->img_n;
+   if (comp) *comp = j->s->img_n >= 3 ? 3 : 1;
    return 1;
 }
 
