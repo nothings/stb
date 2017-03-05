@@ -583,12 +583,14 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #define STBI__X86_TARGET
 #endif
 
-#if defined(__GNUC__) && (defined(STBI__X86_TARGET) || defined(STBI__X64_TARGET)) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
-// NOTE: not clear do we actually need this for the 64-bit path?
+#if defined(__GNUC__) && defined(STBI__X86_TARGET) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
 // gcc doesn't support sse2 intrinsics unless you compile with -msse2,
-// (but compiling with -msse2 allows the compiler to use SSE2 everywhere;
-// this is just broken and gcc are jerks for not fixing it properly
-// http://www.virtualdub.org/blog/pivot/entry.php?id=363 )
+// which in turn means it gets to use SSE2 everywhere. This is unfortunate,
+// but previous attempts to provide the SSE2 functions with runtime
+// detection caused numerous issues. The way architecture extensions are
+// exposed in GCC/Clang is, sadly, not really suited for one-file libs.
+// New behavior: if compiled with -msse2, we use SSE2 without any
+// detection; if not, we don't use it at all.
 #define STBI_NO_SIMD
 #endif
 
@@ -646,14 +648,10 @@ static int stbi__sse2_available()
 
 static int stbi__sse2_available()
 {
-#if defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__) >= 408 // GCC 4.8 or later
-   // GCC 4.8+ has a nice way to do this
-   return __builtin_cpu_supports("sse2");
-#else
-   // portable way to do this, preferably without using GCC inline ASM?
-   // just bail for now.
-   return 0;
-#endif
+   // If we're even attempting to compile this on GCC/Clang, that means
+   // -msse2 is on, which means the compiler is allowed to use SSE2
+   // instructions at will, and so are we.
+   return 1;
 }
 #endif
 #endif
