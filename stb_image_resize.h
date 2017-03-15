@@ -1713,13 +1713,13 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
 
     // build a table of all channels that need colorspace correction, so
     // we don't perform colorspace correction on channels that don't need it.
-	for (x = 0, num_nonalpha = 0; x < channels; ++x)
-	{
-		if (x != alpha_channel || (stbir_info->flags & STBIR_FLAG_ALPHA_USES_COLORSPACE))
-		{
+    for (x = 0, num_nonalpha = 0; x < channels; ++x)
+    {
+        if (x != alpha_channel || (stbir_info->flags & STBIR_FLAG_ALPHA_USES_COLORSPACE))
+        {
             nonalpha[num_nonalpha++] = (stbir_uint16)x;
-		}
-	}
+        }
+    }
 
     #define STBIR__ROUND_INT(f)    ((int)          ((f)+0.5))
     #define STBIR__ROUND_UINT(f)   ((stbir_uint32) ((f)+0.5))
