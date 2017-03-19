@@ -1693,7 +1693,7 @@ typedef struct
    int            succ_low;
    int            eob_run;
    int            jfif;
-   int            app14;
+   int            app14_color_transform; // Adobe APP14 tag
    int            rgb;
 
    int scan_n, order[4];
@@ -2862,9 +2862,8 @@ static int stbi__process_marker(stbi__jpeg *z, int m)
             if (stbi__get8(z->s) != tag[i])
                ok = 0;
          L -= 5;
-         if (ok) {
+         if (ok)
             z->jfif = 1;
-         }
       } else if (m == 0xEE && L >= 12) { // Adobe APP14 segment
          static const unsigned char tag[6] = {'A','d','o','b','e','\0'};
          int ok = 1;
@@ -2877,7 +2876,7 @@ static int stbi__process_marker(stbi__jpeg *z, int m)
             stbi__get8(z->s); // version
             stbi__get16be(z->s); // flags0
             stbi__get16be(z->s); // flags1
-            z->app14 = stbi__get8(z->s); // color transform
+            z->app14_color_transform = stbi__get8(z->s); // color transform
             L -= 6;
          }
       }
@@ -3047,7 +3046,7 @@ static int stbi__decode_jpeg_header(stbi__jpeg *z, int scan)
 {
    int m;
    z->jfif = 0;
-   z->app14 = -1;
+   z->app14_color_transform = -1; // valid values are 0,1,2
    z->marker = STBI__MARKER_none; // initialize cached marker to empty
    m = stbi__get_marker(z);
    if (!stbi__SOI(m)) return stbi__err("no SOI","Corrupt JPEG");
@@ -3531,7 +3530,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
    // determine actual number of components to generate
    n = req_comp ? req_comp : z->s->img_n;
 
-   is_rgb = z->s->img_n == 3 && (z->rgb == 3 || (z->app14 == 0 && !z->jfif));
+   is_rgb = z->s->img_n == 3 && (z->rgb == 3 || (z->app14_color_transform == 0 && !z->jfif));
 
    if (z->s->img_n == 3 && n < 3 && !is_rgb)
       decode_n = 1;
