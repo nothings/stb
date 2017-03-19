@@ -70,9 +70,11 @@ void stbir_progress(float p)
 
 #ifdef _WIN32
 #include <sys/timeb.h>
-#endif
-
 #include <direct.h>
+#define mkdir(a, b) _mkdir(a)
+#else
+#include <sys/stat.h>
+#endif
 
 #define MT_SIZE 624
 static size_t g_aiMT[MT_SIZE];
@@ -833,7 +835,7 @@ void test_filters(void)
 
 #define UMAX32   4294967295U
 
-static void write32(char *filename, stbir_uint32 *output, int w, int h)
+static void write32(const char *filename, stbir_uint32 *output, int w, int h)
 {
     stbir_uint8 *data = (stbir_uint8*) malloc(w*h*3);
     for (int i=0; i < w*h*3; ++i)
@@ -869,9 +871,9 @@ static void test_32(void)
 void test_suite(int argc, char **argv)
 {
 	int i;
-	char *barbara;
+	const char *barbara;
 
-	_mkdir("test-output");
+	mkdir("test-output", 777);
 
 	if (argc > 1)
 		barbara = argv[1];
