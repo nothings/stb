@@ -5965,8 +5965,10 @@ static stbi_uc *stbi__pic_load_core(stbi__context *s,int width,int height,int *c
 static void *stbi__pic_load(stbi__context *s,int *px,int *py,int *comp,int req_comp, stbi__result_info *ri)
 {
    stbi_uc *result;
-   int i, x,y;
+   int i, x,y, internal_comp;
    STBI_NOTUSED(ri);
+
+   if (!comp) comp = &internal_comp;
 
    for (i=0; i<92; ++i)
       stbi__get8(s);
@@ -6586,6 +6588,11 @@ static int stbi__hdr_info(stbi__context *s, int *x, int *y, int *comp)
    char buffer[STBI__HDR_BUFLEN];
    char *token;
    int valid = 0;
+   int dummy;
+
+   if (!x) x = &dummy;
+   if (!y) y = &dummy;
+   if (!comp) comp = &dummy;
 
    if (stbi__hdr_test(s) == 0) {
        stbi__rewind( s );
@@ -6632,9 +6639,9 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
    stbi__rewind( s );
    if (p == NULL)
       return 0;
-   *x = s->img_x;
-   *y = s->img_y;
-   *comp = info.ma ? 4 : 3;
+   if (x) *x = s->img_x;
+   if (y) *y = s->img_y;
+   if (comp) *comp = info.ma ? 4 : 3;
    return 1;
 }
 #endif
@@ -6642,7 +6649,10 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
 #ifndef STBI_NO_PSD
 static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
 {
-   int channelCount;
+   int channelCount, dummy;
+   if (!x) x = &dummy;
+   if (!y) y = &dummy;
+   if (!comp) comp = &dummy;
    if (stbi__get32be(s) != 0x38425053) {
        stbi__rewind( s );
        return 0;
@@ -6675,8 +6685,12 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
 #ifndef STBI_NO_PIC
 static int stbi__pic_info(stbi__context *s, int *x, int *y, int *comp)
 {
-   int act_comp=0,num_packets=0,chained;
+   int act_comp=0,num_packets=0,chained,dummy;
    stbi__pic_packet packets[10];
+
+   if (!x) x = &dummy;
+   if (!y) y = &dummy;
+   if (!comp) comp = &dummy;
 
    if (!stbi__pic_is4(s,"\x53\x80\xF6\x34")) {
       stbi__rewind(s);
@@ -6763,7 +6777,7 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
 
    *x = s->img_x;
    *y = s->img_y;
-   *comp = s->img_n;
+   if (comp) *comp = s->img_n;
 
    if (!stbi__mad3sizes_valid(s->img_n, s->img_x, s->img_y, 0))
       return stbi__errpuc("too large", "PNM too large");
@@ -6817,16 +6831,20 @@ static int      stbi__pnm_getinteger(stbi__context *s, char *c)
 
 static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
 {
-   int maxv;
+   int maxv, dummy;
    char c, p, t;
 
-   stbi__rewind( s );
+   if (!x) x = &dummy;
+   if (!y) y = &dummy;
+   if (!comp) comp = &dummy;
+
+   stbi__rewind(s);
 
    // Get identifier
    p = (char) stbi__get8(s);
    t = (char) stbi__get8(s);
    if (p != 'P' || (t != '5' && t != '6')) {
-       stbi__rewind( s );
+       stbi__rewind(s);
        return 0;
    }
 
@@ -6934,7 +6952,8 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 /*
    revision history:
       2.15  (2017-03-18) fix png-1,2,4 bug; now all Imagenet JPGs decode;
-                         warning fixes; disable run-time SSE detection on gcc
+                         warning fixes; disable run-time SSE detection on gcc;
+                         uniform handling of optional "return" values
       2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD; fixes for Imagenet JPGs
       2.13  (2016-11-29) add 16-bit API, only supported for PNG right now
       2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
