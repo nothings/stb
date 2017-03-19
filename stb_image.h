@@ -2628,7 +2628,7 @@ static void stbi__jpeg_reset(stbi__jpeg *j)
    j->code_bits = 0;
    j->code_buffer = 0;
    j->nomore = 0;
-   j->img_comp[0].dc_pred = j->img_comp[1].dc_pred = j->img_comp[2].dc_pred = 0;
+   j->img_comp[0].dc_pred = j->img_comp[1].dc_pred = j->img_comp[2].dc_pred = j->img_comp[3].dc_pred = 0;
    j->marker = STBI__MARKER_none;
    j->todo = j->restart_interval ? j->restart_interval : 0x7fffffff;
    j->eob_run = 0;
@@ -2959,7 +2959,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
    s->img_y = stbi__get16be(s);   if (s->img_y == 0) return stbi__err("no header height", "JPEG format not supported: delayed height"); // Legal, but we don't handle it--but neither does IJG
    s->img_x = stbi__get16be(s);   if (s->img_x == 0) return stbi__err("0 width","Corrupt JPEG"); // JPEG requires
    c = stbi__get8(s);
-   if (c != 3 && c != 1) return stbi__err("bad component count","Corrupt JPEG");    // JFIF requires
+   if (c != 3 && c != 1 && c != 4) return stbi__err("bad component count","Corrupt JPEG");
    s->img_n = c;
    for (i=0; i < c; ++i) {
       z->img_comp[i].data = NULL;
@@ -2972,7 +2972,7 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
    for (i=0; i < s->img_n; ++i) {
       static unsigned char rgb[3] = { 'R', 'G', 'B' };
       z->img_comp[i].id = stbi__get8(s);
-      if (z->img_comp[i].id == rgb[i])
+      if (s->img_n == 3 && z->img_comp[i].id == rgb[i])
          ++z->rgb;
       q = stbi__get8(s);
       z->img_comp[i].h = (q >> 4);  if (!z->img_comp[i].h || z->img_comp[i].h > 4) return stbi__err("bad H","Corrupt JPEG");
@@ -3516,6 +3516,13 @@ typedef struct
    int ypos;    // which pre-expansion row we're on
 } stbi__resample;
 
+// fast 0..255 * 0..255 => 0..255 rounded multiplication
+static stbi_uc stbi__blinn_8x8(stbi_uc x, stbi_uc y)
+{
+   unsigned int t = x*y + 128;
+   return (stbi_uc) ((t + (t >>8)) >> 8);
+}
+
 static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp, int req_comp)
 {
    int n, decode_n, is_rgb;
@@ -3528,7 +3535,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
    if (!stbi__decode_jpeg_image(z)) { stbi__cleanup_jpeg(z); return NULL; }
 
    // determine actual number of components to generate
-   n = req_comp ? req_comp : z->s->img_n;
+   n = req_comp ? req_comp : z->s->img_n >= 3 ? 3 : 1;
 
    is_rgb = z->s->img_n == 3 && (z->rgb == 3 || (z->app14_color_transform == 0 && !z->jfif));
 
@@ -3603,6 +3610,28 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
                } else {
                   z->YCbCr_to_RGB_kernel(out, y, coutput[1], coutput[2], z->s->img_x, n);
                }
+            } else if (z->s->img_n == 4) {
+               if (z->app14_color_transform == 0) { // CMYK
+                  for (i=0; i < z->s->img_x; ++i) {
+                     stbi_uc k = coutput[3][i];
+                     out[0] = stbi__blinn_8x8(coutput[0][i], k);
+                     out[1] = stbi__blinn_8x8(coutput[1][i], k);
+                     out[2] = stbi__blinn_8x8(coutput[2][i], k);
+                     out[3] = 255;
+                     out += n;
+                  }
+               } else if (z->app14_color_transform == 2) { // YCCK
+                  z->YCbCr_to_RGB_kernel(out, y, coutput[1], coutput[2], z->s->img_x, n);
+                  for (i=0; i < z->s->img_x; ++i) {
+                     stbi_uc k = coutput[3][i];
+                     out[0] = stbi__blinn_8x8(255 - out[0], k);
+                     out[1] = stbi__blinn_8x8(255 - out[1], k);
+                     out[2] = stbi__blinn_8x8(255 - out[2], k);
+                     out += n;
+                  }
+               } else { // YCbCr + alpha?  Ignore the fourth channel for now
+                  z->YCbCr_to_RGB_kernel(out, y, coutput[1], coutput[2], z->s->img_x, n);
+               }
             } else
                for (i=0; i < z->s->img_x; ++i) {
                   out[0] = out[1] = out[2] = y[i];
@@ -3620,6 +3649,22 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
                      out[1] = 255;
                   }
                }
+            } else if (z->s->img_n == 4 && z->app14_color_transform == 0) {
+               for (i=0; i < z->s->img_x; ++i) {
+                  stbi_uc k = coutput[3][i];
+                  stbi_uc r = stbi__blinn_8x8(coutput[0][i], k);
+                  stbi_uc g = stbi__blinn_8x8(coutput[1][i], k);
+                  stbi_uc b = stbi__blinn_8x8(coutput[2][i], k);
+                  out[0] = stbi__compute_y(r, g, b);
+                  out[1] = 255;
+                  out += n;
+               }
+            } else if (z->s->img_n == 4 && z->app14_color_transform == 2) {
+               for (i=0; i < z->s->img_x; ++i) {
+                  out[0] = stbi__blinn_8x8(255 - coutput[0][i], coutput[3][i]);
+                  out[1] = 255;
+                  out += n;
+               }
             } else {
                stbi_uc *y = coutput[0];
                if (n == 1)
@@ -3632,7 +3677,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
       stbi__cleanup_jpeg(z);
       *out_x = z->s->img_x;
       *out_y = z->s->img_y;
-      if (comp) *comp  = z->s->img_n; // report original components, not output
+      if (comp) *comp = z->s->img_n >= 3 ? 3 : 1; // report original components, not output
       return output;
    }
 }
@@ -3669,7 +3714,7 @@ static int stbi__jpeg_info_raw(stbi__jpeg *j, int *x, int *y, int *comp)
    }
    if (x) *x = j->s->img_x;
    if (y) *y = j->s->img_y;
-   if (comp) *comp = j->s->img_n;
+   if (comp) *comp = j->s->img_n >= 3 ? 3 : 1;
    return 1;
 }
 
