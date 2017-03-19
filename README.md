@@ -12,10 +12,10 @@ by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **[stb_vorbis.c](stb_vorbis.c)** | 1.10 | audio | 5447 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**[stb_image.h](stb_image.h)** | 2.14 | graphics | 7049 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**[stb_image.h](stb_image.h)** | 2.15 | graphics | 7177 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **[stb_truetype.h](stb_truetype.h)** | 1.15 | graphics | 4061 | parse, decode, and rasterize characters from truetype fonts
 **[stb_image_write.h](stb_image_write.h)** | 1.05 | graphics | 1092 | image writing to disk: PNG, TGA, BMP
-**[stb_image_resize.h](stb_image_resize.h)** | 0.93 | graphics | 2625 | resize images larger/smaller with good quality
+**[stb_image_resize.h](stb_image_resize.h)** | 0.94 | graphics | 2624 | resize images larger/smaller with good quality
 **[stb_rect_pack.h](stb_rect_pack.h)** | 0.11 | graphics | 635 | simple 2D rectangle packer with decent quality
 **[stb_sprintf.h](stb_sprintf.h)** | 1.02 | utility | 1202 | fast sprintf, snprintf for C/C++
 **[stretchy_buffer.h](stretchy_buffer.h)** | 1.02 | utility | 257 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
@@ -33,7 +33,7 @@ library    | lastest version | category | LoC | description
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.3 | misc | 165 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 20  
-Total lines of C code: 51177
+Total lines of C code: 51304
 
 
 FAQ
