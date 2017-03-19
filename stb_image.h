@@ -48,7 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
-      2.15  (2017-03-18) fix png-1,2,4 bug; warnings
+      2.15  (2017-03-18) fix png-1,2,4 bug; warnings; all Imagenet JPGs decode
       2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD; fixes for Imagenet JPGs
       2.13  (2016-12-04) experimental 16-bit API, only for PNG so far; fixes
       2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
@@ -1692,6 +1692,8 @@ typedef struct
    int            succ_high;
    int            succ_low;
    int            eob_run;
+   int            jfif;
+   int            app14_color_transform; // Adobe APP14 tag
    int            rgb;
 
    int scan_n, order[4];
@@ -2840,11 +2842,49 @@ static int stbi__process_marker(stbi__jpeg *z, int m)
          }
          return L==0;
    }
+
    // check for comment block or APP blocks
    if ((m >= 0xE0 && m <= 0xEF) || m == 0xFE) {
-      stbi__skip(z->s, stbi__get16be(z->s)-2);
+      L = stbi__get16be(z->s);
+      if (L < 2) {
+         if (m == 0xFE)
+            return stbi__err("bad COM len","Corrupt JPEG");
+         else
+            return stbi__err("bad APP len","Corrupt JPEG");
+      }
+      L -= 2;
+
+      if (m == 0xE0 && L >= 5) { // JFIF APP0 segment
+         static const unsigned char tag[5] = {'J','F','I','F','\0'};
+         int ok = 1;
+         int i;
+         for (i=0; i < 5; ++i)
+            if (stbi__get8(z->s) != tag[i])
+               ok = 0;
+         L -= 5;
+         if (ok)
+            z->jfif = 1;
+      } else if (m == 0xEE && L >= 12) { // Adobe APP14 segment
+         static const unsigned char tag[6] = {'A','d','o','b','e','\0'};
+         int ok = 1;
+         int i;
+         for (i=0; i < 6; ++i)
+            if (stbi__get8(z->s) != tag[i])
+               ok = 0;
+         L -= 6;
+         if (ok) {
+            stbi__get8(z->s); // version
+            stbi__get16be(z->s); // flags0
+            stbi__get16be(z->s); // flags1
+            z->app14_color_transform = stbi__get8(z->s); // color transform
+            L -= 6;
+         }
+      }
+
+      stbi__skip(z->s, L);
       return 1;
    }
+
    return stbi__err("unknown marker","Corrupt JPEG");
 }
 
@@ -3005,6 +3045,8 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
 static int stbi__decode_jpeg_header(stbi__jpeg *z, int scan)
 {
    int m;
+   z->jfif = 0;
+   z->app14_color_transform = -1; // valid values are 0,1,2
    z->marker = STBI__MARKER_none; // initialize cached marker to empty
    m = stbi__get_marker(z);
    if (!stbi__SOI(m)) return stbi__err("no SOI","Corrupt JPEG");
@@ -3476,7 +3518,7 @@ typedef struct
 
 static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp, int req_comp)
 {
-   int n, decode_n;
+   int n, decode_n, is_rgb;
    z->s->img_n = 0; // make stbi__cleanup_jpeg safe
 
    // validate req_comp
@@ -3488,7 +3530,9 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
    // determine actual number of components to generate
    n = req_comp ? req_comp : z->s->img_n;
 
-   if (z->s->img_n == 3 && n < 3 && z->rgb != 3)
+   is_rgb = z->s->img_n == 3 && (z->rgb == 3 || (z->app14_color_transform == 0 && !z->jfif));
+
+   if (z->s->img_n == 3 && n < 3 && !is_rgb)
       decode_n = 1;
    else
       decode_n = z->s->img_n;
@@ -3548,7 +3592,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
          if (n >= 3) {
             stbi_uc *y = coutput[0];
             if (z->s->img_n == 3) {
-               if (z->rgb == 3) {
+               if (is_rgb) {
                   for (i=0; i < z->s->img_x; ++i) {
                      out[0] = y[i];
                      out[1] = coutput[1][i];
@@ -3566,7 +3610,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
                   out += n;
                }
          } else {
-            if (z->rgb == 3) {
+            if (is_rgb) {
                if (n == 1)
                   for (i=0; i < z->s->img_x; ++i)
                      *out++ = stbi__compute_y(coutput[0][i], coutput[1][i], coutput[2][i]);
