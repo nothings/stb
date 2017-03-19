@@ -1,4 +1,4 @@
-/* stb_image - v2.14 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.15 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -48,6 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.15  (2017-03-18) fix png-1,2,4 bug; warnings
       2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD; fixes for Imagenet JPGs
       2.13  (2016-12-04) experimental 16-bit API, only for PNG so far; fixes
       2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
@@ -77,7 +78,7 @@ RECENT REVISION HISTORY:
     Ken Miller (pgm, ppm)                  Richard Mitton (16-bit PSD)
     github:urraka (animated gif)           Junggon Kim (PNM comments)
                                            Daniel Gibson (16-bit TGA)
-                                           socks-the-fox (16-bit TGA)
+                                           socks-the-fox (16-bit PNG)
                                            Jeremy Sawicki (handle all ImageNet JPGs)
  Optimizations & bugfixes
     Fabian "ryg" Giesen
@@ -96,7 +97,7 @@ RECENT REVISION HISTORY:
     Ryamond Barbiero        Paul Du Bois       Engin Manap        github:snagar
     Michaelangel007@github  Oriol Ferrer Mesia Dale Weiler        github:Zelex
     Philipp Wiesemann       Josh Tobin         github:rlyeh       github:grim210@github
-    Blazej Dariusz Roszkowski                  github:sammyhw     GrayHatter@uTox
+    Blazej Dariusz Roszkowski                  github:sammyhw     Gregory Mullen
 
 */
 
@@ -3594,9 +3595,9 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
 
 static void *stbi__jpeg_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
 {
-   (void)ri; // This unused warning is safe to ignore.
    unsigned char* result;
    stbi__jpeg* j = (stbi__jpeg*) stbi__malloc(sizeof(stbi__jpeg));
+   STBI_NOTUSED(ri);
    j->s = s;
    stbi__setup_jpeg(j);
    result = load_jpeg_image(j, x,y,comp,req_comp);
