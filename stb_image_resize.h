@@ -1,4 +1,4 @@
-/* stb_image_resize - v0.93 - public domain image resizing
+/* stb_image_resize - v0.94 - public domain image resizing
    by Jorge L Rodriguez (@VinoBS) - 2014
    http://github.com/nothings/stb
 
@@ -107,8 +107,8 @@
          industry, it is still uncommon in the videogame/real-time world.
 
          If you linearly filter non-premultiplied alpha, strange effects
-         occur. (For example, the average of 1% opaque bright green
-         and 99% opaque black produces 50% transparent dark green when
+         occur. (For example, the 50/50 average of 99% transparent bright green
+         and 1% transparent black produces 50% transparent dark green when
          non-premultiplied, whereas premultiplied it produces 50%
          transparent near-black. The former introduces green energy
          that doesn't exist in the source image.)
@@ -152,18 +152,19 @@
          (For example, graphics hardware does not apply sRGB conversion
          to the alpha channel.)
 
-   ADDITIONAL CONTRIBUTORS
+   CONTRIBUTORS
+      Jorge L Rodriguez: Implementation
       Sean Barrett: API design, optimizations
       Aras Pranckevicius: bugfix
          
    REVISIONS
+      0.94 (2017-03-18) fixed warnings
       0.93 (2017-03-03) fixed bug with certain combinations of heights
       0.92 (2017-01-02) fix integer overflow on large (>2GB) images
       0.91 (2016-04-02) fix warnings; fix handling of subpixel regions
       0.90 (2014-09-17) first released version
 
    LICENSE
-
      See end of file for license information.
 
    TODO
