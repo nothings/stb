@@ -3,7 +3,7 @@
 stb
 ===
 
-single-file public domain libraries for C/C++ <a name="stb_libs"></a>
+single-file public domain (or MIT licensed) libraries for C/C++ <a name="stb_libs"></a>
 
 Most libraries by stb, except: stb_dxt by Fabian "ryg" Giesen, stb_image_resize
 by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
@@ -15,25 +15,25 @@ library    | lastest version | category | LoC | description
 **[stb_image.h](stb_image.h)** | 2.14 | graphics | 7049 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **[stb_truetype.h](stb_truetype.h)** | 1.15 | graphics | 4061 | parse, decode, and rasterize characters from truetype fonts
 **[stb_image_write.h](stb_image_write.h)** | 1.05 | graphics | 1092 | image writing to disk: PNG, TGA, BMP
-**[stb_image_resize.h](stb_image_resize.h)** | 0.92 | graphics | 2620 | resize images larger/smaller with good quality
-**[stb_rect_pack.h](stb_rect_pack.h)** | 0.10 | graphics | 623 | simple 2D rectangle packer with decent quality
-**[stb_sprintf.h](stb_sprintf.h)** | 1.02 | utility | 1134 | fast sprintf, snprintf for C/C++
+**[stb_image_resize.h](stb_image_resize.h)** | 0.93 | graphics | 2625 | resize images larger/smaller with good quality
+**[stb_rect_pack.h](stb_rect_pack.h)** | 0.11 | graphics | 635 | simple 2D rectangle packer with decent quality
+**[stb_sprintf.h](stb_sprintf.h)** | 1.02 | utility | 1202 | fast sprintf, snprintf for C/C++
 **[stretchy_buffer.h](stretchy_buffer.h)** | 1.02 | utility | 257 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
-**[stb_textedit.h](stb_textedit.h)** | 1.10 | user&nbsp;interface | 1370 | guts of a text editor for games etc implementing them from scratch
-**[stb_voxel_render.h](stb_voxel_render.h)** | 0.84 | 3D&nbsp;graphics | 3792 | Minecraft-esque voxel rendering "engine" with many more features
-**[stb_dxt.h](stb_dxt.h)** | 1.05 | 3D&nbsp;graphics | 686 | Fabian "ryg" Giesen's real-time DXT compressor
-**[stb_perlin.h](stb_perlin.h)** | 0.2 | 3D&nbsp;graphics | 222 | revised Perlin noise (3D input, 1D output)
+**[stb_textedit.h](stb_textedit.h)** | 1.11 | user&nbsp;interface | 1393 | guts of a text editor for games etc implementing them from scratch
+**[stb_voxel_render.h](stb_voxel_render.h)** | 0.85 | 3D&nbsp;graphics | 3803 | Minecraft-esque voxel rendering "engine" with many more features
+**[stb_dxt.h](stb_dxt.h)** | 1.06 | 3D&nbsp;graphics | 687 | Fabian "ryg" Giesen's real-time DXT compressor
+**[stb_perlin.h](stb_perlin.h)** | 0.3 | 3D&nbsp;graphics | 316 | revised Perlin noise (3D input, 1D output)
 **[stb_easy_font.h](stb_easy_font.h)** | 1.0 | 3D&nbsp;graphics | 303 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
 **[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.38 | game&nbsp;dev | 4172 | embeddable tilemap editor
 **[stb_herringbone_wa...](stb_herringbone_wang_tile.h)** | 0.6 | game&nbsp;dev | 1220 | herringbone Wang tile map generator
 **[stb_c_lexer.h](stb_c_lexer.h)** | 0.09 | parsing | 962 | simplify writing parsers for C-like languages
 **[stb_divide.h](stb_divide.h)** | 0.91 | math | 419 | more useful 32-bit modulus e.g. "euclidean divide"
 **[stb_connected_comp...](stb_connected_components.h)** | 0.95 | misc | 1045 | incrementally compute reachability on grids
-**[stb.h](stb.h)** | 2.28 | misc | 14277 | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**[stb.h](stb.h)** | 2.29 | misc | 14324 | helper functions for C, mostly redundant in C++; basically author's personal stuff
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.3 | misc | 165 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 20  
-Total lines of C code: 50916
+Total lines of C code: 51177
 
 
 FAQ
@@ -41,17 +41,22 @@ FAQ
 
 #### What's the license?
 
-These libraries are in the public domain (or the equivalent where that is not
-possible). You can do anything you want with them. You have no legal obligation
+These libraries are in the public domain. You can do anything you
+want with them. You have no legal obligation
 to do anything else, although I appreciate attribution.
+
+They are also licensed under the MIT open source license, if you have lawyers
+who are unhappy with public domain. Every source file includes an explicit
+dual-license for you to choose from.
 
 #### <a name="other_libs"></a> Are there other single-file public-domain/open source libraries with minimal dependencies out there?
 
 [Yes.](https://github.com/nothings/single_file_libs)
 
-#### If I wrap an stb library in a new library, does the new library have to be public domain?
+#### If I wrap an stb library in a new library, does the new library have to be public domain/MIT?
 
-No.
+No, because it's public domain you can freely relicense it to whatever license your new
+library wants to be.
 
 #### Some of these libraries seem redundant to existing open source libraries. Are they better somehow?
 
@@ -61,7 +66,7 @@ attribution requirement). They may be less featureful, slower,
 and/or use more memory. If you're already using an equivalent
 library, there's probably no good reason to switch.
 
-###### Can I link directly to the table of stb libraries?
+#### Can I link directly to the table of stb libraries?
 
 You can use [this URL](https://github.com/nothings/stb#stb_libs) to link directly to that list.
 

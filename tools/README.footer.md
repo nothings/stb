@@ -4,17 +4,22 @@ FAQ
 
 #### What's the license?
 
-These libraries are in the public domain (or the equivalent where that is not
-possible). You can do anything you want with them. You have no legal obligation
+These libraries are in the public domain. You can do anything you
+want with them. You have no legal obligation
 to do anything else, although I appreciate attribution.
+
+They are also licensed under the MIT open source license, if you have lawyers
+who are unhappy with public domain. Every source file includes an explicit
+dual-license for you to choose from.
 
 #### <a name="other_libs"></a> Are there other single-file public-domain/open source libraries with minimal dependencies out there?
 
 [Yes.](https://github.com/nothings/single_file_libs)
 
-#### If I wrap an stb library in a new library, does the new library have to be public domain?
+#### If I wrap an stb library in a new library, does the new library have to be public domain/MIT?
 
-No.
+No, because it's public domain you can freely relicense it to whatever license your new
+library wants to be.
 
 #### Some of these libraries seem redundant to existing open source libraries. Are they better somehow?
 
@@ -24,7 +29,7 @@ attribution requirement). They may be less featureful, slower,
 and/or use more memory. If you're already using an equivalent
 library, there's probably no good reason to switch.
 
-###### Can I link directly to the table of stb libraries?
+#### Can I link directly to the table of stb libraries?
 
 You can use [this URL](https://github.com/nothings/stb#stb_libs) to link directly to that list.
 
