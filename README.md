@@ -58,6 +58,22 @@ dual-license for you to choose from.
 No, because it's public domain you can freely relicense it to whatever license your new
 library wants to be.
 
+#### What's the deal with SSE support in GCC-based compilers?
+
+stb_image will either use SSE2 (if you compile with -msse2) or
+will not use any SIMD at all, rather than trying to detect the
+processor at runtime and handle it correctly. As I understand it,
+the approved path in GCC for runtime-detection require
+you to use multiple source files, one for each CPU configuration.
+Because stb_image is a header-file library that compiles in only
+one source file, there's no approved way to build both an
+SSE-enabled and a non-SSE-enabled variation.
+
+While we've tried to work around it, we've had multiple issues over
+the years due to specific versions of gcc breaking what we're doing,
+so we've given up on it. See https://github.com/nothings/stb/issues/280
+and https://github.com/nothings/stb/issues/410 for examples.
+
 #### Some of these libraries seem redundant to existing open source libraries. Are they better somehow?
 
 Generally they're only better in that they're easier to integrate,
