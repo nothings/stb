@@ -923,7 +923,7 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
                   case 1: line_buffer[i] = z[i]; break;
                   case 2: line_buffer[i] = z[i] - z[i-stride_bytes]; break;
                   case 3: line_buffer[i] = z[i] - (z[i-stride_bytes]>>1); break;
-                  case 4: line_buffer[i] = (signed char) (z[i] - stbiw__paeth(0,z[i-stride_bytes],0)); break;
+                  case 4: line_buffer[i] = z[i] - z[i-stride_bytes]; break;
                   case 5: line_buffer[i] = z[i]; break;
                   case 6: line_buffer[i] = z[i]; break;
                }
@@ -935,7 +935,7 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
                   case 3: line_buffer[i] = z[i] - ((z[i-n] + z[i-stride_bytes])>>1); break;
                   case 4: line_buffer[i] = z[i] - stbiw__paeth(z[i-n], z[i-stride_bytes], z[i-stride_bytes-n]); break;
                   case 5: line_buffer[i] = z[i] - (z[i-n]>>1); break;
-                  case 6: line_buffer[i] = z[i] - stbiw__paeth(z[i-n], 0,0); break;
+                  case 6: line_buffer[i] = z[i] - z[i-n]; break;
                }
             }
             if (p) break;
