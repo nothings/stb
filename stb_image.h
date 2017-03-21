@@ -4867,7 +4867,7 @@ static void *stbi__do_png(stbi__png *p, int *x, int *y, int *n, int req_comp, st
       }
       *x = p->s->img_x;
       *y = p->s->img_y;
-      if (n) *n = p->s->img_n;
+      if (n) *n = p->s->img_out_n;
    }
    STBI_FREE(p->out);      p->out      = NULL;
    STBI_FREE(p->expanded); p->expanded = NULL;
