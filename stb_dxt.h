@@ -19,6 +19,9 @@
 //   v1.01  - (stb) fix bug converting to RGB that messed up quality, thanks ryg & cbloom
 //   v1.00  - (stb) first release
 //
+// contributors: 
+//   Kevin Schmidt 
+// 
 // LICENSE
 //
 //   See end of file for license information.
