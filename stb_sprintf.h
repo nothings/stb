@@ -130,25 +130,37 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 "...512 char string..." ( 35.0x/32.5x faster!)
 */
 
-#if defined(__has_feature)
- #if __has_feature(address_sanitizer)
-  #define STBI__ASAN __attribute__((no_sanitize("address")))
+#if defined(__clang__)
+ #if defined(__has_feature) && defined(__has_attribute)
+  #if __has_feature(address_sanitizer)
+   #if __has_attribute(__no_sanitize__)
+    #define STBSP__ASAN __attribute__((__no_sanitize__("address")))
+   #elif __has_attribute(__no_sanitize_address__)
+    #define STBSP__ASAN __attribute__((__no_sanitize_address__))
+   #elif __has_attribute(__no_address_safety_analysis__)
+    #define STBSP__ASAN __attribute__((__no_address_safety_analysis__))
+   #endif
+  #endif
+ #endif
+#elif __GNUC__ >= 5 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)
+ #if __SANITIZE_ADDRESS__
+  #define STBSP__ASAN __attribute__((__no_sanitize_address__))
  #endif
 #endif
-#ifndef STBI__ASAN
-#define STBI__ASAN
+#ifndef STBSP__ASAN
+#define STBSP__ASAN
 #endif
 
 #ifdef STB_SPRINTF_STATIC
 #define STBSP__PUBLICDEC static
-#define STBSP__PUBLICDEF static STBI__ASAN
+#define STBSP__PUBLICDEF static STBSP__ASAN
 #else
 #ifdef __cplusplus
 #define STBSP__PUBLICDEC extern "C"
-#define STBSP__PUBLICDEF extern "C" STBI__ASAN
+#define STBSP__PUBLICDEF extern "C" STBSP__ASAN
 #else
 #define STBSP__PUBLICDEC extern
-#define STBSP__PUBLICDEF STBI__ASAN
+#define STBSP__PUBLICDEF STBSP__ASAN
 #endif
 #endif
 
