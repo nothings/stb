@@ -98,7 +98,8 @@ RECENT REVISION HISTORY:
     Michaelangel007@github  Philipp Wiesemann  Dale Weiler        github:grim210
     Oriol Ferrer Mesia      Josh Tobin         Matthew Gregan     github:sammyhw
     Blazej Dariusz Roszkowski                  Gregory Mullen     github:phprus
-
+    Kevin Schmidt
+    
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
