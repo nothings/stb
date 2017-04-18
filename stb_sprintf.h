@@ -9,6 +9,7 @@
 //    github:d26435
 //    github:trex78
 //    Jari Komppa (SI suffixes)
+//    Kevin Schmidt
 //
 // LICENSE:
 //
