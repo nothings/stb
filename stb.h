@@ -193,6 +193,8 @@ CREDITS
   Tim Sjostrand
 */
 
+#include <stdarg.h>
+
 #ifndef STB__INCLUDE_STB_H
 #define STB__INCLUDE_STB_H
 
