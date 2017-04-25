@@ -639,7 +639,7 @@ static int stbi__cpuid3(void)
 
 #define STBI_SIMD_ALIGN(type, name) __declspec(align(16)) type name
 
-static int stbi__sse2_available()
+static int stbi__sse2_available(void)
 {
    int info3 = stbi__cpuid3();
    return ((info3 >> 26) & 1) != 0;
@@ -647,7 +647,7 @@ static int stbi__sse2_available()
 #else // assume GCC-style if not VC++
 #define STBI_SIMD_ALIGN(type, name) type name __attribute__((aligned(16)))
 
-static int stbi__sse2_available()
+static int stbi__sse2_available(void)
 {
    // If we're even attempting to compile this on GCC/Clang, that means
    // -msse2 is on, which means the compiler is allowed to use SSE2
