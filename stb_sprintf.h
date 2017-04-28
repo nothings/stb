@@ -504,7 +504,8 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
 
         // clamp the precision and delete extra zeros after clamp
         n = pr;
-        if ( l > (stbsp__uint32)pr ) l = pr; while ((l>1)&&(pr)&&(sn[l-1]=='0')) { --pr; --l; }
+        if ( l > (stbsp__uint32)pr ) l = pr;
+        while ((l>1)&&(pr)&&(sn[l-1]=='0')) { --pr; --l; }
 
         // should we use %e
         if ((dp<=-4)||(dp>(stbsp__int32)n))
@@ -585,7 +586,8 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsprintfcb )( STBSP_SPRINTFCB * callb
           // handle 0.000*000xxxx
           *s++='0'; if (pr) *s++=stbsp__period; 
           n=-dp; if((stbsp__int32)n>pr) n=pr; i=n; while(i) { if ((((stbsp__uintptr)s)&3)==0) break; *s++='0'; --i; } while(i>=4) { *(stbsp__uint32*)s=0x30303030; s+=4; i-=4; } while(i) { *s++='0'; --i; }
-          if ((stbsp__int32)(l+n)>pr) l=pr-n; i=l; while(i) { *s++=*sn++; --i; }
+          if ((stbsp__int32)(l+n)>pr) l=pr-n;
+          i=l; while(i) { *s++=*sn++; --i; }
           tz = pr-(n+l);
           cs = 1 + (3<<24); // how many tens did we write (for commas below)
         }
