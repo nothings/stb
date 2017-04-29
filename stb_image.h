@@ -4960,7 +4960,7 @@ static int stbi__bitcount(unsigned int a)
    return a & 0xff;
 }
 
-static int stbi__shiftsigned(int v, int shift, int bits)
+static unsigned int stbi__shiftsigned(unsigned int v, int shift, int bits)
 {
    int result;
    int z=0;
@@ -4969,6 +4969,7 @@ static int stbi__shiftsigned(int v, int shift, int bits)
    else v >>= shift;
    result = v;
 
+   // replicate the high bits to the low bits
    z = bits;
    while (z < 8) {
       result += v >> z;
@@ -5185,7 +5186,7 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
             int bpp = info.bpp;
             for (i=0; i < (int) s->img_x; ++i) {
                stbi__uint32 v = (bpp == 16 ? (stbi__uint32) stbi__get16le(s) : stbi__get32le(s));
-               int a;
+               unsigned int a;
                out[z++] = STBI__BYTECAST(stbi__shiftsigned(v & mr, rshift, rcount));
                out[z++] = STBI__BYTECAST(stbi__shiftsigned(v & mg, gshift, gcount));
                out[z++] = STBI__BYTECAST(stbi__shiftsigned(v & mb, bshift, bcount));
