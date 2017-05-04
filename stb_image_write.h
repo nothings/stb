@@ -119,10 +119,17 @@ LICENSE
 extern "C" {
 #endif
 
-#if defined(STB_IMAGE_WRITE_STATIC) && defined(STB_IMAGE_WRITE_INLINE)
-#define STBIWDEF static inline
+
+#ifdef STB_IMAGE_WRITE_INLINE
+#ifdef __cplusplus
+#define STBIWDEF inline
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#define STBIWDEF inline
 #elif defined(STB_IMAGE_WRITE_STATIC)
 #define STBIWDEF static
+#else
+#error "inline not supported."
+#endif
 #else
 #define STBIWDEF extern
 extern int stbi_write_tga_with_rle;

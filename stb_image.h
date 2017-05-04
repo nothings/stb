@@ -325,10 +325,16 @@ typedef unsigned short stbi_us;
 extern "C" {
 #endif
 
-#if defined(STB_IMAGE_STATIC) && defined(STB_IMAGE_INLINE)
-#define STBIDEF static inline
-#elif defined(STB_IMAGE_STATIC)
+#ifdef STB_IMAGE_STATIC
 #define STBIDEF static
+#elif defined(STB_IMAGE_INLINE)
+#ifdef __cplusplus
+#define STBIDEF inline
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#define STBIDEF inline
+#else
+#error "inline not supported."
+#endif
 #else
 #define STBIDEF extern
 #endif

@@ -191,16 +191,22 @@ typedef uint16_t stbir_uint16;
 typedef uint32_t stbir_uint32;
 #endif
 
-#if defined(STB_IMAGE_RESIZE_STATIC) && defined(STB_IMAGE_RESIZE_INLINE)
-#define STBIRDEF static inline
-#elif defined(STB_IMAGE_RESIZE_STATIC)
-#define STBIRDEF static
-#else
 #ifdef __cplusplus
-#define STBIRDEF extern "C"
+extern "C" {
+#endif
+
+#ifdef STB_IMAGE_RESIZE_STATIC
+#define STBIRDEF static
+#elif defined(STB_IMAGE_RESIZE_INLINE)
+#ifdef __cplusplus
+#define STBIRDEF inline
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+#define STBIRDEF inline
+#else
+#error "inline not supported."
+#endif
 #else
 #define STBIRDEF extern
-#endif
 #endif
 
 
@@ -2580,6 +2586,10 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
         s0,t0,s1,t1,NULL,num_channels,alpha_channel,flags, datatype, filter_horizontal, filter_vertical,
         edge_mode_horizontal, edge_mode_vertical, space);
 }
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // STB_IMAGE_RESIZE_IMPLEMENTATION
 
