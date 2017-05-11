@@ -5217,6 +5217,7 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
    if (req_comp && req_comp != target) {
       out = stbi__convert_format(out, target, req_comp, s->img_x, s->img_y);
       if (out == NULL) return out; // stbi__convert_format frees input on failure
+      s->img_n = req_comp;
    }
 
    *x = s->img_x;
