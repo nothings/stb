@@ -393,8 +393,9 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
 
 #ifndef STBIR_MALLOC
 #include <stdlib.h>
-#define STBIR_MALLOC(size,c) malloc(size)
-#define STBIR_FREE(ptr,c)    free(ptr)
+// use comma operator to evaluate c, to avoid "unused parameter" warnings
+#define STBIR_MALLOC(size,c) ((void)(c), malloc(size))
+#define STBIR_FREE(ptr,c)    ((void)(c), free(ptr))
 #endif
 
 #ifndef _MSC_VER
