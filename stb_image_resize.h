@@ -984,7 +984,7 @@ static int stbir__edge_wrap_slow(stbir_edge edge, int n, int max)
 
             return (m);
         }
-        return n;  // NOTREACHED
+        // NOTREACHED
 
     default:
         STBIR_ASSERT(!"Unimplemented edge type");
