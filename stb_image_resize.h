@@ -156,7 +156,8 @@
       Jorge L Rodriguez: Implementation
       Sean Barrett: API design, optimizations
       Aras Pranckevicius: bugfix
-         
+      Nathan Reed: warning fixes
+
    REVISIONS
       0.94 (2017-03-18) fixed warnings
       0.93 (2017-03-03) fixed bug with certain combinations of heights
