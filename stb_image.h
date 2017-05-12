@@ -2806,7 +2806,7 @@ static int stbi__process_marker(stbi__jpeg *z, int m)
             if (t > 3) return stbi__err("bad DQT table","Corrupt JPEG");
 
             for (i=0; i < 64; ++i)
-               z->dequant[t][stbi__jpeg_dezigzag[i]] = sixteen ? stbi__get16be(z->s) : stbi__get8(z->s);
+               z->dequant[t][stbi__jpeg_dezigzag[i]] = (stbi__uint16)(sixteen ? stbi__get16be(z->s) : stbi__get8(z->s));
             L -= (sixteen ? 129 : 65);
          }
          return L==0;
