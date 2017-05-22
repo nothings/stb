@@ -192,7 +192,7 @@ typedef struct
   // occurred.
   int error;
 } stb_vorbis_iocallbacks;
-#endif
+#endif // STB_VORBIS_NO_IOCALLBACKS
 
 // get general information about the file
 extern stb_vorbis_info stb_vorbis_get_info(stb_vorbis *f);
@@ -367,7 +367,7 @@ extern stb_vorbis * stb_vorbis_open_section_callbacks(
 // on failure, returns NULL and sets *error. note that stb_vorbis must "own"
 // this stream; if you seek it in between calls to stb_vorbis, it will become
 // confused.
-#endif
+#endif // STB_VORBIS_NO_IOCALLBACKS
 
 extern int stb_vorbis_seek_frame(stb_vorbis *f, unsigned int sample_number);
 extern int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
@@ -866,7 +866,7 @@ struct stb_vorbis
   void *iocallbacks_userdata;
 #endif
 
-#if !defined(STB_VORBIS_NO_STDIO) && !defined(STB_VORBIS_NO_IOCALLBACKS)
+#if !defined(STB_VORBIS_NO_STDIO) || !defined(STB_VORBIS_NO_IOCALLBACKS)
    uint32 f_start;
    int close_on_free;
 #endif
@@ -1414,6 +1414,7 @@ static uint8 get8(vorb *z)
      if (c == z->iocallbacks.eof) { z->eof = TRUE; return 0; }
      return c;
    } else {
+   #endif
    #ifndef STB_VORBIS_NO_STDIO
    {
    int c = fgetc(z->f);
@@ -1446,7 +1447,7 @@ static int getn(vorb *z, uint8 *data, int n)
    }
    #ifndef STB_VORBIS_NO_IOCALLBACKS
    if (z->f == NULL) {
-     if (z->iocallbacks.read(z->iocallbacks_userdata, data, n) > 0) {
+     if (z->iocallbacks.read(z->iocallbacks_userdata, n, data) > 0) {
        return 1;
      } else {
        z->eof = 1;
@@ -5147,17 +5148,17 @@ stb_vorbis * stb_vorbis_open_filename(const char *filename, int *error, const st
 extern stb_vorbis * stb_vorbis_open_section_callbacks(
     stb_vorbis_iocallbacks callbacks,
     void *userdata,
-    int close_handle_on_close,
+    int close_on_free,
     int *error,
     const stb_vorbis_alloc *alloc_buffer,
     unsigned int len) {
    stb_vorbis *f, p;
-   vorbis_init(&p, alloc);
+   vorbis_init(&p, alloc_buffer);
    p.f = NULL;
    p.iocallbacks = callbacks;
    p.iocallbacks_userdata = userdata;
    p.f_start = (uint32) callbacks.tell(userdata);
-   p.stream_len   = length;
+   p.stream_len   = len;
    p.close_on_free = close_on_free;
    if (start_decoder(&p)) {
       f = vorbis_alloc(&p);
@@ -5175,7 +5176,7 @@ extern stb_vorbis * stb_vorbis_open_section_callbacks(
 extern stb_vorbis * stb_vorbis_open_callbacks(
     stb_vorbis_iocallbacks callbacks,
     void *userdata,
-    int close_handle_on_close,
+    int close_on_free,
     int *error,
     const stb_vorbis_alloc *alloc_buffer) {
    unsigned int len, start;
@@ -5183,7 +5184,7 @@ extern stb_vorbis * stb_vorbis_open_callbacks(
    callbacks.seek(userdata, 0, callbacks.seek_end);
    len = (unsigned int) (callbacks.tell(userdata) - start);
    callbacks.seek(userdata, start, callbacks.seek_set);
-   return stb_vorbis_open_section_callbacks(callbacks, userdata, close_on_free, error, alloc, len);
+   return stb_vorbis_open_section_callbacks(callbacks, userdata, close_on_free, error, alloc_buffer, len);
 }
 
 #endif // STB_VORBIS_NO_IOCALLBACKS
