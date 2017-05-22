@@ -521,6 +521,10 @@ enum STBVorbisError
 //      most platforms which requires endianness be defined correctly.
 //#define STB_VORBIS_NO_FAST_SCALED_FLOAT
 
+// STB_VORBIS_NO_IOCALLBACKS
+//      does not compile in support for custom I/O callbacks.
+// #define STB_VORBIS_NO_IOCALLBACKS
+
 
 // STB_VORBIS_MAX_CHANNELS [number]
 //     globally define this to the maximum number of channels you need.
@@ -965,6 +969,15 @@ struct stb_vorbis
    int channel_buffer_end;
 };
 
+#ifndef STB_VORBIS_NO_IOCALLBACKS
+#ifdef STB_VORBIS_NO_STDIO
+#define STB_VORBIS_USE_IOCALLBACKS(x) (1)
+#else
+#define STB_VORBIS_USE_IOCALLBACKS(x) (x->f == NULL)
+#endif
+#endif
+
+
 #if defined(STB_VORBIS_NO_PUSHDATA_API)
    #define IS_PUSH_MODE(f)   FALSE
 #elif defined(STB_VORBIS_NO_PULLDATA_API)
@@ -1395,7 +1408,7 @@ static int STBV_CDECL point_compare(const void *p, const void *q)
 /////////////////////// END LEAF SETUP FUNCTIONS //////////////////////////
 
 
-#if defined(STB_VORBIS_NO_STDIO)
+#if defined(STB_VORBIS_NO_STDIO) && defined(STB_VORBIS_NO_IOCALLBACKS)
    #define USE_MEMORY(z)    TRUE
 #else
    #define USE_MEMORY(z)    ((z)->stream)
@@ -1409,7 +1422,7 @@ static uint8 get8(vorb *z)
    }
 
    #ifndef STB_VORBIS_NO_IOCALLBACKS
-   if (z->f == NULL) {
+   if (STB_VORBIS_USE_IOCALLBACKS(z)) {
      int c = z->iocallbacks.getc(z->iocallbacks_userdata);
      if (c == z->iocallbacks.eof) { z->eof = TRUE; return 0; }
      return c;
@@ -1446,7 +1459,7 @@ static int getn(vorb *z, uint8 *data, int n)
       return 1;
    }
    #ifndef STB_VORBIS_NO_IOCALLBACKS
-   if (z->f == NULL) {
+   if (STB_VORBIS_USE_IOCALLBACKS(z)) {
      if (z->iocallbacks.read(z->iocallbacks_userdata, n, data) > 0) {
        return 1;
      } else {
@@ -1476,7 +1489,7 @@ static void skip(vorb *z, int n)
       return;
    }
    #ifndef STB_VORBIS_NO_IOCALLBACKS
-   if (z->f == NULL) {
+   if (STB_VORBIS_USE_IOCALLBACKS(z)) {
      long x = z->iocallbacks.tell(z->iocallbacks_userdata);
      z->iocallbacks.seek(z->iocallbacks_userdata, x + n, z->iocallbacks.seek_set);
    } else {
@@ -1516,7 +1529,7 @@ static int set_file_offset(stb_vorbis *f, unsigned int loc)
       loc += f->f_start;
    }
    #ifndef STB_VORBIS_NO_IOCALLBACKS
-   if (f->f == NULL) {
+   if (STB_VORBIS_USE_IOCALLBACKS(f)) {
      if (!f->iocallbacks.seek(f->iocallbacks_userdata,
                                loc,
                                f->iocallbacks.seek_set)) {
@@ -1528,7 +1541,7 @@ static int set_file_offset(stb_vorbis *f, unsigned int loc)
                           f->iocallbacks.seek_end);
    } else {
    #endif
-   #ifndef STB_VORBIS_STDIO
+   #ifndef STB_VORBIS_NO_STDIO
    if (!fseek(f->f, loc, SEEK_SET))
       return 1;
    f->eof = 1;
@@ -4321,11 +4334,14 @@ static void vorbis_deinit(stb_vorbis *p)
       setup_free(p, p->bit_reverse[i]);
    }
    #ifndef STB_VORBIS_NO_IOCALLBACKS
-   if (p->f == NULL) p->iocallbacks.close(p->iocallbacks_userdata);
-   else
+   if (STB_VORBIS_USE_IOCALLBACKS(p)) p->iocallbacks.close(p->iocallbacks_userdata);
+   else {
    #endif
    #ifndef STB_VORBIS_NO_STDIO
    if (p->close_on_free) fclose(p->f);
+   #endif
+   #ifndef STB_VORBIS_NO_IOCALLBACKS
+   }
    #endif
 }
 
@@ -4600,7 +4616,7 @@ unsigned int stb_vorbis_get_file_offset(stb_vorbis *f)
    #endif
    if (USE_MEMORY(f)) return (unsigned int) (f->stream - f->stream_start);
    #ifndef STB_VORBIS_NO_IOCALLBACKS
-   if (f->f == NULL) {
+   if (STB_VORBIS_USE_IOCALLBACKS(f)) {
      return (unsigned int)(f->iocallbacks.tell(f->iocallbacks_userdata) - f->f_start);
    } else {
    #endif
@@ -5154,7 +5170,9 @@ extern stb_vorbis * stb_vorbis_open_section_callbacks(
     unsigned int len) {
    stb_vorbis *f, p;
    vorbis_init(&p, alloc_buffer);
+   #ifndef STB_VORBIS_NO_STDIO
    p.f = NULL;
+   #endif
    p.iocallbacks = callbacks;
    p.iocallbacks_userdata = userdata;
    p.f_start = (uint32) callbacks.tell(userdata);
