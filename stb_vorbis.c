@@ -150,7 +150,7 @@ typedef struct
   // to the `eof' member of this struct, in case there is no more data to read,
   // or a value equal to the `error' member of this struct, if an error
   // occurred.
-  int (*getc)(void *userdata);
+  int (*getcharacter)(void *userdata);
   
   // Pointer to a function that seeks to a position in the given custom data
   // source.
@@ -1423,7 +1423,7 @@ static uint8 get8(vorb *z)
 
    #ifndef STB_VORBIS_NO_IOCALLBACKS
    if (STB_VORBIS_USE_IOCALLBACKS(z)) {
-     int c = z->iocallbacks.getc(z->iocallbacks_userdata);
+     int c = z->iocallbacks.getcharacter(z->iocallbacks_userdata);
      if (c == z->iocallbacks.eof) { z->eof = TRUE; return 0; }
      return c;
    } else {
