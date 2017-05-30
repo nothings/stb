@@ -3031,6 +3031,11 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
    return 1;
 }
 
+#if defined(__clang__)
+#	pragma clang diagnostic push
+#	pragma clang diagnostic ignored "-Wparentheses-equality"
+#endif // __clang__
+
 // use comparisons since in some cases we handle more than one case (e.g. SOF)
 #define stbi__DNL(x)         ((x) == 0xdc)
 #define stbi__SOI(x)         ((x) == 0xd8)
@@ -6961,6 +6966,10 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
    stbi__start_callbacks(&s, (stbi_io_callbacks *) c, user);
    return stbi__info_main(&s,x,y,comp);
 }
+
+#if defined(__clang__)
+#	pragma clang diagnostic pop
+#endif // __clang__
 
 #endif // STB_IMAGE_IMPLEMENTATION
 
