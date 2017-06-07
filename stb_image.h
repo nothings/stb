@@ -83,6 +83,7 @@ RECENT REVISION HISTORY:
  Optimizations & bugfixes
     Fabian "ryg" Giesen
     Arseny Kapoulkine
+    John-Mark Allen
 
  Bug & warning fixes
     Marc LeBlanc            David Woo          Guillaume George   Martins Mozeiko
