@@ -1046,21 +1046,20 @@ static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, 
    // @TODO: move stbi__convert_format to here
 
    if (stbi__vertically_flip_on_load) {
-      int w = *x, h = *y;
-      int channels = req_comp ? req_comp : *comp;
-      int row,col,z;
-      stbi_uc *image = (stbi_uc *) result;
+     int w = *x, h = *y;
+     int channels = req_comp ? req_comp : *comp;
+     size_t row_stride = w * channels * sizeof( stbi_uc );
+     stbi_uc* image = (stbi_uc *) result;
+     stbi_uc* temp_row = (stbi_uc *) stbi__malloc( row_stride );
 
-      // @OPTIMIZE: use a bigger temp buffer and memcpy multiple pixels at once
-      for (row = 0; row < (h>>1); row++) {
-         for (col = 0; col < w; col++) {
-            for (z = 0; z < channels; z++) {
-               stbi_uc temp = image[(row * w + col) * channels + z];
-               image[(row * w + col) * channels + z] = image[((h - row - 1) * w + col) * channels + z];
-               image[((h - row - 1) * w + col) * channels + z] = temp;
-            }
-         }
-      }
+     for (int row = 0; row < (h>>1); row++) {
+        memcpy( temp_row, &image[row * w * channels], row_stride );
+        memcpy( &image[row * w * channels], &image[(h - row - 1) * w * channels], row_stride );
+        memcpy( &image[(h - row - 1 ) * w * channels], temp_row, row_stride );
+     }
+
+     STBI_FREE( temp_row );
+     temp_row = NULL;
    }
 
    return (unsigned char *) result;
