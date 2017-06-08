@@ -2227,7 +2227,7 @@ STBTT_DEF void stbtt_GetFontVOS2Metrics(const stbtt_fontinfo *info, int *typoasc
 	basetableoffset += 2;    // ystrikeoutsize
 	basetableoffset += 2;    // ystrikeoutposition
 	basetableoffset += 2;    // sfamilyclass
-	basetableoffset += 8*10; // panose
+	basetableoffset += 10; // panose
 	basetableoffset += 4;    // ulunicoderange1
 	basetableoffset += 4;    // ulunicoderange2
 	basetableoffset += 4;    // ulunicoderange3
