@@ -73,6 +73,9 @@ USAGE:
    writer, both because it is in BGR order and because it may have padding
    at the end of the line.)
 
+   PNG allows you to set the deflate compression level by setting the global
+   variable 'stbi_write_png_level' (it defaults to 8).
+
    HDR expects linear float data. Since the format is always 32-bit rgb(e)
    data, alpha (if provided) is discarded, and for monochrome data it is
    replicated across all three channels.
@@ -124,6 +127,7 @@ extern "C" {
 #else
 #define STBIWDEF extern
 extern int stbi_write_tga_with_rle;
+extern int stbi_write_png_level;
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
@@ -894,6 +898,12 @@ static unsigned char stbiw__paeth(int a, int b, int c)
    return STBIW_UCHAR(c);
 }
 
+#ifdef STB_IMAGE_WRITE_STATIC
+static int stbi_write_png_level = 8;
+#else
+int stbi_write_png_level = 8;
+#endif
+
 // @OPTIMIZE: provide an option that always forces left-predict or paeth predict
 unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
 {
@@ -949,7 +959,7 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
       STBIW_MEMMOVE(filt+j*(x*n+1)+1, line_buffer, x*n);
    }
    STBIW_FREE(line_buffer);
-   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, 8); // increase 8 to get smaller but use more memory
+   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, stbi_write_png_level);
    STBIW_FREE(filt);
    if (!zlib) return 0;
 
