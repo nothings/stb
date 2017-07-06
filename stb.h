@@ -1024,8 +1024,8 @@ stb__wchar *stb__from_utf8(char *str)
 
 stb__wchar *stb__from_utf8_alt(char *str)
 {
-   static stb__wchar buffer[64];
-   return stb_from_utf8(buffer, str, 64);
+   static stb__wchar buffer[4096];
+   return stb_from_utf8(buffer, str, 4096);
 }
 
 char *stb__to_utf8(stb__wchar *str)
@@ -5435,15 +5435,62 @@ typedef struct
    int   errors;
 } stb__file_data;
 
+static FILE *stb__open_temp_file(char *temp_name, char *src_name, char *mode)
+{
+   int p;
+#ifdef _MSC_VER
+   int j;
+#endif
+   FILE *f;
+   // try to generate a temporary file in the same directory
+   p = strlen(src_name)-1;
+   while (p > 0 && src_name[p] != '/' && src_name[p] != '\\'
+                && src_name[p] != ':' && src_name[p] != '~')
+      --p;
+   ++p;
+
+   memcpy(temp_name, src_name, p);
+
+   #ifdef _MSC_VER
+   // try multiple times to make a temp file... just in
+   // case some other process makes the name first
+   for (j=0; j < 32; ++j) {
+      strcpy(temp_name+p, "stmpXXXXXX");
+      if (stb_mktemp(temp_name) == NULL)
+         return 0;
+
+      f = fopen(temp_name, mode);
+      if (f != NULL)
+         break;
+   }
+   #else
+   {
+      strcpy(temp_name+p, "stmpXXXXXX");
+      #ifdef __MINGW32__
+         int fd = open(mktemp(temp_name), O_RDWR);
+      #else
+         int fd = mkstemp(temp_name);
+      #endif
+      if (fd == -1) return NULL;
+      f = fdopen(fd, mode);
+      if (f == NULL) {
+         unlink(temp_name);
+         close(fd);
+         return NULL;
+      }
+   }
+   #endif
+   return f;
+}
+
+
 FILE *  stb_fopen(char *filename, char *mode)
 {
    FILE *f;
    char name_full[4096];
    char temp_full[sizeof(name_full) + 12];
-   int p;
-#ifdef _MSC_VER
-   int j;
-#endif
+
+   // @TODO: if the file doesn't exist, we can also use the fastpath here
    if (mode[0] != 'w' && !strchr(mode, '+'))
       return stb__fopen(filename, mode);
 
@@ -5454,44 +5501,7 @@ FILE *  stb_fopen(char *filename, char *mode)
    if (stb_fullpath(name_full, sizeof(name_full), filename)==0)
       return 0;
 
-   // try to generate a temporary file in the same directory
-   p = strlen(name_full)-1;
-   while (p > 0 && name_full[p] != '/' && name_full[p] != '\\'
-                && name_full[p] != ':' && name_full[p] != '~')
-      --p;
-   ++p;
-
-   memcpy(temp_full, name_full, p);
-
-   #ifdef _MSC_VER
-   // try multiple times to make a temp file... just in
-   // case some other process makes the name first
-   for (j=0; j < 32; ++j) {
-      strcpy(temp_full+p, "stmpXXXXXX");
-      if (stb_mktemp(temp_full) == NULL)
-         return 0;
-
-      f = fopen(temp_full, mode);
-      if (f != NULL)
-         break;
-   }
-   #else
-   {
-      strcpy(temp_full+p, "stmpXXXXXX");
-      #ifdef __MINGW32__
-         int fd = open(mktemp(temp_full), O_RDWR);
-      #else
-         int fd = mkstemp(temp_full);
-      #endif
-      if (fd == -1) return NULL;
-      f = fdopen(fd, mode);
-      if (f == NULL) {
-         unlink(temp_full);
-         close(fd);
-         return NULL;
-      }
-   }
-   #endif
+   f = stb__open_temp_file(temp_full, name_full, mode);
    if (f != NULL) {
       stb__file_data *d = (stb__file_data *) malloc(sizeof(*d));
       if (!d) { assert(0);  /* NOTREACHED */fclose(f); return NULL; }
@@ -5534,20 +5544,62 @@ int     stb_fclose(FILE *f, int keep)
       }
    }
 
-   if (keep != stb_keep_no) {
-      if (stb_fexists(d->name) && remove(d->name)) {
-         // failed to delete old, so don't keep new
-         keep = stb_keep_no;
+   if (keep == stb_keep_no) {
+      remove(d->temp_name);
+   } else {
+      if (!stb_fexists(d->name)) {
+         // old file doesn't exist, so just move the new file over it
+         stb_rename(d->temp_name, d->name);
       } else {
-         if (!stb_rename(d->temp_name, d->name))
-            ok = STB_TRUE;
-         else
-            keep=stb_keep_no;
+         // don't delete the old file yet in case there are troubles! First rename it!
+         char preserved_old_file[4096];
+
+         // generate a temp filename in the same directory (also creates it, which we don't need)
+         FILE *dummy = stb__open_temp_file(preserved_old_file, d->name, "wb");
+         if (dummy != NULL) {
+            // we don't actually want the open file
+            fclose(dummy);
+
+            // discard what we just created
+            remove(preserved_old_file);  // if this fails, there's nothing we can do, and following logic handles it as best as possible anyway
+
+            // move the existing file to the preserved name
+            if (0 != stb_rename(d->name, preserved_old_file)) {  // 0 on success
+               // failed, state is:
+               //    filename  -> old file
+               //    tempname  -> new file
+               // keep tempname around so we don't lose data
+            } else {
+               //  state is:
+               //    preserved -> old file
+               //    tempname  -> new file
+               // move the new file to the old name
+               if (0 == stb_rename(d->temp_name, d->name)) {
+                  //  state is:
+                  //    preserved -> old file
+                  //    filename  -> new file
+                  ok = STB_TRUE;
+
+                  // 'filename -> new file' has always been the goal, so clean up
+                  remove(preserved_old_file); // nothing to be done if it fails
+               } else {
+                  // couldn't rename, so try renaming preserved file back
+
+                  //  state is:
+                  //    preserved -> old file
+                  //    tempname  -> new file
+                  stb_rename(preserved_old_file, d->name);
+                  // if the rename failed, there's nothing more we can do
+               }
+            }
+         } else {
+            // we couldn't get a temp filename. do this the naive way; the worst case failure here
+            // leaves the filename pointing to nothing and the new file as a tempfile
+            remove(d->name);
+            stb_rename(d->temp_name, d->name);
+         }
       }
    }
-
-   if (keep == stb_keep_no)
-      remove(d->temp_name);
 
    free(d->temp_name);
    free(d->name);
