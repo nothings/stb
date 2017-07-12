@@ -30,15 +30,18 @@ int main(int argc, char  **argv)
       if (*s1 == 'v') ++s1;
       s3 = tokens[0];
       stb_trimwhite(s3);
+      fprintf(f, "**[");
       if (strlen(s3) < 21) {
-         fprintf(f, "**%s** | %s", tokens[0], s1);
+         fprintf(f, "%s", tokens[0]);
       } else {
          char buffer[256];
          strncpy(buffer, s3, 18);
          buffer[18] = 0;   
          strcat(buffer, "...");
-         fprintf(f, "**%s** | %s", buffer, s1);
+         fprintf(f, "%s", buffer);
       }
+      fprintf(f, "](%s)**", tokens[0]);
+      fprintf(f, " | %s", s1);
       s1 = stb_trimwhite(tokens[1]);           // stb_trimwhite -- advance pointer to after whitespace & delete trailing whitespace
       s2 = stb_dupreplace(s1, " ", "&nbsp;");  // stb_dupreplace -- search & replace string and malloc result
       fprintf(f, " | %s", s2);

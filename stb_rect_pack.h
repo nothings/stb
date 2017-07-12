@@ -1,4 +1,4 @@
-// stb_rect_pack.h - v0.06 - public domain - rectangle packing
+// stb_rect_pack.h - v0.11 - public domain - rectangle packing
 // Sean Barrett 2014
 //
 // Useful for e.g. packing rectangular textures into an atlas.
@@ -27,15 +27,26 @@
 //    Sean Barrett
 //  Minor features
 //    Martins Mozeiko
+//    github:IntellectualKitty
+//    
 //  Bugfixes / warning fixes
-//    [your name could be here]
+//    Jeremy Jaussaud
 //
 // Version history:
 //
+//     0.11  (2017-03-03)  return packing success/fail result
+//     0.10  (2016-10-25)  remove cast-away-const to avoid warnings
+//     0.09  (2016-08-27)  fix compiler warnings
+//     0.08  (2015-09-13)  really fix bug with empty rects (w=0 or h=0)
+//     0.07  (2015-09-13)  fix bug with empty rects (w=0 or h=0)
 //     0.06  (2015-04-15)  added STBRP_SORT to allow replacing qsort
 //     0.05:  added STBRP_ASSERT to allow replacing assert
 //     0.04:  fixed minor bug in STBRP_LARGE_RECTS support
 //     0.01:  initial release
+//
+// LICENSE
+//
+//   See end of file for license information.
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -67,7 +78,7 @@ typedef int            stbrp_coord;
 typedef unsigned short stbrp_coord;
 #endif
 
-STBRP_DEF void stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int num_rects);
+STBRP_DEF int stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int num_rects);
 // Assign packed locations to rectangles. The rectangles are of type
 // 'stbrp_rect' defined below, stored in the array 'rects', and there
 // are 'num_rects' many of them.
@@ -88,6 +99,9 @@ STBRP_DEF void stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int 
 // arrays will probably produce worse packing results than calling it
 // a single time with the full rectangle array, but the option is
 // available.
+//
+// The function returns 1 if all of the rectangles were successfully
+// packed and 0 otherwise.
 
 struct stbrp_rect
 {
@@ -140,7 +154,7 @@ enum
 {
    STBRP_HEURISTIC_Skyline_default=0,
    STBRP_HEURISTIC_Skyline_BL_sortHeight = STBRP_HEURISTIC_Skyline_default,
-   STBRP_HEURISTIC_Skyline_BF_sortHeight,
+   STBRP_HEURISTIC_Skyline_BF_sortHeight
 };
 
 
@@ -190,9 +204,15 @@ struct stbrp_context
 #define STBRP_ASSERT assert
 #endif
 
+#ifdef _MSC_VER
+#define STBRP__NOTUSED(v)  (void)(v)
+#else
+#define STBRP__NOTUSED(v)  (void)sizeof(v)
+#endif
+
 enum
 {
-   STBRP__INIT_skyline = 1,
+   STBRP__INIT_skyline = 1
 };
 
 STBRP_DEF void stbrp_setup_heuristic(stbrp_context *context, int heuristic)
@@ -265,6 +285,9 @@ static int stbrp__skyline_find_min_y(stbrp_context *c, stbrp_node *first, int x0
    stbrp_node *node = first;
    int x1 = x0 + width;
    int min_y, visited_width, waste_area;
+
+   STBRP__NOTUSED(c);
+
    STBRP_ASSERT(first->x <= x0);
 
    #if 0
@@ -492,8 +515,8 @@ static stbrp__findresult stbrp__skyline_pack_rectangle(stbrp_context *context, i
 
 static int rect_height_compare(const void *a, const void *b)
 {
-   stbrp_rect *p = (stbrp_rect *) a;
-   stbrp_rect *q = (stbrp_rect *) b;
+   const stbrp_rect *p = (const stbrp_rect *) a;
+   const stbrp_rect *q = (const stbrp_rect *) b;
    if (p->h > q->h)
       return -1;
    if (p->h < q->h)
@@ -503,8 +526,8 @@ static int rect_height_compare(const void *a, const void *b)
 
 static int rect_width_compare(const void *a, const void *b)
 {
-   stbrp_rect *p = (stbrp_rect *) a;
-   stbrp_rect *q = (stbrp_rect *) b;
+   const stbrp_rect *p = (const stbrp_rect *) a;
+   const stbrp_rect *q = (const stbrp_rect *) b;
    if (p->w > q->w)
       return -1;
    if (p->w < q->w)
@@ -514,8 +537,8 @@ static int rect_width_compare(const void *a, const void *b)
 
 static int rect_original_order(const void *a, const void *b)
 {
-   stbrp_rect *p = (stbrp_rect *) a;
-   stbrp_rect *q = (stbrp_rect *) b;
+   const stbrp_rect *p = (const stbrp_rect *) a;
+   const stbrp_rect *q = (const stbrp_rect *) b;
    return (p->was_packed < q->was_packed) ? -1 : (p->was_packed > q->was_packed);
 }
 
@@ -525,9 +548,9 @@ static int rect_original_order(const void *a, const void *b)
 #define STBRP__MAXVAL  0xffff
 #endif
 
-STBRP_DEF void stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)
+STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)
 {
-   int i;
+   int i, all_rects_packed = 1;
 
    // we use the 'was_packed' field internally to allow sorting/unsorting
    for (i=0; i < num_rects; ++i) {
@@ -541,20 +564,72 @@ STBRP_DEF void stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int n
    STBRP_SORT(rects, num_rects, sizeof(rects[0]), rect_height_compare);
 
    for (i=0; i < num_rects; ++i) {
-      stbrp__findresult fr = stbrp__skyline_pack_rectangle(context, rects[i].w, rects[i].h);
-      if (fr.prev_link) {
-         rects[i].x = (stbrp_coord) fr.x;
-         rects[i].y = (stbrp_coord) fr.y;
+      if (rects[i].w == 0 || rects[i].h == 0) {
+         rects[i].x = rects[i].y = 0;  // empty rect needs no space
       } else {
-         rects[i].x = rects[i].y = STBRP__MAXVAL;
+         stbrp__findresult fr = stbrp__skyline_pack_rectangle(context, rects[i].w, rects[i].h);
+         if (fr.prev_link) {
+            rects[i].x = (stbrp_coord) fr.x;
+            rects[i].y = (stbrp_coord) fr.y;
+         } else {
+            rects[i].x = rects[i].y = STBRP__MAXVAL;
+         }
       }
    }
 
    // unsort
    STBRP_SORT(rects, num_rects, sizeof(rects[0]), rect_original_order);
 
-   // set was_packed flags
-   for (i=0; i < num_rects; ++i)
+   // set was_packed flags and all_rects_packed status
+   for (i=0; i < num_rects; ++i) {
       rects[i].was_packed = !(rects[i].x == STBRP__MAXVAL && rects[i].y == STBRP__MAXVAL);
+      if (!rects[i].was_packed)
+         all_rects_packed = 0;
+   }
+
+   // return the all_rects_packed status
+   return all_rects_packed;
 }
 #endif
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
+software, either in source code form or as a compiled binary, for any purpose, 
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this 
+software dedicate any and all copyright interest in the software to the public 
+domain. We make this dedication for the benefit of the public at large and to 
+the detriment of our heirs and successors. We intend this dedication to be an 
+overt act of relinquishment in perpetuity of all present and future rights to 
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/

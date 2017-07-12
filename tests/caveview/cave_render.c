@@ -699,7 +699,7 @@ static int test_plane(plane *p, float x0, float y0, float z0, float x1, float y1
 static int is_box_in_frustum(float *bmin, float *bmax)
 {
    int i;
-   for (i=0; i < 5; ++i)
+   for (i=0; i < 6; ++i)
       if (!test_plane(&frustum[i], bmin[0], bmin[1], bmin[2], bmax[0], bmax[1], bmax[2]))
          return 0;
    return 1;

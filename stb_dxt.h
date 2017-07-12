@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.04 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.06 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -9,6 +9,8 @@
 //     and "high quality" using mode.
 //
 // version history:
+//   v1.06  - (stb) fix to known-broken 1.05
+//   v1.05  - (stb) support bc5/3dc (Arvids Kokins), use extern "C" in C++ (Pavel Krajcevski)
 //   v1.04  - (ryg) default to no rounding bias for lerped colors (as per S3TC/DX10 spec);
 //            single color match fix (allow for inexact color interpolation);
 //            optimal DXT5 index finder; "high quality" mode that runs multiple refinement steps.
@@ -16,6 +18,10 @@
 //   v1.02  - (stb) fix alpha encoding bug
 //   v1.01  - (stb) fix bug converting to RGB that messed up quality, thanks ryg & cbloom
 //   v1.00  - (stb) first release
+//
+// LICENSE
+//
+//   See end of file for license information.
 
 #ifndef STB_INCLUDE_STB_DXT_H
 #define STB_INCLUDE_STB_DXT_H
@@ -25,7 +31,17 @@
 #define STB_DXT_DITHER    1   // use dithering. dubious win. never use for normal maps and the like!
 #define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
 
-void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode);
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
+void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel);
+
+#ifdef __cplusplus
+}
+#endif
+
 #define STB_COMPRESS_DXT_BLOCK
 
 #ifdef STB_DXT_IMPLEMENTATION
@@ -532,18 +548,18 @@ static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, i
 }
 
 // Alpha block compression (this is easy for a change)
-static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src,int mode)
+static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int stride)
 {
    int i,dist,bias,dist4,dist2,bits,mask;
 
    // find min/max color
    int mn,mx;
-   mn = mx = src[3];
+   mn = mx = src[0];
 
    for (i=1;i<16;i++)
    {
-      if (src[i*4+3] < mn) mn = src[i*4+3];
-      else if (src[i*4+3] > mx) mx = src[i*4+3];
+      if (src[i*stride] < mn) mn = src[i*stride];
+      else if (src[i*stride] > mx) mx = src[i*stride];
    }
 
    // encode them
@@ -562,7 +578,7 @@ static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src,int m
    bits = 0,mask=0;
    
    for (i=0;i<16;i++) {
-      int a = src[i*4+3]*7 + bias;
+      int a = src[i*stride]*7 + bias;
       int ind,t;
 
       // select index. this is a "linear scale" lerp factor between 0 (val=min) and 7 (val=max).
@@ -613,12 +629,59 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
    }
 
    if (alpha) {
-      stb__CompressAlphaBlock(dest,(unsigned char*) src,mode);
+      stb__CompressAlphaBlock(dest,(unsigned char*) src+3, 4);
       dest += 8;
    }
 
    stb__CompressColorBlock(dest,(unsigned char*) src,mode);
 }
-#endif // STB_DXT_IMPLEMENTATION
 
+void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)
+{
+   stb__CompressAlphaBlock(dest,(unsigned char*) src,2);
+   stb__CompressAlphaBlock(dest + 8,(unsigned char*) src+1,2);
+}
+#endif // STB_DXT_IMPLEMENTATION
 #endif // STB_INCLUDE_STB_DXT_H
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
+software, either in source code form or as a compiled binary, for any purpose, 
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this 
+software dedicate any and all copyright interest in the software to the public 
+domain. We make this dedication for the benefit of the public at large and to 
+the detriment of our heirs and successors. We intend this dedication to be an 
+overt act of relinquishment in perpetuity of all present and future rights to 
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/

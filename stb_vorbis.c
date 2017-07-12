@@ -1,35 +1,44 @@
-// Ogg Vorbis audio decoder - v1.05 - public domain
+// Ogg Vorbis audio decoder - v1.10 - public domain
 // http://nothings.org/stb_vorbis/
 //
-// Written by Sean Barrett in 2007, last updated in 2014
-// Sponsored by RAD Game Tools.
+// Original version written by Sean Barrett in 2007.
 //
-// Placed in the public domain April 2007 by the author: no copyright
-// is claimed, and you may use it for any purpose you like.
+// Originally sponsored by RAD Game Tools. Seeking sponsored
+// by Phillip Bennefall, Marc Andersen, Aaron Baker, Elias Software,
+// Aras Pranckevicius, and Sean Barrett.
 //
-// No warranty for any purpose is expressed or implied by the author (nor
-// by RAD Game Tools). Report bugs and send enhancements to the author.
+// LICENSE
+//
+//   See end of file for license information.
 //
 // Limitations:
 //
-//   - seeking not supported except manually via PUSHDATA api
 //   - floor 0 not supported (used in old ogg vorbis files pre-2004)
 //   - lossless sample-truncation at beginning ignored
 //   - cannot concatenate multiple vorbis streams
 //   - sample positions are 32-bit, limiting seekable 192Khz
 //       files to around 6 hours (Ogg supports 64-bit)
 //
+// Feature contributors:
+//    Dougall Johnson (sample-exact seeking)
+//
 // Bugfix/warning contributors:
 //    Terje Mathisen     Niklas Frykholm     Andy Hill
 //    Casey Muratori     John Bolton         Gargaj
 //    Laurent Gomila     Marc LeBlanc        Ronny Chevalier
-//    Bernhard Wodo      Evan Balster			"alxprd"@github
+//    Bernhard Wodo      Evan Balster        alxprd@github
 //    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
-// (If you reported a bug but do not appear in this list, it is because
-// someone else reported the bug before you. There were too many of you to
-// list them all because I was lax about updating for a long time, sorry.)
+//    Phillip Bennefall  Rohit               Thiago Goulart
+//    manxorist@github   saga musix
 //
 // Partial history:
+//    1.10    - 2017/03/03 - more robust seeking; fix negative ilog(); clear error in open_memory
+//    1.09    - 2016/04/04 - back out 'truncation of last frame' fix from previous version
+//    1.08    - 2016/04/02 - warnings; setup memory leaks; truncation of last frame
+//    1.07    - 2015/01/16 - fixes for crashes on invalid files; warning fixes; const
+//    1.06    - 2015/08/31 - full, correct support for seeking API (Dougall Johnson)
+//                           some crash fixes when out of memory or with corrupt files
+//                           fix some inappropriately signed shifts
 //    1.05    - 2015/04/19 - don't define __forceinline if it's redundant
 //    1.04    - 2014/08/27 - fix missing const-correct case in API
 //    1.03    - 2014/08/07 - warning fixes
@@ -37,8 +46,6 @@
 //    1.01    - 2014/06/18 - fix stb_vorbis_get_samples_float (interleaved was correct)
 //    1.0     - 2014/05/26 - fix memory leaks; fix warnings; fix bugs in >2-channel;
 //                           (API change) report sample rate for decode-full-file funcs
-//    0.99996 -            - bracket #include <malloc.h> for macintosh compilation
-//    0.99995 -            - avoid alias-optimization issue in float-to-int conversion
 //
 // See end of file for full version history.
 
@@ -147,10 +154,10 @@ extern unsigned int stb_vorbis_get_file_offset(stb_vorbis *f);
 // specification does not bound the size of an individual frame.
 
 extern stb_vorbis *stb_vorbis_open_pushdata(
-         unsigned char *datablock, int datablock_length_in_bytes,
+         const unsigned char * datablock, int datablock_length_in_bytes,
          int *datablock_memory_consumed_in_bytes,
          int *error,
-         stb_vorbis_alloc *alloc_buffer);
+         const stb_vorbis_alloc *alloc_buffer);
 // create a vorbis decoder by passing in the initial data block containing
 //    the ogg&vorbis headers (you don't need to do parse them, just provide
 //    the first N bytes of the file--you're told if it's not enough, see below)
@@ -161,7 +168,8 @@ extern stb_vorbis *stb_vorbis_open_pushdata(
 //       incomplete and you need to pass in a larger block from the start of the file
 
 extern int stb_vorbis_decode_frame_pushdata(
-         stb_vorbis *f, unsigned char *datablock, int datablock_length_in_bytes,
+         stb_vorbis *f,
+         const unsigned char *datablock, int datablock_length_in_bytes,
          int *channels,             // place to write number of float * buffers
          float ***output,           // place to write float ** array of float * buffers
          int *samples               // place to write number of output samples
@@ -225,18 +233,18 @@ extern int stb_vorbis_decode_memory(const unsigned char *mem, int len, int *chan
 // When you're done with it, just free() the pointer returned in *output.
 
 extern stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len,
-                                  int *error, stb_vorbis_alloc *alloc_buffer);
+                                  int *error, const stb_vorbis_alloc *alloc_buffer);
 // create an ogg vorbis decoder from an ogg vorbis stream in memory (note
 // this must be the entire stream!). on failure, returns NULL and sets *error
 
 #ifndef STB_VORBIS_NO_STDIO
 extern stb_vorbis * stb_vorbis_open_filename(const char *filename,
-                                  int *error, stb_vorbis_alloc *alloc_buffer);
+                                  int *error, const stb_vorbis_alloc *alloc_buffer);
 // create an ogg vorbis decoder from a filename via fopen(). on failure,
 // returns NULL and sets *error (possibly to VORBIS_file_open_failure).
 
 extern stb_vorbis * stb_vorbis_open_file(FILE *f, int close_handle_on_close,
-                                  int *error, stb_vorbis_alloc *alloc_buffer);
+                                  int *error, const stb_vorbis_alloc *alloc_buffer);
 // create an ogg vorbis decoder from an open FILE *, looking for a stream at
 // the _current_ seek point (ftell). on failure, returns NULL and sets *error.
 // note that stb_vorbis must "own" this stream; if you seek it in between
@@ -246,7 +254,7 @@ extern stb_vorbis * stb_vorbis_open_file(FILE *f, int close_handle_on_close,
 // function, stb_vorbis_open_file_section(), to limit it.
 
 extern stb_vorbis * stb_vorbis_open_file_section(FILE *f, int close_handle_on_close,
-                int *error, stb_vorbis_alloc *alloc_buffer, unsigned int len);
+                int *error, const stb_vorbis_alloc *alloc_buffer, unsigned int len);
 // create an ogg vorbis decoder from an open FILE *, looking for a stream at
 // the _current_ seek point (ftell); the stream will be of length 'len' bytes.
 // on failure, returns NULL and sets *error. note that stb_vorbis must "own"
@@ -256,7 +264,6 @@ extern stb_vorbis * stb_vorbis_open_file_section(FILE *f, int close_handle_on_cl
 
 extern int stb_vorbis_seek_frame(stb_vorbis *f, unsigned int sample_number);
 extern int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
-// NOT WORKING YET
 // these functions seek in the Vorbis file to (approximately) 'sample_number'.
 // after calling seek_frame(), the next call to get_frame_*() will include
 // the specified sample. after calling stb_vorbis_seek(), the next call to
@@ -264,9 +271,8 @@ extern int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
 // do not need to seek to EXACTLY the target sample when using get_samples_*,
 // you can also use seek_frame().
 
-extern void stb_vorbis_seek_start(stb_vorbis *f);
-// this function is equivalent to stb_vorbis_seek(f,0), but it
-// actually works
+extern int stb_vorbis_seek_start(stb_vorbis *f);
+// this function is equivalent to stb_vorbis_seek(f,0)
 
 extern unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f);
 extern float        stb_vorbis_stream_length_in_seconds(stb_vorbis *f);
@@ -286,15 +292,17 @@ extern int stb_vorbis_get_frame_float(stb_vorbis *f, int *channels, float ***out
 extern int stb_vorbis_get_frame_short_interleaved(stb_vorbis *f, int num_c, short *buffer, int num_shorts);
 extern int stb_vorbis_get_frame_short            (stb_vorbis *f, int num_c, short **buffer, int num_samples);
 #endif
-// decode the next frame and return the number of samples per channel. the
-// data is coerced to the number of channels you request according to the
+// decode the next frame and return the number of *samples* per channel.
+// Note that for interleaved data, you pass in the number of shorts (the
+// size of your array), but the return value is the number of samples per
+// channel, not the total number of samples.
+//
+// The data is coerced to the number of channels you request according to the
 // channel coercion rules (see below). You must pass in the size of your
 // buffer(s) so that stb_vorbis will not overwrite the end of the buffer.
 // The maximum buffer size needed can be gotten from get_info(); however,
 // the Vorbis I specification implies an absolute maximum of 4096 samples
-// per channel. Note that for interleaved data, you pass in the number of
-// shorts (the size of your array), but the return value is the number of
-// samples per channel, not the total number of samples.
+// per channel.
 
 // Channel coercion rules:
 //    Let M be the number of channels requested, and N the number of channels present,
@@ -361,7 +369,7 @@ enum STBVorbisError
    VORBIS_invalid_first_page,
    VORBIS_bad_packet_type,
    VORBIS_cant_find_last_page,
-   VORBIS_seek_failed,
+   VORBIS_seek_failed
 };
 
 
@@ -482,14 +490,8 @@ enum STBVorbisError
 //     trade off storage for speed.
 //#define STB_VORBIS_DIVIDES_IN_CODEBOOK
 
-// STB_VORBIS_CODEBOOK_SHORTS
-//     The vorbis file format encodes VQ codebook floats as ax+b where a and
-//     b are floating point per-codebook constants, and x is a 16-bit int.
-//     Normally, stb_vorbis decodes them to floats rather than leaving them
-//     as 16-bit ints and computing ax+b while decoding. This is a speed/space
-//     tradeoff; you can save space by defining this flag.
-#ifndef STB_VORBIS_CODEBOOK_SHORTS
-#define STB_VORBIS_CODEBOOK_FLOATS
+#ifdef STB_VORBIS_CODEBOOK_SHORTS
+#error "STB_VORBIS_CODEBOOK_SHORTS is no longer supported as it produced incorrect results for some input formats"
 #endif
 
 // STB_VORBIS_DIVIDE_TABLE
@@ -543,18 +545,38 @@ enum STBVorbisError
 #endif
 
 #ifndef STB_VORBIS_NO_CRT
-#include <stdlib.h>
-#include <string.h>
-#include <assert.h>
-#include <math.h>
-#if !(defined(__APPLE__) || defined(MACOSX) || defined(macintosh) || defined(Macintosh))
-#include <malloc.h>
-#endif
-#else
-#define NULL 0
-#endif
+   #include <stdlib.h>
+   #include <string.h>
+   #include <assert.h>
+   #include <math.h>
 
-#if !defined(_MSC_VER) && !(defined(__MINGW32__) && defined(__forceinline))
+   // find definition of alloca if it's not in stdlib.h:
+   #ifdef _MSC_VER
+      #include <malloc.h>
+   #endif
+   #if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__)
+      #include <alloca.h>
+   #endif
+#else // STB_VORBIS_NO_CRT
+   #define NULL 0
+   #define malloc(s)   0
+   #define free(s)     ((void) 0)
+   #define realloc(s)  0
+#endif // STB_VORBIS_NO_CRT
+
+#include <limits.h>
+
+#ifdef __MINGW32__
+   // eff you mingw:
+   //     "fixed":
+   //         http://sourceforge.net/p/mingw-w64/mailman/message/32882927/
+   //     "no that broke the build, reverted, who cares about C":
+   //         http://sourceforge.net/p/mingw-w64/mailman/message/32890381/
+   #ifdef __forceinline
+   #undef __forceinline
+   #endif
+   #define __forceinline
+#elif !defined(_MSC_VER)
    #if __GNUC__
       #define __forceinline inline
    #else
@@ -570,6 +592,13 @@ enum STBVorbisError
 #error "Value of STB_VORBIS_FAST_HUFFMAN_LENGTH outside of allowed range"
 #endif
 
+
+#if 0
+#include <crtdbg.h>
+#define CHECK(f)   _CrtIsValidHeapPointer(f->channel_buffers[1])
+#else
+#define CHECK(f)   ((void) 0)
+#endif
 
 #define MAX_BLOCKSIZE_LOG  13   // from specification
 #define MAX_BLOCKSIZE      (1 << MAX_BLOCKSIZE_LOG)
@@ -587,11 +616,7 @@ typedef   signed int    int32;
 #define FALSE 0
 #endif
 
-#ifdef STB_VORBIS_CODEBOOK_FLOATS
 typedef float codetype;
-#else
-typedef uint16 codetype;
-#endif
 
 // @NOTE
 //
@@ -711,8 +736,6 @@ typedef struct
 typedef struct
 {
    uint32 page_start, page_end;
-   uint32 after_previous_page_start;
-   uint32 first_decoded_sample;
    uint32 last_decoded_sample;
 } ProbedPage;
 
@@ -827,13 +850,6 @@ struct stb_vorbis
    int channel_buffer_end;
 };
 
-extern int my_prof(int slot);
-//#define stb_prof my_prof
-
-#ifndef stb_prof
-#define stb_prof(x)  ((void) 0)
-#endif
-
 #if defined(STB_VORBIS_NO_PUSHDATA_API)
    #define IS_PUSH_MODE(f)   FALSE
 #elif defined(STB_VORBIS_NO_PULLDATA_API)
@@ -900,7 +916,7 @@ static void *setup_malloc(vorb *f, int sz)
 
 static void setup_free(vorb *f, void *p)
 {
-   if (f->alloc.alloc_buffer) return; // do nothing; setup mem is not a stack
+   if (f->alloc.alloc_buffer) return; // do nothing; setup mem is a stack
    free(p);
 }
 
@@ -932,7 +948,7 @@ static void crc32_init(void)
    int i,j;
    uint32 s;
    for(i=0; i < 256; i++) {
-      for (s=i<<24, j=0; j < 8; ++j)
+      for (s=(uint32) i << 24, j=0; j < 8; ++j)
          s = (s << 1) ^ (s >= (1U<<31) ? CRC32_POLY : 0);
       crc_table[i] = s;
    }
@@ -966,17 +982,18 @@ static int ilog(int32 n)
 {
    static signed char log2_4[16] = { 0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4 };
 
+   if (n < 0) return 0; // signed n returns 0
+
    // 2 compares if n < 16, 3 compares otherwise (4 if signed or n > 1<<29)
    if (n < (1 << 14))
-        if (n < (1 <<  4))        return     0 + log2_4[n      ];
-        else if (n < (1 <<  9))      return  5 + log2_4[n >>  5];
+        if (n < (1 <<  4))            return  0 + log2_4[n      ];
+        else if (n < (1 <<  9))       return  5 + log2_4[n >>  5];
              else                     return 10 + log2_4[n >> 10];
    else if (n < (1 << 24))
-             if (n < (1 << 19))      return 15 + log2_4[n >> 15];
+             if (n < (1 << 19))       return 15 + log2_4[n >> 15];
              else                     return 20 + log2_4[n >> 20];
-        else if (n < (1 << 29))      return 25 + log2_4[n >> 25];
-             else if (n < (1 << 31)) return 30 + log2_4[n >> 30];
-                  else                return 0; // signed n returns 0
+        else if (n < (1 << 29))       return 25 + log2_4[n >> 25];
+             else                     return 30 + log2_4[n >> 30];
 }
 
 #ifndef M_PI
@@ -1033,7 +1050,7 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
    add_entry(c, 0, k, m++, len[k], values);
    // add all available leaves
    for (i=1; i <= len[k]; ++i)
-      available[i] = 1 << (32-i);
+      available[i] = 1U << (32-i);
    // note that the above code treats the first case specially,
    // but it's really the same as the following code, so they
    // could probably be combined (except the initial code is 0,
@@ -1049,12 +1066,14 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
       // trivial to prove, but it seems true and the assert never
       // fires, so!
       while (z > 0 && !available[z]) --z;
-      if (z == 0) { assert(0); return FALSE; }
+      if (z == 0) { return FALSE; }
       res = available[z];
+      assert(z >= 0 && z < 32);
       available[z] = 0;
       add_entry(c, bit_reverse(res), i, m++, len[i], values);
       // propogate availability up the tree
       if (z != len[i]) {
+         assert(len[i] >= 0 && len[i] < 32);
          for (y=len[i]; y > z; --y) {
             assert(available[y] == 0);
             available[y] = res + (1 << (32-y));
@@ -1247,13 +1266,13 @@ static void neighbors(uint16 *x, int n, int *plow, int *phigh)
 // this has been repurposed so y is now the original index instead of y
 typedef struct
 {
-   uint16 x,y;
-} Point;
+   uint16 x,id;
+} stbv__floor_ordering;
 
 static int STBV_CDECL point_compare(const void *p, const void *q)
 {
-   Point *a = (Point *) p;
-   Point *b = (Point *) q;
+   stbv__floor_ordering *a = (stbv__floor_ordering *) p;
+   stbv__floor_ordering *b = (stbv__floor_ordering *) q;
    return a->x < b->x ? -1 : a->x > b->x;
 }
 
@@ -1289,7 +1308,7 @@ static uint32 get32(vorb *f)
    x = get8(f);
    x += get8(f) << 8;
    x += get8(f) << 16;
-   x += get8(f) << 24;
+   x += (uint32) get8(f) << 24;
    return x;
 }
 
@@ -1420,8 +1439,6 @@ static int start_page_no_capturepattern(vorb *f)
       len += 27 + f->segment_count;
       p.page_start = f->first_audio_page_offset;
       p.page_end = p.page_start + len;
-      p.after_previous_page_start = p.page_start;
-      p.first_decoded_sample = 0;
       p.last_decoded_sample = loc0;
       f->p_first = p;
    }
@@ -1564,7 +1581,7 @@ static __forceinline void prep_huffman(vorb *f)
          if (f->last_seg && !f->bytes_in_seg) return;
          z = get8_packet_raw(f);
          if (z == EOP) return;
-         f->acc += z << f->valid_bits;
+         f->acc += (unsigned) z << f->valid_bits;
          f->valid_bits += 8;
       } while (f->valid_bits <= 24);
    }
@@ -1574,7 +1591,7 @@ enum
 {
    VORBIS_packet_id = 1,
    VORBIS_packet_comment = 3,
-   VORBIS_packet_setup = 5,
+   VORBIS_packet_setup = 5
 };
 
 static int codebook_decode_scalar_raw(vorb *f, Codebook *c)
@@ -1582,7 +1599,9 @@ static int codebook_decode_scalar_raw(vorb *f, Codebook *c)
    int i;
    prep_huffman(f);
 
-   assert(c->sorted_codewords || c->codewords);
+   if (c->codewords == NULL && c->sorted_codewords == NULL)
+      return -1;
+
    // cases to use binary search: sorted_codewords && !c->codewords
    //                             sorted_codewords && c->entries > 8
    if (c->entries > 8 ? c->sorted_codewords!=NULL : !c->codewords) {
@@ -1690,15 +1709,9 @@ static int codebook_decode_scalar(vorb *f, Codebook *c)
 
 // CODEBOOK_ELEMENT_FAST is an optimization for the CODEBOOK_FLOATS case
 // where we avoid one addition
-#ifndef STB_VORBIS_CODEBOOK_FLOATS
-   #define CODEBOOK_ELEMENT(c,off)          (c->multiplicands[off] * c->delta_value + c->minimum_value)
-   #define CODEBOOK_ELEMENT_FAST(c,off)     (c->multiplicands[off] * c->delta_value)
-   #define CODEBOOK_ELEMENT_BASE(c)         (c->minimum_value)
-#else
-   #define CODEBOOK_ELEMENT(c,off)          (c->multiplicands[off])
-   #define CODEBOOK_ELEMENT_FAST(c,off)     (c->multiplicands[off])
-   #define CODEBOOK_ELEMENT_BASE(c)         (0)
-#endif
+#define CODEBOOK_ELEMENT(c,off)          (c->multiplicands[off])
+#define CODEBOOK_ELEMENT_FAST(c,off)     (c->multiplicands[off])
+#define CODEBOOK_ELEMENT_BASE(c)         (0)
 
 static int codebook_decode_start(vorb *f, Codebook *c)
 {
@@ -1860,86 +1873,6 @@ static int codebook_decode_deinterleave_repeat(vorb *f, Codebook *c, float **out
    return TRUE;
 }
 
-#ifndef STB_VORBIS_DIVIDES_IN_CODEBOOK
-static int codebook_decode_deinterleave_repeat_2(vorb *f, Codebook *c, float **outputs, int *c_inter_p, int *p_inter_p, int len, int total_decode)
-{
-   int c_inter = *c_inter_p;
-   int p_inter = *p_inter_p;
-   int i,z, effective = c->dimensions;
-
-   // type 0 is only legal in a scalar context
-   if (c->lookup_type == 0)   return error(f, VORBIS_invalid_stream);
-
-   while (total_decode > 0) {
-      float last = CODEBOOK_ELEMENT_BASE(c);
-      DECODE_VQ(z,f,c);
-
-      if (z < 0) {
-         if (!f->bytes_in_seg)
-            if (f->last_seg) return FALSE;
-         return error(f, VORBIS_invalid_stream);
-      }
-
-      // if this will take us off the end of the buffers, stop short!
-      // we check by computing the length of the virtual interleaved
-      // buffer (len*ch), our current offset within it (p_inter*ch)+(c_inter),
-      // and the length we'll be using (effective)
-      if (c_inter + p_inter*2 + effective > len * 2) {
-         effective = len*2 - (p_inter*2 - c_inter);
-      }
-
-      {
-         z *= c->dimensions;
-         stb_prof(11);
-         if (c->sequence_p) {
-            // haven't optimized this case because I don't have any examples
-            for (i=0; i < effective; ++i) {
-               float val = CODEBOOK_ELEMENT_FAST(c,z+i) + last;
-               if (outputs[c_inter])
-                  outputs[c_inter][p_inter] += val;
-               if (++c_inter == 2) { c_inter = 0; ++p_inter; }
-               last = val;
-            }
-         } else {
-            i=0;
-            if (c_inter == 1) {
-               float val = CODEBOOK_ELEMENT_FAST(c,z+i) + last;
-               if (outputs[c_inter])
-                  outputs[c_inter][p_inter] += val;
-               c_inter = 0; ++p_inter;
-               ++i;
-            }
-            {
-               float *z0 = outputs[0];
-               float *z1 = outputs[1];
-               for (; i+1 < effective;) {
-                  float v0 = CODEBOOK_ELEMENT_FAST(c,z+i) + last;
-                  float v1 = CODEBOOK_ELEMENT_FAST(c,z+i+1) + last;
-                  if (z0)
-                     z0[p_inter] += v0;
-                  if (z1)
-                     z1[p_inter] += v1;
-                  ++p_inter;
-                  i += 2;
-               }
-            }
-            if (i < effective) {
-               float val = CODEBOOK_ELEMENT_FAST(c,z+i) + last;
-               if (outputs[c_inter])
-                  outputs[c_inter][p_inter] += val;
-               if (++c_inter == 2) { c_inter = 0; ++p_inter; }
-            }
-         }
-      }
-
-      total_decode -= effective;
-   }
-   *c_inter_p = c_inter;
-   *p_inter_p = p_inter;
-   return TRUE;
-}
-#endif
-
 static int predict_point(int x, int x0, int x1, int y0, int y1)
 {
    int dy = y1 - y0;
@@ -2074,15 +2007,17 @@ static __forceinline void draw_line(float *output, int x0, int y0, int x1, int y
 #endif
    ady -= abs(base) * adx;
    if (x1 > n) x1 = n;
-   LINE_OP(output[x], inverse_db_table[y]);
-   for (++x; x < x1; ++x) {
-      err += ady;
-      if (err >= adx) {
-         err -= adx;
-         y += sy;
-      } else
-         y += base;
+   if (x < x1) {
       LINE_OP(output[x], inverse_db_table[y]);
+      for (++x; x < x1; ++x) {
+         err += ady;
+         if (err >= adx) {
+            err -= adx;
+            y += sy;
+         } else
+            y += base;
+         LINE_OP(output[x], inverse_db_table[y]);
+      }
    }
 }
 
@@ -2121,7 +2056,8 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
    int **classifications = (int **) temp_block_array(f,f->channels, part_read * sizeof(**classifications));
    #endif
 
-   stb_prof(2);
+   CHECK(f);
+
    for (i=0; i < ch; ++i)
       if (!do_not_decode[i])
          memset(residue_buffers[i], 0, sizeof(float) * n);
@@ -2133,11 +2069,9 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
       if (j == ch)
          goto done;
 
-      stb_prof(3);
       for (pass=0; pass < 8; ++pass) {
          int pcount = 0, class_set = 0;
          if (ch == 2) {
-            stb_prof(13);
             while (pcount < part_read) {
                int z = r->begin + pcount*r->part_size;
                int c_inter = (z & 1), p_inter = z>>1;
@@ -2155,7 +2089,6 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                   }
                   #endif
                }
-               stb_prof(5);
                for (i=0; i < classwords && pcount < part_read; ++i, ++pcount) {
                   int z = r->begin + pcount*r->part_size;
                   #ifndef STB_VORBIS_DIVIDES_IN_RESIDUE
@@ -2166,23 +2099,20 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                   int b = r->residue_books[c][pass];
                   if (b >= 0) {
                      Codebook *book = f->codebooks + b;
-                     stb_prof(20);  // accounts for X time
                      #ifdef STB_VORBIS_DIVIDES_IN_CODEBOOK
                      if (!codebook_decode_deinterleave_repeat(f, book, residue_buffers, ch, &c_inter, &p_inter, n, r->part_size))
                         goto done;
                      #else
                      // saves 1%
-                     if (!codebook_decode_deinterleave_repeat_2(f, book, residue_buffers, &c_inter, &p_inter, n, r->part_size))
+                     if (!codebook_decode_deinterleave_repeat(f, book, residue_buffers, ch, &c_inter, &p_inter, n, r->part_size))
                         goto done;
                      #endif
-                     stb_prof(7);
                   } else {
                      z += r->part_size;
                      c_inter = z & 1;
                      p_inter = z >> 1;
                   }
                }
-               stb_prof(8);
                #ifndef STB_VORBIS_DIVIDES_IN_RESIDUE
                ++class_set;
                #endif
@@ -2215,10 +2145,8 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                   int b = r->residue_books[c][pass];
                   if (b >= 0) {
                      Codebook *book = f->codebooks + b;
-                     stb_prof(22);
                      if (!codebook_decode_deinterleave_repeat(f, book, residue_buffers, ch, &c_inter, &p_inter, n, r->part_size))
                         goto done;
-                     stb_prof(3);
                   } else {
                      z += r->part_size;
                      c_inter = 0;
@@ -2257,10 +2185,8 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                   int b = r->residue_books[c][pass];
                   if (b >= 0) {
                      Codebook *book = f->codebooks + b;
-                     stb_prof(22);
                      if (!codebook_decode_deinterleave_repeat(f, book, residue_buffers, ch, &c_inter, &p_inter, n, r->part_size))
                         goto done;
-                     stb_prof(3);
                   } else {
                      z += r->part_size;
                      c_inter = z % ch;
@@ -2275,7 +2201,7 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
       }
       goto done;
    }
-   stb_prof(9);
+   CHECK(f);
 
    for (pass=0; pass < 8; ++pass) {
       int pcount = 0, class_set=0;
@@ -2324,7 +2250,12 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
       }
    }
   done:
-   stb_prof(0);
+   CHECK(f);
+   #ifndef STB_VORBIS_DIVIDES_IN_RESIDUE
+   temp_free(f,part_classdata);
+   #else
+   temp_free(f,classifications);
+   #endif
    temp_alloc_restore(f,temp_alloc_point);
 }
 
@@ -2970,6 +2901,7 @@ static void inverse_mdct(float *buffer, int n, vorb *f, int blocktype)
       }
    }
 
+   temp_free(f,buf2);
    temp_alloc_restore(f,save_point);
 }
 
@@ -3136,14 +3068,18 @@ static int do_floor(vorb *f, Mapping *map, int i, int n, float *target, YTYPE *f
          {
             int hy = finalY[j] * g->floor1_multiplier;
             int hx = g->Xlist[j];
-            draw_line(target, lx,ly, hx,hy, n2);
+            if (lx != hx)
+               draw_line(target, lx,ly, hx,hy, n2);
+            CHECK(f);
             lx = hx, ly = hy;
          }
       }
-      if (lx < n2)
+      if (lx < n2) {
          // optimization of: draw_line(target, lx,ly, n,ly, n2);
          for (j=lx; j < n2; ++j)
             LINE_OP(target[j], inverse_db_table[ly]);
+         CHECK(f);
+      }
    }
    return TRUE;
 }
@@ -3214,6 +3150,7 @@ static int vorbis_decode_initial(vorb *f, int *p_left_start, int *p_left_end, in
       *p_right_start = window_center;
       *p_right_end   = n;
    }
+
    return TRUE;
 }
 
@@ -3232,7 +3169,8 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
 // FLOORS
    n2 = n >> 1;
 
-   stb_prof(1);
+   CHECK(f);
+
    for (i=0; i < f->channels; ++i) {
       int s = map->chan[i].mux, floor;
       zero_channel[i] = FALSE;
@@ -3324,7 +3262,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
          // at this point we've decoded the floor into buffer
       }
    }
-   stb_prof(0);
+   CHECK(f);
    // at this point we've decoded all floors
 
    if (f->alloc.alloc_buffer)
@@ -3337,6 +3275,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
          zero_channel[map->chan[i].magnitude] = zero_channel[map->chan[i].angle] = FALSE;
       }
 
+   CHECK(f);
 // RESIDUE DECODE
    for (i=0; i < map->submaps; ++i) {
       float *residue_buffers[STB_VORBIS_MAX_CHANNELS];
@@ -3361,9 +3300,9 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
 
    if (f->alloc.alloc_buffer)
       assert(f->alloc.alloc_buffer_length_in_bytes == f->temp_offset);
+   CHECK(f);
 
 // INVERSE COUPLING
-   stb_prof(14);
    for (i = map->coupling_steps-1; i >= 0; --i) {
       int n2 = n >> 1;
       float *m = f->channel_buffers[map->chan[i].magnitude];
@@ -3384,10 +3323,10 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
          a[j] = a2;
       }
    }
+   CHECK(f);
 
    // finish decoding the floors
 #ifndef STB_VORBIS_NO_DEFER_FLOOR
-   stb_prof(15);
    for (i=0; i < f->channels; ++i) {
       if (really_zero_channel[i]) {
          memset(f->channel_buffers[i], 0, sizeof(*f->channel_buffers[i]) * n2);
@@ -3407,10 +3346,10 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
 #endif
 
 // INVERSE MDCT
-   stb_prof(16);
+   CHECK(f);
    for (i=0; i < f->channels; ++i)
       inverse_mdct(f->channel_buffers[i], n, f, m->blockflag);
-   stb_prof(0);
+   CHECK(f);
 
    // this shouldn't be necessary, unless we exited on an error
    // and want to flush to get to the next packet
@@ -3428,9 +3367,15 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
       f->current_loc_valid = TRUE;
       f->first_decode = FALSE;
    } else if (f->discard_samples_deferred) {
-      left_start += f->discard_samples_deferred;
-      *p_left = left_start;
-      f->discard_samples_deferred = 0;
+      if (f->discard_samples_deferred >= right_start - left_start) {
+         f->discard_samples_deferred -= (right_start - left_start);
+         left_start = right_start;
+         *p_left = left_start;
+      } else {
+         left_start += f->discard_samples_deferred;
+         *p_left = left_start;
+         f->discard_samples_deferred = 0;
+      }
    } else if (f->previous_length == 0 && f->current_loc_valid) {
       // we're recovering from a seek... that means we're going to discard
       // the samples from this packet even though we know our position from
@@ -3446,7 +3391,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
       if (f->current_loc_valid && (f->page_flag & PAGEFLAG_last_page)) {
          uint32 current_end = f->known_loc_for_packet - (n-right_end);
          // then let's infer the size of the (probably) short final frame
-         if (current_end < f->current_loc + right_end) {
+         if (current_end < f->current_loc + (right_end-left_start)) {
             if (current_end < f->current_loc) {
                // negative truncation, that's impossible!
                *len = 0;
@@ -3454,6 +3399,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
                *len = current_end - f->current_loc;
             }
             *len += left_start;
+            if (*len > right_end) *len = right_end; // this should never happen
             f->current_loc += *len;
             return TRUE;
          }
@@ -3471,6 +3417,8 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
    if (f->alloc.alloc_buffer)
       assert(f->alloc.alloc_buffer_length_in_bytes == f->temp_offset);
    *len = right_end;  // ignore samples after the window goes to 0
+   CHECK(f);
+
    return TRUE;
 }
 
@@ -3533,11 +3481,13 @@ static int vorbis_finish_frame(stb_vorbis *f, int len, int left, int right)
    return right - left;
 }
 
-static void vorbis_pump_first_frame(stb_vorbis *f)
+static int vorbis_pump_first_frame(stb_vorbis *f)
 {
-   int len, right, left;
-   if (vorbis_decode_packet(f, &len, &left, &right))
+   int len, right, left, res;
+   res = vorbis_decode_packet(f, &len, &left, &right);
+   if (res)
       vorbis_finish_frame(f, len, left, right);
+   return res;
 }
 
 #ifndef STB_VORBIS_NO_PUSHDATA_API
@@ -3636,14 +3586,15 @@ static int start_decoder(vorb *f)
    get32(f); // bitrate_nominal
    get32(f); // bitrate_minimum
    x = get8(f);
-   { int log0,log1;
-   log0 = x & 15;
-   log1 = x >> 4;
-   f->blocksize_0 = 1 << log0;
-   f->blocksize_1 = 1 << log1;
-   if (log0 < 6 || log0 > 13)                       return error(f, VORBIS_invalid_setup);
-   if (log1 < 6 || log1 > 13)                       return error(f, VORBIS_invalid_setup);
-   if (log0 > log1)                                 return error(f, VORBIS_invalid_setup);
+   {
+      int log0,log1;
+      log0 = x & 15;
+      log1 = x >> 4;
+      f->blocksize_0 = 1 << log0;
+      f->blocksize_1 = 1 << log1;
+      if (log0 < 6 || log0 > 13)                       return error(f, VORBIS_invalid_setup);
+      if (log1 < 6 || log1 > 13)                       return error(f, VORBIS_invalid_setup);
+      if (log0 > log1)                                 return error(f, VORBIS_invalid_setup);
    }
 
    // framing_flag
@@ -3692,6 +3643,7 @@ static int start_decoder(vorb *f)
       int total=0;
       uint8 *lengths;
       Codebook *c = f->codebooks+i;
+      CHECK(f);
       x = get_bits(f, 8); if (x != 0x42)            return error(f, VORBIS_invalid_setup);
       x = get_bits(f, 8); if (x != 0x43)            return error(f, VORBIS_invalid_setup);
       x = get_bits(f, 8); if (x != 0x56)            return error(f, VORBIS_invalid_setup);
@@ -3702,6 +3654,8 @@ static int start_decoder(vorb *f)
       c->entries = (get_bits(f, 8)<<16) + (y<<8) + x;
       ordered = get_bits(f,1);
       c->sparse = ordered ? 0 : get_bits(f,1);
+
+      if (c->dimensions == 0 && c->entries != 0)    return error(f, VORBIS_invalid_setup);
 
       if (c->sparse)
          lengths = (uint8 *) setup_temp_malloc(f, c->entries);
@@ -3727,6 +3681,8 @@ static int start_decoder(vorb *f)
             if (present) {
                lengths[j] = get_bits(f, 5) + 1;
                ++total;
+               if (lengths[j] == 32)
+                  return error(f, VORBIS_invalid_setup);
             } else {
                lengths[j] = NO_CODE;
             }
@@ -3739,6 +3695,7 @@ static int start_decoder(vorb *f)
             f->setup_temp_memory_required = c->entries;
 
          c->codeword_lengths = (uint8 *) setup_malloc(f, c->entries);
+         if (c->codeword_lengths == NULL) return error(f, VORBIS_outofmem);
          memcpy(c->codeword_lengths, lengths, c->entries);
          setup_temp_free(f, lengths, c->entries); // note this is only safe if there have been no intervening temp mallocs!
          lengths = c->codeword_lengths;
@@ -3760,6 +3717,7 @@ static int start_decoder(vorb *f)
       c->sorted_entries = sorted_count;
       values = NULL;
 
+      CHECK(f);
       if (!c->sparse) {
          c->codewords = (uint32 *) setup_malloc(f, sizeof(c->codewords[0]) * c->entries);
          if (!c->codewords)                  return error(f, VORBIS_outofmem);
@@ -3786,10 +3744,13 @@ static int start_decoder(vorb *f)
       if (c->sorted_entries) {
          // allocate an extra slot for sentinels
          c->sorted_codewords = (uint32 *) setup_malloc(f, sizeof(*c->sorted_codewords) * (c->sorted_entries+1));
+         if (c->sorted_codewords == NULL) return error(f, VORBIS_outofmem);
          // allocate an extra slot at the front so that c->sorted_values[-1] is defined
          // so that we can catch that case without an extra if
          c->sorted_values    = ( int   *) setup_malloc(f, sizeof(*c->sorted_values   ) * (c->sorted_entries+1));
-         if (c->sorted_values) { ++c->sorted_values; c->sorted_values[-1] = -1; }
+         if (c->sorted_values == NULL) return error(f, VORBIS_outofmem);
+         ++c->sorted_values;
+         c->sorted_values[-1] = -1;
          compute_sorted_huffman(c, lengths, values);
       }
 
@@ -3802,6 +3763,7 @@ static int start_decoder(vorb *f)
 
       compute_accelerated_huffman(c);
 
+      CHECK(f);
       c->lookup_type = get_bits(f, 4);
       if (c->lookup_type > 2) return error(f, VORBIS_invalid_setup);
       if (c->lookup_type > 0) {
@@ -3815,6 +3777,7 @@ static int start_decoder(vorb *f)
          } else {
             c->lookup_values = c->entries * c->dimensions;
          }
+         if (c->lookup_values == 0) return error(f, VORBIS_invalid_setup);
          mults = (uint16 *) setup_temp_malloc(f, sizeof(mults[0]) * c->lookup_values);
          if (mults == NULL) return error(f, VORBIS_outofmem);
          for (j=0; j < (int) c->lookup_values; ++j) {
@@ -3826,6 +3789,7 @@ static int start_decoder(vorb *f)
 #ifndef STB_VORBIS_DIVIDES_IN_CODEBOOK
          if (c->lookup_type == 1) {
             int len, sparse = c->sparse;
+            float last=0;
             // pre-expand the lookup1-style multiplicands, to avoid a divide in the inner loop
             if (sparse) {
                if (c->sorted_entries == 0) goto skip;
@@ -3835,50 +3799,48 @@ static int start_decoder(vorb *f)
             if (c->multiplicands == NULL) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
             len = sparse ? c->sorted_entries : c->entries;
             for (j=0; j < len; ++j) {
-               int z = sparse ? c->sorted_values[j] : j, div=1;
+               unsigned int z = sparse ? c->sorted_values[j] : j;
+               unsigned int div=1;
                for (k=0; k < c->dimensions; ++k) {
                   int off = (z / div) % c->lookup_values;
-                  c->multiplicands[j*c->dimensions + k] =
-                         #ifndef STB_VORBIS_CODEBOOK_FLOATS
-                            mults[off];
-                         #else
-                            mults[off]*c->delta_value + c->minimum_value;
-                            // in this case (and this case only) we could pre-expand c->sequence_p,
-                            // and throw away the decode logic for it; have to ALSO do
-                            // it in the case below, but it can only be done if
-                            //    STB_VORBIS_CODEBOOK_FLOATS
-                            //   !STB_VORBIS_DIVIDES_IN_CODEBOOK
-                         #endif
-                  div *= c->lookup_values;
+                  float val = mults[off];
+                  val = mults[off]*c->delta_value + c->minimum_value + last;
+                  c->multiplicands[j*c->dimensions + k] = val;
+                  if (c->sequence_p)
+                     last = val;
+                  if (k+1 < c->dimensions) {
+                     if (div > UINT_MAX / (unsigned int) c->lookup_values) {
+                        setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values);
+                        return error(f, VORBIS_invalid_setup);
+                     }
+                     div *= c->lookup_values;
+                  }
                }
             }
-            setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values);
             c->lookup_type = 2;
          }
          else
 #endif
          {
+            float last=0;
+            CHECK(f);
             c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->lookup_values);
-            #ifndef STB_VORBIS_CODEBOOK_FLOATS
-            memcpy(c->multiplicands, mults, sizeof(c->multiplicands[0]) * c->lookup_values);
-            #else
-            for (j=0; j < (int) c->lookup_values; ++j)
-               c->multiplicands[j] = mults[j] * c->delta_value + c->minimum_value;
-            #endif
-            setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values);
+            if (c->multiplicands == NULL) { setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
+            for (j=0; j < (int) c->lookup_values; ++j) {
+               float val = mults[j] * c->delta_value + c->minimum_value + last;
+               c->multiplicands[j] = val;
+               if (c->sequence_p)
+                  last = val;
+            }
          }
 #ifndef STB_VORBIS_DIVIDES_IN_CODEBOOK
         skip:;
 #endif
+         setup_temp_free(f, mults, sizeof(mults[0])*c->lookup_values);
 
-         #ifdef STB_VORBIS_CODEBOOK_FLOATS
-         if (c->lookup_type == 2 && c->sequence_p) {
-            for (j=1; j < (int) c->lookup_values; ++j)
-               c->multiplicands[j] = c->multiplicands[j-1];
-            c->sequence_p = 0;
-         }
-         #endif
+         CHECK(f);
       }
+      CHECK(f);
    }
 
    // time domain transfers (notused)
@@ -3892,6 +3854,7 @@ static int start_decoder(vorb *f)
    // Floors
    f->floor_count = get_bits(f, 6)+1;
    f->floor_config = (Floor *)  setup_malloc(f, f->floor_count * sizeof(*f->floor_config));
+   if (f->floor_config == NULL) return error(f, VORBIS_outofmem);
    for (i=0; i < f->floor_count; ++i) {
       f->floor_types[i] = get_bits(f, 16);
       if (f->floor_types[i] > 1) return error(f, VORBIS_invalid_setup);
@@ -3907,7 +3870,7 @@ static int start_decoder(vorb *f)
             g->book_list[j] = get_bits(f,8);
          return error(f, VORBIS_feature_not_supported);
       } else {
-         Point p[31*8+2];
+         stbv__floor_ordering p[31*8+2];
          Floor1 *g = &f->floor_config[i].floor1;
          int max_class = -1; 
          g->partitions = get_bits(f, 5);
@@ -3943,11 +3906,11 @@ static int start_decoder(vorb *f)
          // precompute the sorting
          for (j=0; j < g->values; ++j) {
             p[j].x = g->Xlist[j];
-            p[j].y = j;
+            p[j].id = j;
          }
          qsort(p, g->values, sizeof(p[0]), point_compare);
          for (j=0; j < g->values; ++j)
-            g->sorted_order[j] = (uint8) p[j].y;
+            g->sorted_order[j] = (uint8) p[j].id;
          // precompute the neighbors
          for (j=2; j < g->values; ++j) {
             int low,hi;
@@ -3963,7 +3926,9 @@ static int start_decoder(vorb *f)
 
    // Residue
    f->residue_count = get_bits(f, 6)+1;
-   f->residue_config = (Residue *) setup_malloc(f, f->residue_count * sizeof(*f->residue_config));
+   f->residue_config = (Residue *) setup_malloc(f, f->residue_count * sizeof(f->residue_config[0]));
+   if (f->residue_config == NULL) return error(f, VORBIS_outofmem);
+   memset(f->residue_config, 0, f->residue_count * sizeof(f->residue_config[0]));
    for (i=0; i < f->residue_count; ++i) {
       uint8 residue_cascade[64];
       Residue *r = f->residue_config+i;
@@ -3971,9 +3936,11 @@ static int start_decoder(vorb *f)
       if (f->residue_types[i] > 2) return error(f, VORBIS_invalid_setup);
       r->begin = get_bits(f, 24);
       r->end = get_bits(f, 24);
+      if (r->end < r->begin) return error(f, VORBIS_invalid_setup);
       r->part_size = get_bits(f,24)+1;
       r->classifications = get_bits(f,6)+1;
       r->classbook = get_bits(f,8);
+      if (r->classbook >= f->codebook_count) return error(f, VORBIS_invalid_setup);
       for (j=0; j < r->classifications; ++j) {
          uint8 high_bits=0;
          uint8 low_bits=get_bits(f,3);
@@ -3982,6 +3949,7 @@ static int start_decoder(vorb *f)
          residue_cascade[j] = high_bits*8 + low_bits;
       }
       r->residue_books = (short (*)[8]) setup_malloc(f, sizeof(r->residue_books[0]) * r->classifications);
+      if (r->residue_books == NULL) return error(f, VORBIS_outofmem);
       for (j=0; j < r->classifications; ++j) {
          for (k=0; k < 8; ++k) {
             if (residue_cascade[j] & (1 << k)) {
@@ -4001,6 +3969,7 @@ static int start_decoder(vorb *f)
          int classwords = f->codebooks[r->classbook].dimensions;
          int temp = j;
          r->classdata[j] = (uint8 *) setup_malloc(f, sizeof(r->classdata[j][0]) * classwords);
+         if (r->classdata[j] == NULL) return error(f, VORBIS_outofmem);
          for (k=classwords-1; k >= 0; --k) {
             r->classdata[j][k] = temp % r->classifications;
             temp /= r->classifications;
@@ -4010,11 +3979,14 @@ static int start_decoder(vorb *f)
 
    f->mapping_count = get_bits(f,6)+1;
    f->mapping = (Mapping *) setup_malloc(f, f->mapping_count * sizeof(*f->mapping));
+   if (f->mapping == NULL) return error(f, VORBIS_outofmem);
+   memset(f->mapping, 0, f->mapping_count * sizeof(*f->mapping));
    for (i=0; i < f->mapping_count; ++i) {
       Mapping *m = f->mapping + i;      
       int mapping_type = get_bits(f,16);
       if (mapping_type != 0) return error(f, VORBIS_invalid_setup);
       m->chan = (MappingChannel *) setup_malloc(f, f->channels * sizeof(*m->chan));
+      if (m->chan == NULL) return error(f, VORBIS_outofmem);
       if (get_bits(f,1))
          m->submaps = get_bits(f,4)+1;
       else
@@ -4075,8 +4047,10 @@ static int start_decoder(vorb *f)
       f->channel_buffers[i] = (float *) setup_malloc(f, sizeof(float) * f->blocksize_1);
       f->previous_window[i] = (float *) setup_malloc(f, sizeof(float) * f->blocksize_1/2);
       f->finalY[i]          = (int16 *) setup_malloc(f, sizeof(int16) * longest_floorlist);
+      if (f->channel_buffers[i] == NULL || f->previous_window[i] == NULL || f->finalY[i] == NULL) return error(f, VORBIS_outofmem);
       #ifdef STB_VORBIS_NO_DEFER_FLOOR
       f->floor_buffers[i]   = (float *) setup_malloc(f, sizeof(float) * f->blocksize_1/2);
+      if (f->floor_buffers[i] == NULL) return error(f, VORBIS_outofmem);
       #endif
    }
 
@@ -4134,17 +4108,20 @@ static int start_decoder(vorb *f)
 static void vorbis_deinit(stb_vorbis *p)
 {
    int i,j;
-   for (i=0; i < p->residue_count; ++i) {
-      Residue *r = p->residue_config+i;
-      if (r->classdata) {
-         for (j=0; j < p->codebooks[r->classbook].entries; ++j)
-            setup_free(p, r->classdata[j]);
-         setup_free(p, r->classdata);
+   if (p->residue_config) {
+      for (i=0; i < p->residue_count; ++i) {
+         Residue *r = p->residue_config+i;
+         if (r->classdata) {
+            for (j=0; j < p->codebooks[r->classbook].entries; ++j)
+               setup_free(p, r->classdata[j]);
+            setup_free(p, r->classdata);
+         }
+         setup_free(p, r->residue_books);
       }
-      setup_free(p, r->residue_books);
    }
 
    if (p->codebooks) {
+      CHECK(p);
       for (i=0; i < p->codebook_count; ++i) {
          Codebook *c = p->codebooks + i;
          setup_free(p, c->codeword_lengths);
@@ -4158,10 +4135,13 @@ static void vorbis_deinit(stb_vorbis *p)
    }
    setup_free(p, p->floor_config);
    setup_free(p, p->residue_config);
-   for (i=0; i < p->mapping_count; ++i)
-      setup_free(p, p->mapping[i].chan);
-   setup_free(p, p->mapping);
-   for (i=0; i < p->channels; ++i) {
+   if (p->mapping) {
+      for (i=0; i < p->mapping_count; ++i)
+         setup_free(p, p->mapping[i].chan);
+      setup_free(p, p->mapping);
+   }
+   CHECK(p);
+   for (i=0; i < p->channels && i < STB_VORBIS_MAX_CHANNELS; ++i) {
       setup_free(p, p->channel_buffers[i]);
       setup_free(p, p->previous_window[i]);
       #ifdef STB_VORBIS_NO_DEFER_FLOOR
@@ -4188,7 +4168,7 @@ void stb_vorbis_close(stb_vorbis *p)
    setup_free(p,p);
 }
 
-static void vorbis_init(stb_vorbis *p, stb_vorbis_alloc *z)
+static void vorbis_init(stb_vorbis *p, const stb_vorbis_alloc *z)
 {
    memset(p, 0, sizeof(*p)); // NULL out all malloc'd pointers to start
    if (z) {
@@ -4346,11 +4326,11 @@ static int vorbis_search_for_page_pushdata(vorb *f, uint8 *data, int data_len)
 
 // return value: number of bytes we used
 int stb_vorbis_decode_frame_pushdata(
-         stb_vorbis *f,                 // the file we're decoding
-         uint8 *data, int data_len,     // the memory available for decoding
-         int *channels,                 // place to write number of float * buffers
-         float ***output,               // place to write float ** array of float * buffers
-         int *samples                   // place to write number of output samples
+         stb_vorbis *f,                   // the file we're decoding
+         const uint8 *data, int data_len, // the memory available for decoding
+         int *channels,                   // place to write number of float * buffers
+         float ***output,                 // place to write float ** array of float * buffers
+         int *samples                     // place to write number of output samples
      )
 {
    int i;
@@ -4360,11 +4340,11 @@ int stb_vorbis_decode_frame_pushdata(
 
    if (f->page_crc_tests >= 0) {
       *samples = 0;
-      return vorbis_search_for_page_pushdata(f, data, data_len);
+      return vorbis_search_for_page_pushdata(f, (uint8 *) data, data_len);
    }
 
-   f->stream     = data;
-   f->stream_end = data + data_len;
+   f->stream     = (uint8 *) data;
+   f->stream_end = (uint8 *) data + data_len;
    f->error      = VORBIS__no_error;
 
    // check that we have the entire packet in memory
@@ -4382,7 +4362,7 @@ int stb_vorbis_decode_frame_pushdata(
          while (get8_packet(f) != EOP)
             if (f->eof) break;
          *samples = 0;
-         return f->stream - data;
+         return (int) (f->stream - data);
       }
       if (error == VORBIS_continued_packet_flag_invalid) {
          if (f->previous_length == 0) {
@@ -4392,7 +4372,7 @@ int stb_vorbis_decode_frame_pushdata(
             while (get8_packet(f) != EOP)
                if (f->eof) break;
             *samples = 0;
-            return f->stream - data;
+            return (int) (f->stream - data);
          }
       }
       // if we get an error while parsing, what to do?
@@ -4412,18 +4392,18 @@ int stb_vorbis_decode_frame_pushdata(
    if (channels) *channels = f->channels;
    *samples = len;
    *output = f->outputs;
-   return f->stream - data;
+   return (int) (f->stream - data);
 }
 
 stb_vorbis *stb_vorbis_open_pushdata(
-         unsigned char *data, int data_len, // the memory available for decoding
+         const unsigned char *data, int data_len, // the memory available for decoding
          int *data_used,              // only defined if result is not NULL
-         int *error, stb_vorbis_alloc *alloc)
+         int *error, const stb_vorbis_alloc *alloc)
 {
    stb_vorbis *f, p;
    vorbis_init(&p, alloc);
-   p.stream     = data;
-   p.stream_end = data + data_len;
+   p.stream     = (uint8 *) data;
+   p.stream_end = (uint8 *) data + data_len;
    p.push_mode  = TRUE;
    if (!start_decoder(&p)) {
       if (p.eof)
@@ -4435,7 +4415,7 @@ stb_vorbis *stb_vorbis_open_pushdata(
    f = vorbis_alloc(&p);
    if (f) {
       *f = p;
-      *data_used = f->stream - data;
+      *data_used = (int) (f->stream - data);
       *error = 0;
       return f;
    } else {
@@ -4450,9 +4430,9 @@ unsigned int stb_vorbis_get_file_offset(stb_vorbis *f)
    #ifndef STB_VORBIS_NO_PUSHDATA_API
    if (f->push_mode) return 0;
    #endif
-   if (USE_MEMORY(f)) return f->stream - f->stream_start;
+   if (USE_MEMORY(f)) return (unsigned int) (f->stream - f->stream_start);
    #ifndef STB_VORBIS_NO_STDIO
-   return ftell(f->f) - f->f_start;
+   return (unsigned int) (ftell(f->f) - f->f_start);
    #endif
 }
 
@@ -4467,7 +4447,7 @@ static uint32 vorbis_find_page(stb_vorbis *f, uint32 *end, uint32 *last)
       int n;
       if (f->eof) return 0;
       n = get8(f);
-      if (n == 0x4f) { // page header
+      if (n == 0x4f) { // page header candidate
          unsigned int retry_loc = stb_vorbis_get_file_offset(f);
          int i;
          // check if we're off the end of a file_section stream
@@ -4531,37 +4511,30 @@ static uint32 vorbis_find_page(stb_vorbis *f, uint32 *end, uint32 *last)
    }
 }
 
-// seek is implemented with 'interpolation search'--this is like
-// binary search, but we use the data values to estimate the likely
-// location of the data item (plus a bit of a bias so when the
-// estimation is wrong we don't waste overly much time)
 
 #define SAMPLE_unknown  0xffffffff
 
+// seeking is implemented with a binary search, which narrows down the range to
+// 64K, before using a linear search (because finding the synchronization
+// pattern can be expensive, and the chance we'd find the end page again is
+// relatively high for small ranges)
+//
+// two initial interpolation-style probes are used at the start of the search
+// to try to bound either side of the binary search sensibly, while still
+// working in O(log n) time if they fail.
 
-// ogg vorbis, in its insane infinite wisdom, only provides
-// information about the sample at the END of the page.
-// therefore we COULD have the data we need in the current
-// page, and not know it. we could just use the end location
-// as our only knowledge for bounds, seek back, and eventually
-// the binary search finds it. or we can try to be smart and
-// not waste time trying to locate more pages. we try to be
-// smart, since this data is already in memory anyway, so
-// doing needless I/O would be crazy!
-static int vorbis_analyze_page(stb_vorbis *f, ProbedPage *z)
+static int get_seek_page_info(stb_vorbis *f, ProbedPage *z)
 {
    uint8 header[27], lacing[255];
-   uint8 packet_type[255];
-   int num_packet, packet_start;
    int i,len;
-   uint32 samples;
 
    // record where the page starts
    z->page_start = stb_vorbis_get_file_offset(f);
 
    // parse the header
    getn(f, header, 27);
-   assert(header[0] == 'O' && header[1] == 'g' && header[2] == 'g' && header[3] == 'S');
+   if (header[0] != 'O' || header[1] != 'g' || header[2] != 'g' || header[3] != 'S')
+      return 0;
    getn(f, lacing, header[26]);
 
    // determine the length of the payload
@@ -4573,314 +4546,279 @@ static int vorbis_analyze_page(stb_vorbis *f, ProbedPage *z)
    z->page_end = z->page_start + 27 + header[26] + len;
 
    // read the last-decoded sample out of the data
-   z->last_decoded_sample = header[6] + (header[7] << 8) + (header[8] << 16) + (header[9] << 16);
-
-   if (header[5] & 4) {
-      // if this is the last page, it's not possible to work
-      // backwards to figure out the first sample! whoops! fuck.
-      z->first_decoded_sample = SAMPLE_unknown;
-      set_file_offset(f, z->page_start);
-      return 1;
-   }
-
-   // scan through the frames to determine the sample-count of each one...
-   // our goal is the sample # of the first fully-decoded sample on the
-   // page, which is the first decoded sample of the 2nd packet
-
-   num_packet=0;
-
-   packet_start = ((header[5] & 1) == 0);
-
-   for (i=0; i < header[26]; ++i) {
-      if (packet_start) {
-         uint8 n,b;
-         if (lacing[i] == 0) goto bail; // trying to read from zero-length packet
-         n = get8(f);
-         // if bottom bit is non-zero, we've got corruption
-         if (n & 1) goto bail;
-         n >>= 1;
-         b = ilog(f->mode_count-1);
-         n &= (1 << b)-1;
-         if (n >= f->mode_count) goto bail;
-         packet_type[num_packet++] = f->mode_config[n].blockflag;
-         skip(f, lacing[i]-1);
-      } else
-         skip(f, lacing[i]);
-      packet_start = (lacing[i] < 255);
-   }
-
-   // now that we know the sizes of all the pages, we can start determining
-   // how much sample data there is.
-
-   samples = 0;
-
-   // for the last packet, we step by its whole length, because the definition
-   // is that we encoded the end sample loc of the 'last packet completed',
-   // where 'completed' refers to packets being split, and we are left to guess
-   // what 'end sample loc' means. we assume it means ignoring the fact that
-   // the last half of the data is useless without windowing against the next
-   // packet... (so it's not REALLY complete in that sense)
-   if (num_packet > 1)
-      samples += f->blocksize[packet_type[num_packet-1]];
-
-   for (i=num_packet-2; i >= 1; --i) {
-      // now, for this packet, how many samples do we have that
-      // do not overlap the following packet?
-      if (packet_type[i] == 1)
-         if (packet_type[i+1] == 1)
-            samples += f->blocksize_1 >> 1;
-         else
-            samples += ((f->blocksize_1 - f->blocksize_0) >> 2) + (f->blocksize_0 >> 1);
-      else
-         samples += f->blocksize_0 >> 1;
-   }
-   // now, at this point, we've rewound to the very beginning of the
-   // _second_ packet. if we entirely discard the first packet after
-   // a seek, this will be exactly the right sample number. HOWEVER!
-   // we can't as easily compute this number for the LAST page. The
-   // only way to get the sample offset of the LAST page is to use
-   // the end loc from the previous page. But what that returns us
-   // is _exactly_ the place where we get our first non-overlapped
-   // sample. (I think. Stupid spec for being ambiguous.) So for
-   // consistency it's better to do that here, too. However, that
-   // will then require us to NOT discard all of the first frame we
-   // decode, in some cases, which means an even weirder frame size
-   // and extra code. what a fucking pain.
-   
-   // we're going to discard the first packet if we
-   // start the seek here, so we don't care about it. (we could actually
-   // do better; if the first packet is long, and the previous packet
-   // is short, there's actually data in the first half of the first
-   // packet that doesn't need discarding... but not worth paying the
-   // effort of tracking that of that here and in the seeking logic)
-   // except crap, if we infer it from the _previous_ packet's end
-   // location, we DO need to use that definition... and we HAVE to
-   // infer the start loc of the LAST packet from the previous packet's
-   // end location. fuck you, ogg vorbis.
-
-   z->first_decoded_sample = z->last_decoded_sample - samples;
+   z->last_decoded_sample = header[6] + (header[7] << 8) + (header[8] << 16) + (header[9] << 24);
 
    // restore file state to where we were
    set_file_offset(f, z->page_start);
    return 1;
+}
 
-   // restore file state to where we were
-  bail:
-   set_file_offset(f, z->page_start);
+// rarely used function to seek back to the preceeding page while finding the
+// start of a packet
+static int go_to_page_before(stb_vorbis *f, unsigned int limit_offset)
+{
+   unsigned int previous_safe, end;
+
+   // now we want to seek back 64K from the limit
+   if (limit_offset >= 65536 && limit_offset-65536 >= f->first_audio_page_offset)
+      previous_safe = limit_offset - 65536;
+   else
+      previous_safe = f->first_audio_page_offset;
+
+   set_file_offset(f, previous_safe);
+
+   while (vorbis_find_page(f, &end, NULL)) {
+      if (end >= limit_offset && stb_vorbis_get_file_offset(f) < limit_offset)
+         return 1;
+      set_file_offset(f, end);
+   }
+
    return 0;
 }
 
-static int vorbis_seek_frame_from_page(stb_vorbis *f, uint32 page_start, uint32 first_sample, uint32 target_sample, int fine)
+// implements the search logic for finding a page and starting decoding. if
+// the function succeeds, current_loc_valid will be true and current_loc will
+// be less than or equal to the provided sample number (the closer the
+// better).
+static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
 {
-   int left_start, left_end, right_start, right_end, mode,i;
-   int frame=0;
-   uint32 frame_start;
-   int frames_to_skip, data_to_skip;
+   ProbedPage left, right, mid;
+   int i, start_seg_with_known_loc, end_pos, page_start;
+   uint32 delta, stream_length, padding;
+   double offset, bytes_per_sample;
+   int probe = 0;
 
-   // first_sample is the sample # of the first sample that doesn't
-   // overlap the previous page... note that this requires us to
-   // _partially_ discard the first packet! bleh.
-   set_file_offset(f, page_start);
+   // find the last page and validate the target sample
+   stream_length = stb_vorbis_stream_length_in_samples(f);
+   if (stream_length == 0)            return error(f, VORBIS_seek_without_length);
+   if (sample_number > stream_length) return error(f, VORBIS_seek_invalid);
 
-   f->next_seg = -1;  // force page resync
+   // this is the maximum difference between the window-center (which is the
+   // actual granule position value), and the right-start (which the spec
+   // indicates should be the granule position (give or take one)).
+   padding = ((f->blocksize_1 - f->blocksize_0) >> 2);
+   if (sample_number < padding)
+      sample_number = 0;
+   else
+      sample_number -= padding;
 
-   frame_start = first_sample;
-   // frame start is where the previous packet's last decoded sample
-   // was, which corresponds to left_end... EXCEPT if the previous
-   // packet was long and this packet is short? Probably a bug here.
+   left = f->p_first;
+   while (left.last_decoded_sample == ~0U) {
+      // (untested) the first page does not have a 'last_decoded_sample'
+      set_file_offset(f, left.page_end);
+      if (!get_seek_page_info(f, &left)) goto error;
+   }
 
+   right = f->p_last;
+   assert(right.last_decoded_sample != ~0U);
 
-   // now, we can start decoding frames... we'll only FAKE decode them,
-   // until we find the frame that contains our sample; then we'll rewind,
-   // and try again
-   for (;;) {
-      int start;
+   // starting from the start is handled differently
+   if (sample_number <= left.last_decoded_sample) {
+      if (stb_vorbis_seek_start(f))
+         return 1;
+      return 0;
+   }
 
-      if (!vorbis_decode_initial(f, &left_start, &left_end, &right_start, &right_end, &mode))
-         return error(f, VORBIS_seek_failed);
+   while (left.page_end != right.page_start) {
+      assert(left.page_end < right.page_start);
+      // search range in bytes
+      delta = right.page_start - left.page_end;
+      if (delta <= 65536) {
+         // there's only 64K left to search - handle it linearly
+         set_file_offset(f, left.page_end);
+      } else {
+         if (probe < 2) {
+            if (probe == 0) {
+               // first probe (interpolate)
+               double data_bytes = right.page_end - left.page_start;
+               bytes_per_sample = data_bytes / right.last_decoded_sample;
+               offset = left.page_start + bytes_per_sample * (sample_number - left.last_decoded_sample);
+            } else {
+               // second probe (try to bound the other side)
+               double error = ((double) sample_number - mid.last_decoded_sample) * bytes_per_sample;
+               if (error >= 0 && error <  8000) error =  8000;
+               if (error <  0 && error > -8000) error = -8000;
+               offset += error * 2;
+            }
 
-      if (frame == 0)
-         start = left_end;
-      else
-         start = left_start;
+            // ensure the offset is valid
+            if (offset < left.page_end)
+               offset = left.page_end;
+            if (offset > right.page_start - 65536)
+               offset = right.page_start - 65536;
 
-      // the window starts at left_start; the last valid sample we generate
-      // before the next frame's window start is right_start-1
-      if (target_sample < frame_start + right_start-start)
+            set_file_offset(f, (unsigned int) offset);
+         } else {
+            // binary search for large ranges (offset by 32K to ensure
+            // we don't hit the right page)
+            set_file_offset(f, left.page_end + (delta / 2) - 32768);
+         }
+
+         if (!vorbis_find_page(f, NULL, NULL)) goto error;
+      }
+
+      for (;;) {
+         if (!get_seek_page_info(f, &mid)) goto error;
+         if (mid.last_decoded_sample != ~0U) break;
+         // (untested) no frames end on this page
+         set_file_offset(f, mid.page_end);
+         assert(mid.page_start < right.page_start);
+      }
+
+      // if we've just found the last page again then we're in a tricky file,
+      // and we're close enough.
+      if (mid.page_start == right.page_start)
          break;
 
-      flush_packet(f);
-      if (f->eof)
-         return error(f, VORBIS_seek_failed);
+      if (sample_number < mid.last_decoded_sample)
+         right = mid;
+      else
+         left = mid;
 
-      frame_start += right_start - start;
-
-      ++frame;
+      ++probe;
    }
 
-   // ok, at this point, the sample we want is contained in frame #'frame'
-
-   // to decode frame #'frame' normally, we have to decode the
-   // previous frame first... but if it's the FIRST frame of the page
-   // we can't. if it's the first frame, it means it falls in the part
-   // of the first frame that doesn't overlap either of the other frames.
-   // so, if we have to handle that case for the first frame, we might
-   // as well handle it for all of them, so:
-   if (target_sample > frame_start + (left_end - left_start)) {
-      // so what we want to do is go ahead and just immediately decode
-      // this frame, but then make it so the next get_frame_float() uses
-      // this already-decoded data? or do we want to go ahead and rewind,
-      // and leave a flag saying to skip the first N data? let's do that
-      frames_to_skip = frame;  // if this is frame #1, skip 1 frame (#0)
-      data_to_skip = left_end - left_start;
-   } else {
-      // otherwise, we want to skip frames 0, 1, 2, ... frame-2
-      // (which means frame-2+1 total frames) then decode frame-1,
-      // then leave frame pending
-      frames_to_skip = frame - 1;
-      assert(frames_to_skip >= 0);
-      data_to_skip = -1;      
-   }
-
+   // seek back to start of the last packet
+   page_start = left.page_start;
    set_file_offset(f, page_start);
-   f->next_seg = - 1; // force page resync
+   if (!start_page(f)) return error(f, VORBIS_seek_failed);
+   end_pos = f->end_seg_with_known_loc;
+   assert(end_pos >= 0);
 
-   for (i=0; i < frames_to_skip; ++i) {
-      maybe_start_packet(f);
-      flush_packet(f);
+   for (;;) {
+      for (i = end_pos; i > 0; --i)
+         if (f->segments[i-1] != 255)
+            break;
+
+      start_seg_with_known_loc = i;
+
+      if (start_seg_with_known_loc > 0 || !(f->page_flag & PAGEFLAG_continued_packet))
+         break;
+
+      // (untested) the final packet begins on an earlier page
+      if (!go_to_page_before(f, page_start))
+         goto error;
+
+      page_start = stb_vorbis_get_file_offset(f);
+      if (!start_page(f)) goto error;
+      end_pos = f->segment_count - 1;
    }
 
-   if (data_to_skip >= 0) {
-      int i,j,n = f->blocksize_0 >> 1;
-      f->discard_samples_deferred = data_to_skip;
-      for (i=0; i < f->channels; ++i)
-         for (j=0; j < n; ++j)
-            f->previous_window[i][j] = 0;
-      f->previous_length = n;
-      frame_start += data_to_skip;
-   } else {
-      f->previous_length = 0;
-      vorbis_pump_first_frame(f);
-   }
+   // prepare to start decoding
+   f->current_loc_valid = FALSE;
+   f->last_seg = FALSE;
+   f->valid_bits = 0;
+   f->packet_bytes = 0;
+   f->bytes_in_seg = 0;
+   f->previous_length = 0;
+   f->next_seg = start_seg_with_known_loc;
 
-   // at this point, the NEXT decoded frame will generate the desired sample
-   if (fine) {
-      // so if we're doing sample accurate streaming, we want to go ahead and decode it!
-      if (target_sample != frame_start) {
-         int n;
-         stb_vorbis_get_frame_float(f, &n, NULL);
-         assert(target_sample > frame_start);
-         assert(f->channel_buffer_start + (int) (target_sample-frame_start) < f->channel_buffer_end);
-         f->channel_buffer_start += (target_sample - frame_start);
-      }
-   }
+   for (i = 0; i < start_seg_with_known_loc; i++)
+      skip(f, f->segments[i]);
 
-   return 0;
+   // start decoding (optimizable - this frame is generally discarded)
+   if (!vorbis_pump_first_frame(f))
+      return 0;
+   if (f->current_loc > sample_number)
+      return error(f, VORBIS_seek_failed);
+   return 1;
+
+error:
+   // try to restore the file to a valid state
+   stb_vorbis_seek_start(f);
+   return error(f, VORBIS_seek_failed);
 }
 
-static int vorbis_seek_base(stb_vorbis *f, unsigned int sample_number, int fine)
+// the same as vorbis_decode_initial, but without advancing
+static int peek_decode_initial(vorb *f, int *p_left_start, int *p_left_end, int *p_right_start, int *p_right_end, int *mode)
 {
-   ProbedPage p[2],q;
-   if (IS_PUSH_MODE(f)) return error(f, VORBIS_invalid_api_mixing);
+   int bits_read, bytes_read;
 
-   // do we know the location of the last page?
-   if (f->p_last.page_start == 0) {
-      uint32 z = stb_vorbis_stream_length_in_samples(f);
-      if (z == 0) return error(f, VORBIS_cant_find_last_page);
-   }
-
-   p[0] = f->p_first;
-   p[1] = f->p_last;
-
-   if (sample_number >= f->p_last.last_decoded_sample)
-      sample_number = f->p_last.last_decoded_sample-1;
-
-   if (sample_number < f->p_first.last_decoded_sample) {
-      vorbis_seek_frame_from_page(f, p[0].page_start, 0, sample_number, fine);
+   if (!vorbis_decode_initial(f, p_left_start, p_left_end, p_right_start, p_right_end, mode))
       return 0;
-   } else {
-      int attempts=0;
-      while (p[0].page_end < p[1].page_start) {
-         uint32 probe;
-         uint32 start_offset, end_offset;
-         uint32 start_sample, end_sample;
 
-         // copy these into local variables so we can tweak them
-         // if any are unknown
-         start_offset = p[0].page_end;
-         end_offset   = p[1].after_previous_page_start; // an address known to seek to page p[1]
-         start_sample = p[0].last_decoded_sample;
-         end_sample   = p[1].last_decoded_sample;
+   // either 1 or 2 bytes were read, figure out which so we can rewind
+   bits_read = 1 + ilog(f->mode_count-1);
+   if (f->mode_config[*mode].blockflag)
+      bits_read += 2;
+   bytes_read = (bits_read + 7) / 8;
 
-         // currently there is no such tweaking logic needed/possible?
-         if (start_sample == SAMPLE_unknown || end_sample == SAMPLE_unknown)
-            return error(f, VORBIS_seek_failed);
+   f->bytes_in_seg += bytes_read;
+   f->packet_bytes -= bytes_read;
+   skip(f, -bytes_read);
+   if (f->next_seg == -1)
+      f->next_seg = f->segment_count - 1;
+   else
+      f->next_seg--;
+   f->valid_bits = 0;
 
-         // now we want to lerp between these for the target samples...
-      
-         // step 1: we need to bias towards the page start...
-         if (start_offset + 4000 < end_offset)
-            end_offset -= 4000;
-
-         // now compute an interpolated search loc
-         probe = start_offset + (int) floor((float) (end_offset - start_offset) / (end_sample - start_sample) * (sample_number - start_sample));
-
-         // next we need to bias towards binary search...
-         // code is a little wonky to allow for full 32-bit unsigned values
-         if (attempts >= 4) {
-            uint32 probe2 = start_offset + ((end_offset - start_offset) >> 1);
-            if (attempts >= 8)
-               probe = probe2;
-            else if (probe < probe2)
-               probe = probe + ((probe2 - probe) >> 1);
-            else
-               probe = probe2 + ((probe - probe2) >> 1);
-         }
-         ++attempts;
-
-         set_file_offset(f, probe);
-         if (!vorbis_find_page(f, NULL, NULL))   return error(f, VORBIS_seek_failed);
-         if (!vorbis_analyze_page(f, &q))        return error(f, VORBIS_seek_failed);
-         q.after_previous_page_start = probe;
-
-         // it's possible we've just found the last page again
-         if (q.page_start == p[1].page_start) {
-            p[1] = q;
-            continue;
-         }
-
-         if (sample_number < q.last_decoded_sample)
-            p[1] = q;
-         else
-            p[0] = q;
-      }
-
-      if (p[0].last_decoded_sample <= sample_number && sample_number < p[1].last_decoded_sample) {
-         vorbis_seek_frame_from_page(f, p[1].page_start, p[0].last_decoded_sample, sample_number, fine);
-         return 0;
-      }
-      return error(f, VORBIS_seek_failed);
-   }
+   return 1;
 }
 
 int stb_vorbis_seek_frame(stb_vorbis *f, unsigned int sample_number)
 {
-   return vorbis_seek_base(f, sample_number, FALSE);
+   uint32 max_frame_samples;
+
+   if (IS_PUSH_MODE(f)) return error(f, VORBIS_invalid_api_mixing);
+
+   // fast page-level search
+   if (!seek_to_sample_coarse(f, sample_number))
+      return 0;
+
+   assert(f->current_loc_valid);
+   assert(f->current_loc <= sample_number);
+
+   // linear search for the relevant packet
+   max_frame_samples = (f->blocksize_1*3 - f->blocksize_0) >> 2;
+   while (f->current_loc < sample_number) {
+      int left_start, left_end, right_start, right_end, mode, frame_samples;
+      if (!peek_decode_initial(f, &left_start, &left_end, &right_start, &right_end, &mode))
+         return error(f, VORBIS_seek_failed);
+      // calculate the number of samples returned by the next frame
+      frame_samples = right_start - left_start;
+      if (f->current_loc + frame_samples > sample_number) {
+         return 1; // the next frame will contain the sample
+      } else if (f->current_loc + frame_samples + max_frame_samples > sample_number) {
+         // there's a chance the frame after this could contain the sample
+         vorbis_pump_first_frame(f);
+      } else {
+         // this frame is too early to be relevant
+         f->current_loc += frame_samples;
+         f->previous_length = 0;
+         maybe_start_packet(f);
+         flush_packet(f);
+      }
+   }
+   // the next frame will start with the sample
+   assert(f->current_loc == sample_number);
+   return 1;
 }
 
 int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number)
 {
-   return vorbis_seek_base(f, sample_number, TRUE);
+   if (!stb_vorbis_seek_frame(f, sample_number))
+      return 0;
+
+   if (sample_number != f->current_loc) {
+      int n;
+      uint32 frame_start = f->current_loc;
+      stb_vorbis_get_frame_float(f, &n, NULL);
+      assert(sample_number > frame_start);
+      assert(f->channel_buffer_start + (int) (sample_number-frame_start) <= f->channel_buffer_end);
+      f->channel_buffer_start += (sample_number - frame_start);
+   }
+
+   return 1;
 }
 
-void stb_vorbis_seek_start(stb_vorbis *f)
+int stb_vorbis_seek_start(stb_vorbis *f)
 {
-   if (IS_PUSH_MODE(f)) { error(f, VORBIS_invalid_api_mixing); return; }
+   if (IS_PUSH_MODE(f)) { return error(f, VORBIS_invalid_api_mixing); }
    set_file_offset(f, f->first_audio_page_offset);
    f->previous_length = 0;
    f->first_decode = TRUE;
    f->next_seg = -1;
-   vorbis_pump_first_frame(f);
+   return vorbis_pump_first_frame(f);
 }
 
 unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f)
@@ -4951,8 +4889,6 @@ unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f)
       f->p_last.page_start = last_page_loc;
       f->p_last.page_end   = end;
       f->p_last.last_decoded_sample = lo;
-      f->p_last.first_decoded_sample = SAMPLE_unknown;
-      f->p_last.after_previous_page_start = previous_safe;
 
      done:
       set_file_offset(f, restore_offset);
@@ -4991,12 +4927,12 @@ int stb_vorbis_get_frame_float(stb_vorbis *f, int *channels, float ***output)
 
 #ifndef STB_VORBIS_NO_STDIO
 
-stb_vorbis * stb_vorbis_open_file_section(FILE *file, int close_on_free, int *error, stb_vorbis_alloc *alloc, unsigned int length)
+stb_vorbis * stb_vorbis_open_file_section(FILE *file, int close_on_free, int *error, const stb_vorbis_alloc *alloc, unsigned int length)
 {
    stb_vorbis *f, p;
    vorbis_init(&p, alloc);
    p.f = file;
-   p.f_start = ftell(file);
+   p.f_start = (uint32) ftell(file);
    p.stream_len   = length;
    p.close_on_free = close_on_free;
    if (start_decoder(&p)) {
@@ -5012,17 +4948,17 @@ stb_vorbis * stb_vorbis_open_file_section(FILE *file, int close_on_free, int *er
    return NULL;
 }
 
-stb_vorbis * stb_vorbis_open_file(FILE *file, int close_on_free, int *error, stb_vorbis_alloc *alloc)
+stb_vorbis * stb_vorbis_open_file(FILE *file, int close_on_free, int *error, const stb_vorbis_alloc *alloc)
 {
    unsigned int len, start;
-   start = ftell(file);
+   start = (unsigned int) ftell(file);
    fseek(file, 0, SEEK_END);
-   len = ftell(file) - start;
+   len = (unsigned int) (ftell(file) - start);
    fseek(file, start, SEEK_SET);
    return stb_vorbis_open_file_section(file, close_on_free, error, alloc, len);
 }
 
-stb_vorbis * stb_vorbis_open_filename(const char *filename, int *error, stb_vorbis_alloc *alloc)
+stb_vorbis * stb_vorbis_open_filename(const char *filename, int *error, const stb_vorbis_alloc *alloc)
 {
    FILE *f = fopen(filename, "rb");
    if (f) 
@@ -5032,7 +4968,7 @@ stb_vorbis * stb_vorbis_open_filename(const char *filename, int *error, stb_vorb
 }
 #endif // STB_VORBIS_NO_STDIO
 
-stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len, int *error, stb_vorbis_alloc *alloc)
+stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len, int *error, const stb_vorbis_alloc *alloc)
 {
    stb_vorbis *f, p;
    if (data == NULL) return NULL;
@@ -5047,6 +4983,7 @@ stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len, int *err
       if (f) {
          *f = p;
          vorbis_pump_first_frame(f);
+         if (error) *error = VORBIS__no_error;
          return f;
       }
    }
@@ -5412,6 +5349,14 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
 #endif // STB_VORBIS_NO_PULLDATA_API
 
 /* Version history
+    1.10    - 2017/03/03 - more robust seeking; fix negative ilog(); clear error in open_memory
+    1.09    - 2016/04/04 - back out 'avoid discarding last frame' fix from previous version
+    1.08    - 2016/04/02 - fixed multiple warnings; fix setup memory leaks;
+                           avoid discarding last frame of audio data
+    1.07    - 2015/01/16 - fixed some warnings, fix mingw, const-correct API
+                           some more crash fixes when out of memory or with corrupt files 
+    1.06    - 2015/08/31 - full, correct support for seeking API (Dougall Johnson)
+                           some crash fixes when out of memory or with corrupt files
     1.05    - 2015/04/19 - don't define __forceinline if it's redundant
     1.04    - 2014/08/27 - fix missing const-correct case in API
     1.03    - 2014/08/07 - Warning fixes
@@ -5457,3 +5402,46 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
 */
 
 #endif // STB_VORBIS_HEADER_ONLY
+
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
+software, either in source code form or as a compiled binary, for any purpose, 
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this 
+software dedicate any and all copyright interest in the software to the public 
+domain. We make this dedication for the benefit of the public at large and to 
+the detriment of our heirs and successors. We intend this dedication to be an 
+overt act of relinquishment in perpetuity of all present and future rights to 
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/

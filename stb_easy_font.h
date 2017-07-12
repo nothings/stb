@@ -1,4 +1,4 @@
-// stb_easy_font.h - v0.5 - bitmap font for 3D rendering - public domain
+// stb_easy_font.h - v1.0 - bitmap font for 3D rendering - public domain
 // Sean Barrett, Feb 2015
 //
 //    Easy-to-deploy,
@@ -16,8 +16,10 @@
 // DOCUMENTATION:
 //
 //   int stb_easy_font_width(char *text)
+//   int stb_easy_font_height(char *text)
 //
-//      Takes a string without newlines and returns the horizontal size.
+//      Takes a string and returns the horizontal size and the
+//      vertical size (which can vary if 'text' has newlines).
 //
 //   int stb_easy_font_print(float x, float y,
 //                           char *text, unsigned char color[4],
@@ -40,7 +42,7 @@
 //
 //      You can ignore z and color if you get them from elsewhere
 //      This format was chosen in the hopes it would make it
-//      easier for you to reuse existing buffer-drawing code.
+//      easier for you to reuse existing vertex-buffer-drawing code.
 //
 //      If you pass in NULL for color, it becomes 255,255,255,255.
 //
@@ -63,12 +65,27 @@
 //      compact to me; -0.5 is a reasonable compromise as long as
 //      you're scaling the font up.
 //
+// LICENSE
+//
+//   See end of file for license information.
+//
+// VERSION HISTORY
+//
+//   (2017-01-15)  1.0   space character takes same space as numbers; fix bad spacing of 'f'
+//   (2016-01-22)  0.7   width() supports multiline text; add height()
+//   (2015-09-13)  0.6   #include <math.h>; updated license
+//   (2015-02-01)  0.5   First release
+//
+// CONTRIBUTORS
+//
+//   github:vassvik  --  bug report
+
+#if 0
 // SAMPLE CODE:
 //
 //    Here's sample code for old OpenGL; it's a lot more complicated
 //    to make work on modern APIs, and that's your problem.
 //
-#if 0
 void print_string(float x, float y, char *text, float r, float g, float b)
 {
   static char buffer[99999]; // ~500 chars
@@ -88,13 +105,14 @@ void print_string(float x, float y, char *text, float r, float g, float b)
 #define INCLUDE_STB_EASY_FONT_H
 
 #include <stdlib.h>
+#include <math.h>
 
-struct {
+struct stb_easy_font_info_struct {
     unsigned char advance;
     unsigned char h_seg;
     unsigned char v_seg;
 } stb_easy_font_charinfo[96] = {
-    {  5,  0,  0 },  {  3,  0,  0 },  {  5,  1,  1 },  {  7,  1,  4 },
+    {  6,  0,  0 },  {  3,  0,  0 },  {  5,  1,  1 },  {  7,  1,  4 },
     {  7,  3,  7 },  {  7,  6, 12 },  {  7,  8, 19 },  {  4, 16, 21 },
     {  4, 17, 22 },  {  4, 19, 23 },  { 23, 21, 24 },  { 23, 22, 31 },
     { 20, 23, 34 },  { 22, 23, 36 },  { 19, 24, 36 },  { 21, 25, 36 },
@@ -111,7 +129,7 @@ struct {
     {  7,109,165 },  {  7,118,167 },  {  6,118,172 },  {  4,120,176 },
     {  6,122,177 },  {  4,122,181 },  { 23,124,182 },  { 22,129,182 },
     {  4,130,182 },  { 22,131,183 },  {  6,133,187 },  { 22,135,191 },
-    {  6,137,192 },  { 22,139,196 },  {  5,144,197 },  { 22,147,198 },
+    {  6,137,192 },  { 22,139,196 },  {  6,144,197 },  { 22,147,198 },
     {  6,150,202 },  { 19,151,206 },  { 21,152,207 },  {  6,155,209 },
     {  3,160,210 },  { 23,160,211 },  { 22,164,216 },  { 22,165,220 },
     { 22,167,224 },  { 22,169,228 },  { 21,171,232 },  { 21,173,233 },
@@ -210,11 +228,76 @@ static int stb_easy_font_print(float x, float y, char *text, unsigned char color
 static int stb_easy_font_width(char *text)
 {
     float len = 0;
+    float max_len = 0;
     while (*text) {
-        len += stb_easy_font_charinfo[*text-32].advance & 15;
-        len += stb_easy_font_spacing_val;
+        if (*text == '\n') {
+            if (len > max_len) max_len = len;
+            len = 0;
+        } else {
+            len += stb_easy_font_charinfo[*text-32].advance & 15;
+            len += stb_easy_font_spacing_val;
+        }
         ++text;
     }
-    return (int) ceil(len);
+    if (len > max_len) max_len = len;
+    return (int) ceil(max_len);
+}
+
+static int stb_easy_font_height(char *text)
+{
+    float y = 0;
+    int nonempty_line=0;
+    while (*text) {
+        if (*text == '\n') {
+            y += 12;
+            nonempty_line = 0;
+        } else {
+            nonempty_line = 1;
+        }
+        ++text;
+    }
+    return (int) ceil(y + (nonempty_line ? 12 : 0));
 }
 #endif
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
+software, either in source code form or as a compiled binary, for any purpose, 
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this 
+software dedicate any and all copyright interest in the software to the public 
+domain. We make this dedication for the benefit of the public at large and to 
+the detriment of our heirs and successors. We intend this dedication to be an 
+overt act of relinquishment in perpetuity of all present and future rights to 
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/

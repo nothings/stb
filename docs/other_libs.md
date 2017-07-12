@@ -1,0 +1,1 @@
+Moved to https://github.com/nothings/single_file_libs

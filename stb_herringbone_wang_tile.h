@@ -1,8 +1,11 @@
 /* stbhw - v0.6 -  http://nothings.org/gamedev/herringbone
    Herringbone Wang Tile Generator - Sean Barrett 2014 - public domain
 
- This file is in the public domain. In case that declaration is ineffective,
- you are also granted a license to use and modify it without restriction.
+== LICENSE ==============================
+
+This software is dual-licensed to the public domain and under the following
+license: you are granted a perpetual, irrevocable license to copy, modify,
+publish, and distribute this file as you see fit.
 
 == WHAT IT IS ===========================
 

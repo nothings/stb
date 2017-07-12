@@ -1,4 +1,4 @@
-// stb_voxel_render.h - v0.81 - Sean Barrett, 2015 - public domain
+// stb_voxel_render.h - v0.85 - Sean Barrett, 2015 - public domain
 //
 // This library helps render large-scale "voxel" worlds for games,
 // in this case, one with blocks that can have textures and that
@@ -13,7 +13,7 @@
 // It works by creating triangle meshes. The library includes
 //
 //    - converter from dense 3D arrays of block info to vertex mesh
-//    - shader for the vertex mesh
+//    - vertex & fragment shaders for the vertex mesh
 //    - assistance in setting up shader state
 //
 // For portability, none of the library code actually accesses
@@ -24,8 +24,9 @@
 // yourself. However, you could also try making a game with
 // a small enough world that it's fully loaded rather than
 // streaming. Currently the preferred vertex format is 20 bytes
-// per quad. There are plans to allow much more compact formats
-// with a slight reduction in shader features.
+// per quad. There are designs to allow much more compact formats
+// with a slight reduction in shader features, but no roadmap
+// for actually implementing them.
 //
 //
 // USAGE
@@ -108,7 +109,7 @@
 //        and avoids a potential slow path (gathering non-uniform
 //        data from uniforms) on some hardware.
 //
-//   In the future I hope to add additional modes that have significantly
+//   In the future I might add additional modes that have significantly
 //   smaller meshes but reduce features, down as small as 6 bytes per quad.
 //   See elsewhere in this file for a table of candidate modes. Switching
 //   to a mode will require changing some of your mesh creation code, but
@@ -186,11 +187,16 @@
 //   Features             Porting            Bugfixes & Warnings
 //  Sean Barrett                          github:r-leyh   Jesus Fernandez
 //                                        Miguel Lechon   github:Arbeiterunfallversicherungsgesetz
-//                                        Thomas Frase
+//                                        Thomas Frase    James Hofmann
+//                                        Stephen Olsen   github:guitarfreak
 //
 // VERSION HISTORY
 //
+//   0.85   (2017-03-03)  add block_selector (by guitarfreak)
+//   0.84   (2016-04-02)  fix GLSL syntax error on glModelView path
+//   0.83   (2015-09-13)  remove non-constant struct initializers to support more compilers
 //   0.82   (2015-08-01)  added input.packed_compact to store rot, vheight & texlerp efficiently
+//                        fix broken tex_overlay2
 //   0.81   (2015-05-28)  fix broken STBVOX_CONFIG_OPTIMIZED_VHEIGHT
 //   0.80   (2015-04-11)  fix broken STBVOX_CONFIG_ROTATION_IN_LIGHTING refactoring
 //                        change STBVOX_MAKE_LIGHTING to STBVOX_MAKE_LIGHTING_EXT so
@@ -209,6 +215,11 @@
 //   stb_voxel_render   20-byte quads   2015/01
 //   zmc engine         32-byte quads   2013/12
 //   zmc engine         96-byte quads   2011/10
+//
+//
+// LICENSE
+//
+//   See end of file for license information.
 
 #ifndef INCLUDE_STB_VOXEL_RENDER_H
 #define INCLUDE_STB_VOXEL_RENDER_H
@@ -253,7 +264,7 @@ extern "C" {
 //     modes 0,1,20,21, Z in the mesh can extend to 511 instead
 //     of 255. However, half-height blocks cannot be used.
 //
-// All of the following just #ifdef tested so need no values, and are optional.
+// All of the following are just #ifdef tested so need no values, and are optional.
 //
 //    STBVOX_CONFIG_BLOCKTYPE_SHORT
 //        use unsigned 16-bit values for 'blocktype' in the input instead of 8-bit values
@@ -293,7 +304,7 @@ extern "C" {
 //
 //    STBVOX_CONFIG_DISABLE_TEX2
 //        This disables all processing of texture 2 in the shader in case
-//        you don't use it. Eventually this will be replaced with a mode
+//        you don't use it. Eventually this could be replaced with a mode
 //        that omits the unused data entirely.
 //
 //    STBVOX_CONFIG_TEX1_EDGE_CLAMP
@@ -1581,7 +1592,7 @@ static const char *stbvox_vertex_program =
       "uniform vec3 normal_table[32];\n"
 
       #ifndef STBVOX_CONFIG_OPENGL_MODELVIEW
-         "uniform mat44 model_view;\n"
+         "uniform mat4x4 model_view;\n"
       #endif
 
       // fragment output data
@@ -2891,7 +2902,9 @@ static void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, in
 
    if (mm->input.selector)
       mesh = mm->input.selector[v_off];
-
+   else if (mm->input.block_selector)
+      mesh = mm->input.block_selector[mm->input.blocktype[v_off]];
+  
    // check if we're going off the end
    if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
       mm->full = 1;
@@ -3100,7 +3113,9 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
    mesh = mm->default_mesh;
    if (mm->input.selector)
       mesh = mm->input.selector[v_off];
-
+   else if (mm->input.block_selector)
+      mesh = mm->input.block_selector[bt];
+  
    if (geo <= STBVOX_GEOM_ceil_slope_north_is_bottom) {
       // this is the simple case, we can just use regular block gen with special vmesh calculated with vheight
       stbvox_mesh_vertex basevert;
@@ -3121,7 +3136,9 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       basevert = stbvox_vertex_encode(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z, 0,0);
       if (mm->input.selector) {
          mesh = mm->input.selector[v_off];
-      }
+      } else if (mm->input.block_selector)
+         mesh = mm->input.block_selector[bt];
+
 
       // check if we're going off the end
       if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
@@ -3341,6 +3358,9 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          mesh = mm->input.selector[v_off];
          simple_rot = mesh >> 4;
          mesh &= 15;
+      } 
+      if (mm->input.block_selector) {
+         mesh = mm->input.block_selector[bt];
       }
 
       // check if we're going off the end
@@ -3374,10 +3394,13 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
 
 static void stbvox_make_mesh_for_column(stbvox_mesh_maker *mm, int x, int y, int z0)
 {
-   stbvox_pos pos = { x,y,0 };
+   stbvox_pos pos;
    int v_off = x * mm->x_stride_in_bytes + y * mm->y_stride_in_bytes;
    int ns_off = mm->y_stride_in_bytes;
    int ew_off = mm->x_stride_in_bytes;
+   pos.x = x;
+   pos.y = y;
+   pos.z = 0;
    if (mm->input.geometry) {
       unsigned char *bt  = mm->input.blocktype + v_off;
       unsigned char *geo = mm->input.geometry + v_off;
@@ -3736,3 +3759,45 @@ int main(int argc, char **argv)
 // (v:  x:2,y:2,z:2,light:2)
 
 #endif // STB_VOXEL_RENDER_IMPLEMENTATION
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
+software, either in source code form or as a compiled binary, for any purpose, 
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this 
+software dedicate any and all copyright interest in the software to the public 
+domain. We make this dedication for the benefit of the public at large and to 
+the detriment of our heirs and successors. We intend this dedication to be an 
+overt act of relinquishment in perpetuity of all present and future rights to 
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
