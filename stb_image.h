@@ -83,6 +83,7 @@ RECENT REVISION HISTORY:
  Optimizations & bugfixes
     Fabian "ryg" Giesen
     Arseny Kapoulkine
+    John-Mark Allen
 
  Bug & warning fixes
     Marc LeBlanc            David Woo          Guillaume George   Martins Mozeiko
@@ -1046,21 +1047,33 @@ static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, 
    // @TODO: move stbi__convert_format to here
 
    if (stbi__vertically_flip_on_load) {
-      int w = *x, h = *y;
-      int channels = req_comp ? req_comp : *comp;
-      int row,col,z;
-      stbi_uc *image = (stbi_uc *) result;
+     int w = *x, h = *y;
+     int row;
+     int channels = req_comp ? req_comp : *comp;
+     size_t row_stride = w * channels * sizeof( stbi_uc );
+     stbi_uc* image = (stbi_uc *) result;
 
-      // @OPTIMIZE: use a bigger temp buffer and memcpy multiple pixels at once
-      for (row = 0; row < (h>>1); row++) {
-         for (col = 0; col < w; col++) {
-            for (z = 0; z < channels; z++) {
-               stbi_uc temp = image[(row * w + col) * channels + z];
-               image[(row * w + col) * channels + z] = image[((h - row - 1) * w + col) * channels + z];
-               image[((h - row - 1) * w + col) * channels + z] = temp;
-            }
-         }
-      }
+     // Stack temporary row storage for smaller images
+     stbi_uc temp_row_stack[2048];
+     stbi_uc* temp_row = temp_row_stack;
+
+     // malloc'd temporary row storage if 2048uc isn't large enoughs
+     stbi_uc* temp_row_heap = NULL;
+     if( w * channels > 2048 ) {
+        temp_row_heap = (stbi_uc *) stbi__malloc( row_stride );
+        temp_row = temp_row_heap;
+     }
+
+     for (row = 0; row < (h>>1); row++) {
+        memcpy( temp_row, &image[row * w * channels], row_stride );
+        memcpy( &image[row * w * channels], &image[(h - row - 1) * w * channels], row_stride );
+        memcpy( &image[(h - row - 1 ) * w * channels], temp_row, row_stride );
+     }
+
+     if( temp_row_heap != NULL ) {
+        STBI_FREE( temp_row_heap );
+        temp_row_heap = NULL;
+     }
    }
 
    return (unsigned char *) result;
