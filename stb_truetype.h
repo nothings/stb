@@ -112,6 +112,7 @@
 //   Character advance/positioning
 //           stbtt_GetCodepointHMetrics()
 //           stbtt_GetFontVMetrics()
+//			 stbtt_GetFontVOS2Metrics()
 //           stbtt_GetCodepointKernAdvance()
 //
 //   Starting with version 1.06, the rasterizer was replaced with a new,
@@ -672,7 +673,7 @@ struct stbtt_fontinfo
 
    int numGlyphs;                     // number of glyphs, needed for range checking
 
-   int loca,head,glyf,hhea,hmtx,kern; // table locations as offset from start of .ttf
+   int loca,head,glyf,hhea,hmtx,kern,os2; // table locations as offset from start of .ttf
    int index_map;                     // a cmap mapping for our chosen character encoding
    int indexToLocFormat;              // format needed to map from glyph index to glyph
 
@@ -728,6 +729,9 @@ STBTT_DEF void stbtt_GetFontVMetrics(const stbtt_fontinfo *info, int *ascent, in
 // so you should advance the vertical position by "*ascent - *descent + *lineGap"
 //   these are expressed in unscaled coordinates, so you must multiply by
 //   the scale factor for a given size
+
+STBTT_DEF void stbtt_GetFontVOS2Metrics(const stbtt_fontinfo *info, int *typoascent, int *typodescent, int *typolineGap);
+// equivalent to stbtt_GetFontVMetrics but obtains values from the windows specific OS/2 table
 
 STBTT_DEF void stbtt_GetFontBoundingBox(const stbtt_fontinfo *info, int *x0, int *y0, int *x1, int *y1);
 // the bounding box around all possible characters
@@ -1309,6 +1313,7 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, in
    info->hhea = stbtt__find_table(data, fontstart, "hhea"); // required
    info->hmtx = stbtt__find_table(data, fontstart, "hmtx"); // required
    info->kern = stbtt__find_table(data, fontstart, "kern"); // not required
+   info->os2 = stbtt__find_table(data, fontstart, "OS/2"); // required according to microsoft, not required by apple
 
    if (!cmap || !info->head || !info->hhea || !info->hmtx)
       return 0;
@@ -2276,6 +2281,42 @@ STBTT_DEF void stbtt_GetFontVMetrics(const stbtt_fontinfo *info, int *ascent, in
    if (ascent ) *ascent  = ttSHORT(info->data+info->hhea + 4);
    if (descent) *descent = ttSHORT(info->data+info->hhea + 6);
    if (lineGap) *lineGap = ttSHORT(info->data+info->hhea + 8);
+}
+
+STBTT_DEF void stbtt_GetFontVOS2Metrics(const stbtt_fontinfo *info, int *typoascent, int *typodescent, int *typolineGap)
+{
+	if (!info->os2) return;
+
+	int basetableoffset = 0;
+	basetableoffset += 2;    // version
+	basetableoffset += 2;    // xavgcharwidth
+	basetableoffset += 2;    // usweightclass
+	basetableoffset += 2;    // uswidthclass
+	basetableoffset += 2;    // fstype
+	basetableoffset += 2;    // ysubscriptxsize
+	basetableoffset += 2;    // ysubscriptysize
+	basetableoffset += 2;    // ysubscriptxoffset
+	basetableoffset += 2;    // ysubscriptyoffset
+	basetableoffset += 2;    // ysupersciptxsize
+	basetableoffset += 2;    // ysupersciptysize
+	basetableoffset += 2;    // ysupersciptxoffset
+	basetableoffset += 2;    // ysupersciptyoffset
+	basetableoffset += 2;    // ystrikeoutsize
+	basetableoffset += 2;    // ystrikeoutposition
+	basetableoffset += 2;    // sfamilyclass
+	basetableoffset += 10; // panose
+	basetableoffset += 4;    // ulunicoderange1
+	basetableoffset += 4;    // ulunicoderange2
+	basetableoffset += 4;    // ulunicoderange3
+	basetableoffset += 4;    // ulunicoderange4
+	basetableoffset += 4*1;  // achvnedID
+	basetableoffset += 2;    // fsselection
+	basetableoffset += 2;    // usfirstcharindex
+	basetableoffset += 2;    // uslastcharindex
+
+	if (typoascent)  *typoascent  = ttSHORT(info->data+info->os2 + basetableoffset);
+	if (typodescent) *typodescent = ttSHORT(info->data+info->os2 + basetableoffset + 2);
+	if (typolineGap) *typolineGap = ttSHORT(info->data+info->os2 + basetableoffset + 4);
 }
 
 STBTT_DEF void stbtt_GetFontBoundingBox(const stbtt_fontinfo *info, int *x0, int *y0, int *x1, int *y1)
