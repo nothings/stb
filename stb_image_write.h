@@ -51,7 +51,18 @@ USAGE:
    functions, so the library will not use stdio.h at all. However, this will
    also disable HDR writing, because it requires stdio for formatted output.
 
-   Each function returns 0 on failure and non-0 on success.
+   For the file variants, there is also a function to vertically flip the data
+   automatically before writing. Flipping only works for PNG, TGA and BMP-files.
+   Set the flag before writing using the function:
+
+      void stbi_write_set_flip_vertically_on_save(int flag_true_if_should_flip)
+
+   Please note that this function modifies the data parameter you pass to any
+   of the stb_write functions. Copy it using memcpy or likewise if you want to
+   preserve or reuse it later.
+   
+   Each function except stbi_write_set_flip_vertically_on_save returns 0 on
+   failure and non-0 on success.
 
    The functions create an image file defined by the parameters. The image
    is a rectangle of pixels stored from left-to-right, top-to-bottom.
@@ -94,6 +105,8 @@ CREDITS:
       Alan Hickman
    initial file IO callback implementation
       Emmanuel Julien
+   flipping for tga, png, bmp
+      Fredrik Haikarainen (haikarainen@github)
    bugfixes:
       github:Chribba
       Guillaume Chereau
@@ -131,6 +144,7 @@ STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const 
 STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
+STBIWDEF void stbi_write_set_flip_vertically_on_save(int flag_true_if_should_flip);
 #endif
 
 typedef void stbi_write_func(void *context, void *data, int size);
@@ -239,6 +253,33 @@ static int stbi_write_tga_with_rle = 1;
 #else
 int stbi_write_tga_with_rle = 1;
 #endif
+
+static int stbi_vertically_flip_on_save = 0;
+
+STBIWDEF void stbi_write_set_flip_vertically_on_save(int flag_true_if_should_flip)
+{
+    stbi_vertically_flip_on_save = flag_true_if_should_flip;
+}
+
+static void stbi_flip_data(int x, int y, int comp, void *data)
+{
+   int w = x, h = y;
+   int depth = comp;
+   int row,col,z;
+   unsigned char temp;
+   unsigned char* wdata = (unsigned char*) data;
+
+   // @OPTIMIZE: use a bigger temp buffer and memcpy multiple pixels at once
+   for (row = 0; row < (h>>1); row++) {
+      for (col = 0; col < w; col++) {
+         for (z = 0; z < depth; z++) {
+            temp = wdata[(row * w + col) * depth + z];
+            wdata[(row * w + col) * depth + z] = wdata[((h - row - 1) * w + col) * depth + z];
+            wdata[((h - row - 1) * w + col) * depth + z] = temp;
+         }
+      }
+   }
+}
 
 static void stbiw__writefv(stbi__write_context *s, const char *fmt, va_list v)
 {
@@ -374,6 +415,9 @@ STBIWDEF int stbi_write_bmp(char const *filename, int x, int y, int comp, const 
 {
    stbi__write_context s;
    if (stbi__start_write_file(&s,filename)) {
+      if (stbi_vertically_flip_on_save) {
+          stbi_flip_data(x, y, comp, (void *) data);
+      }
       int r = stbi_write_bmp_core(&s, x, y, comp, data);
       stbi__end_write_file(&s);
       return r;
@@ -462,11 +506,15 @@ int stbi_write_tga(char const *filename, int x, int y, int comp, const void *dat
 {
    stbi__write_context s;
    if (stbi__start_write_file(&s,filename)) {
+      if (stbi_vertically_flip_on_save) {
+         stbi_flip_data(x, y, comp, (void *) data);
+      }
       int r = stbi_write_tga_core(&s, x, y, comp, (void *) data);
       stbi__end_write_file(&s);
       return r;
-   } else
+   } else {
       return 0;
+   }
 }
 #endif
 
@@ -992,6 +1040,9 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
 {
    FILE *f;
    int len;
+   if (stbi_vertically_flip_on_save) {
+       stbi_flip_data(x, y, comp, (void *) data);
+   }
    unsigned char *png = stbi_write_png_to_mem((unsigned char *) data, stride_bytes, x, y, comp, &len);
    if (png == NULL) return 0;
    f = fopen(filename, "wb");
