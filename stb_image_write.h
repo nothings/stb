@@ -1,5 +1,5 @@
 /* stb_image_write - v1.05 - public domain - http://nothings.org/stb/stb_image_write.h
-   writes out PNG/BMP/TGA images to C stdio - Sean Barrett 2010-2015
+   writes out PNG/BMP/TGA/PGM images to C stdio - Sean Barrett 2010-2015
                                      no warranty implied; use at your own risk
 
    Before #including,
@@ -29,20 +29,22 @@ BUILDING:
 
 USAGE:
 
-   There are four functions, one for each image file format:
+   There are five functions, one for each image file format:
 
      int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
      int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
+     int stbi_write_pgm(char const *filename, int w, int h, const unsigned char *data);
 
-   There are also four equivalent functions that use an arbitrary write function. You are
+   There are also five equivalent functions that use an arbitrary write function. You are
    expected to open/close your file-equivalent before and after calling these:
 
      int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
      int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
      int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
      int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
+     int stbi_write_pgm_to_func(stbi_write_func *func, void *context, int w, int h, const unsigned char *data);
 
    where the callback is:
       void stbi_write_func(void *context, void *data, int size);
@@ -80,10 +82,15 @@ USAGE:
    TGA supports RLE or non-RLE compressed data. To use non-RLE-compressed
    data, set the global variable 'stbi_write_tga_with_rle' to 0.
 
+   PGM supports only 8-bit grayscale images so the 'comp' parameter is not used.
+   The PGM format expects linear unsigned char data.
+
 CREDITS:
 
    PNG/BMP/TGA
       Sean Barrett
+   PGM
+      Tiago De Gaspari
    HDR
       Baldur Karlsson
    TGA monochrome:
@@ -131,6 +138,7 @@ STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const 
 STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
+STBIWDEF int stbi_write_pgm(char const *filename, int w, int h, const unsigned char *data);
 #endif
 
 typedef void stbi_write_func(void *context, void *data, int size);
@@ -139,6 +147,7 @@ STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int w,
 STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
+STBIWDEF int stbi_write_pgm_to_func(stbi_write_func *func, void *context, int w, int h, const unsigned char  *data);
 
 #ifdef __cplusplus
 }
@@ -1010,6 +1019,35 @@ STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x,
    if (png == NULL) return 0;
    func(context, png, len);
    STBIW_FREE(png);
+   return 1;
+}
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// PGM writer
+// by Tiago De Gaspari
+
+#ifndef STBI_WRITE_NO_STDIO
+STBIWDEF int stbi_write_pgm(char const *filename, int x, int y, const unsigned char *data)
+{
+   FILE *f;
+   int len = x * y;
+   int maxValue = 255;
+   if (data == NULL) return 0;
+   f = fopen(filename, "wb");
+   if (!f) { return 0; }
+   fprintf(f, "P5\n%d %d\n%d\n", x, y, maxValue);
+   fwrite(data, 1, len, f);
+   fclose(f);
+   return 1;
+}
+#endif
+
+STBIWDEF int stbi_write_pgm_to_func(stbi_write_func *func, void *context, int x, int y, const unsigned char *data)
+{
+   int len = x * y;
+   if (data == NULL) return 0;
+   func(context, const_cast<unsigned char*>(data), len);
    return 1;
 }
 
