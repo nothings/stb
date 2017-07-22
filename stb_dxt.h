@@ -19,6 +19,9 @@
 //   v1.01  - (stb) fix bug converting to RGB that messed up quality, thanks ryg & cbloom
 //   v1.00  - (stb) first release
 //
+// contributors:
+//   Kevin Schmidt
+//
 // LICENSE
 //
 //   See end of file for license information.
@@ -35,8 +38,14 @@
 extern "C" {
 #endif
 
-void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
-void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel);
+#ifdef STB_DXT_STATIC
+#define STBDDEF static
+#else
+#define STBDDEF extern
+#endif
+
+STBDDEF void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
+STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel);
 
 #ifdef __cplusplus
 }
