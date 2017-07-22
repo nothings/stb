@@ -1267,9 +1267,9 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
 
    for(i = 0; i < 64; ++i) {
       int uvti, yti = (YQT[i]*quality+50)/100;
-      YTable[stbiw__jpg_ZigZag[i]] = yti < 1 ? 1 : yti > 255 ? 255 : yti;
+      YTable[stbiw__jpg_ZigZag[i]] = (unsigned char) (yti < 1 ? 1 : yti > 255 ? 255 : yti);
       uvti = (UVQT[i]*quality+50)/100;
-      UVTable[stbiw__jpg_ZigZag[i]] = uvti < 1 ? 1 : uvti > 255 ? 255 : uvti;
+      UVTable[stbiw__jpg_ZigZag[i]] = (unsigned char) (uvti < 1 ? 1 : uvti > 255 ? 255 : uvti);
    }
 
    for(row = 0, k = 0; row < 8; ++row) {
