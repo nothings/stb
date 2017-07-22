@@ -559,13 +559,9 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          cs = 0;
          goto scopy;
 #else
-      case 'A': // float
-         h = hexu;
-         goto hexfloat;
-
+      case 'A': // hex float
       case 'a': // hex float
-         h = hex;
-      hexfloat:
+         h = (f[0] == 'A') ? hexu : hex;
          fv = va_arg(va, double);
          if (pr == -1)
             pr = 6; // default is 6
@@ -636,12 +632,8 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          goto scopy;
 
       case 'G': // float
-         h = hexu;
-         goto dosmallfloat;
-
       case 'g': // float
-         h = hex;
-      dosmallfloat:
+         h = (f[0] == 'G') ? hexu : hex;
          fv = va_arg(va, double);
          if (pr == -1)
             pr = 6;
@@ -677,12 +669,8 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          goto dofloatfromg;
 
       case 'E': // float
-         h = hexu;
-         goto doexp;
-
       case 'e': // float
-         h = hex;
-      doexp:
+         h = (f[0] == 'E') ? hexu : hex;
          fv = va_arg(va, double);
          if (pr == -1)
             pr = 6; // default is 6
@@ -911,12 +899,8 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
 #endif
 
       case 'B': // upper binary
-         h = hexu;
-         goto binary;
-
       case 'b': // lower binary
-         h = hex;
-      binary:
+         h = (f[0] == 'B') ? hexu : hex;
          lead[0] = 0;
          if (fl & STBSP__LEADING_0X) {
             lead[0] = 2;
@@ -942,13 +926,9 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          fl &= ~STBSP__LEADINGZERO; // 'p' only prints the pointer with zeros
                                     // drop through to X
 
-      case 'X': // upper binary
-         h = hexu;
-         goto dohexb;
-
-      case 'x': // lower binary
-         h = hex;
-      dohexb:
+      case 'X': // upper hex
+      case 'x': // lower hex
+         h = (f[0] == 'X') ? hexu : hex;
          l = (4 << 4) | (4 << 8);
          lead[0] = 0;
          if (fl & STBSP__LEADING_0X) {
