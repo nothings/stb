@@ -20,7 +20,8 @@
 //   v1.00  - (stb) first release
 //
 // contributors: 
-//   Kevin Schmidt 
+//   Kevin Schmidt (#defines for "freestanding" compilation)
+//   github:ppiastucki (BC4 support)
 // 
 // LICENSE
 //
