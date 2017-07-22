@@ -98,7 +98,7 @@ RECENT REVISION HISTORY:
     Michaelangel007@github  Philipp Wiesemann  Dale Weiler        github:grim210
     Oriol Ferrer Mesia      Josh Tobin         Matthew Gregan     github:sammyhw
     Blazej Dariusz Roszkowski                  Gregory Mullen     github:phprus
-    Kevin Schmidt           github:poppolopoppo
+    Christian Floisand      Kevin Schmidt      github:poppolopoppo
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -4670,9 +4670,10 @@ static void stbi__de_iphone(stbi__png *z)
             stbi_uc a = p[3];
             stbi_uc t = p[0];
             if (a) {
-               p[0] = p[2] * 255 / a;
-               p[1] = p[1] * 255 / a;
-               p[2] =  t   * 255 / a;
+               stbi_uc half = a / 2;
+               p[0] = (p[2] * 255 + half) / a;
+               p[1] = (p[1] * 255 + half) / a;
+               p[2] = ( t   * 255 + half) / a;
             } else {
                p[0] = p[2];
                p[2] = t;
