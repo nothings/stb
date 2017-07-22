@@ -131,9 +131,9 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 */
 
 #if defined(__has_feature)
-#if __has_feature(address_sanitizer)
-#define STBI__ASAN __attribute__((no_sanitize("address")))
-#endif
+   #if __has_feature(address_sanitizer)
+      #define STBI__ASAN __attribute__((no_sanitize("address")))
+   #endif
 #endif
 #ifndef STBI__ASAN
 #define STBI__ASAN
@@ -271,33 +271,33 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       stbsp__int32 fw, pr, tz;
       stbsp__uint32 fl;
 
-// macros for the callback buffer stuff
-#define stbsp__chk_cb_bufL(bytes)                        \
-   {                                                     \
-      int len = (int)(bf - buf);                         \
-      if ((len + (bytes)) >= STB_SPRINTF_MIN) {          \
-         tlen += len;                                    \
-         if (0 == (bf = buf = callback(buf, user, len))) \
-            goto done;                                   \
-      }                                                  \
-   }
-#define stbsp__chk_cb_buf(bytes)    \
-   {                                \
-      if (callback) {               \
-         stbsp__chk_cb_bufL(bytes); \
-      }                             \
-   }
-#define stbsp__flush_cb()                      \
-   {                                           \
-      stbsp__chk_cb_bufL(STB_SPRINTF_MIN - 1); \
-   } // flush if there is even one byte in the buffer
-#define stbsp__cb_buf_clamp(cl, v)                \
-   cl = v;                                        \
-   if (callback) {                                \
-      int lg = STB_SPRINTF_MIN - (int)(bf - buf); \
-      if (cl > lg)                                \
-         cl = lg;                                 \
-   }
+      // macros for the callback buffer stuff
+      #define stbsp__chk_cb_bufL(bytes)                        \
+         {                                                     \
+            int len = (int)(bf - buf);                         \
+            if ((len + (bytes)) >= STB_SPRINTF_MIN) {          \
+               tlen += len;                                    \
+               if (0 == (bf = buf = callback(buf, user, len))) \
+                  goto done;                                   \
+            }                                                  \
+         }
+      #define stbsp__chk_cb_buf(bytes)    \
+         {                                \
+            if (callback) {               \
+               stbsp__chk_cb_bufL(bytes); \
+            }                             \
+         }
+      #define stbsp__flush_cb()                      \
+         {                                           \
+            stbsp__chk_cb_bufL(STB_SPRINTF_MIN - 1); \
+         } // flush if there is even one byte in the buffer
+      #define stbsp__cb_buf_clamp(cl, v)                \
+         cl = v;                                        \
+         if (callback) {                                \
+            int lg = STB_SPRINTF_MIN - (int)(bf - buf); \
+            if (cl > lg)                                \
+               cl = lg;                                 \
+         }
 
       // fast copy everything up to the next % (or end of string)
       for (;;) {
@@ -465,7 +465,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
 
       // handle each replacement
       switch (f[0]) {
-#define STBSP__NUMSZ 512 // big enough for e308 (with commas) or e-307
+         #define STBSP__NUMSZ 512 // big enough for e308 (with commas) or e-307
          char num[STBSP__NUMSZ];
          char lead[8];
          char tail[8];
@@ -1427,84 +1427,100 @@ static stbsp__int32 stbsp__real_to_parts(stbsp__int64 *bits, stbsp__int32 *expo,
    return (stbsp__int32)(b >> 63);
 }
 
-static double const stbsp__bot[23] = {1e+000, 1e+001, 1e+002, 1e+003, 1e+004, 1e+005, 1e+006, 1e+007, 1e+008, 1e+009, 1e+010, 1e+011,
-                                      1e+012, 1e+013, 1e+014, 1e+015, 1e+016, 1e+017, 1e+018, 1e+019, 1e+020, 1e+021, 1e+022};
-static double const stbsp__negbot[22] = {1e-001, 1e-002, 1e-003, 1e-004, 1e-005, 1e-006, 1e-007, 1e-008, 1e-009, 1e-010, 1e-011,
-                                         1e-012, 1e-013, 1e-014, 1e-015, 1e-016, 1e-017, 1e-018, 1e-019, 1e-020, 1e-021, 1e-022};
+static double const stbsp__bot[23] = {
+   1e+000, 1e+001, 1e+002, 1e+003, 1e+004, 1e+005, 1e+006, 1e+007, 1e+008, 1e+009, 1e+010, 1e+011,
+   1e+012, 1e+013, 1e+014, 1e+015, 1e+016, 1e+017, 1e+018, 1e+019, 1e+020, 1e+021, 1e+022
+};
+static double const stbsp__negbot[22] = {
+   1e-001, 1e-002, 1e-003, 1e-004, 1e-005, 1e-006, 1e-007, 1e-008, 1e-009, 1e-010, 1e-011,
+   1e-012, 1e-013, 1e-014, 1e-015, 1e-016, 1e-017, 1e-018, 1e-019, 1e-020, 1e-021, 1e-022
+};
 static double const stbsp__negboterr[22] = {
    -5.551115123125783e-018,  -2.0816681711721684e-019, -2.0816681711721686e-020, -4.7921736023859299e-021, -8.1803053914031305e-022, 4.5251888174113741e-023,
    4.5251888174113739e-024,  -2.0922560830128471e-025, -6.2281591457779853e-026, -3.6432197315497743e-027, 6.0503030718060191e-028,  2.0113352370744385e-029,
    -3.0373745563400371e-030, 1.1806906454401013e-032,  -7.7705399876661076e-032, 2.0902213275965398e-033,  -7.1542424054621921e-034, -7.1542424054621926e-035,
-   2.4754073164739869e-036,  5.4846728545790429e-037,  9.2462547772103625e-038,  -4.8596774326570872e-039};
-static double const stbsp__top[13] = {1e+023, 1e+046, 1e+069, 1e+092, 1e+115, 1e+138, 1e+161, 1e+184, 1e+207, 1e+230, 1e+253, 1e+276, 1e+299};
-static double const stbsp__negtop[13] = {1e-023, 1e-046, 1e-069, 1e-092, 1e-115, 1e-138, 1e-161, 1e-184, 1e-207, 1e-230, 1e-253, 1e-276, 1e-299};
-static double const stbsp__toperr[13] = {8388608,
-                                         6.8601809640529717e+028,
-                                         -7.253143638152921e+052,
-                                         -4.3377296974619174e+075,
-                                         -1.5559416129466825e+098,
-                                         -3.2841562489204913e+121,
-                                         -3.7745893248228135e+144,
-                                         -1.7356668416969134e+167,
-                                         -3.8893577551088374e+190,
-                                         -9.9566444326005119e+213,
-                                         6.3641293062232429e+236,
-                                         -5.2069140800249813e+259,
-                                         -5.2504760255204387e+282};
-static double const stbsp__negtoperr[13] = {3.9565301985100693e-040,  -2.299904345391321e-063,  3.6506201437945798e-086,  1.1875228833981544e-109,
-                                            -5.0644902316928607e-132, -6.7156837247865426e-155, -2.812077463003139e-178,  -5.7778912386589953e-201,
-                                            7.4997100559334532e-224,  -4.6439668915134491e-247, -6.3691100762962136e-270, -9.436808465446358e-293,
-                                            8.0970921678014997e-317};
+   2.4754073164739869e-036,  5.4846728545790429e-037,  9.2462547772103625e-038,  -4.8596774326570872e-039
+};
+static double const stbsp__top[13] = {
+   1e+023, 1e+046, 1e+069, 1e+092, 1e+115, 1e+138, 1e+161, 1e+184, 1e+207, 1e+230, 1e+253, 1e+276, 1e+299
+};
+static double const stbsp__negtop[13] = {
+   1e-023, 1e-046, 1e-069, 1e-092, 1e-115, 1e-138, 1e-161, 1e-184, 1e-207, 1e-230, 1e-253, 1e-276, 1e-299
+};
+static double const stbsp__toperr[13] = {
+   8388608,
+   6.8601809640529717e+028,
+   -7.253143638152921e+052,
+   -4.3377296974619174e+075,
+   -1.5559416129466825e+098,
+   -3.2841562489204913e+121,
+   -3.7745893248228135e+144,
+   -1.7356668416969134e+167,
+   -3.8893577551088374e+190,
+   -9.9566444326005119e+213,
+   6.3641293062232429e+236,
+   -5.2069140800249813e+259,
+   -5.2504760255204387e+282
+};
+static double const stbsp__negtoperr[13] = {
+   3.9565301985100693e-040,  -2.299904345391321e-063,  3.6506201437945798e-086,  1.1875228833981544e-109,
+   -5.0644902316928607e-132, -6.7156837247865426e-155, -2.812077463003139e-178,  -5.7778912386589953e-201,
+   7.4997100559334532e-224,  -4.6439668915134491e-247, -6.3691100762962136e-270, -9.436808465446358e-293,
+   8.0970921678014997e-317
+};
 
 #if defined(_MSC_VER) && (_MSC_VER <= 1200)
-static stbsp__uint64 const stbsp__powten[20] = {1,
-                                                10,
-                                                100,
-                                                1000,
-                                                10000,
-                                                100000,
-                                                1000000,
-                                                10000000,
-                                                100000000,
-                                                1000000000,
-                                                10000000000,
-                                                100000000000,
-                                                1000000000000,
-                                                10000000000000,
-                                                100000000000000,
-                                                1000000000000000,
-                                                10000000000000000,
-                                                100000000000000000,
-                                                1000000000000000000,
-                                                10000000000000000000U};
+static stbsp__uint64 const stbsp__powten[20] = {
+   1,
+   10,
+   100,
+   1000,
+   10000,
+   100000,
+   1000000,
+   10000000,
+   100000000,
+   1000000000,
+   10000000000,
+   100000000000,
+   1000000000000,
+   10000000000000,
+   100000000000000,
+   1000000000000000,
+   10000000000000000,
+   100000000000000000,
+   1000000000000000000,
+   10000000000000000000U
+};
 #define stbsp__tento19th ((stbsp__uint64)1000000000000000000)
 #else
-static stbsp__uint64 const stbsp__powten[20] = {1,
-                                                10,
-                                                100,
-                                                1000,
-                                                10000,
-                                                100000,
-                                                1000000,
-                                                10000000,
-                                                100000000,
-                                                1000000000,
-                                                10000000000ULL,
-                                                100000000000ULL,
-                                                1000000000000ULL,
-                                                10000000000000ULL,
-                                                100000000000000ULL,
-                                                1000000000000000ULL,
-                                                10000000000000000ULL,
-                                                100000000000000000ULL,
-                                                1000000000000000000ULL,
-                                                10000000000000000000ULL};
+static stbsp__uint64 const stbsp__powten[20] = {
+   1,
+   10,
+   100,
+   1000,
+   10000,
+   100000,
+   1000000,
+   10000000,
+   100000000,
+   1000000000,
+   10000000000ULL,
+   100000000000ULL,
+   1000000000000ULL,
+   10000000000000ULL,
+   100000000000000ULL,
+   1000000000000000ULL,
+   10000000000000000ULL,
+   100000000000000000ULL,
+   1000000000000000000ULL,
+   10000000000000000000ULL
+};
 #define stbsp__tento19th (1000000000000000000ULL)
 #endif
 
 #define stbsp__ddmulthi(oh, ol, xh, yh)                            \
-   \
-{                                                            \
+   {                                                               \
       double ahi = 0, alo, bhi = 0, blo;                           \
       stbsp__int64 bt;                                             \
       oh = xh * yh;                                                \
@@ -1517,12 +1533,10 @@ static stbsp__uint64 const stbsp__powten[20] = {1,
       STBSP__COPYFP(bhi, bt);                                      \
       blo = yh - bhi;                                              \
       ol = ((ahi * bhi - oh) + ahi * blo + alo * bhi) + alo * blo; \
-   \
-}
+   }
 
 #define stbsp__ddtoS64(ob, xh, xl)          \
-   \
-{                                     \
+   {                                        \
       double ahi = 0, alo, vh, t;           \
       ob = (stbsp__int64)ph;                \
       vh = (double)ob;                      \
@@ -1530,8 +1544,7 @@ static stbsp__uint64 const stbsp__powten[20] = {1,
       t = (ahi - xh);                       \
       alo = (xh - (ahi - t)) - (vh + t);    \
       ob += (stbsp__int64)(ahi + alo + xl); \
-   \
-}
+   }
 
 #define stbsp__ddrenorm(oh, ol) \
    {                            \
