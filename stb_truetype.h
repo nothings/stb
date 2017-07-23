@@ -53,6 +53,7 @@
 //       Thomas Fields
 //       Derek Vinyard
 //       Cort Stratton
+//       github:oyvindjam
 //
 // VERSION HISTORY
 //
@@ -95,7 +96,7 @@
 //   Improved 3D API (more shippable):
 //           #include "stb_rect_pack.h"           -- optional, but you really want it
 //           stbtt_PackBegin()
-//           stbtt_PackSetOversample()            -- for improved quality on small fonts
+//           stbtt_PackSetOversampling()          -- for improved quality on small fonts
 //           stbtt_PackFontRanges()               -- pack and renders
 //           stbtt_PackEnd()
 //           stbtt_GetPackedQuad()
