@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.16 - public domain
+// stb_truetype.h - v1.17 - public domain
 // authored from 2009-2016 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -57,6 +57,7 @@
 //
 // VERSION HISTORY
 //
+//   1.17 (2017-07-23) make more arguments const; doc fix
 //   1.16 (2017-07-12) SDF support
 //   1.15 (2017-03-03) make more arguments const
 //   1.14 (2017-01-16) num-fonts-in-TTC function

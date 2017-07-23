@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.06 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.07 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -9,6 +9,7 @@
 //     and "high quality" using mode.
 //
 // version history:
+//   v1.07  - bc4; allow not using libc; add STB_DXT_STATIC
 //   v1.06  - (stb) fix to known-broken 1.05
 //   v1.05  - (stb) support bc5/3dc (Arvids Kokins), use extern "C" in C++ (Pavel Krajcevski)
 //   v1.04  - (ryg) default to no rounding bias for lerped colors (as per S3TC/DX10 spec);

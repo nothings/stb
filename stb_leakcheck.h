@@ -1,4 +1,4 @@
-// stb_leakcheck.h - v0.3 - quick & dirty malloc leak-checking - public domain
+// stb_leakcheck.h - v0.4 - quick & dirty malloc leak-checking - public domain
 // LICENSE
 //
 //   See end of file.
@@ -135,8 +135,8 @@ void stb_leakcheck_dumpmem(void)
 #define free(p)       stb_leakcheck_free(p)
 #define realloc(p,sz) stb_leakcheck_realloc(p,sz, __FILE__, __LINE__)
 
-extern void * stb_leakcheck_malloc(size_t sz, char *file, int line);
-extern void * stb_leakcheck_realloc(void *ptr, size_t sz, char *file, int line);
+extern void * stb_leakcheck_malloc(size_t sz, const char *file, int line);
+extern void * stb_leakcheck_realloc(void *ptr, size_t sz, const char *file, int line);
 extern void   stb_leakcheck_free(void *ptr);
 extern void   stb_leakcheck_dumpmem(void);
 
