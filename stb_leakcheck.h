@@ -59,7 +59,7 @@ void stb_leakcheck_free(void *ptr)
       if (mi->next)
          mi->next->prev = mi->prev;
       #endif
-      free(ptr);
+      free(mi);
    }
 }
 
