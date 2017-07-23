@@ -551,7 +551,7 @@ enum STBVorbisError
    #include <math.h>
 
    // find definition of alloca if it's not in stdlib.h:
-   #ifdef _MSC_VER
+   #if defined(_MSC_VER) || defined(__MINGW32__)
       #include <malloc.h>
    #endif
    #if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__)
