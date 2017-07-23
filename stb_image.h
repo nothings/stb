@@ -135,11 +135,12 @@ RECENT REVISION HISTORY:
 // with each pixel consisting of N interleaved 8-bit components; the first
 // pixel pointed to is top-left-most in the image. There is no padding between
 // image scanlines or between pixels, regardless of format. The number of
-// components N is 'req_comp' if req_comp is non-zero, or *comp otherwise.
-// If req_comp is non-zero, *comp has the number of components that _would_
-// have been output otherwise. E.g. if you set req_comp to 4, you will always
-// get RGBA output, but you can check *comp to see if it's trivially opaque
-// because e.g. there were only 3 channels in the source image.
+// components N is 'desired_channels' if desired_channels is non-zero, or
+// *channels_in_file otherwise. If desired_channels is non-zero,
+// *channels_in_file has the number of components that _would_ have been
+// output otherwise. E.g. if you set desired_channels to 4, you will always
+// get RGBA output, but you can check *channels_in_file to see if it's trivially
+// opaque because e.g. there were only 3 channels in the source image.
 //
 // An output image with N components has the following components interleaved
 // in this order in each pixel:
@@ -151,10 +152,10 @@ RECENT REVISION HISTORY:
 //       4           red, green, blue, alpha
 //
 // If image loading fails for any reason, the return value will be NULL,
-// and *x, *y, *comp will be unchanged. The function stbi_failure_reason()
-// can be queried for an extremely brief, end-user unfriendly explanation
-// of why the load failed. Define STBI_NO_FAILURE_STRINGS to avoid
-// compiling these strings at all, and STBI_FAILURE_USERMSG to get slightly
+// and *x, *y, *channels_in_file will be unchanged. The function
+// stbi_failure_reason() can be queried for an extremely brief, end-user
+// unfriendly explanation of why the load failed. Define STBI_NO_FAILURE_STRINGS
+// to avoid compiling these strings at all, and STBI_FAILURE_USERMSG to get slightly
 // more user-friendly ones.
 //
 // Paletted PNG, BMP, GIF, and PIC images are automatically depalettized.
@@ -311,7 +312,7 @@ RECENT REVISION HISTORY:
 
 enum
 {
-   STBI_default = 0, // only used for req_comp
+   STBI_default = 0, // only used for desired_channels
 
    STBI_grey       = 1,
    STBI_grey_alpha = 2,
