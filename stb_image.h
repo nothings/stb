@@ -4299,11 +4299,10 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
 
    img_width_bytes = (((img_n * x * depth) + 7) >> 3);
    img_len = (img_width_bytes + 1) * y;
-   if (s->img_x == x && s->img_y == y) {
-      if (raw_len != img_len) return stbi__err("not enough pixels","Corrupt PNG");
-   } else { // interlaced:
-      if (raw_len < img_len) return stbi__err("not enough pixels","Corrupt PNG");
-   }
+   // we used to check for exact match between raw_len and img_len on non-interlaced PNGs,
+   // but issue #276 reported a PNG in the wild that had extra data at the end (all zeros),
+   // so just check for raw_len < img_len always.
+   if (raw_len < img_len) return stbi__err("not enough pixels","Corrupt PNG");
 
    for (j=0; j < y; ++j) {
       stbi_uc *cur = a->out + stride*j;
