@@ -27,6 +27,7 @@
 //       Ryan Gordon
 //       Simon Glass
 //       github:IntellectualKitty
+//       Imanol Celaya
 //
 //   Bug/warning reports/fixes:
 //       "Zer" on mollyrocket
@@ -112,6 +113,7 @@
 //   Character advance/positioning
 //           stbtt_GetCodepointHMetrics()
 //           stbtt_GetFontVMetrics()
+//           stbtt_GetFontVMetricsOS2()
 //           stbtt_GetCodepointKernAdvance()
 //
 //   Starting with version 1.06, the rasterizer was replaced with a new,
@@ -728,6 +730,12 @@ STBTT_DEF void stbtt_GetFontVMetrics(const stbtt_fontinfo *info, int *ascent, in
 // so you should advance the vertical position by "*ascent - *descent + *lineGap"
 //   these are expressed in unscaled coordinates, so you must multiply by
 //   the scale factor for a given size
+
+STBTT_DEF int  stbtt_GetFontVMetricsOS2(const stbtt_fontinfo *info, int *typoAscent, int *typoDescent, int *typoLineGap);
+// analogous to GetFontVMetrics, but returns the "typographic" values from the OS/2
+// table (specific to MS/Windows TTF files).
+//
+// Returns 1 on success (table present), 0 on failure.
 
 STBTT_DEF void stbtt_GetFontBoundingBox(const stbtt_fontinfo *info, int *x0, int *y0, int *x1, int *y1);
 // the bounding box around all possible characters
@@ -2276,6 +2284,17 @@ STBTT_DEF void stbtt_GetFontVMetrics(const stbtt_fontinfo *info, int *ascent, in
    if (ascent ) *ascent  = ttSHORT(info->data+info->hhea + 4);
    if (descent) *descent = ttSHORT(info->data+info->hhea + 6);
    if (lineGap) *lineGap = ttSHORT(info->data+info->hhea + 8);
+}
+
+STBTT_DEF int  stbtt_GetFontVMetricsOS2(const stbtt_fontinfo *info, int *typoAscent, int *typoDescent, int *typoLineGap)
+{
+   int tab = stbtt__find_table(info->data, info->fontstart, "OS/2");
+   if (!tab)
+      return 0;
+   if (typoAscent ) *typoAscent  = ttSHORT(info->data+tab + 68);
+   if (typoDescent) *typoDescent = ttSHORT(info->data+tab + 70);
+   if (typoLineGap) *typoLineGap = ttSHORT(info->data+tab + 72);
+   return 1;
 }
 
 STBTT_DEF void stbtt_GetFontBoundingBox(const stbtt_fontinfo *info, int *x0, int *y0, int *x1, int *y1)
