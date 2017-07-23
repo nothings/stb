@@ -83,6 +83,7 @@ RECENT REVISION HISTORY:
  Optimizations & bugfixes
     Fabian "ryg" Giesen
     Arseny Kapoulkine
+    John-Mark Allen
 
  Bug & warning fixes
     Marc LeBlanc            David Woo          Guillaume George   Martins Mozeiko
@@ -1031,6 +1032,30 @@ static stbi__uint16 *stbi__convert_8_to_16(stbi_uc *orig, int w, int h, int chan
    return enlarged;
 }
 
+static void stbi__vertical_flip(void *image, int w, int h, int bytes_per_pixel)
+{
+   int row;
+   size_t bytes_per_row = (size_t)w * bytes_per_pixel;
+   stbi_uc temp[2048];
+   stbi_uc *bytes = (stbi_uc *)image;
+
+   for (row = 0; row < (h>>1); row++) {
+      stbi_uc *row0 = bytes + row*bytes_per_row;
+      stbi_uc *row1 = bytes + (h - row - 1)*bytes_per_row;
+      // swap row0 with row1
+      size_t bytes_left = bytes_per_row;
+      while (bytes_left) {
+         size_t bytes_copy = (bytes_left < sizeof(temp)) ? bytes_left : sizeof(temp);
+         memcpy(temp, row0, bytes_copy);
+         memcpy(row0, row1, bytes_copy);
+         memcpy(row1, temp, bytes_copy);
+         row0 += bytes_copy;
+         row1 += bytes_copy;
+         bytes_left -= bytes_copy;
+      }
+   }
+}
+
 static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    stbi__result_info ri;
@@ -1048,21 +1073,8 @@ static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, 
    // @TODO: move stbi__convert_format to here
 
    if (stbi__vertically_flip_on_load) {
-      int w = *x, h = *y;
       int channels = req_comp ? req_comp : *comp;
-      int row,col,z;
-      stbi_uc *image = (stbi_uc *) result;
-
-      // @OPTIMIZE: use a bigger temp buffer and memcpy multiple pixels at once
-      for (row = 0; row < (h>>1); row++) {
-         for (col = 0; col < w; col++) {
-            for (z = 0; z < channels; z++) {
-               stbi_uc temp = image[(row * w + col) * channels + z];
-               image[(row * w + col) * channels + z] = image[((h - row - 1) * w + col) * channels + z];
-               image[((h - row - 1) * w + col) * channels + z] = temp;
-            }
-         }
-      }
+      stbi__vertical_flip(result, *x, *y, channels * sizeof(stbi_uc));
    }
 
    return (unsigned char *) result;
@@ -1086,21 +1098,8 @@ static stbi__uint16 *stbi__load_and_postprocess_16bit(stbi__context *s, int *x, 
    // @TODO: special case RGB-to-Y (and RGBA-to-YA) for 8-bit-to-16-bit case to keep more precision
 
    if (stbi__vertically_flip_on_load) {
-      int w = *x, h = *y;
       int channels = req_comp ? req_comp : *comp;
-      int row,col,z;
-      stbi__uint16 *image = (stbi__uint16 *) result;
-
-      // @OPTIMIZE: use a bigger temp buffer and memcpy multiple pixels at once
-      for (row = 0; row < (h>>1); row++) {
-         for (col = 0; col < w; col++) {
-            for (z = 0; z < channels; z++) {
-               stbi__uint16 temp = image[(row * w + col) * channels + z];
-               image[(row * w + col) * channels + z] = image[((h - row - 1) * w + col) * channels + z];
-               image[((h - row - 1) * w + col) * channels + z] = temp;
-            }
-         }
-      }
+      stbi__vertical_flip(result, *x, *y, channels * sizeof(stbi__uint16));
    }
 
    return (stbi__uint16 *) result;
@@ -1110,21 +1109,8 @@ static stbi__uint16 *stbi__load_and_postprocess_16bit(stbi__context *s, int *x, 
 static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, int req_comp)
 {
    if (stbi__vertically_flip_on_load && result != NULL) {
-      int w = *x, h = *y;
-      int depth = req_comp ? req_comp : *comp;
-      int row,col,z;
-      float temp;
-
-      // @OPTIMIZE: use a bigger temp buffer and memcpy multiple pixels at once
-      for (row = 0; row < (h>>1); row++) {
-         for (col = 0; col < w; col++) {
-            for (z = 0; z < depth; z++) {
-               temp = result[(row * w + col) * depth + z];
-               result[(row * w + col) * depth + z] = result[((h - row - 1) * w + col) * depth + z];
-               result[((h - row - 1) * w + col) * depth + z] = temp;
-            }
-         }
-      }
+      int channels = req_comp ? req_comp : *comp;
+      stbi__vertical_flip(result, *x, *y, channels * sizeof(float));
    }
 }
 #endif
