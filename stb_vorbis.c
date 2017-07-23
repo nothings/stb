@@ -29,7 +29,7 @@
 //    Bernhard Wodo      Evan Balster        alxprd@github
 //    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
 //    Phillip Bennefall  Rohit               Thiago Goulart
-//    manxorist@github   saga musix
+//    manxorist@github   saga musix          github:infatum
 //
 // Partial history:
 //    1.11    - 2017/07/23 - fix MinGW compilation 
@@ -577,7 +577,7 @@ enum STBVorbisError
    #undef __forceinline
    #endif
    #define __forceinline
-#define alloca __builtin_alloca
+   #define alloca __builtin_alloca
 #elif !defined(_MSC_VER)
    #if __GNUC__
       #define __forceinline inline
