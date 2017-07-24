@@ -1,4 +1,4 @@
-/* stb_image_write - v1.06 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v1.07 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA/JPEG/HDR images to C stdio - Sean Barrett 2010-2015
                                      no warranty implied; use at your own risk
 
@@ -35,7 +35,7 @@ USAGE:
      int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
-     int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int quality)
+     int stbi_write_jpg(char const *filename, int w, int h, int comp, const float *data);
 
    There are also four equivalent functions that use an arbitrary write function. You are
    expected to open/close your file-equivalent before and after calling these:
@@ -1377,6 +1377,8 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
+      1.07  (2017-07-24)
+             doc fix
       1.06 (2017-07-23)
              writing JPEG (using Jon Olick's code)
       1.05   ???
