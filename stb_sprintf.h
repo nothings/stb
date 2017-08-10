@@ -927,7 +927,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          fl |= (sizeof(void *) == 8) ? STBSP__INTMAX : 0;
          pr = sizeof(void *) * 2;
          fl &= ~STBSP__LEADINGZERO; // 'p' only prints the pointer with zeros
-                                    // drop through to X
+                                    // fall through - to X
 
       case 'X': // upper hex
       case 'x': // lower hex
