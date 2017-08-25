@@ -193,6 +193,7 @@ CREDITS
   Eugene Opalev
   Tim Sjostrand
   github:infatum
+  Dave Butler (Croepha)
 */
 
 #include <stdarg.h>
