@@ -88,7 +88,7 @@ STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *sr
 
 #ifndef STBD_MEMSET
 #include <string.h>
-#define STBD_MEMSET(x)        memset(x)
+#define STBD_MEMSET           memset
 #endif
 
 static unsigned char stb__Expand5[32];
