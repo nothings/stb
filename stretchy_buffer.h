@@ -203,7 +203,7 @@ static void * stb__copy(void *arr, int itemsize)
    }
 
    int count = 2 * sizeof(int) + stb_sb_count(arr) * itemsize;
-   int *p = malloc(count);
+   int *p = (int *)malloc(count);
    if (p) {
       memcpy(p, stb__sbraw(arr), count);
       return p+2;
