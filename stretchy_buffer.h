@@ -203,7 +203,6 @@ static void * stb__copy(void *arr, int itemsize)
    }
 
    int count = 2 * sizeof(int) + stb_sb_count(arr) * itemsize;
-   printf("copying %d bytes\n", count);
    int *p = malloc(count);
    if (p) {
       memcpy(p, stb__sbraw(arr), count);
