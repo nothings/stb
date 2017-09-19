@@ -175,6 +175,7 @@
 #define sb_count  stb_sb_count
 #define sb_add    stb_sb_add
 #define sb_last   stb_sb_last
+#define sb_copy   stb_sb_copy
 #endif
 
 #define stb_sb_free(a)         ((a) ? free(stb__sbraw(a)),0 : 0)
@@ -182,6 +183,7 @@
 #define stb_sb_count(a)        ((a) ? stb__sbn(a) : 0)
 #define stb_sb_add(a,n)        (stb__sbmaybegrow(a,n), stb__sbn(a)+=(n), &(a)[stb__sbn(a)-(n)])
 #define stb_sb_last(a)         ((a)[stb__sbn(a)-1])
+#define stb_sb_copy(a)         ((a) ? stb__copy((a), sizeof(*(a))) : 0)
 
 #define stb__sbraw(a) ((int *) (a) - 2)
 #define stb__sbm(a)   stb__sbraw(a)[0]
@@ -192,6 +194,27 @@
 #define stb__sbgrow(a,n)      ((a) = stb__sbgrowf((a), (n), sizeof(*(a))))
 
 #include <stdlib.h>
+#include <string.h>
+
+static void * stb__copy(void *arr, int itemsize)
+{
+   if (!arr) {
+       return NULL;
+   }
+
+   int count = 2 * sizeof(int) + stb_sb_count(arr) * itemsize;
+   printf("copying %d bytes\n", count);
+   int *p = malloc(count);
+   if (p) {
+      memcpy(p, stb__sbraw(arr), count);
+      return p+2;
+   } else {
+#ifdef STRETCHY_BUFFER_OUT_OF_MEMORY
+       STRETCHY_BUFFER_OUT_OF_MEMORY ;
+#endif
+      return (void *) (2*sizeof(int)); // try to force a NULL pointer
+   }
+}
 
 static void * stb__sbgrowf(void *arr, int increment, int itemsize)
 {
