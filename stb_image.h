@@ -96,7 +96,7 @@ RECENT REVISION HISTORY:
     Michaelangel007@github  Philipp Wiesemann  Dale Weiler        github:grim210
     Oriol Ferrer Mesia      Josh Tobin         Matthew Gregan     github:sammyhw
     Blazej Dariusz Roszkowski                  Gregory Mullen     github:phprus
-    Christian Floisand      Kevin Schmidt                         github:poppolopoppo
+    Christian Floisand      Kevin Schmidt      Aldo Culquicondor  github:poppolopoppo
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -5240,7 +5240,7 @@ static int stbi__tga_get_comp(int bits_per_pixel, int is_grey, int* is_rgb16)
    switch(bits_per_pixel) {
       case 8:  return STBI_grey;
       case 16: if(is_grey) return STBI_grey_alpha;
-            // else: fall-through
+            // else, fall-through
       case 15: if(is_rgb16) *is_rgb16 = 1;
             return STBI_rgb;
       case 24: // fall-through
