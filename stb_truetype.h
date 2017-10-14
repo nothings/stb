@@ -2172,7 +2172,7 @@ static int stbtt__run_charstring(const stbtt_fontinfo *info, int glyph_index, st
 
          // push immediate
          if (b0 == 255) {
-            f = (float)stbtt__buf_get32(&b) / 0x10000;
+            f = (float)(stbtt_int32)stbtt__buf_get32(&b) / 0x10000;
          } else {
             stbtt__buf_skip(&b, -1);
             f = (float)(stbtt_int16)stbtt__cff_int(&b);
