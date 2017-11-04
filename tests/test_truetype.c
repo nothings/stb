@@ -1,13 +1,20 @@
+#ifndef _CRT_SECURE_NO_WARNINGS
+// Fixes Compile Errors for Visual Studio 2005 or newer
+  #define _CRT_SECURE_NO_WARNINGS
+#endif
+
+#define STB_RECT_PACK_IMPLEMENTATION
 #include "stb_rect_pack.h"
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
 #ifdef TT_TEST
 
 #include <stdio.h>
 
-char ttf_buffer[1<<25];
+unsigned char ttf_buffer[1 << 25];
 unsigned char output[512*100];
 
 void debug(void)
@@ -66,12 +73,14 @@ int main(int argc, char **argv)
       stbtt_PackBegin(&pc, temp_bitmap[0], BITMAP_W, BITMAP_H, 0, 1, NULL);
 
       pr[0].chardata_for_range = pdata;
-      pr[0].first_unicode_char_in_range = 32;
-      pr[0].num_chars_in_range = 95;
+      pr[0].array_of_unicode_codepoints = NULL;
+      pr[0].first_unicode_codepoint_in_range = 32;
+      pr[0].num_chars = 95;
       pr[0].font_size = 20.0f;
       pr[1].chardata_for_range = pdata+256;
-      pr[1].first_unicode_char_in_range = 0xa0;
-      pr[1].num_chars_in_range = 0x100 - 0xa0;
+      pr[1].array_of_unicode_codepoints = NULL;
+      pr[1].first_unicode_codepoint_in_range = 0xa0;
+      pr[1].num_chars = 0x100 - 0xa0;
       pr[1].font_size = 20.0f;
 
       stbtt_PackSetOversampling(&pc, 2, 2);
