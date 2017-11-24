@@ -4902,7 +4902,7 @@ static int stbi__png_info_raw(stbi__png *p, int *x, int *y, int *comp)
    }
    if (x) *x = p->s->img_x;
    if (y) *y = p->s->img_y;
-   if (comp) *comp = p->s->img_n * p->depth / 8;
+   if (comp) *comp = p->s->img_n;
    return 1;
 }
 
@@ -6667,7 +6667,7 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
 #ifndef STBI_NO_PSD
 static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
 {
-   int channelCount, dummy, depth;
+   int channelCount, dummy;
    if (!x) x = &dummy;
    if (!y) y = &dummy;
    if (!comp) comp = &dummy;
@@ -6687,8 +6687,7 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
    }
    *y = stbi__get32be(s);
    *x = stbi__get32be(s);
-   depth = stbi__get16be(s);
-   if (depth != 8 && depth != 16) {
+   if (stbi__get16be(s) != 8) {
        stbi__rewind( s );
        return 0;
    }
@@ -6696,7 +6695,7 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
        stbi__rewind( s );
        return 0;
    }
-   *comp = 4 * depth / 8;
+   *comp = 4;
    return 1;
 }
 #endif
