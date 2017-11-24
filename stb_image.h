@@ -416,11 +416,14 @@ STBIDEF void     stbi_image_free      (void *retval_from_stbi_load);
 // get image dimensions & components without fully decoding
 STBIDEF int      stbi_info_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp);
 STBIDEF int      stbi_info_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp);
+STBIDEF int      stbi_is_16_from_memory(stbi_uc const *buffer, int len);
+STBIDEF int      stbi_is_16_from_callbacks(stbi_io_callbacks const *clbk, void *user);
 
 #ifndef STBI_NO_STDIO
 STBIDEF int      stbi_info            (char const *filename,     int *x, int *y, int *comp);
 STBIDEF int      stbi_info_from_file  (FILE *f,                  int *x, int *y, int *comp);
-
+STBIDEF int      stbi_is_16           (char const *filename);
+STBIDEF int      stbi_is_16_from_file (FILE *f);
 #endif
 
 
@@ -784,6 +787,7 @@ static int      stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp);
 static int      stbi__png_test(stbi__context *s);
 static void    *stbi__png_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
 static int      stbi__png_info(stbi__context *s, int *x, int *y, int *comp);
+static int      stbi__png_is16(stbi__context *s);
 #endif
 
 #ifndef STBI_NO_BMP
@@ -802,6 +806,7 @@ static int      stbi__tga_info(stbi__context *s, int *x, int *y, int *comp);
 static int      stbi__psd_test(stbi__context *s);
 static void    *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc);
 static int      stbi__psd_info(stbi__context *s, int *x, int *y, int *comp);
+static int      stbi__psd_is16(stbi__context *s);
 #endif
 
 #ifndef STBI_NO_HDR
@@ -4912,6 +4917,19 @@ static int stbi__png_info(stbi__context *s, int *x, int *y, int *comp)
    p.s = s;
    return stbi__png_info_raw(&p, x, y, comp);
 }
+
+static int stbi__png_is16(stbi__context *s)
+{
+   stbi__png p;
+   p.s = s;
+   if (!stbi__png_info_raw(&p, NULL, NULL, NULL))
+	   return 0;
+   if (p.depth != 16) {
+      stbi__rewind(p.s);
+      return 0;
+   }
+   return 1;
+}
 #endif
 
 // Microsoft/Windows BMP image
@@ -6667,7 +6685,7 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
 #ifndef STBI_NO_PSD
 static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
 {
-   int channelCount, dummy;
+   int channelCount, dummy, depth;
    if (!x) x = &dummy;
    if (!y) y = &dummy;
    if (!comp) comp = &dummy;
@@ -6687,7 +6705,8 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
    }
    *y = stbi__get32be(s);
    *x = stbi__get32be(s);
-   if (stbi__get16be(s) != 8) {
+   depth = stbi__get16be(s);
+   if (depth != 8 && depth != 16) {
        stbi__rewind( s );
        return 0;
    }
@@ -6696,6 +6715,33 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
        return 0;
    }
    *comp = 4;
+   return 1;
+}
+
+static int stbi__psd_is16(stbi__context *s)
+{
+   int channelCount, dummy, depth;
+   if (stbi__get32be(s) != 0x38425053) {
+       stbi__rewind( s );
+       return 0;
+   }
+   if (stbi__get16be(s) != 1) {
+       stbi__rewind( s );
+       return 0;
+   }
+   stbi__skip(s, 6);
+   channelCount = stbi__get16be(s);
+   if (channelCount < 0 || channelCount > 16) {
+       stbi__rewind( s );
+       return 0;
+   }
+   dummy = stbi__get32be(s);
+   dummy = stbi__get32be(s);
+   depth = stbi__get16be(s);
+   if (depth != 16) {
+       stbi__rewind( s );
+       return 0;
+   }
    return 1;
 }
 #endif
@@ -6928,6 +6974,19 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
    return stbi__err("unknown image type", "Image not of any known type, or corrupt");
 }
 
+static int stbi__is_16_main(stbi__context *s)
+{
+   #ifndef STBI_NO_PNG
+   if (stbi__png_is16(s))  return 1;
+   #endif
+
+   #ifndef STBI_NO_PSD
+   if (stbi__psd_is16(s))  return 1;
+   #endif
+
+   return 0;
+}
+
 #ifndef STBI_NO_STDIO
 STBIDEF int stbi_info(char const *filename, int *x, int *y, int *comp)
 {
@@ -6949,6 +7008,27 @@ STBIDEF int stbi_info_from_file(FILE *f, int *x, int *y, int *comp)
    fseek(f,pos,SEEK_SET);
    return r;
 }
+
+STBIDEF int stbi_is_16(char const *filename)
+{
+    FILE *f = stbi__fopen(filename, "rb");
+    int result;
+    if (!f) return stbi__err("can't fopen", "Unable to open file");
+    result = stbi_is_16_from_file(f);
+    fclose(f);
+    return result;
+}
+
+STBIDEF int stbi_is_16_from_file(FILE *f)
+{
+   int r;
+   stbi__context s;
+   long pos = ftell(f);
+   stbi__start_file(&s, f);
+   r = stbi__is_16_main(&s);
+   fseek(f,pos,SEEK_SET);
+   return r;
+}
 #endif // !STBI_NO_STDIO
 
 STBIDEF int stbi_info_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp)
@@ -6963,6 +7043,20 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) c, user);
    return stbi__info_main(&s,x,y,comp);
+}
+
+STBIDEF int stbi_is_16_from_memory(stbi_uc const *buffer, int len)
+{
+   stbi__context s;
+   stbi__start_mem(&s,buffer,len);
+   return stbi__is_16_main(&s);
+}
+
+STBIDEF int stbi_is_16_from_callbacks(stbi_io_callbacks const *c, void *user)
+{
+   stbi__context s;
+   stbi__start_callbacks(&s, (stbi_io_callbacks *) c, user);
+   return stbi__is_16_main(&s);
 }
 
 #endif // STB_IMAGE_IMPLEMENTATION
