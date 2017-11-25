@@ -1103,7 +1103,7 @@ static stbi__uint16 *stbi__load_and_postprocess_16bit(stbi__context *s, int *x, 
    return (stbi__uint16 *) result;
 }
 
-#ifndef STBI_NO_HDR
+#if !defined(STBI_NO_HDR) && !defined(STBI_NO_LINEAR)
 static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, int req_comp)
 {
    if (stbi__vertically_flip_on_load && result != NULL) {
