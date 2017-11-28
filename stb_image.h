@@ -6487,7 +6487,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
                (*delays)[layers - 1U] = g.delay; 
             }
          }
-      } while (u != nullptr); 
+      } while (u != 0); 
 
       // free temp buffer; 
       STBI_FREE(g.out); 
