@@ -6309,7 +6309,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
       dispose = (g->eflags & 0x1C) >> 2; 
       pcount = g->w * g->h; 
 
-      if ((dispose == 4) && (two_back == 0)) {
+      if ((dispose == 3) && (two_back == 0)) {
          dispose = 2; // if I don't have an image to revert back to, default to the old background
       }
 
@@ -6386,7 +6386,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
 
             // if this was the first frame, 
             pcount = g->w * g->h; 
-            if (first_frame && (g->bgindex >= 0)) {
+            if (first_frame && (g->bgindex > 0)) {
                // if first frame, any pixel not drawn to gets the background color
                for (pi = 0; pi < pcount; ++pi) {
                   if (g->history[pi] == 0) {
