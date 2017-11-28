@@ -74,7 +74,7 @@ RECENT REVISION HISTORY:
     Thatcher Ulrich (psd)                  Nicolas Guillemot (vertical flip)
     Ken Miller (pgm, ppm)                  Richard Mitton (16-bit PSD)
     github:urraka (animated gif)           Junggon Kim (PNM comments)
-                                           Daniel Gibson (16-bit TGA)
+    github:tocchan (animated gif)          Daniel Gibson (16-bit TGA)
                                            socks-the-fox (16-bit PNG)
                                            Jeremy Sawicki (handle all ImageNet JPGs)
  Optimizations & bugfixes
@@ -6313,7 +6313,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
          dispose = 2; // if I don't have an image to revert back to, default to the old background
       }
 
-      if (dispose == 4) { // use previous graphic
+      if (dispose == 3) { // use previous graphic
          for (pi = 0; pi < pcount; ++pi) {
             if (g->history[pi]) {
                memcpy( &g->out[pi * 4], &two_back[pi * 4], 4 ); 
@@ -6329,7 +6329,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
       } else {
          // This is a non-disposal case eithe way, so just 
          // leave the pixels as is, and they will become the new background
-         // 1:  do not dispose?  Same as 4?
+         // 1: do not dispose
          // 0:  not specified.
       }
 
