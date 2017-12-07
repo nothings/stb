@@ -1259,7 +1259,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          s = num + STBSP__NUMSZ - 1;
          *s = f[0];
          l = 1;
-         fw = pr = fl = 0;
+         fw = fl = 0;
          lead[0] = 0;
          tail[0] = 0;
          pr = 0;
