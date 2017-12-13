@@ -304,6 +304,9 @@ RECENT REVISION HISTORY:
 #ifndef STBI_NO_STDIO
 #include <stdio.h>
 #endif // STBI_NO_STDIO
+#if !defined(STBI_NO_WCHAR) && !defined(_MSC_VER)
+#define STBI_NO_WCHAR
+#endif
 
 #define STBI_VERSION 1
 
@@ -356,6 +359,9 @@ STBIDEF stbi_uc *stbi_load_from_callbacks(stbi_io_callbacks const *clbk  , void 
 
 #ifndef STBI_NO_STDIO
 STBIDEF stbi_uc *stbi_load            (char const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
+#if !defined(STBI_NO_WCHAR)
+STBIDEF stbi_uc *stbi_loadW           (wchar_t const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
+#endif
 STBIDEF stbi_uc *stbi_load_from_file  (FILE *f, int *x, int *y, int *channels_in_file, int desired_channels);
 // for stbi_load_from_file, file pointer is left pointing immediately after image
 #endif
@@ -370,6 +376,9 @@ STBIDEF stbi_us *stbi_load_16_from_callbacks(stbi_io_callbacks const *clbk, void
 
 #ifndef STBI_NO_STDIO
 STBIDEF stbi_us *stbi_load_16          (char const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
+#if !defined(STBI_NO_WCHAR)
+STBIDEF stbi_us *stbi_load_16W         (wchar_t const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
+#endif
 STBIDEF stbi_us *stbi_load_from_file_16(FILE *f, int *x, int *y, int *channels_in_file, int desired_channels);
 #endif
 
@@ -383,6 +392,9 @@ STBIDEF stbi_us *stbi_load_from_file_16(FILE *f, int *x, int *y, int *channels_i
 
    #ifndef STBI_NO_STDIO
    STBIDEF float *stbi_loadf            (char const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
+#if !defined(STBI_NO_WCHAR)
+   STBIDEF float *stbi_loadfW           (wchar_t const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
+#endif
    STBIDEF float *stbi_loadf_from_file  (FILE *f, int *x, int *y, int *channels_in_file, int desired_channels);
    #endif
 #endif
@@ -402,6 +414,9 @@ STBIDEF int    stbi_is_hdr_from_callbacks(stbi_io_callbacks const *clbk, void *u
 STBIDEF int    stbi_is_hdr_from_memory(stbi_uc const *buffer, int len);
 #ifndef STBI_NO_STDIO
 STBIDEF int      stbi_is_hdr          (char const *filename);
+#if !defined(STBI_NO_WCHAR)
+STBIDEF int      stbi_is_hdrW         (wchar_t const *filename);
+#endif
 STBIDEF int      stbi_is_hdr_from_file(FILE *f);
 #endif // STBI_NO_STDIO
 
@@ -419,6 +434,9 @@ STBIDEF int      stbi_info_from_callbacks(stbi_io_callbacks const *clbk, void *u
 
 #ifndef STBI_NO_STDIO
 STBIDEF int      stbi_info            (char const *filename,     int *x, int *y, int *comp);
+#if !defined(STBI_NO_WCHAR)
+STBIDEF int      stbi_infoW           (wchar_t const *filename,  int *x, int *y, int *comp);
+#endif
 STBIDEF int      stbi_info_from_file  (FILE *f,                  int *x, int *y, int *comp);
 
 #endif
@@ -1115,28 +1133,51 @@ static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, in
 
 #ifndef STBI_NO_STDIO
 
-static FILE *stbi__fopen(char const *filename, char const *mode)
+static FILE *stbi__fopen_rb(char const *filename)
 {
    FILE *f;
 #if defined(_MSC_VER) && _MSC_VER >= 1400
-   if (0 != fopen_s(&f, filename, mode))
+   if (0 != fopen_s(&f, filename, "rb"))
       f=0;
 #else
-   f = fopen(filename, mode);
+   f = fopen(filename, "rb");
 #endif
    return f;
 }
 
+#if !defined(STBI_NO_WCHAR)
+static FILE *stbi__wfopen_rb(wchar_t const *filename)
+{
+   FILE *f;
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+   if (0 != _wfopen_s(&f, filename, L"rb"))
+      f=0;
+#else
+   f = _wfopen(filename, L"rb");
+#endif
+   return f;
+}
+#endif
 
 STBIDEF stbi_uc *stbi_load(char const *filename, int *x, int *y, int *comp, int req_comp)
 {
-   FILE *f = stbi__fopen(filename, "rb");
-   unsigned char *result;
+   FILE *f = stbi__fopen_rb(filename);
    if (!f) return stbi__errpuc("can't fopen", "Unable to open file");
-   result = stbi_load_from_file(f,x,y,comp,req_comp);
+   unsigned char *result = stbi_load_from_file(f,x,y,comp,req_comp);
    fclose(f);
    return result;
 }
+
+#if !defined(STBI_NO_WCHAR)
+STBIDEF stbi_uc *stbi_loadW(wchar_t const *filename, int *x, int *y, int *comp, int req_comp)
+{
+   FILE *f = stbi__wfopen_rb(filename);
+   if (!f) return stbi__errpuc("can't fopen", "Unable to open file");
+   unsigned char *result = stbi_load_from_file(f,x,y,comp,req_comp);
+   fclose(f);
+   return result;
+}
+#endif
 
 STBIDEF stbi_uc *stbi_load_from_file(FILE *f, int *x, int *y, int *comp, int req_comp)
 {
@@ -1166,14 +1207,23 @@ STBIDEF stbi__uint16 *stbi_load_from_file_16(FILE *f, int *x, int *y, int *comp,
 
 STBIDEF stbi_us *stbi_load_16(char const *filename, int *x, int *y, int *comp, int req_comp)
 {
-   FILE *f = stbi__fopen(filename, "rb");
-   stbi__uint16 *result;
+   FILE *f = stbi__fopen_rb(filename);
    if (!f) return (stbi_us *) stbi__errpuc("can't fopen", "Unable to open file");
-   result = stbi_load_from_file_16(f,x,y,comp,req_comp);
+   stbi__uint16 *result = stbi_load_from_file_16(f,x,y,comp,req_comp);
    fclose(f);
    return result;
 }
 
+#if !defined(STBI_NO_WCHAR)
+STBIDEF stbi_us *stbi_load_16W(wchar_t const *filename, int *x, int *y, int *comp, int req_comp)
+{
+   FILE *f = stbi__wfopen_rb(filename);
+   if (!f) return (stbi_us *) stbi__errpuc("can't fopen", "Unable to open file");
+   stbi__uint16 *result = stbi_load_from_file_16(f,x,y,comp,req_comp);
+   fclose(f);
+   return result;
+}
+#endif
 
 #endif //!STBI_NO_STDIO
 
@@ -1241,13 +1291,23 @@ STBIDEF float *stbi_loadf_from_callbacks(stbi_io_callbacks const *clbk, void *us
 #ifndef STBI_NO_STDIO
 STBIDEF float *stbi_loadf(char const *filename, int *x, int *y, int *comp, int req_comp)
 {
-   float *result;
-   FILE *f = stbi__fopen(filename, "rb");
+   FILE *f = stbi__fopen_rb(filename);
    if (!f) return stbi__errpf("can't fopen", "Unable to open file");
-   result = stbi_loadf_from_file(f,x,y,comp,req_comp);
+   float *result = stbi_loadf_from_file(f,x,y,comp,req_comp);
    fclose(f);
    return result;
 }
+
+#if !defined(STBI_NO_WCHAR)
+STBIDEF float *stbi_loadfW(wchar_t const *filename, int *x, int *y, int *comp, int req_comp)
+{
+   FILE *f = stbi__wfopen_rb(filename);
+   if (!f) return stbi__errpf("can't fopen", "Unable to open file");
+   float *result = stbi_loadf_from_file(f,x,y,comp,req_comp);
+   fclose(f);
+   return result;
+}
+#endif
 
 STBIDEF float *stbi_loadf_from_file(FILE *f, int *x, int *y, int *comp, int req_comp)
 {
@@ -1277,16 +1337,25 @@ STBIDEF int stbi_is_hdr_from_memory(stbi_uc const *buffer, int len)
 }
 
 #ifndef STBI_NO_STDIO
-STBIDEF int      stbi_is_hdr          (char const *filename)
+STBIDEF int stbi_is_hdr(char const *filename)
 {
-   FILE *f = stbi__fopen(filename, "rb");
-   int result=0;
-   if (f) {
-      result = stbi_is_hdr_from_file(f);
-      fclose(f);
-   }
+   FILE *f = stbi__fopen_rb(filename);
+   if (!f) return 0;
+   int result = stbi_is_hdr_from_file(f);
+   fclose(f);
    return result;
 }
+
+#if !defined(STBI_NO_WCHAR)
+STBIDEF int stbi_is_hdrW(wchar_t const *filename)
+{
+   FILE *f = stbi__wfopen_rb(filename);
+   if (!f) return 0;
+   int result = stbi_is_hdr_from_file(f);
+   fclose(f);
+   return result;
+}
+#endif
 
 STBIDEF int      stbi_is_hdr_from_file(FILE *f)
 {
@@ -6931,13 +7000,23 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 #ifndef STBI_NO_STDIO
 STBIDEF int stbi_info(char const *filename, int *x, int *y, int *comp)
 {
-    FILE *f = stbi__fopen(filename, "rb");
-    int result;
+    FILE *f = stbi__fopen_rb(filename);
     if (!f) return stbi__err("can't fopen", "Unable to open file");
-    result = stbi_info_from_file(f, x, y, comp);
+    int result = stbi_info_from_file(f, x, y, comp);
     fclose(f);
     return result;
 }
+
+#if !defined(STBI_NO_WCHAR)
+STBIDEF int stbi_infoW(wchar_t const *filename, int *x, int *y, int *comp)
+{
+    FILE *f = stbi__wfopen_rb(filename);
+    if (!f) return stbi__err("can't fopen", "Unable to open file");
+    int result = stbi_info_from_file(f, x, y, comp);
+    fclose(f);
+    return result;
+}
+#endif
 
 STBIDEF int stbi_info_from_file(FILE *f, int *x, int *y, int *comp)
 {
