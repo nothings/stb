@@ -1,8 +1,13 @@
+
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
+//#define WCHAR_TEST
+
+#if !defined(WCHAR_TEST)
 
 #define STB_DEFINE
 #include "stb.h"
@@ -164,3 +169,60 @@ int main(int argc, char **argv)
    }
    return 0;
 }
+
+#else	// WCHAR_TEST
+
+#include <string.h>
+#include <wchar.h>
+
+int wmain(int argc, wchar_t **argv)
+{
+   int w,h;
+   int i, n;
+
+   printf("test wchar edition\n");
+   if (argc <= 1) {
+	   printf("%ls [filename] ...\n", argv[0]);
+	   return 0;
+   }
+
+   for (i=1; i < argc; ++i) {
+	   const wchar_t *fn_src = argv[i];
+	   int res;
+	   int w2,h2,n2;
+	   unsigned char *data;
+	   wprintf(L"%s\n", fn_src);
+	   res = stbi_infoW(fn_src, &w2, &h2, &n2);
+	   data = stbi_loadW(fn_src, &w, &h, &n, 4); if (data) free(data); else printf("Failed &n\n");
+	   data = stbi_loadW(fn_src, &w, &h,  0, 1); if (data) free(data); else printf("Failed 1\n");
+	   data = stbi_loadW(fn_src, &w, &h,  0, 2); if (data) free(data); else printf("Failed 2\n");
+	   data = stbi_loadW(fn_src, &w, &h,  0, 3); if (data) free(data); else printf("Failed 3\n");
+	   data = stbi_loadW(fn_src, &w, &h, &n, 4);
+	   assert(data);
+	   assert(w == w2 && h == h2 && n == n2);
+	   assert(res);
+	   if (data) {
+		   wchar_t fname[512];
+		   wchar_t *p = wcsrchr(fn_src, L'\\');
+		   if (p == NULL) p = wcsrchr(fn_src, L'/');
+		   p++;
+		   wcscpy(fname, p);
+		   p = wcsrchr(fname, L'.');
+		   *p = L'\0';
+		   const wchar_t *fn_out = fname;
+		   wchar_t fnamep[512];
+		   swprintf(fnamep, sizeof(fnamep), L"output/%s.png", fn_out);
+		   stbi_write_pngW(fnamep, w, h, 4, data, w*4);
+		   swprintf(fnamep, sizeof(fnamep), L"output/%s.bmp", fn_out);
+		   stbi_write_bmpW(fnamep, w, h, 4, data);
+		   swprintf(fnamep, sizeof(fnamep), L"output/%s.tga", fn_out);
+		   stbi_write_tgaW(fnamep, w, h, 4, data);
+		   swprintf(fnamep, sizeof(fnamep), L"output/%s.jpg", fn_out);
+		   stbi_write_jpgW(fnamep, w, h, 4, data, 90);
+		   free(data);
+	   } else
+		   printf("FAILED 4\n");
+   }
+}
+
+#endif	// WCHAR_TEST
