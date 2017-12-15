@@ -124,6 +124,10 @@ LICENSE
 #ifndef INCLUDE_STB_IMAGE_WRITE_H
 #define INCLUDE_STB_IMAGE_WRITE_H
 
+#ifndef STBI_WRITE_NO_STDIO
+#include <stdio.h>
+#endif // STBI_WRITE_NO_STDIO
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -141,6 +145,11 @@ STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const 
 STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
 STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const void  *data, int quality);
+STBIWDEF int stbi_write_png_to_file(FILE *f, int x, int y, int comp, const void *data, int stride_bytes);
+STBIWDEF int stbi_write_bmp_to_file(FILE *f, int x, int y, int comp, const void *data);
+STBIWDEF int stbi_write_tga_to_file(FILE *f, int x, int y, int comp, const void *data);
+STBIWDEF int stbi_write_hdr_to_file(FILE *f, int x, int y, int comp, const float *data);
+STBIWDEF int stbi_write_jpg_to_file(FILE *f, int x, int y, int comp, const void *data, int quality);
 #endif
 
 typedef void stbi_write_func(void *context, void *data, int size);
@@ -167,10 +176,6 @@ STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x,
    #define _CRT_NONSTDC_NO_DEPRECATE
    #endif
 #endif
-
-#ifndef STBI_WRITE_NO_STDIO
-#include <stdio.h>
-#endif // STBI_WRITE_NO_STDIO
 
 #include <stdarg.h>
 #include <stdlib.h>
@@ -223,21 +228,26 @@ static void stbi__start_write_callbacks(stbi__write_context *s, stbi_write_func 
 
 #ifndef STBI_WRITE_NO_STDIO
 
+static FILE *stbi__fopen_wb(char const *filename)
+{
+   FILE *f;
+#if defined(_MSC_VER) && _MSC_VER >= 1400
+   if (0 != fopen_s(&f, filename, "wb"))
+      f=0;
+#else
+   f = fopen(filename, "wb");
+#endif
+   return f;
+}
+
 static void stbi__stdio_write(void *context, void *data, int size)
 {
    fwrite(data,1,size,(FILE*) context);
 }
 
-static int stbi__start_write_file(stbi__write_context *s, const char *filename)
+static void stbi__start_write_f(stbi__write_context *s, const FILE *f)
 {
-   FILE *f = fopen(filename, "wb");
    stbi__start_write_callbacks(s, stbi__stdio_write, (void *) f);
-   return f != NULL;
-}
-
-static void stbi__end_write_file(stbi__write_context *s)
-{
-   fclose((FILE *)s->context);
 }
 
 #endif // !STBI_WRITE_NO_STDIO
@@ -386,15 +396,24 @@ STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int x,
 }
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *data)
+
+STBIWDEF int stbi_write_bmp_to_file(FILE *f, int x, int y, int comp, const void *data)
 {
    stbi__write_context s;
-   if (stbi__start_write_file(&s,filename)) {
-      int r = stbi_write_bmp_core(&s, x, y, comp, data);
-      stbi__end_write_file(&s);
-      return r;
-   } else
-      return 0;
+   int r;
+   stbi__start_write_f(&s,f);
+   r = stbi_write_bmp_core(&s, x, y, comp, data);
+   return r;
+}
+
+STBIWDEF int stbi_write_bmp(char const *filename, int x, int y, int comp, const void *data)
+{
+   FILE *f = stbi__fopen_wb(filename);
+   int result;
+   if (!f) return 0;
+   result = stbi_write_bmp_to_file(f, x, y, comp, data);
+   fclose(f);
+   return result;
 }
 #endif //!STBI_WRITE_NO_STDIO
 
@@ -474,16 +493,24 @@ STBIWDEF int stbi_write_tga_to_func(stbi_write_func *func, void *context, int x,
 }
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
+STBIWDEF int stbi_write_tga_to_file(FILE *f, int x, int y, int comp, const void *data)
 {
    stbi__write_context s;
-   if (stbi__start_write_file(&s,filename)) {
-      int r = stbi_write_tga_core(&s, x, y, comp, (void *) data);
-      stbi__end_write_file(&s);
-      return r;
-   } else
-      return 0;
+   stbi__start_write_f(&s,f);
+   int r = stbi_write_tga_core(&s, x, y, comp, (void *) data);
+   return r;
 }
+
+STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const void *data)
+{
+   FILE *f = stbi__fopen_wb(filename);
+   int result;
+   if (!f) return 0;
+   result = stbi_write_tga_to_file(f, x, y, comp, data);
+   fclose(f);
+   return result;
+}
+
 #endif
 
 // *************************************************************************************************
@@ -644,16 +671,24 @@ STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int x,
 }
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *data)
+STBIWDEF int stbi_write_hdr_to_file(FILE *f, int x, int y, int comp, const float *data)
 {
    stbi__write_context s;
-   if (stbi__start_write_file(&s,filename)) {
-      int r = stbi_write_hdr_core(&s, x, y, comp, (float *) data);
-      stbi__end_write_file(&s);
-      return r;
-   } else
-      return 0;
+   stbi__start_write_f(&s,f);
+   int r = stbi_write_hdr_core(&s, x, y, comp, (float *) data);
+   return r;
 }
+
+STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *data)
+{
+   FILE *f = stbi__fopen_wb(filename);
+   int result;
+   if (!f) return 0;
+   result = stbi_write_hdr_to_file(f, x, y, comp, data);
+   fclose(f);
+   return result;
+}
+
 #endif // STBI_WRITE_NO_STDIO
 
 
@@ -1004,19 +1039,27 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
 }
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
+STBIWDEF int stbi_write_png_to_file(FILE *f, int x, int y, int comp, const void *data, int stride_bytes)
 {
-   FILE *f;
    int len;
    unsigned char *png = stbi_write_png_to_mem((unsigned char *) data, stride_bytes, x, y, comp, &len);
    if (png == NULL) return 0;
-   f = fopen(filename, "wb");
-   if (!f) { STBIW_FREE(png); return 0; }
    fwrite(png, 1, len, f);
    fclose(f);
    STBIW_FREE(png);
    return 1;
 }
+
+STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
+{
+   FILE *f = stbi__fopen_wb(filename);
+   int result;
+   if (!f) return 0;
+   result = stbi_write_png_to_file(f, x, y, comp, data, stride_bytes);
+   fclose(f);
+   return result;
+}
+
 #endif
 
 STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int stride_bytes)
@@ -1362,16 +1405,24 @@ STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x,
 
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const void *data, int quality)
+STBIWDEF int stbi_write_jpg_to_file(FILE *f, int x, int y, int comp, const void *data, int quality)
 {
    stbi__write_context s;
-   if (stbi__start_write_file(&s,filename)) {
-      int r = stbi_write_jpg_core(&s, x, y, comp, data, quality);
-      stbi__end_write_file(&s);
-      return r;
-   } else
-      return 0;
+   stbi__start_write_f(&s,f);
+   int r = stbi_write_jpg_core(&s, x, y, comp, data, quality);
+   return r;
 }
+
+STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const void *data, int quality)
+{
+   FILE *f = stbi__fopen_wb(filename);
+   int result;
+   if (!f) return 0;
+   result = stbi_write_jpg_to_file(f, x, y, comp, data, quality);
+   fclose(f);
+   return result;
+}
+
 #endif
 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
