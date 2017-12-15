@@ -28,7 +28,13 @@ if(MSVC)
 	#  PRIVATE "/W4"
 	PRIVATE "/W3"
 	)
+else()
+  target_compile_options(
+	image_test
+	PRIVATE "-std=gnu90"
+	)
 endif()
+
 
 set_target_properties(
   image_test
@@ -42,6 +48,29 @@ if(UNIX)
 	-lm
     )
 endif()
+
+############
+# image_test_wchar
+if(MSVC)
+  add_executable(
+	image_test_wchar
+	image_test_wchar.c
+	../stb_image.h
+	../stb_image_write.h
+	)
+
+  target_compile_options(
+	image_test
+	#  PRIVATE "/W4"
+	PRIVATE "/W3"
+	)
+
+  set_target_properties(
+	image_test_wchar
+	PROPERTIES
+	VS_DEBUGGER_WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+	)
+endif(MSVC)
 
 ############
 # herringbone
