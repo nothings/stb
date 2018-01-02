@@ -10,6 +10,11 @@
 
    Will probably not work correctly with strict-aliasing optimizations.
 
+   If using a modern Microsoft Compiler non-safe versions of CRT calls may cause 
+   compilation warnings or even errors. To avoid this, aldo before #including,
+
+       #define STBI_MSC_SECURE_CRT
+
 ABOUT:
 
    This header file is a library for writing images to C stdio. It could be
@@ -231,7 +236,7 @@ static void stbi__stdio_write(void *context, void *data, int size)
 static int stbi__start_write_file(stbi__write_context *s, const char *filename)
 {
    FILE *f;
-#ifdef _MSC_VER
+#ifdef STBI_MSC_SECURE_CRT
    fopen_s(&f, filename, "wb");
 #else
    f = fopen(filename, "wb");
@@ -631,7 +636,7 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
       char header[] = "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n";
       s->func(s->context, header, sizeof(header)-1);
 
-#ifdef _MSC_VER
+#ifdef STBI_MSC_SECURE_CRT
       len = sprintf_s(buffer, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
 #else
       len = sprintf(buffer, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
@@ -1019,7 +1024,7 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
    int len;
    unsigned char *png = stbi_write_png_to_mem((unsigned char *) data, stride_bytes, x, y, comp, &len);
    if (png == NULL) return 0;
-#ifdef _MSC_VER
+#ifdef STBI_MSC_SECURE_CRT
    fopen_s(&f, filename, "wb");
 #else
    f = fopen(filename, "wb");
