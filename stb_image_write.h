@@ -10,8 +10,8 @@
 
    Will probably not work correctly with strict-aliasing optimizations.
 
-   If using a modern Microsoft Compiler non-safe versions of CRT calls may cause 
-   compilation warnings or even errors. To avoid this, aldo before #including,
+   If using a modern Microsoft Compiler, non-safe versions of CRT calls may cause 
+   compilation warnings or even errors. To avoid this, also before #including,
 
        #define STBI_MSC_SECURE_CRT
 
