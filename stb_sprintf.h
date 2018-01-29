@@ -13,6 +13,7 @@
 //    github:trex78
 //    Jari Komppa (SI suffixes)
 //    Rohit Nirmal
+//    Marcin Wojdyr
 //
 // LICENSE:
 //
