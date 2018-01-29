@@ -41,7 +41,7 @@ USAGE:
      int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
-     int stbi_write_jpg(char const *filename, int w, int h, int comp, const float *data);
+     int stbi_write_jpg(char const *filename, int w, int h, int comp, const float *data, int quality);
 
      void stbi_flip_vertically_on_write(int flag); // flag is non-zero to flip data vertically
 
