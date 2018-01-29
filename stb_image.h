@@ -3139,8 +3139,8 @@ static int stbi__decode_jpeg_image(stbi__jpeg *j)
       } else if (stbi__DNL(m)) {
          int Ld = stbi__get16be(j->s);
          stbi__uint32 NL = stbi__get16be(j->s);
-         if (Ld != 4) stbi__err("bad DNL len", "Corrupt JPEG");
-         if (NL != j->s->img_y) stbi__err("bad DNL height", "Corrupt JPEG");
+         if (Ld != 4) return stbi__err("bad DNL len", "Corrupt JPEG");
+         if (NL != j->s->img_y) return stbi__err("bad DNL height", "Corrupt JPEG");
       } else {
          if (!stbi__process_marker(j, m)) return 0;
       }
@@ -5324,10 +5324,10 @@ static int stbi__tga_get_comp(int bits_per_pixel, int is_grey, int* is_rgb16)
    switch(bits_per_pixel) {
       case 8:  return STBI_grey;
       case 16: if(is_grey) return STBI_grey_alpha;
-               // fall-through
+               // fallthrough
       case 15: if(is_rgb16) *is_rgb16 = 1;
                return STBI_rgb;
-      case 24: // fall-through
+      case 24: // fallthrough
       case 32: return bits_per_pixel/8;
       default: return 0;
    }
