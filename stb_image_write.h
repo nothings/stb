@@ -16,16 +16,22 @@ ABOUT:
    adapted to write to memory or a general streaming interface; let me know.
 
    The PNG output is not optimal; it is 20-50% larger than the file
-   written by a decent optimizing implementation. This library is designed
-   for source code compactness and simplicity, not optimal image file size
-   or run-time performance.
+   written by a decent optimizing implementation; though providing a custom
+   zlib compress function (see STBIW_ZLIB_COMPRESS) can mitigate that.
+   This library is designed for source code compactness and simplicity,
+   not optimal image file size or run-time performance.
 
 BUILDING:
 
    You can #define STBIW_ASSERT(x) before the #include to avoid using assert.h.
    You can #define STBIW_MALLOC(), STBIW_REALLOC(), and STBIW_FREE() to replace
    malloc,realloc,free.
-   You can define STBIW_MEMMOVE() to replace memmove()
+   You can #define STBIW_MEMMOVE() to replace memmove()
+   You can #define STBIW_ZLIB_COMPRESS to use a custom zlib-style compress function
+   for PNG compression (instead of the builtin one), it must have the following signature:
+   unsigned char * my_compress(unsigned char *data, int data_len, int *out_len, int quality);
+   The returned data will be freed with STBIW_FREE() (free() by default),
+   so it must be heap allocated with STBIW_MALLOC() (malloc() by default),
 
 USAGE:
 
@@ -76,6 +82,9 @@ USAGE:
    formats do not. (Thus you cannot write a native-format BMP through the BMP
    writer, both because it is in BGR order and because it may have padding
    at the end of the line.)
+
+   PNG allows you to set the deflate compression level by setting the global
+   variable 'stbi_write_png_level' (it defaults to 8).
 
    HDR expects linear float data. Since the format is always 32-bit rgb(e)
    data, alpha (if provided) is discarded, and for monochrome data it is
@@ -135,6 +144,7 @@ extern "C" {
 #else
 #define STBIWDEF extern
 extern int stbi_write_tga_with_rle;
+extern int stbi_write_png_level;
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
@@ -686,6 +696,7 @@ STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const 
 // PNG writer
 //
 
+#ifndef STBIW_ZLIB_COMPRESS
 // stretchy buffer; stbiw__sbpush() == vector<>::push_back() -- stbiw__sbcount() == vector<>::size()
 #define stbiw__sbraw(a) ((int *) (a) - 2)
 #define stbiw__sbm(a)   stbiw__sbraw(a)[0]
@@ -766,8 +777,14 @@ static unsigned int stbiw__zhash(unsigned char *data)
 
 #define stbiw__ZHASH   16384
 
+#endif // STBIW_ZLIB_COMPRESS
+
 unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_len, int quality)
 {
+#ifdef STBIW_ZLIB_COMPRESS
+   // user provided a zlib compress implementation, use that
+   return STBIW_ZLIB_COMPRESS(data, data_len, out_len, quality);
+#else // use builtin
    static unsigned short lengthc[] = { 3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258, 259 };
    static unsigned char  lengtheb[]= { 0,0,0,0,0,0,0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4,  4,  5,  5,  5,  5,  0 };
    static unsigned short distc[]   = { 1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577, 32768 };
@@ -869,6 +886,7 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
    // make returned pointer freeable
    STBIW_MEMMOVE(stbiw__sbraw(out), out, *out_len);
    return (unsigned char *) stbiw__sbraw(out);
+#endif // STBIW_ZLIB_COMPRESS
 }
 
 static unsigned int stbiw__crc32(unsigned char *buffer, int len)
@@ -934,6 +952,12 @@ static unsigned char stbiw__paeth(int a, int b, int c)
    return STBIW_UCHAR(c);
 }
 
+#ifdef STB_IMAGE_WRITE_STATIC
+static int stbi_write_png_level = 8;
+#else
+int stbi_write_png_level = 8;
+#endif
+
 // @OPTIMIZE: provide an option that always forces left-predict or paeth predict
 unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
 {
@@ -989,7 +1013,7 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
       STBIW_MEMMOVE(filt+j*(x*n+1)+1, line_buffer, x*n);
    }
    STBIW_FREE(line_buffer);
-   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, 8); // increase 8 to get smaller but use more memory
+   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, stbi_write_png_level);
    STBIW_FREE(filt);
    if (!zlib) return 0;
 
