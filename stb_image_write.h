@@ -99,21 +99,16 @@ USAGE:
 
 CREDITS:
 
-   PNG/BMP/TGA
-      Sean Barrett
-   HDR
-      Baldur Karlsson
-   TGA monochrome:
-      Jean-Sebastien Guay
-   misc enhancements:
-      Tim Kelsey
-   TGA RLE
-      Alan Hickman
-   initial file IO callback implementation
-      Emmanuel Julien
-   JPEG
-      Jon Olick (original jo_jpeg.cpp code)
-      Daniel Gibson
+
+   Sean Barrett           -    PNG/BMP/TGA 
+   Baldur Karlsson        -    HDR
+   Jean-Sebastien Guay    -    TGA monochrome
+   Tim Kelsey             -    misc enhancements
+   Alan Hickman           -    TGA RLE
+   Emmanuel Julien        -    initial file IO callback implementation
+   Jon Olick              -    original jo_jpeg.cpp code
+   Daniel Gibson          -    integrate JPEG, allow external zlib
+
    bugfixes:
       github:Chribba
       Guillaume Chereau
