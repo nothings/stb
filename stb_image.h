@@ -1,4 +1,4 @@
-/* stb_image - v2.17 - public domain image loader - http://nothings.org/stb
+/* stb_image - v2.17b - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 
    Do this:
@@ -5041,9 +5041,9 @@ static int stbi__shiftsigned(int v, int shift, int bits)
       v <<= -shift;
    else
       v >>= shift;
-   assert(v >= 0 && v < 256);
+   STBI_ASSERT(v >= 0 && v < 256);
    v >>= (8-bits);
-   assert(bits >= 0 && bits <= 8);
+   STBI_ASSERT(bits >= 0 && bits <= 8);
    return (int) ((unsigned) v * mul_table[bits]) >> shift_table[bits];
 }
 

@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.12 - public domain
+// Ogg Vorbis audio decoder - v1.13 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
@@ -32,6 +32,7 @@
 //    manxorist@github   saga musix          github:infatum
 //
 // Partial history:
+//    1.13    - 2018/01/29 - fix truncation of last frame (hopefully)
 //    1.12    - 2017/11/21 - limit residue begin/end to blocksize/2 to avoid large temp allocs in bad/corrupt files
 //    1.11    - 2017/07/23 - fix MinGW compilation 
 //    1.10    - 2017/03/03 - more robust seeking; fix negative ilog(); clear error in open_memory
