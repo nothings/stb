@@ -41,9 +41,8 @@
 //       Anthony Pesch              Higor Euripedes    
 //       Johan Duparc               Thomas Fields      
 //       Hou Qiming                 Derek Vinyard      
-//                                  Cort Stratton      
-//                                  github:oyvindjam   
-//                                  Kenney Phillis Jr. 
+//       Rob Loach                  Cort Stratton      
+//       Kenney Phillis Jr.         github:oyvindjam   
 //       
 //       
 // VERSION HISTORY
