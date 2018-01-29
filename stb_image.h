@@ -97,7 +97,8 @@ RECENT REVISION HISTORY:
     Michaelangel007@github  Philipp Wiesemann  Dale Weiler        github:sammyhw
     Oriol Ferrer Mesia      Josh Tobin         Matthew Gregan     github:phprus
     Blazej Dariusz Roszkowski                  Gregory Mullen     github:poppolopoppo
-    Christian Floisand      Kevin Schmidt      Baldur Karlsson    darealshinji
+    Christian Floisand      Kevin Schmidt      Baldur Karlsson    github:darealshinji
+    Aldo Culquicondor
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -5264,13 +5265,13 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
 static int stbi__tga_get_comp(int bits_per_pixel, int is_grey, int* is_rgb16)
 {
    // only RGB or RGBA (incl. 16bit) or grey allowed
-   if(is_rgb16) *is_rgb16 = 0;
+   if (is_rgb16) *is_rgb16 = 0;
    switch(bits_per_pixel) {
       case 8:  return STBI_grey;
       case 16: if(is_grey) return STBI_grey_alpha;
-            // else: fall-through
+               // fall-through
       case 15: if(is_rgb16) *is_rgb16 = 1;
-            return STBI_rgb;
+               return STBI_rgb;
       case 24: // fall-through
       case 32: return bits_per_pixel/8;
       default: return 0;
