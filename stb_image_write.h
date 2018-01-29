@@ -1,4 +1,4 @@
-/* stb_image_write - v1.07 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v1.08 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA/JPEG/HDR images to C stdio - Sean Barrett 2010-2015
                                      no warranty implied; use at your own risk
 
@@ -29,7 +29,7 @@ BUILDING:
 
 USAGE:
 
-   There are four functions, one for each image file format:
+   There are five functions, one for each image file format:
 
      int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
      int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
@@ -37,7 +37,9 @@ USAGE:
      int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
      int stbi_write_jpg(char const *filename, int w, int h, int comp, const float *data);
 
-   There are also four equivalent functions that use an arbitrary write function. You are
+     void stbi_flip_vertically_on_write(int flag); // flag is non-zero to flip data vertically
+
+   There are also five equivalent functions that use an arbitrary write function. You are
    expected to open/close your file-equivalent before and after calling these:
 
      int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
@@ -151,6 +153,8 @@ STBIWDEF int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w,
 STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
 STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, int quality);
 
+extern void stbi_flip_vertically_on_write(int flip_boolean);
+
 #ifdef __cplusplus
 }
 #endif
@@ -207,6 +211,13 @@ STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x,
 #endif
 
 #define STBIW_UCHAR(x) (unsigned char) ((x) & 0xff)
+
+int stbi__flip_vertically_on_write=0;
+
+void stbi_flip_vertically_on_write(int flag)
+{
+   stbi__flip_vertically_on_write = flag;
+}
 
 typedef struct
 {
@@ -341,6 +352,9 @@ static void stbiw__write_pixels(stbi__write_context *s, int rgb_dir, int vdir, i
    if (y <= 0)
       return;
 
+   if (stbi__flip_vertically_on_write)
+      vdir *= -1;
+
    if (vdir < 0)
       j_end = -1, j = y-1;
    else
@@ -412,11 +426,21 @@ static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, v
          "111 221 2222 11", 0, 0, format, 0, 0, 0, 0, 0, x, y, (colorbytes + has_alpha) * 8, has_alpha * 8);
    } else {
       int i,j,k;
+      int jend, jdir;
 
       stbiw__writef(s, "111 221 2222 11", 0,0,format+8, 0,0,0, 0,0,x,y, (colorbytes + has_alpha) * 8, has_alpha * 8);
 
-      for (j = y - 1; j >= 0; --j) {
-          unsigned char *row = (unsigned char *) data + j * x * comp;
+      if (stbi__flip_vertically_on_write) {
+         j = 0;
+         jend = y;
+         jdir = 1;
+      } else {
+         j = y-1;
+         jend = -1;
+         jdir = -1;
+      }
+      for (; j != jend; j += jdir) {
+         unsigned char *row = (unsigned char *) data + j * x * comp;
          int len;
 
          for (i = 0; i < x; i += len) {
@@ -630,7 +654,7 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
       s->func(s->context, buffer, len);
 
       for(i=0; i < y; i++)
-         stbiw__write_hdr_scanline(s, x, comp, scratch, data + comp*i*x);
+         stbiw__write_hdr_scanline(s, x, comp, scratch, data + comp*x*(stbi__flip_vertically_on_write ? y-1-i : i)*x);
       STBIW_FREE(scratch);
       return 1;
    }
@@ -932,7 +956,7 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
       for (p=0; p < 2; ++p) {
          for (k= p?best:0; k < 5; ++k) { // @TODO: clarity: rewrite this to go 0..5, and 'continue' the unwanted ones during 2nd pass
             int type = mymap[k],est=0;
-            unsigned char *z = pixels + stride_bytes*j;
+            unsigned char *z = pixels + stride_bytes*(stbi__flip_vertically_on_write ? y-1-j : j);
             for (i=0; i < n; ++i)
                switch (type) {
                   case 0: line_buffer[i] = z[i]; break;
@@ -954,7 +978,7 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
                   case 6: line_buffer[i] = z[i] - stbiw__paeth(z[i-n], 0,0); break;
                }
             }
-            if (p) break;
+            if (p != 0) break;
             for (i=0; i < x*n; ++i)
                est += abs((signed char) line_buffer[i]);
             if (est < bestval) { bestval = est; best = k; }
@@ -1318,7 +1342,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
             float YDU[64], UDU[64], VDU[64];
             for(row = y, pos = 0; row < y+8; ++row) {
                for(col = x; col < x+8; ++col, ++pos) {
-                  int p = row*width*comp + col*comp;
+                  int p = (stbi__flip_vertically_on_write ? height-1-row : row)*width*comp + col*comp;
                   float r, g, b;
                   if(row >= height) {
                      p -= width*comp*(row+1 - height);
@@ -1377,6 +1401,8 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
+      1.08  (2018-01-29)
+             add stbi__flip_vertically_on_write
       1.07  (2017-07-24)
              doc fix
       1.06 (2017-07-23)
