@@ -132,6 +132,7 @@ CREDITS:
       Thatcher Ulrich
       github:poppolopoppo
       Patrick Boettcher
+      github:xeekworx
       
 LICENSE
 
