@@ -1,15 +1,4 @@
 #include "stb_sprintf.h"
-#include "stb_easy_font.h"
-#include "stb_herringbone_wang_tile.h"
-#include "stb_image.h"
-#include "stb_image_write.h"
-#include "stb_perlin.h"
-#include "stb_dxt.h"
-#include "stb_c_lexer.h"
-#include "stb_divide.h"
-#include "stb_image_resize.h"
-#include "stb_rect_pack.h"
-
 #define STB_SPRINTF_IMPLEMENTATION
 #include "stb_sprintf.h"
 

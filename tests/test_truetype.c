@@ -3,11 +3,12 @@
   #define _CRT_SECURE_NO_WARNINGS
 #endif
 
-#define STB_RECT_PACK_IMPLEMENTATION
+#include <stdlib.h>
+
+// this isn't meant to compile standalone; link with test_c_compilation.c as well
 #include "stb_rect_pack.h"
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
 #ifdef TT_TEST
