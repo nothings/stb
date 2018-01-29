@@ -817,6 +817,8 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
    int i,j, bitcount=0;
    unsigned char *out = NULL;
    unsigned char ***hash_table = (unsigned char***) STBIW_MALLOC(stbiw__ZHASH * sizeof(char**));
+   if (hash_table == NULL)
+      return NULL;
    if (quality < 5) quality = 5;
 
    stbiw__sbpush(out, 0x78);   // DEFLATE 32K window
