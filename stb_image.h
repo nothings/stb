@@ -48,7 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
-      2.17  (2018-01-29) bugfix, 1-bit BMP, 16-bitness query
+      2.17  (2018-01-29) bugfix, 1-bit BMP, 16-bitness query, fix warnings
       2.16  (2017-07-23) all functions have 16-bit variants; optimizations; bugfixes
       2.15  (2017-03-18) fix png-1,2,4; all Imagenet JPGs; no runtime SSE detection on GCC
       2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD; fixes for Imagenet JPGs
@@ -94,11 +94,11 @@ RECENT REVISION HISTORY:
     Laurent Gomila          Cort Stratton      Sergio Gonzalez    github:snagar
     Aruelien Pocheville     Thibault Reuille   Cass Everitt       github:Zelex
     Ryamond Barbiero        Paul Du Bois       Engin Manap        github:grim210
-    Michaelangel007@github  Philipp Wiesemann  Dale Weiler        github:sammyhw
+    Aldo Culquicondor       Philipp Wiesemann  Dale Weiler        github:sammyhw
     Oriol Ferrer Mesia      Josh Tobin         Matthew Gregan     github:phprus
-    Blazej Dariusz Roszkowski                  Gregory Mullen     github:poppolopoppo
-    Christian Floisand      Kevin Schmidt      Baldur Karlsson    github:darealshinji
-    Aldo Culquicondor
+    Julian Raschke          Gregory Mullen     Baldur Karlsson    github:poppolopoppo
+    Christian Floisand      Kevin Schmidt                         github:darealshinji
+    Blazej Dariusz Roszkowski                                     github:Michaelangel007
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
