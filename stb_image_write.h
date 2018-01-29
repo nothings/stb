@@ -273,7 +273,8 @@ static int stbi__start_write_file(stbi__write_context *s, const char *filename)
 {
    FILE *f;
 #ifdef STBI_MSC_SECURE_CRT
-   fopen_s(&f, filename, "wb");
+   if (fopen_s(&f, filename, "wb"))
+      f = NULL;
 #else
    f = fopen(filename, "wb");
 #endif
@@ -1102,7 +1103,8 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
    unsigned char *png = stbi_write_png_to_mem((unsigned char *) data, stride_bytes, x, y, comp, &len);
    if (png == NULL) return 0;
 #ifdef STBI_MSC_SECURE_CRT
-   fopen_s(&f, filename, "wb");
+   if (fopen_s(&f, filename, "wb"))
+      f = NULL;
 #else
    f = fopen(filename, "wb");
 #endif
