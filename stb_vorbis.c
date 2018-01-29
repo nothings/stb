@@ -1,11 +1,11 @@
-// Ogg Vorbis audio decoder - v1.10 - public domain
+// Ogg Vorbis audio decoder - v1.11 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
 //
-// Originally sponsored by RAD Game Tools. Seeking sponsored
-// by Phillip Bennefall, Marc Andersen, Aaron Baker, Elias Software,
-// Aras Pranckevicius, and Sean Barrett.
+// Originally sponsored by RAD Game Tools. Seeking implementation
+// sponsored by Phillip Bennefall, Marc Andersen, Aaron Baker,
+// Elias Software, Aras Pranckevicius, and Sean Barrett.
 //
 // LICENSE
 //
@@ -29,9 +29,11 @@
 //    Bernhard Wodo      Evan Balster        alxprd@github
 //    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
 //    Phillip Bennefall  Rohit               Thiago Goulart
-//    manxorist@github   saga musix
+//    manxorist@github   saga musix          github:infatum
 //
 // Partial history:
+//    1.12    - 2017/11/21 - limit residue begin/end to blocksize/2 to avoid large temp allocs in bad/corrupt files
+//    1.11    - 2017/07/23 - fix MinGW compilation 
 //    1.10    - 2017/03/03 - more robust seeking; fix negative ilog(); clear error in open_memory
 //    1.09    - 2016/04/04 - back out 'truncation of last frame' fix from previous version
 //    1.08    - 2016/04/02 - warnings; setup memory leaks; truncation of last frame
@@ -551,7 +553,7 @@ enum STBVorbisError
    #include <math.h>
 
    // find definition of alloca if it's not in stdlib.h:
-   #ifdef _MSC_VER
+   #if defined(_MSC_VER) || defined(__MINGW32__)
       #include <malloc.h>
    #endif
    #if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__)
@@ -576,6 +578,7 @@ enum STBVorbisError
    #undef __forceinline
    #endif
    #define __forceinline
+   #define alloca __builtin_alloca
 #elif !defined(_MSC_VER)
    #if __GNUC__
       #define __forceinline inline
@@ -2040,6 +2043,8 @@ static int residue_decode(vorb *f, Codebook *book, float *target, int offset, in
    return TRUE;
 }
 
+// n is 1/2 of the blocksize --
+// specification: "Correct per-vector decode length is [n]/2"
 static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int rn, uint8 *do_not_decode)
 {
    int i,j,pass;
@@ -2047,7 +2052,10 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
    int rtype = f->residue_types[rn];
    int c = r->classbook;
    int classwords = f->codebooks[c].dimensions;
-   int n_read = r->end - r->begin;
+   unsigned int actual_size = rtype == 2 ? n*2 : n;
+   unsigned int limit_r_begin = (r->begin < actual_size ? r->begin : actual_size);
+   unsigned int limit_r_end   = (r->end   < actual_size ? r->end   : actual_size);
+   int n_read = limit_r_end - limit_r_begin;
    int part_read = n_read / r->part_size;
    int temp_alloc_point = temp_alloc_save(f);
    #ifndef STB_VORBIS_DIVIDES_IN_RESIDUE
@@ -4075,7 +4083,10 @@ static int start_decoder(vorb *f)
       int i,max_part_read=0;
       for (i=0; i < f->residue_count; ++i) {
          Residue *r = f->residue_config + i;
-         int n_read = r->end - r->begin;
+         unsigned int actual_size = f->blocksize_1 / 2;
+         unsigned int limit_r_begin = r->begin < actual_size ? r->begin : actual_size;
+         unsigned int limit_r_end   = r->end   < actual_size ? r->end   : actual_size;
+         int n_read = limit_r_end - limit_r_begin;
          int part_read = n_read / r->part_size;
          if (part_read > max_part_read)
             max_part_read = part_read;
@@ -4085,6 +4096,8 @@ static int start_decoder(vorb *f)
       #else
       classify_mem = f->channels * (sizeof(void*) + max_part_read * sizeof(int *));
       #endif
+
+      // maximum reasonable partition size is f->blocksize_1
 
       f->temp_memory_required = classify_mem;
       if (imdct_mem > f->temp_memory_required)
@@ -5349,6 +5362,8 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
 #endif // STB_VORBIS_NO_PULLDATA_API
 
 /* Version history
+    1.12    - 2017/11/21 - limit residue begin/end to blocksize/2 to avoid large temp allocs in bad/corrupt files
+    1.11    - 2017/07/23 - fix MinGW compilation 
     1.10    - 2017/03/03 - more robust seeking; fix negative ilog(); clear error in open_memory
     1.09    - 2016/04/04 - back out 'avoid discarding last frame' fix from previous version
     1.08    - 2016/04/02 - fixed multiple warnings; fix setup memory leaks;

@@ -1,4 +1,4 @@
-/* stb.h - v2.29 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.31 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
@@ -25,6 +25,8 @@
 
 Version History
 
+   2.31   stb_ucharcmp
+   2.30   MinGW fix
    2.29   attempt to fix use of swprintf()
    2.28   various new functionality
    2.27   test _WIN32 not WIN32 in STB_THREADS
@@ -185,13 +187,17 @@ CREDITS
   Robert Nix
   r-lyeh
   blackpawn
-  Mojofreem@github
+  github:Mojofreem
   Ryan Whitworth
   Vincent Isambart
   Mike Sartain
   Eugene Opalev
   Tim Sjostrand
+  github:infatum
+  Dave Butler (Croepha)
 */
+
+#include <stdarg.h>
 
 #ifndef STB__INCLUDE_STB_H
 #define STB__INCLUDE_STB_H
@@ -1544,7 +1550,7 @@ STB_EXTERN int (*stb_doublecmp(int offset))(const void *a, const void *b);
 STB_EXTERN int (*stb_charcmp(int offset))(const void *a, const void *b);
 
 #ifdef STB_DEFINE
-static int stb__intcmpoffset, stb__charcmpoffset, stb__strcmpoffset;
+static int stb__intcmpoffset, stb__ucharcmpoffset, stb__strcmpoffset;
 static int stb__floatcmpoffset, stb__doublecmpoffset;
 
 int stb__intcmp(const void *a, const void *b)
@@ -1554,10 +1560,10 @@ int stb__intcmp(const void *a, const void *b)
    return p < q ? -1 : p > q;
 }
 
-int stb__charcmp(const void *a, const void *b)
+int stb__ucharcmp(const void *a, const void *b)
 {
-   const int p = *(const unsigned char *) ((const char *) a + stb__charcmpoffset);
-   const int q = *(const unsigned char *) ((const char *) b + stb__charcmpoffset);
+   const int p = *(const unsigned char *) ((const char *) a + stb__ucharcmpoffset);
+   const int q = *(const unsigned char *) ((const char *) b + stb__ucharcmpoffset);
    return p < q ? -1 : p > q;
 }
 
@@ -1595,10 +1601,10 @@ int (*stb_intcmp(int offset))(const void *, const void *)
    return &stb__intcmp;
 }
 
-int (*stb_charcmp(int offset))(const void *, const void *)
+int (*stb_ucharcmp(int offset))(const void *, const void *)
 {
-   stb__charcmpoffset = offset;
-   return &stb__charcmp;
+   stb__ucharcmpoffset = offset;
+   return &stb__ucharcmp;
 }
 
 int (*stb_qsort_strcmp(int offset))(const void *, const void *)
@@ -1624,7 +1630,6 @@ int (*stb_doublecmp(int offset))(const void *, const void *)
    stb__doublecmpoffset = offset;
    return &stb__doublecmp;
 }
-
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1791,7 +1796,7 @@ STB_EXTERN int    stb_prefix (char *s, char *t);
 STB_EXTERN char * stb_strichr(char *s, char t);
 STB_EXTERN char * stb_stristr(char *s, char *t);
 STB_EXTERN int    stb_prefix_count(char *s, char *t);
-STB_EXTERN char * stb_plural(int n);  // "s" or ""
+STB_EXTERN const char * stb_plural(int n);  // "s" or ""
 STB_EXTERN size_t stb_strscpy(char *d, const char *s, size_t n);
 
 STB_EXTERN char **stb_tokens(char *src, char *delimit, int *count);
@@ -1818,7 +1823,7 @@ size_t stb_strscpy(char *d, const char *s, size_t n)
    return len + 1;
 }
 
-char *stb_plural(int n)
+const char *stb_plural(int n)
 {
    return n == 1 ? "" : "s";
 }
@@ -3358,7 +3363,7 @@ unsigned int stb_hashlen(char *str, int len)
 
 unsigned int stb_hashptr(void *p)
 {
-   unsigned int x = (unsigned int) p;
+    unsigned int x = (unsigned int)(size_t) p;
 
    // typically lacking in low bits and high bits
    x = stb_rehash(x);
@@ -3407,7 +3412,7 @@ unsigned int stb_hash_fast(void *p, int len)
    if (len <= 0 || q == NULL) return 0;
 
    /* Main loop */
-   if (((int) q & 1) == 0) {
+    if (((int)(size_t) q & 1) == 0) {
       for (;len > 3; len -= 4) {
          unsigned int val;
          hash +=  stb__get16(q);
@@ -3733,7 +3738,7 @@ int stb_ischar(char c, char *set)
    static unsigned char (*tables)[256];
    static char ** sets = NULL;
 
-   int z = stb_perfect_hash(&p, (int) set);
+   int z = stb_perfect_hash(&p, (int)(size_t) set);
    if (z < 0) {
       int i,k,n,j,f;
       // special code that means free all existing data
@@ -3752,7 +3757,7 @@ int stb_ischar(char c, char *set)
       tables = (unsigned char (*)[256]) realloc(tables, sizeof(*tables) * k);
       memset(tables, 0, sizeof(*tables) * k);
       for (i=0; i < stb_arr_len(sets); ++i) {
-         k = stb_perfect_hash(&p, (int) sets[i]);
+          k = stb_perfect_hash(&p, (int)(size_t) sets[i]);
          assert(k >= 0);
          n = k >> 3;
          f = bit[k&7];
@@ -3760,7 +3765,7 @@ int stb_ischar(char c, char *set)
             tables[n][(unsigned char) sets[i][j]] |= f;
          }
       }
-      z = stb_perfect_hash(&p, (int) set);
+      z = stb_perfect_hash(&p, (int)(size_t) set);
    }
    return tables[z >> 3][(unsigned char) c] & bit[z & 7];
 }
@@ -7679,14 +7684,14 @@ static stb_ps_hash *stb_ps_makehash(int size, int old_size, void **old_data)
    h->any_offset = 0;
    memset(h->table, 0, size * sizeof(h->table[0]));
    for (i=0; i < old_size; ++i)
-      if (!stb_ps_empty(old_data[i]))
+        if (!stb_ps_empty((size_t)old_data[i]))
          stb_ps_add(EncodeHash(h), old_data[i]);
    return h;
 }
 
 void stb_ps_delete(stb_ps *ps)
 {
-   switch (3 & (int) ps) {
+    switch (3 & (int)(size_t) ps) {
       case STB_ps_direct: break;
       case STB_ps_bucket: stb_bucket_free(GetBucket(ps)); break;
       case STB_ps_array : free(GetArray(ps)); break;
@@ -7698,7 +7703,7 @@ stb_ps *stb_ps_copy(stb_ps *ps)
 {
    int i;
    // not a switch: order based on expected performance/power-law distribution
-   switch (3 & (int) ps) {
+    switch (3 & (int)(size_t) ps) {
       case STB_ps_direct: return ps;
       case STB_ps_bucket: {
          stb_ps_bucket *n = (stb_ps_bucket *) malloc(sizeof(*n));
@@ -7725,8 +7730,8 @@ stb_ps *stb_ps_copy(stb_ps *ps)
 
 int stb_ps_find(stb_ps *ps, void *value)
 {
-   int i, code = 3 & (int) ps;
-    assert((3 & (int) value) == STB_ps_direct);
+    int i, code = 3 & (int)(size_t) ps;
+    assert((3 & (int)(size_t) value) == STB_ps_direct);
    assert(stb_ps_fastlist_valid(value));
    // not a switch: order based on expected performance/power-law distribution
    if (code == STB_ps_direct)
@@ -7767,11 +7772,11 @@ stb_ps *  stb_ps_add   (stb_ps *ps, void *value)
    assert(!stb_ps_find(ps,value));
    #endif
    if (value == NULL) return ps; // ignore NULL adds to avoid bad breakage
-   assert((3 & (int) value) == STB_ps_direct);
+    assert((3 & (int)(size_t) value) == STB_ps_direct);
    assert(stb_ps_fastlist_valid(value));
    assert(value != STB_DEL);     // STB_DEL is less likely
 
-   switch (3 & (int) ps) {
+    switch (3 & (int)(size_t) ps) {
       case STB_ps_direct:
          if (ps == NULL) return (stb_ps *) value;
          return EncodeBucket(stb_bucket_create2(ps,value));
@@ -7820,11 +7825,11 @@ stb_ps *  stb_ps_add   (stb_ps *ps, void *value)
          stb_uint32 n = hash & h->mask;
          void **t = h->table;
          // find first NULL or STB_DEL entry
-         if (!stb_ps_empty(t[n])) {
+          if (!stb_ps_empty((size_t)t[n])) {
             stb_uint32 s = stb_rehash(hash) | 1;
             do {
                n = (n + s) & h->mask;
-            } while (!stb_ps_empty(t[n]));
+            } while (!stb_ps_empty((size_t)t[n]));
          }
          if (t[n] == STB_DEL)
             -- h->count_deletes;
@@ -7851,9 +7856,9 @@ stb_ps *stb_ps_remove(stb_ps *ps, void *value)
    #ifdef STB_DEBUG
    assert(stb_ps_find(ps, value));
    #endif
-   assert((3 & (int) value) == STB_ps_direct);
+    assert((3 & (int)(size_t) value) == STB_ps_direct);
    if (value == NULL) return ps; // ignore NULL removes to avoid bad breakage
-   switch (3 & (int) ps) {
+    switch (3 & (int)(size_t) ps) {
       case STB_ps_direct:
          return ps == value ? NULL : ps;
       case STB_ps_bucket: {
@@ -7912,7 +7917,7 @@ stb_ps *stb_ps_remove(stb_ps *ps, void *value)
                stb_ps_array *a = (stb_ps_array *) malloc(sizeof(*a) + (n-1) * sizeof(a->p[0]));
                int i,j=0;
                for (i=0; i < h->size; ++i)
-                  if (!stb_ps_empty(t[i]))
+                    if (!stb_ps_empty((size_t)t[i]))
                      a->p[j++] = t[i];
                assert(j == h->count);
                a->count = j;
@@ -7934,7 +7939,7 @@ stb_ps *stb_ps_remove(stb_ps *ps, void *value)
 stb_ps *stb_ps_remove_any(stb_ps *ps, void **value)
 {
    assert(ps != NULL);
-   switch (3 & (int) ps) {
+    switch (3 & (int)(size_t) ps) {
       case STB_ps_direct:
          *value = ps;
          return NULL;
@@ -7967,7 +7972,7 @@ stb_ps *stb_ps_remove_any(stb_ps *ps, void **value)
          stb_ps_hash *h = GetHash(ps);
          void **t = h->table;
          stb_uint32 n = h->any_offset;
-         while (stb_ps_empty(t[n]))
+          while (stb_ps_empty((size_t)t[n]))
             n = (n + 1) & h->mask;
          *value = t[n];
          h->any_offset = (n+1) & h->mask;
@@ -7988,7 +7993,7 @@ void ** stb_ps_getlist(stb_ps *ps, int *count)
 {
    int i,n=0;
    void **p = NULL;
-   switch (3 & (int) ps) {
+    switch (3 & (int)(size_t) ps) {
       case STB_ps_direct:
          if (ps == NULL) { *count = 0; return NULL; }
          p = (void **) malloc(sizeof(*p) * 1);
@@ -8014,7 +8019,7 @@ void ** stb_ps_getlist(stb_ps *ps, int *count)
          stb_ps_hash *h = GetHash(ps);
          p = (void **) malloc(sizeof(*p) * h->count);
          for (i=0; i < h->size; ++i)
-            if (!stb_ps_empty(h->table[i]))
+              if (!stb_ps_empty((size_t)h->table[i]))
                p[n++] = h->table[i];
          break;
       }
@@ -8026,7 +8031,7 @@ void ** stb_ps_getlist(stb_ps *ps, int *count)
 int stb_ps_writelist(stb_ps *ps, void **list, int size )
 {
    int i,n=0;
-   switch (3 & (int) ps) {
+    switch (3 & (int)(size_t) ps) {
       case STB_ps_direct:
          if (ps == NULL || size <= 0) return 0;
          list[0] = ps;
@@ -8048,7 +8053,7 @@ int stb_ps_writelist(stb_ps *ps, void **list, int size )
          stb_ps_hash *h = GetHash(ps);
          if (size <= 0) return 0;
          for (i=0; i < h->count; ++i) {
-            if (!stb_ps_empty(h->table[i])) {
+             if (!stb_ps_empty((size_t)h->table[i])) {
                list[n++] = h->table[i];
                if (n == size) break;
             }
@@ -8062,7 +8067,7 @@ int stb_ps_writelist(stb_ps *ps, void **list, int size )
 int stb_ps_enum(stb_ps *ps, void *data, int (*func)(void *value, void *data))
 {
    int i;
-   switch (3 & (int) ps) {
+    switch (3 & (int)(size_t) ps) {
       case STB_ps_direct:
          if (ps == NULL) return STB_TRUE;
          return func(ps, data);
@@ -8084,7 +8089,7 @@ int stb_ps_enum(stb_ps *ps, void *data, int (*func)(void *value, void *data))
       case STB_ps_hash: {
          stb_ps_hash *h = GetHash(ps);
          for (i=0; i < h->count; ++i)
-            if (!stb_ps_empty(h->table[i]))
+              if (!stb_ps_empty((size_t)h->table[i]))
                if (!func(h->table[i], data))
                   return STB_FALSE;
          return STB_TRUE;
@@ -8095,7 +8100,7 @@ int stb_ps_enum(stb_ps *ps, void *data, int (*func)(void *value, void *data))
 
 int stb_ps_count (stb_ps *ps)
 {
-   switch (3 & (int) ps) {
+    switch (3 & (int)(size_t) ps) {
       case STB_ps_direct:
          return ps != NULL;
       case STB_ps_bucket: {
@@ -8119,7 +8124,7 @@ void ** stb_ps_fastlist(stb_ps *ps, int *count)
 {
    static void *storage;
 
-   switch (3 & (int) ps) {
+    switch (3 & (int)(size_t) ps) {
       case STB_ps_direct:
          if (ps == NULL) { *count = 0; return NULL; }
          storage = ps;
@@ -9166,7 +9171,7 @@ static void stb__add_epsilon(stb_matcher *matcher, int from, int to)
 
 static void stb__add_edge(stb_matcher *matcher, int from, int to, int type)
 {
-   stb_nfa_edge z = { type, to };
+    stb_nfa_edge z = { (stb_int16)type, (stb_uint16)to };
    if (matcher->nodes[from].out == NULL)
       stb_arr_malloc((void **) &matcher->nodes[from].out, matcher);
    stb_arr_push(matcher->nodes[from].out, z);
@@ -9879,7 +9884,7 @@ int stb_regex(char *regex, char *str)
    static char        ** regexps;
    static char        ** regexp_cache;
    static unsigned short *mapping;
-   int z = stb_perfect_hash(&p, (int) regex);
+    int z = stb_perfect_hash(&p, (int)(size_t) regex);
    if (z >= 0) {
       if (strcmp(regex, regexp_cache[(int) mapping[z]])) {
          int i = mapping[z];
@@ -9910,8 +9915,8 @@ int stb_regex(char *regex, char *str)
       n = stb_perfect_create(&p, (unsigned int *) (char **) regexps, stb_arr_len(regexps));
       mapping = (unsigned short *) realloc(mapping, n * sizeof(*mapping));
       for (i=0; i < stb_arr_len(regexps); ++i)
-         mapping[stb_perfect_hash(&p, (int) regexps[i])] = i;
-      z = stb_perfect_hash(&p, (int) regex);
+          mapping[stb_perfect_hash(&p, (int)(size_t) regexps[i])] = i;
+      z = stb_perfect_hash(&p, (int)(size_t) regex);
    }
    return stb_matcher_find(matchers[(int) mapping[z]], str);
 }
@@ -10405,7 +10410,7 @@ static void stb__write(unsigned char v)
    ++stb__outbytes;
 }
 
-#define stb_out(v)    (stb__out ? *stb__out++ = (stb_uchar) (v) : stb__write((stb_uchar) (v)))
+#define stb_out(v)    (stb__out ? (void)(*stb__out++ = (stb_uchar) (v)) : stb__write((stb_uchar) (v)))
 
 static void stb_out2(stb_uint v)
 {
@@ -10668,7 +10673,8 @@ static size_t stb_out_backpatch_id(void)
 
 static void stb_out_backpatch(size_t id, stb_uint value)
 {
-   stb_uchar data[4] = { value >> 24, value >> 16, value >> 8, value };
+    
+    stb_uchar data[4] = { (stb_uchar)(value >> 24), (stb_uchar)(value >> 16), (stb_uchar)(value >> 8), (stb_uchar)(value) };
    if (stb__out) {
       memcpy((void *) id, data, 4);
    } else {

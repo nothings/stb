@@ -11,17 +11,17 @@ by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
 
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
-**[stb_vorbis.c](stb_vorbis.c)** | 1.10 | audio | 5447 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**[stb_image.h](stb_image.h)** | 2.15 | graphics | 7177 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**[stb_truetype.h](stb_truetype.h)** | 1.15 | graphics | 4061 | parse, decode, and rasterize characters from truetype fonts
-**[stb_image_write.h](stb_image_write.h)** | 1.05 | graphics | 1092 | image writing to disk: PNG, TGA, BMP
-**[stb_image_resize.h](stb_image_resize.h)** | 0.94 | graphics | 2624 | resize images larger/smaller with good quality
-**[stb_rect_pack.h](stb_rect_pack.h)** | 0.11 | graphics | 635 | simple 2D rectangle packer with decent quality
-**[stb_sprintf.h](stb_sprintf.h)** | 1.02 | utility | 1202 | fast sprintf, snprintf for C/C++
+**[stb_vorbis.c](stb_vorbis.c)** | 1.11 | audio | 5449 | decode ogg vorbis files from file/memory to float/16-bit signed output
+**[stb_image.h](stb_image.h)** | 2.16 | graphics | 7187 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**[stb_truetype.h](stb_truetype.h)** | 1.17 | graphics | 4566 | parse, decode, and rasterize characters from truetype fonts
+**[stb_image_write.h](stb_image_write.h)** | 1.07 | graphics | 1458 | image writing to disk: PNG, TGA, BMP
+**[stb_image_resize.h](stb_image_resize.h)** | 0.95 | graphics | 2627 | resize images larger/smaller with good quality
+**[stb_rect_pack.h](stb_rect_pack.h)** | 0.11 | graphics | 624 | simple 2D rectangle packer with decent quality
+**[stb_sprintf.h](stb_sprintf.h)** | 1.03 | utility | 1812 | fast sprintf, snprintf for C/C++
 **[stretchy_buffer.h](stretchy_buffer.h)** | 1.02 | utility | 257 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **[stb_textedit.h](stb_textedit.h)** | 1.11 | user&nbsp;interface | 1393 | guts of a text editor for games etc implementing them from scratch
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.85 | 3D&nbsp;graphics | 3803 | Minecraft-esque voxel rendering "engine" with many more features
-**[stb_dxt.h](stb_dxt.h)** | 1.06 | 3D&nbsp;graphics | 687 | Fabian "ryg" Giesen's real-time DXT compressor
+**[stb_dxt.h](stb_dxt.h)** | 1.07 | 3D&nbsp;graphics | 719 | Fabian "ryg" Giesen's real-time DXT compressor
 **[stb_perlin.h](stb_perlin.h)** | 0.3 | 3D&nbsp;graphics | 316 | revised Perlin noise (3D input, 1D output)
 **[stb_easy_font.h](stb_easy_font.h)** | 1.0 | 3D&nbsp;graphics | 303 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
 **[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.38 | game&nbsp;dev | 4172 | embeddable tilemap editor
@@ -29,11 +29,11 @@ library    | lastest version | category | LoC | description
 **[stb_c_lexer.h](stb_c_lexer.h)** | 0.09 | parsing | 962 | simplify writing parsers for C-like languages
 **[stb_divide.h](stb_divide.h)** | 0.91 | math | 419 | more useful 32-bit modulus e.g. "euclidean divide"
 **[stb_connected_comp...](stb_connected_components.h)** | 0.95 | misc | 1045 | incrementally compute reachability on grids
-**[stb.h](stb.h)** | 2.29 | misc | 14324 | helper functions for C, mostly redundant in C++; basically author's personal stuff
-**[stb_leakcheck.h](stb_leakcheck.h)** | 0.3 | misc | 165 | quick-and-dirty malloc/free leak-checking
+**[stb.h](stb.h)** | 2.30 | misc | 14328 | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**[stb_leakcheck.h](stb_leakcheck.h)** | 0.4 | misc | 186 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 20  
-Total lines of C code: 51304
+Total lines of C code: 52846
 
 
 FAQ
@@ -57,6 +57,22 @@ dual-license for you to choose from.
 
 No, because it's public domain you can freely relicense it to whatever license your new
 library wants to be.
+
+#### What's the deal with SSE support in GCC-based compilers?
+
+stb_image will either use SSE2 (if you compile with -msse2) or
+will not use any SIMD at all, rather than trying to detect the
+processor at runtime and handle it correctly. As I understand it,
+the approved path in GCC for runtime-detection require
+you to use multiple source files, one for each CPU configuration.
+Because stb_image is a header-file library that compiles in only
+one source file, there's no approved way to build both an
+SSE-enabled and a non-SSE-enabled variation.
+
+While we've tried to work around it, we've had multiple issues over
+the years due to specific versions of gcc breaking what we're doing,
+so we've given up on it. See https://github.com/nothings/stb/issues/280
+and https://github.com/nothings/stb/issues/410 for examples.
 
 #### Some of these libraries seem redundant to existing open source libraries. Are they better somehow?
 

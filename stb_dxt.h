@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.06 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.07 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -9,6 +9,7 @@
 //     and "high quality" using mode.
 //
 // version history:
+//   v1.07  - bc4; allow not using libc; add STB_DXT_STATIC
 //   v1.06  - (stb) fix to known-broken 1.05
 //   v1.05  - (stb) support bc5/3dc (Arvids Kokins), use extern "C" in C++ (Pavel Krajcevski)
 //   v1.04  - (ryg) default to no rounding bias for lerped colors (as per S3TC/DX10 spec);
@@ -19,6 +20,10 @@
 //   v1.01  - (stb) fix bug converting to RGB that messed up quality, thanks ryg & cbloom
 //   v1.00  - (stb) first release
 //
+// contributors: 
+//   Kevin Schmidt (#defines for "freestanding" compilation)
+//   github:ppiastucki (BC4 support)
+// 
 // LICENSE
 //
 //   See end of file for license information.
@@ -35,8 +40,15 @@
 extern "C" {
 #endif
 
-void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
-void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel);
+#ifdef STB_DXT_STATIC
+#define STBDDEF static
+#else
+#define STBDDEF extern
+#endif
+
+STBDDEF void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
+STBDDEF void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src_r_one_byte_per_pixel);
+STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel);
 
 #ifdef __cplusplus
 }
@@ -61,8 +73,23 @@ void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two
 // #define STB_DXT_USE_ROUNDING_BIAS
 
 #include <stdlib.h>
+
+#if !defined(STBD_ABS) || !defined(STBI_FABS)
 #include <math.h>
-#include <string.h> // memset
+#endif
+
+#ifndef STBD_ABS
+#define STBD_ABS(i)           abs(i)
+#endif
+
+#ifndef STBD_FABS
+#define STBD_FABS(x)          fabs(x)
+#endif
+
+#ifndef STBD_MEMSET
+#include <string.h>
+#define STBD_MEMSET           memset
+#endif
 
 static unsigned char stb__Expand5[32];
 static unsigned char stb__Expand6[64];
@@ -127,13 +154,13 @@ static void stb__PrepareOptTable(unsigned char *Table,const unsigned char *expan
          for (mx=0;mx<size;mx++) {
             int mine = expand[mn];
             int maxe = expand[mx];
-            int err = abs(stb__Lerp13(maxe, mine) - i);
+            int err = STBD_ABS(stb__Lerp13(maxe, mine) - i);
             
             // DX10 spec says that interpolation must be within 3% of "correct" result,
             // add this as error term. (normally we'd expect a random distribution of
             // +-1.5% error, but nowhere in the spec does it say that the error has to be
             // unbiased - better safe than sorry).
-            err += abs(maxe - mine) * 3 / 100;
+            err += STBD_ABS(maxe - mine) * 3 / 100;
             
             if(err < bestErr)
             { 
@@ -165,7 +192,7 @@ static void stb__DitherBlock(unsigned char *dest, unsigned char *block)
   for (ch=0; ch<3; ++ch) {
       unsigned char *bp = block+ch, *dp = dest+ch;
       unsigned char *quant = (ch == 1) ? stb__QuantGTab+8 : stb__QuantRBTab+8;
-      memset(err, 0, sizeof(err));
+      STBD_MEMSET(err, 0, sizeof(err));
       for(y=0; y<4; ++y) {
          dp[ 0] = quant[bp[ 0] + ((3*ep2[1] + 5*ep2[0]) >> 4)];
          ep1[0] = bp[ 0] - dp[ 0];
@@ -349,9 +376,9 @@ static void stb__OptimizeColorsBlock(unsigned char *block, unsigned short *pmax1
     vfb = b;
   }
 
-  magn = fabs(vfr);
-  if (fabs(vfg) > magn) magn = fabs(vfg);
-  if (fabs(vfb) > magn) magn = fabs(vfb);
+  magn = STBD_FABS(vfr);
+  if (STBD_FABS(vfg) > magn) magn = STBD_FABS(vfg);
+  if (STBD_FABS(vfb) > magn) magn = STBD_FABS(vfb);
 
    if(magn < 4.0f) { // too small, default to luminance
       v_r = 299; // JPEG YCbCr luma coefs, scaled by 1000.
@@ -634,6 +661,11 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
    }
 
    stb__CompressColorBlock(dest,(unsigned char*) src,mode);
+}
+
+void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src)
+{
+   stb__CompressAlphaBlock(dest,(unsigned char*) src, 1);
 }
 
 void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)
