@@ -88,16 +88,16 @@ RECENT REVISION HISTORY:
     Christpher Lloyd        Jerry Jansson      Joseph Thomson     Phil Jordan
     Dave Moore              Roy Eltham         Hayaki Saito       Nathan Reed
     Won Chun                Luke Graham        Johan Duparc       Nick Verigakis
-    the Horde3D community   Thomas Ruf         Ronny Chevalier    Baldur Karlsson
-    Janez Zemva             John Bartholomew   Michal Cichon      github:rlyeh
-    Jonathan Blow           Ken Hamada         Tero Hanninen      github:romigrou
-    Laurent Gomila          Cort Stratton      Sergio Gonzalez    github:svdijk
-    Aruelien Pocheville     Thibault Reuille   Cass Everitt       github:snagar
-    Ryamond Barbiero        Paul Du Bois       Engin Manap        github:Zelex
-    Michaelangel007@github  Philipp Wiesemann  Dale Weiler        github:grim210
-    Oriol Ferrer Mesia      Josh Tobin         Matthew Gregan     github:sammyhw
-    Blazej Dariusz Roszkowski                  Gregory Mullen     github:phprus
-    Christian Floisand      Kevin Schmidt                         github:poppolopoppo
+    the Horde3D community   Thomas Ruf         Ronny Chevalier    github:rlyeh
+    Janez Zemva             John Bartholomew   Michal Cichon      github:romigrou
+    Jonathan Blow           Ken Hamada         Tero Hanninen      github:svdijk
+    Laurent Gomila          Cort Stratton      Sergio Gonzalez    github:snagar
+    Aruelien Pocheville     Thibault Reuille   Cass Everitt       github:Zelex
+    Ryamond Barbiero        Paul Du Bois       Engin Manap        github:grim210
+    Michaelangel007@github  Philipp Wiesemann  Dale Weiler        github:sammyhw
+    Oriol Ferrer Mesia      Josh Tobin         Matthew Gregan     github:phprus
+    Blazej Dariusz Roszkowski                  Gregory Mullen     github:poppolopoppo
+    Christian Floisand      Kevin Schmidt      Baldur Karlsson    darealshinji
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
