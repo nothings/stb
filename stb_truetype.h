@@ -31,19 +31,19 @@
 //
 //   Bug/warning reports/fixes:
 //       "Zer" on mollyrocket       Fabian "ryg" Giesen
-//       Cass Everitt               Martins Mozeiko    
-//       stoiko (Haemimont Games)   Cap Petschulat     
-//       Brian Hook                 Omar Cornut        
-//       Walter van Niftrik         github:aloucks     
-//       David Gow                  Peter LaValle      
-//       David Given                Sergey Popov       
-//       Ivan-Assen Ivanov          Giumo X. Clanjor   
-//       Anthony Pesch              Higor Euripedes    
-//       Johan Duparc               Thomas Fields      
-//       Hou Qiming                 Derek Vinyard      
-//       Rob Loach                  Cort Stratton      
-//       Kenney Phillis Jr.         github:oyvindjam   
-//       
+//       Cass Everitt               Martins Mozeiko
+//       stoiko (Haemimont Games)   Cap Petschulat
+//       Brian Hook                 Omar Cornut
+//       Walter van Niftrik         github:aloucks
+//       David Gow                  Peter LaValle
+//       David Given                Sergey Popov
+//       Ivan-Assen Ivanov          Giumo X. Clanjor
+//       Anthony Pesch              Higor Euripedes
+//       Johan Duparc               Thomas Fields
+//       Hou Qiming                 Derek Vinyard
+//       Rob Loach                  Cort Stratton
+//       Kenney Phillis Jr.         github:oyvindjam
+//                                  github:vassvik
 //       
 // VERSION HISTORY
 //
@@ -411,11 +411,6 @@ int main(int arg, char **argv)
    #include <math.h>
    #define STBTT_cos(x)       cos(x)
    #define STBTT_acos(x)      acos(x)
-   #endif
-
-   #ifndef STBTT_fabs
-   #include <math.h>
-   #define STBTT_fabs(x)      fabs(x)
    #endif
 
    #ifndef STBTT_fabs
