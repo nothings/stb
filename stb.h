@@ -1,4 +1,4 @@
-/* stb.h - v2.30 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.31 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
@@ -25,6 +25,7 @@
 
 Version History
 
+   2.31   stb_ucharcmp
    2.30   MinGW fix
    2.29   attempt to fix use of swprintf()
    2.28   various new functionality
@@ -1548,7 +1549,7 @@ STB_EXTERN int (*stb_doublecmp(int offset))(const void *a, const void *b);
 STB_EXTERN int (*stb_charcmp(int offset))(const void *a, const void *b);
 
 #ifdef STB_DEFINE
-static int stb__intcmpoffset, stb__charcmpoffset, stb__strcmpoffset;
+static int stb__intcmpoffset, stb__ucharcmpoffset, stb__strcmpoffset;
 static int stb__floatcmpoffset, stb__doublecmpoffset;
 
 int stb__intcmp(const void *a, const void *b)
@@ -1558,10 +1559,10 @@ int stb__intcmp(const void *a, const void *b)
    return p < q ? -1 : p > q;
 }
 
-int stb__charcmp(const void *a, const void *b)
+int stb__ucharcmp(const void *a, const void *b)
 {
-   const int p = *(const unsigned char *) ((const char *) a + stb__charcmpoffset);
-   const int q = *(const unsigned char *) ((const char *) b + stb__charcmpoffset);
+   const int p = *(const unsigned char *) ((const char *) a + stb__ucharcmpoffset);
+   const int q = *(const unsigned char *) ((const char *) b + stb__ucharcmpoffset);
    return p < q ? -1 : p > q;
 }
 
@@ -1599,10 +1600,10 @@ int (*stb_intcmp(int offset))(const void *, const void *)
    return &stb__intcmp;
 }
 
-int (*stb_charcmp(int offset))(const void *, const void *)
+int (*stb_ucharcmp(int offset))(const void *, const void *)
 {
-   stb__charcmpoffset = offset;
-   return &stb__charcmp;
+   stb__ucharcmpoffset = offset;
+   return &stb__ucharcmp;
 }
 
 int (*stb_qsort_strcmp(int offset))(const void *, const void *)
@@ -1628,7 +1629,6 @@ int (*stb_doublecmp(int offset))(const void *, const void *)
    stb__doublecmpoffset = offset;
    return &stb__doublecmp;
 }
-
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
