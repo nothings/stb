@@ -162,6 +162,10 @@
 //    the main trick is in realizing in the first place that it's
 //    possible to do this in a generic, type-safe way in C.
 //
+// Contributors:
+//
+// Timothy Wright (github:ZenToad)
+//
 // LICENSE
 //
 //   See end of file for license information.
@@ -189,7 +193,7 @@
 
 #define stb__sbneedgrow(a,n)  ((a)==0 || stb__sbn(a)+(n) >= stb__sbm(a))
 #define stb__sbmaybegrow(a,n) (stb__sbneedgrow(a,(n)) ? stb__sbgrow(a,n) : 0)
-#define stb__sbgrow(a,n)      ((a) = stb__sbgrowf((a), (n), sizeof(*(a))))
+#define stb__sbgrow(a,n)      (*((void **)&(a)) = stb__sbgrowf((a), (n), sizeof(*(a))))
 
 #include <stdlib.h>
 
