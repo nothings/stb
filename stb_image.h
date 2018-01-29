@@ -78,7 +78,7 @@ RECENT REVISION HISTORY:
                                            Daniel Gibson (16-bit TGA)
                                            socks-the-fox (16-bit PNG)
                                            Jeremy Sawicki (handle all ImageNet JPGs)
- Optimizations & bugfixes
+ Optimizations & bugfixes                  Mikhail Morozov (1-bit BMP)
     Fabian "ryg" Giesen
     Arseny Kapoulkine
     John-Mark Allen
