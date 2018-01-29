@@ -12,6 +12,7 @@
 //    github:d26435
 //    github:trex78
 //    Jari Komppa (SI suffixes)
+//    Rohit Nirmal
 //
 // LICENSE:
 //
@@ -1025,11 +1026,11 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                n64 = 0;
             }
             if ((fl & STBSP__TRIPLET_COMMA) == 0) {
-               while (n) {
+               do {
                   s -= 2;
                   *(stbsp__uint16 *)s = *(stbsp__uint16 *)&stbsp__digitpair[(n % 100) * 2];
                   n /= 100;
-               }
+               } while (n);
             }
             while (n) {
                if ((fl & STBSP__TRIPLET_COMMA) && (l++ == 3)) {
