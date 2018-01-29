@@ -1,5 +1,5 @@
-/* stb_image - v2.17 - public domain image loader - http://nothings.org/stb_image.h
-                                     no warranty implied; use at your own risk
+/* stb_image - v2.17 - public domain image loader - http://nothings.org/stb
+                                  no warranty implied; use at your own risk
 
    Do this:
       #define STB_IMAGE_IMPLEMENTATION
@@ -107,10 +107,8 @@ RECENT REVISION HISTORY:
 // DOCUMENTATION
 //
 // Limitations:
-//    - no 16-bit-per-channel PNG
 //    - no 12-bit-per-channel JPEG
 //    - no JPEGs with arithmetic coding
-//    - no 1-bit BMP
 //    - GIF always returns *comp=4
 //
 // Basic usage (see HDR discussion below for HDR usage):

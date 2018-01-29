@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.07 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.08 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -9,7 +9,8 @@
 //     and "high quality" using mode.
 //
 // version history:
-//   v1.07  - bc4; allow not using libc; add STB_DXT_STATIC
+//   v1.08  - (sbt) fix bug in dxt-with-alpha block
+//   v1.07  - (stb) bc4; allow not using libc; add STB_DXT_STATIC
 //   v1.06  - (stb) fix to known-broken 1.05
 //   v1.05  - (stb) support bc5/3dc (Arvids Kokins), use extern "C" in C++ (Pavel Krajcevski)
 //   v1.04  - (ryg) default to no rounding bias for lerped colors (as per S3TC/DX10 spec);
@@ -649,6 +650,7 @@ static void stb__InitDXT()
 
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode)
 {
+   unsigned char *data[16][4];
    static int init=1;
    if (init) {
       stb__InitDXT();
@@ -656,8 +658,15 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
    }
 
    if (alpha) {
+      int i;
       stb__CompressAlphaBlock(dest,(unsigned char*) src+3, 4);
       dest += 8;
+      // make a new copy of the data in which alpha is opaque,
+      // because code uses a fast test for color constancy
+      memcpy(data, src, 4*16);
+      for (i=0; i < 16; ++i)
+         data[i][3] = 255;
+      src = &data[0][0];
    }
 
    stb__CompressColorBlock(dest,(unsigned char*) src,mode);
