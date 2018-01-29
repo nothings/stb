@@ -48,7 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
-      2.17  (2018-01-29) bugfix
+      2.17  (2018-01-29) bugfix, 1-bit BMP, 16-bitness query
       2.16  (2017-07-23) all functions have 16-bit variants; optimizations; bugfixes
       2.15  (2017-03-18) fix png-1,2,4; all Imagenet JPGs; no runtime SSE detection on GCC
       2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD; fixes for Imagenet JPGs
@@ -79,7 +79,7 @@ RECENT REVISION HISTORY:
                                            socks-the-fox (16-bit PNG)
                                            Jeremy Sawicki (handle all ImageNet JPGs)
  Optimizations & bugfixes                  Mikhail Morozov (1-bit BMP)
-    Fabian "ryg" Giesen
+    Fabian "ryg" Giesen                    Anael Seghezzi (is-16-bit query)
     Arseny Kapoulkine
     John-Mark Allen
 
@@ -418,14 +418,14 @@ STBIDEF void     stbi_image_free      (void *retval_from_stbi_load);
 // get image dimensions & components without fully decoding
 STBIDEF int      stbi_info_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp);
 STBIDEF int      stbi_info_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp);
-STBIDEF int      stbi_is_16_from_memory(stbi_uc const *buffer, int len);
-STBIDEF int      stbi_is_16_from_callbacks(stbi_io_callbacks const *clbk, void *user);
+STBIDEF int      stbi_is_16_bit_from_memory(stbi_uc const *buffer, int len);
+STBIDEF int      stbi_is_16_bit_from_callbacks(stbi_io_callbacks const *clbk, void *user);
 
 #ifndef STBI_NO_STDIO
-STBIDEF int      stbi_info            (char const *filename,     int *x, int *y, int *comp);
-STBIDEF int      stbi_info_from_file  (FILE *f,                  int *x, int *y, int *comp);
-STBIDEF int      stbi_is_16           (char const *filename);
-STBIDEF int      stbi_is_16_from_file (FILE *f);
+STBIDEF int      stbi_info               (char const *filename,     int *x, int *y, int *comp);
+STBIDEF int      stbi_info_from_file     (FILE *f,                  int *x, int *y, int *comp);
+STBIDEF int      stbi_is_16_bit          (char const *filename);
+STBIDEF int      stbi_is_16_bit_from_file(FILE *f);
 #endif
 
 
@@ -7038,17 +7038,17 @@ STBIDEF int stbi_info_from_file(FILE *f, int *x, int *y, int *comp)
    return r;
 }
 
-STBIDEF int stbi_is_16(char const *filename)
+STBIDEF int stbi_is_16_bit(char const *filename)
 {
     FILE *f = stbi__fopen(filename, "rb");
     int result;
     if (!f) return stbi__err("can't fopen", "Unable to open file");
-    result = stbi_is_16_from_file(f);
+    result = stbi_is_16_bit_from_file(f);
     fclose(f);
     return result;
 }
 
-STBIDEF int stbi_is_16_from_file(FILE *f)
+STBIDEF int stbi_is_16_bit_from_file(FILE *f)
 {
    int r;
    stbi__context s;
@@ -7074,14 +7074,14 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
    return stbi__info_main(&s,x,y,comp);
 }
 
-STBIDEF int stbi_is_16_from_memory(stbi_uc const *buffer, int len)
+STBIDEF int stbi_is_16_bit_from_memory(stbi_uc const *buffer, int len)
 {
    stbi__context s;
    stbi__start_mem(&s,buffer,len);
    return stbi__is_16_main(&s);
 }
 
-STBIDEF int stbi_is_16_from_callbacks(stbi_io_callbacks const *c, void *user)
+STBIDEF int stbi_is_16_bit_from_callbacks(stbi_io_callbacks const *c, void *user)
 {
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) c, user);
@@ -7093,6 +7093,9 @@ STBIDEF int stbi_is_16_from_callbacks(stbi_io_callbacks const *c, void *user)
 /*
    revision history:
       2.17  (2018-01-29) change sbti__shiftsigned to avoid clang -O2 bug
+                         1-bit BMP
+                         *_is_16_bit api
+                         avoid warnings
       2.16  (2017-07-23) all functions have 16-bit variants;
                          STBI_NO_STDIO works again;
                          compilation fixes;
