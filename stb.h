@@ -4246,11 +4246,21 @@ STB_EXTERN void        stb_sdict_delete(stb_sdict *);
 STB_EXTERN void *      stb_sdict_change(stb_sdict *, char *str, void *p);
 STB_EXTERN int         stb_sdict_count(stb_sdict *d);
 
+STB_EXTERN int         stb_sdict_internal_limit(stb_sdict *d);
+STB_EXTERN char *      stb_sdict_internal_key(stb_sdict *d, int n);
+STB_EXTERN void *      stb_sdict_internal_value(stb_sdict *d, int n);
+
 #define stb_sdict_for(d,i,q,z)                                          \
-   for(i=0; i < (d)->limit ? q=(d)->table[i].k,z=(d)->table[i].v,1 : 0; ++i)    \
+   for(i=0; i < stb_sdict_internal_limit(d) ? (q=stb_sdict_internal_key(d,i),z=stb_sdict_internal_value(d,i),1) : 0; ++i)    \
       if (q==NULL||q==(void *) 1);else   // reversed makes macro friendly
 
 #ifdef STB_DEFINE
+
+// if in same translation unit, for speed, don't call accessors
+#undef stb_sdict_for
+#define stb_sdict_for(d,i,q,z)                                          \
+   for(i=0; i < (d)->limit ? (q=(d)->table[i].k,z=(d)->table[i].v,1) : 0; ++i)    \
+      if (q==NULL||q==(void *) 1);else   // reversed makes macro friendly
 
 #define STB_DEL ((void *) 1)
 #define STB_SDEL  ((char *) 1)
@@ -4269,6 +4279,19 @@ stb_define_hash_base(STB_noprefix, stb_sdict, void*arena;, stb_sdict_,stb_sdicti
 int stb_sdict_count(stb_sdict *a)
 {
    return a->count;
+}
+
+int stb_sdict_internal_limit(stb_sdict *a)
+{
+   return a->limit;
+}
+char* stb_sdict_internal_key(stb_sdict *a, int n)
+{
+   return a->table[n].k;
+}
+void* stb_sdict_internal_value(stb_sdict *a, int n)
+{
+   return a->table[n].v;
 }
 
 stb_sdict * stb_sdict_new(int use_arena)
