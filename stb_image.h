@@ -1,4 +1,4 @@
-/* stb_image - v2.16 - public domain image loader - http://nothings.org/stb_image.h
+/* stb_image - v2.17 - public domain image loader - http://nothings.org/stb_image.h
                                      no warranty implied; use at your own risk
 
    Do this:
@@ -48,6 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.17  (2018-01-29) bugfix
       2.16  (2017-07-23) all functions have 16-bit variants; optimizations; bugfixes
       2.15  (2017-03-18) fix png-1,2,4; all Imagenet JPGs; no runtime SSE detection on GCC
       2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD; fixes for Imagenet JPGs
@@ -6975,6 +6976,7 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
 
 /*
    revision history:
+      2.17  (2018-01-29) change sbti__shiftsigned to avoid clang -O2 bug
       2.16  (2017-07-23) all functions have 16-bit variants;
                          STBI_NO_STDIO works again;
                          compilation fixes;
