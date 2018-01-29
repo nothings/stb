@@ -2172,7 +2172,7 @@ static int stbtt__run_charstring(const stbtt_fontinfo *info, int glyph_index, st
 
          // push immediate
          if (b0 == 255) {
-            f = (float)stbtt__buf_get32(&b) / 0x10000;
+            f = (float)(stbtt_int32)stbtt__buf_get32(&b) / 0x10000;
          } else {
             stbtt__buf_skip(&b, -1);
             f = (float)(stbtt_int16)stbtt__cff_int(&b);
@@ -2210,12 +2210,10 @@ static int stbtt__GetGlyphInfoT2(const stbtt_fontinfo *info, int glyph_index, in
 {
    stbtt__csctx c = STBTT__CSCTX_INIT(1);
    int r = stbtt__run_charstring(info, glyph_index, &c);
-   if (x0) {
-      *x0 = r ? c.min_x : 0;
-      *y0 = r ? c.min_y : 0;
-      *x1 = r ? c.max_x : 0;
-      *y1 = r ? c.max_y : 0;
-   }
+   if (x0)  *x0 = r ? c.min_x : 0;
+   if (y0)  *y0 = r ? c.min_y : 0;
+   if (x1)  *x1 = r ? c.max_x : 0;
+   if (y1)  *y1 = r ? c.max_y : 0;
    return r ? c.num_vertices : 0;
 }
 
