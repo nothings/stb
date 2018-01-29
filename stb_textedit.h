@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.11  - public domain - Sean Barrett
+// stb_textedit.h - v1.12  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -29,6 +29,7 @@
 //
 // VERSION HISTORY
 //
+//   1.12 (2018-01-29) user can change STB_TEXTEDIT_KEYTYPE
 //   1.11 (2017-03-03) fix HOME on last line, dragging off single-line textfield
 //   1.10 (2016-10-25) supress warnings about casting away const with -Wcast-qual
 //   1.9  (2016-08-27) customizable move-by-word
@@ -198,7 +199,7 @@
 //    void stb_textedit_drag(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, float x, float y)
 //    int  stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
 //    int  stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len)
-//    void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, int key)
+//    void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXEDIT_KEYTYPE key)
 //
 //    Each of these functions potentially updates the string and updates the
 //    state.
@@ -232,7 +233,9 @@
 //          inputs, set a high bit to distinguish the two; then you can define the
 //          various definitions like STB_TEXTEDIT_K_LEFT have the is-key-event bit
 //          set, and make STB_TEXTEDIT_KEYTOCHAR check that the is-key-event bit is
-//          clear.
+//          clear. STB_TEXTEDIT_KEYTYPE defaults to int, but you can #define it to
+//          anything other type you wante before including.
+//
 //     
 //   When rendering, you can read the cursor position and selection state from
 //   the STB_TexteditState.
@@ -711,8 +714,12 @@ static int stb_textedit_paste_internal(STB_TEXTEDIT_STRING *str, STB_TexteditSta
    return 0;
 }
 
+#ifndef STB_TEXTEDIT_KEYTYPE
+#define STB_TEXTEDIT_KEYTYPE int
+#endif
+
 // API key: process a keyboard input
-static void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, int key)
+static void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_KEYTYPE key)
 {
 retry:
    switch (key) {

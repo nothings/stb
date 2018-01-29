@@ -162,7 +162,7 @@
 //         measurement for describing font size, defined as 72 points per inch.
 //         stb_truetype provides a point API for compatibility. However, true
 //         "per inch" conventions don't make much sense on computer displays
-//         since they different monitors have different number of pixels per
+//         since different monitors have different number of pixels per
 //         inch. For example, Windows traditionally uses a convention that
 //         there are 96 pixels per inch, thus making 'inch' measurements have
 //         nothing to do with inches, and thus effectively defining a point to
@@ -171,6 +171,39 @@
 //         but the author has observed that this scale factor is often wrong
 //         for non-commercial fonts, thus making fonts scaled in points
 //         according to the TrueType spec incoherently sized in practice.
+//
+// DETAILED USAGE:
+//
+//  Scale:
+//    Select how high you want the font to be, in points or pixels.
+//    Call ScaleForPixelHeight or ScaleForMappingEmToPixels to compute
+//    a scale factor SF that will be used by all other functions.
+//
+//  Baseline:
+//    You need to select a y-coordinate that is the baseline of where
+//    your text will appear. Call GetFontBoundingBox to get the baseline-relative
+//    bounding box for all characters. SF*-y0 will be the distance in pixels
+//    that the worst-case character could extend above the baseline, so if
+//    you want the top edge of characters to appear at the top of the
+//    screen where y=0, then you would set the baseline to SF*-y0.
+//
+//  Current point:
+//    Set the current point where the first character will appear. The
+//    first character could extend left of the current point; this is font
+//    dependent. You can either choose a current point that is the leftmost
+//    point and hope, or add some padding, or check the bounding box or
+//    left-side-bearing of the first character to be displayed and set
+//    the current point based on that.
+//
+//  Displaying a character:
+//    Compute the bounding box of the character. It will contain signed values
+//    relative to <current_point, baseline>. I.e. if it returns x0,y0,x1,y1,
+//    then the character should be displayed in the rectangle from
+//    <current_point+SF*x0, baseline+SF*y0> to <current_point+SF*x1,baseline+SF*y1).
+//
+//  Advancing for the next character:
+//    Call GlyphHMetrics, and compute 'current_point += SF * advance'.
+// 
 //
 // ADVANCED USAGE
 //
