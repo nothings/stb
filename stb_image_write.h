@@ -57,6 +57,12 @@ USAGE:
    where the callback is:
       void stbi_write_func(void *context, void *data, int size);
 
+   You can configure it with these global variables:
+      int stbi_write_tga_with_rle;             // defaults to true; set to 0 to disable RLE
+      int stbi_write_png_compression_level;    // defaults to 8; set to higher for more compression
+      int stbi_write_force_png_filter;         // defaults to -1; set to 0..5 to force a filter mode
+
+
    You can define STBI_WRITE_NO_STDIO to disable the file variant of these
    functions, so the library will not use stdio.h at all. However, this will
    also disable HDR writing, because it requires stdio for formatted output.
@@ -108,6 +114,7 @@ CREDITS:
    Emmanuel Julien        -    initial file IO callback implementation
    Jon Olick              -    original jo_jpeg.cpp code
    Daniel Gibson          -    integrate JPEG, allow external zlib
+   Aarni Koskela          -    allow choosing PNG filter
 
    bugfixes:
       github:Chribba
@@ -138,9 +145,11 @@ extern "C" {
 #define STBIWDEF static
 #else
 #define STBIWDEF extern
-extern int stbi_write_tga_with_rle;
-extern int stbi_write_png_level;
 #endif
+
+STBIWDEF int stbi_write_tga_with_rle;
+STBIWDEF int stbi_write_png_comperssion_level;
+STBIWDEF int stbi_write_force_png_filter;
 
 #ifndef STBI_WRITE_NO_STDIO
 STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
@@ -158,7 +167,7 @@ STBIWDEF int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w,
 STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
 STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, int quality);
 
-extern void stbi_flip_vertically_on_write(int flip_boolean);
+STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 
 #ifdef __cplusplus
 }
@@ -217,9 +226,19 @@ extern void stbi_flip_vertically_on_write(int flip_boolean);
 
 #define STBIW_UCHAR(x) (unsigned char) ((x) & 0xff)
 
+#ifdef STB_IMAGE_WRITE_STATIC
+static stbi__flip_vertically_on_write=0;
+static int stbi_write_png_compression level = 8;
+static int stbi_write_tga_with_rle = 1;
+static int stbi_write_force_png_filter = -1;
+#else
+int stbi_write_png_compression_level = 8;
 int stbi__flip_vertically_on_write=0;
+int stbi_write_tga_with_rle = 1;
+int stbi_write_force_png_filter = -1;
+#endif
 
-void stbi_flip_vertically_on_write(int flag)
+STBIWDEF void stbi_flip_vertically_on_write(int flag)
 {
    stbi__flip_vertically_on_write = flag;
 }
@@ -260,12 +279,6 @@ static void stbi__end_write_file(stbi__write_context *s)
 
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
-
-#ifdef STB_IMAGE_WRITE_STATIC
-static int stbi_write_tga_with_rle = 1;
-#else
-int stbi_write_tga_with_rle = 1;
-#endif
 
 static void stbiw__writefv(stbi__write_context *s, const char *fmt, va_list v)
 {
@@ -947,68 +960,88 @@ static unsigned char stbiw__paeth(int a, int b, int c)
    return STBIW_UCHAR(c);
 }
 
-#ifdef STB_IMAGE_WRITE_STATIC
-static int stbi_write_png_level = 8;
-#else
-int stbi_write_png_level = 8;
-#endif
-
 // @OPTIMIZE: provide an option that always forces left-predict or paeth predict
+static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int width, int height, int y, int n, int filter_type, signed char *line_buffer)
+{
+   static int mapping[] = { 0,1,2,3,4 };
+   static int firstmap[] = { 0,1,0,5,6 };
+   int *mymap = (y != 0) ? mapping : firstmap;
+   int i;
+   int type = mymap[filter_type];
+   unsigned char *z = pixels + stride_bytes * (stbi__flip_vertically_on_write ? height-1-y : y);
+   for (i = 0; i < n; ++i) {
+      switch (type) {
+         case 0: line_buffer[i] = z[i]; break;
+         case 1: line_buffer[i] = z[i]; break;
+         case 2: line_buffer[i] = z[i] - z[i-stride_bytes]; break;
+         case 3: line_buffer[i] = z[i] - (z[i-stride_bytes]>>1); break;
+         case 4: line_buffer[i] = (signed char) (z[i] - stbiw__paeth(0,z[i-stride_bytes],0)); break;
+         case 5: line_buffer[i] = z[i]; break;
+         case 6: line_buffer[i] = z[i]; break;
+      }
+   }
+   for (i=n; i < width*n; ++i) {
+      switch (type) {
+         case 0: line_buffer[i] = z[i]; break;
+         case 1: line_buffer[i] = z[i] - z[i-n]; break;
+         case 2: line_buffer[i] = z[i] - z[i-stride_bytes]; break;
+         case 3: line_buffer[i] = z[i] - ((z[i-n] + z[i-stride_bytes])>>1); break;
+         case 4: line_buffer[i] = z[i] - stbiw__paeth(z[i-n], z[i-stride_bytes], z[i-stride_bytes-n]); break;
+         case 5: line_buffer[i] = z[i] - (z[i-n]>>1); break;
+         case 6: line_buffer[i] = z[i] - stbiw__paeth(z[i-n], 0,0); break;
+      }
+   }
+}
+
 unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
 {
+   int force_filter = stbi_write_force_png_filter;
    int ctype[5] = { -1, 0, 4, 2, 6 };
    unsigned char sig[8] = { 137,80,78,71,13,10,26,10 };
    unsigned char *out,*o, *filt, *zlib;
    signed char *line_buffer;
-   int i,j,k,p,zlen;
+   int j,zlen;
 
    if (stride_bytes == 0)
       stride_bytes = x * n;
 
+   if (force_filter >= 5) {
+      force_filter = -1;
+   }
+
    filt = (unsigned char *) STBIW_MALLOC((x*n+1) * y); if (!filt) return 0;
    line_buffer = (signed char *) STBIW_MALLOC(x * n); if (!line_buffer) { STBIW_FREE(filt); return 0; }
    for (j=0; j < y; ++j) {
-      static int mapping[] = { 0,1,2,3,4 };
-      static int firstmap[] = { 0,1,0,5,6 };
-      int *mymap = (j != 0) ? mapping : firstmap;
-      int best = 0, bestval = 0x7fffffff;
-      for (p=0; p < 2; ++p) {
-         for (k= p?best:0; k < 5; ++k) { // @TODO: clarity: rewrite this to go 0..5, and 'continue' the unwanted ones during 2nd pass
-            int type = mymap[k],est=0;
-            unsigned char *z = pixels + stride_bytes*(stbi__flip_vertically_on_write ? y-1-j : j);
-            for (i=0; i < n; ++i)
-               switch (type) {
-                  case 0: line_buffer[i] = z[i]; break;
-                  case 1: line_buffer[i] = z[i]; break;
-                  case 2: line_buffer[i] = z[i] - z[i-stride_bytes]; break;
-                  case 3: line_buffer[i] = z[i] - (z[i-stride_bytes]>>1); break;
-                  case 4: line_buffer[i] = (signed char) (z[i] - stbiw__paeth(0,z[i-stride_bytes],0)); break;
-                  case 5: line_buffer[i] = z[i]; break;
-                  case 6: line_buffer[i] = z[i]; break;
-               }
-            for (i=n; i < x*n; ++i) {
-               switch (type) {
-                  case 0: line_buffer[i] = z[i]; break;
-                  case 1: line_buffer[i] = z[i] - z[i-n]; break;
-                  case 2: line_buffer[i] = z[i] - z[i-stride_bytes]; break;
-                  case 3: line_buffer[i] = z[i] - ((z[i-n] + z[i-stride_bytes])>>1); break;
-                  case 4: line_buffer[i] = z[i] - stbiw__paeth(z[i-n], z[i-stride_bytes], z[i-stride_bytes-n]); break;
-                  case 5: line_buffer[i] = z[i] - (z[i-n]>>1); break;
-                  case 6: line_buffer[i] = z[i] - stbiw__paeth(z[i-n], 0,0); break;
-               }
-            }
-            if (p != 0) break;
-            for (i=0; i < x*n; ++i)
+      int filter_type;
+      if (force_filter > -1) {
+         filter_type = force_filter;
+         stbiw__encode_png_line(pixels, stride_bytes, x, y, j, n, force_filter, line_buffer);
+      } else { // Estimate the best filter by running through all of them:
+         int best_filter = 0, best_filter_val = 0x7fffffff, est, i;
+         for (filter_type = 0; filter_type < 5; filter_type++) {
+            stbiw__encode_png_line(pixels, stride_bytes, x, y, j, n, filter_type, line_buffer);
+
+            // Estimate the entropy of the line using this filter; the less, the better.
+            est = 0;
+            for (i = 0; i < x*n; ++i) {
                est += abs((signed char) line_buffer[i]);
-            if (est < bestval) { bestval = est; best = k; }
+            }
+            if (est < best_filter_val) {
+               best_filter_val = est;
+               best_filter = filter_type;
+            }
+         }
+         if (filter_type != best_filter) {  // If the last iteration already got us the best filter, don't redo it
+            stbiw__encode_png_line(pixels, stride_bytes, x, y, j, n, best_filter, line_buffer);
+            filter_type = best_filter;
          }
       }
-      // when we get here, best contains the filter type, and line_buffer contains the data
-      filt[j*(x*n+1)] = (unsigned char) best;
+      // when we get here, filter_type contains the filter type, and line_buffer contains the data
+      filt[j*(x*n+1)] = (unsigned char) filter_type;
       STBIW_MEMMOVE(filt+j*(x*n+1)+1, line_buffer, x*n);
    }
    STBIW_FREE(line_buffer);
-   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, stbi_write_png_level);
+   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, stbi_write_png_compression_level);
    STBIW_FREE(filt);
    if (!zlib) return 0;
 
@@ -1421,7 +1454,7 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
 
 /* Revision history
       1.08  (2018-01-29)
-             add stbi__flip_vertically_on_write
+             add stbi__flip_vertically_on_write, external zlib, zlib quality, choose PNG filter
       1.07  (2017-07-24)
              doc fix
       1.06 (2017-07-23)
