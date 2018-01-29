@@ -30,33 +30,25 @@
 //       Imanol Celaya
 //
 //   Bug/warning reports/fixes:
-//       "Zer" on mollyrocket
-//       Cass Everitt
-//       stoiko (Haemimont Games)
-//       Brian Hook 
-//       Walter van Niftrik
-//       David Gow
-//       David Given
-//       Ivan-Assen Ivanov
-//       Anthony Pesch
-//       Johan Duparc
-//       Hou Qiming
-//       Fabian "ryg" Giesen
-//       Martins Mozeiko
-//       Cap Petschulat
-//       Omar Cornut
-//       github:aloucks
-//       Peter LaValle
-//       Sergey Popov
-//       Giumo X. Clanjor
-//       Higor Euripedes
-//       Thomas Fields
-//       Derek Vinyard
-//       Cort Stratton
-//       github:oyvindjam
-//
+//       "Zer" on mollyrocket       Fabian "ryg" Giesen
+//       Cass Everitt               Martins Mozeiko    
+//       stoiko (Haemimont Games)   Cap Petschulat     
+//       Brian Hook                 Omar Cornut        
+//       Walter van Niftrik         github:aloucks     
+//       David Gow                  Peter LaValle      
+//       David Given                Sergey Popov       
+//       Ivan-Assen Ivanov          Giumo X. Clanjor   
+//       Anthony Pesch              Higor Euripedes    
+//       Johan Duparc               Thomas Fields      
+//       Hou Qiming                 Derek Vinyard      
+//                                  Cort Stratton      
+//                                  github:oyvindjam   
+//                                  Kenney Phillis Jr. 
+//       
+//       
 // VERSION HISTORY
 //
+//   1.18 (2018-01-29) add missing function
 //   1.17 (2017-07-23) make more arguments const; doc fix
 //   1.16 (2017-07-12) SDF support
 //   1.15 (2017-03-03) make more arguments const
