@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.08 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.08b - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -32,11 +32,6 @@
 #ifndef STB_INCLUDE_STB_DXT_H
 #define STB_INCLUDE_STB_DXT_H
 
-// compression mode (bitflags)
-#define STB_DXT_NORMAL    0
-#define STB_DXT_DITHER    1   // use dithering. dubious win. never use for normal maps and the like!
-#define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -47,15 +42,21 @@ extern "C" {
 #define STBDDEF extern
 #endif
 
+// compression mode (bitflags)
+#define STB_DXT_NORMAL    0
+#define STB_DXT_DITHER    1   // use dithering. dubious win. never use for normal maps and the like!
+#define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
+
 STBDDEF void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
 STBDDEF void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src_r_one_byte_per_pixel);
 STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel);
 
+#define STB_COMPRESS_DXT_BLOCK
+
 #ifdef __cplusplus
 }
 #endif
-
-#define STB_COMPRESS_DXT_BLOCK
+#endif // STB_INCLUDE_STB_DXT_H
 
 #ifdef STB_DXT_IMPLEMENTATION
 
@@ -650,7 +651,7 @@ static void stb__InitDXT()
 
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode)
 {
-   unsigned char *data[16][4];
+   unsigned char data[16][4];
    static int init=1;
    if (init) {
       stb__InitDXT();
@@ -683,7 +684,6 @@ void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)
    stb__CompressAlphaBlock(dest + 8,(unsigned char*) src+1,2);
 }
 #endif // STB_DXT_IMPLEMENTATION
-#endif // STB_INCLUDE_STB_DXT_H
 
 /*
 ------------------------------------------------------------------------------
