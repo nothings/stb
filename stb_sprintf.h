@@ -1,4 +1,4 @@
-// stb_sprintf - v1.04 - public domain snprintf() implementation
+// stb_sprintf - v1.05 - public domain snprintf() implementation
 // originally by Jeff Roberts / RAD Game Tools, 2015/10/20
 // http://github.com/nothings/stb
 //
@@ -14,6 +14,7 @@
 //    Jari Komppa (SI suffixes)
 //    Rohit Nirmal
 //    Marcin Wojdyr
+//    Leonard Ritter
 //
 // LICENSE:
 //
@@ -1343,24 +1344,42 @@ static char *stbsp__clamp_callback(char *buf, void *user, int len)
    return (c->count >= STB_SPRINTF_MIN) ? c->buf : c->tmp; // go direct into buffer if you can
 }
 
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsnprintf)(char *buf, int count, char const *fmt, va_list va)
+static char * stbsp__count_clamp_callback( char * buf, void * user, int len )
+{
+   stbsp__context * c = (stbsp__context*)user;
+
+   c->count += len;
+   return c->tmp; // go direct into buffer if you can
+}
+
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsnprintf )( char * buf, int count, char const * fmt, va_list va )
 {
    stbsp__context c;
    int l;
 
-   if (count == 0)
-      return 0;
+   if ( (count == 0) && !buf )
+   {
+      c.count = 0;
 
-   c.buf = buf;
-   c.count = count;
+      STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__count_clamp_callback, &c, c.tmp, fmt, va );
+      l = c.count;
+   }
+   else
+   {
+      if ( count == 0 )
+         return 0;
 
-   STB_SPRINTF_DECORATE(vsprintfcb)(stbsp__clamp_callback, &c, stbsp__clamp_callback(0, &c, 0), fmt, va);
+      c.buf = buf;
+      c.count = count;
 
-   // zero-terminate
-   l = (int)(c.buf - buf);
-   if (l >= count) // should never be greater, only equal (or less) than count
-      l = count - 1;
-   buf[l] = 0;
+      STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__clamp_callback, &c, stbsp__clamp_callback(0,&c,0), fmt, va );
+
+      // zero-terminate
+      l = (int)( c.buf - buf );
+      if ( l >= count ) // should never be greater, only equal (or less) than count
+         l = count - 1;
+      buf[l] = 0;
+   }
 
    return l;
 }
