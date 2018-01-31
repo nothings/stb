@@ -190,11 +190,43 @@ SOURCE=.\test_c_compilation.c
 # End Source File
 # Begin Source File
 
+SOURCE=.\test_c_lexer.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\test_dxt.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\test_easyfont.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\test_image.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\test_image_write.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\test_perlin.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\test_sprintf.c
+# End Source File
+# Begin Source File
+
 SOURCE=.\test_truetype.c
 # End Source File
 # Begin Source File
 
 SOURCE=.\test_vorbis.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\test_voxel.c
 # End Source File
 # Begin Source File
 
