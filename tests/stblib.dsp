@@ -84,7 +84,7 @@ LINK32=link.exe
 # Name "stblib - Win32 Debug"
 # Begin Source File
 
-SOURCE=..\stb_lib.h
+SOURCE=.\prerelease\stb_lib.h
 # End Source File
 # Begin Source File
 
