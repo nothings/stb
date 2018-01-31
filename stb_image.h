@@ -48,6 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.19  (2018-xx-xx) fix warning
       2.18  (2018-01-30) fix warnings
       2.17  (2018-01-29) bugfix, 1-bit BMP, 16-bitness query, fix warnings
       2.16  (2017-07-23) all functions have 16-bit variants; optimizations; bugfixes
@@ -6894,7 +6895,7 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
 
 static int stbi__psd_is16(stbi__context *s)
 {
-   int channelCount, dummy, depth;
+   int channelCount, depth;
    if (stbi__get32be(s) != 0x38425053) {
        stbi__rewind( s );
        return 0;
@@ -6909,8 +6910,8 @@ static int stbi__psd_is16(stbi__context *s)
        stbi__rewind( s );
        return 0;
    }
-   dummy = stbi__get32be(s);
-   dummy = stbi__get32be(s);
+   (void) stbi__get32be(s);
+   (void) stbi__get32be(s);
    depth = stbi__get16be(s);
    if (depth != 16) {
        stbi__rewind( s );
