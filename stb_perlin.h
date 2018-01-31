@@ -18,8 +18,7 @@
 //                           float z,
 //                           int   x_wrap=0,
 //                           int   y_wrap=0,
-//                           int   z_wrap=0,
-//                           unsigned char seed=0)
+//                           int   z_wrap=0)
 //
 // This function computes a random value at the coordinate (x,y,z).
 // Adjacent random values are continuous but the noise fluctuates
@@ -33,9 +32,6 @@
 // details of the implementation, even if you ask for larger or no
 // wrapping.)
 //
-// Using a different "seed" will provide a unique variation
-// of the noise output.
-//
 // Fractal Noise:
 //
 // Three common fractal noise functions are included, which produce 
@@ -44,16 +40,13 @@
 // 'octaves' times, so this parameter will affect runtime.
 //
 // float stb_perlin_ridge_noise3(float x, float y, float z,
-//                               float lacunarity, float gain, float offset, int octaves,
-//                               unsigned char seed=0)
+//                               float lacunarity, float gain, float offset, int octaves)
 //
 // float stb_perlin_fbm_noise3(float x, float y, float z,
-//                             float lacunarity, float gain, int octaves,
-//                             unsigned char seed=0);
+//                             float lacunarity, float gain, int octaves)
 //
 // float stb_perlin_turbulence_noise3(float x, float y, float z,
-//                                    float lacunarity, float gain,int octaves,
-//                                    unsigned char seed=0)
+//                                    float lacunarity, float gain, int octaves)
 //
 // Typical values to start playing with:
 //     octaves    =   6     -- number of "octaves" of noise3() to sum
