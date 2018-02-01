@@ -441,6 +441,11 @@ int main(int arg, char **argv)
    #define STBTT_pow(x,y)     pow(x,y)
    #endif
 
+   #ifndef STBTT_fmod
+   #include <math.h>
+   #define STBTT_fmod(x,y)    fmod(x,y)
+   #endif
+
    #ifndef STBTT_cos
    #include <math.h>
    #define STBTT_cos(x)       cos(x)
