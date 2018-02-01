@@ -44,6 +44,7 @@
 //       Rob Loach                  Cort Stratton
 //       Kenney Phillis Jr.         github:oyvindjam
 //       Brian Costabile            github:vassvik
+//       github:pmttavara
 //       
 // VERSION HISTORY
 //
@@ -438,6 +439,11 @@ int main(int arg, char **argv)
    #include <math.h>
    #define STBTT_sqrt(x)      sqrt(x)
    #define STBTT_pow(x,y)     pow(x,y)
+   #endif
+
+   #ifndef STBTT_fmod
+   #include <math.h>
+   #define STBTT_fmod(x,y)    fmod(x,y)
    #endif
 
    #ifndef STBTT_cos
@@ -3932,7 +3938,7 @@ static int stbtt__ray_intersect_bezier(float orig[2], float ray[2], float q0[2],
       float discr = b*b - a*c;
       if (discr > 0.0) {
          float rcpna = -1 / a;
-         float d = (float) sqrt(discr);
+         float d = (float) STBTT_sqrt(discr);
          s0 = (b+d) * rcpna;
          s1 = (b-d) * rcpna;
          if (s0 >= 0.0 && s0 <= 1.0)
@@ -3994,7 +4000,7 @@ static int stbtt__compute_crossings_x(float x, float y, int nverts, stbtt_vertex
    orig[1] = y;
 
    // make sure y never passes through a vertex of the shape
-   y_frac = (float) fmod(y, 1.0f);
+   y_frac = (float) STBTT_fmod(y, 1.0f);
    if (y_frac < 0.01f)
       y += 0.01f;
    else if (y_frac > 0.99f)
