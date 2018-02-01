@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.13b - public domain
+// Ogg Vorbis audio decoder - v1.14 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
@@ -32,6 +32,7 @@
 //    manxorist@github   saga musix          github:infatum
 //
 // Partial history:
+//    1.14    - 2018/xx/xx - delete bogus dealloca usage
 //    1.13    - 2018/01/29 - fix truncation of last frame (hopefully)
 //    1.12    - 2017/11/21 - limit residue begin/end to blocksize/2 to avoid large temp allocs in bad/corrupt files
 //    1.11    - 2017/07/23 - fix MinGW compilation 
@@ -882,11 +883,7 @@ static int error(vorb *f, enum STBVorbisError e)
 #define array_size_required(count,size)  (count*(sizeof(void *)+(size)))
 
 #define temp_alloc(f,size)              (f->alloc.alloc_buffer ? setup_temp_malloc(f,size) : alloca(size))
-#ifdef dealloca
-#define temp_free(f,p)                  (f->alloc.alloc_buffer ? 0 : dealloca(size))
-#else
 #define temp_free(f,p)                  0
-#endif
 #define temp_alloc_save(f)              ((f)->temp_offset)
 #define temp_alloc_restore(f,p)         ((f)->temp_offset = (p))
 
