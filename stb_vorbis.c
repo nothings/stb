@@ -4057,6 +4057,7 @@ static int start_decoder(vorb *f)
       f->previous_window[i] = (float *) setup_malloc(f, sizeof(float) * f->blocksize_1/2);
       f->finalY[i]          = (int16 *) setup_malloc(f, sizeof(int16) * longest_floorlist);
       if (f->channel_buffers[i] == NULL || f->previous_window[i] == NULL || f->finalY[i] == NULL) return error(f, VORBIS_outofmem);
+      memset(f->channel_buffers[i], 0, sizeof(float) * f->blocksize_1);
       #ifdef STB_VORBIS_NO_DEFER_FLOOR
       f->floor_buffers[i]   = (float *) setup_malloc(f, sizeof(float) * f->blocksize_1/2);
       if (f->floor_buffers[i] == NULL) return error(f, VORBIS_outofmem);
