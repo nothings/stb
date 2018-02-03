@@ -1,15 +1,20 @@
-// Ogg Vorbis audio decoder - v1.13b - public domain
+// Ogg Vorbis audio decoder - v1.09 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
 //
-// Originally sponsored by RAD Game Tools. Seeking implementation
-// sponsored by Phillip Bennefall, Marc Andersen, Aaron Baker,
-// Elias Software, Aras Pranckevicius, and Sean Barrett.
+// Originally sponsored by RAD Game Tools. Seeking sponsored
+// by Phillip Bennefall, Marc Andersen, Aaron Baker, Elias Software,
+// Aras Pranckevicius, and Sean Barrett.
 //
 // LICENSE
 //
-//   See end of file for license information.
+//   This software is dual-licensed to the public domain and under the following
+//   license: you are granted a perpetual, irrevocable license to copy, modify,
+//   publish, and distribute this file as you see fit.
+//
+// No warranty for any purpose is expressed or implied by the author (nor
+// by RAD Game Tools). Report bugs and send enhancements to the author.
 //
 // Limitations:
 //
@@ -29,13 +34,9 @@
 //    Bernhard Wodo      Evan Balster        alxprd@github
 //    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
 //    Phillip Bennefall  Rohit               Thiago Goulart
-//    manxorist@github   saga musix          github:infatum
+//    manxorist@github   saga musix
 //
 // Partial history:
-//    1.13    - 2018/01/29 - fix truncation of last frame (hopefully)
-//    1.12    - 2017/11/21 - limit residue begin/end to blocksize/2 to avoid large temp allocs in bad/corrupt files
-//    1.11    - 2017/07/23 - fix MinGW compilation 
-//    1.10    - 2017/03/03 - more robust seeking; fix negative ilog(); clear error in open_memory
 //    1.09    - 2016/04/04 - back out 'truncation of last frame' fix from previous version
 //    1.08    - 2016/04/02 - warnings; setup memory leaks; truncation of last frame
 //    1.07    - 2015/01/16 - fixes for crashes on invalid files; warning fixes; const
@@ -274,7 +275,7 @@ extern int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
 // do not need to seek to EXACTLY the target sample when using get_samples_*,
 // you can also use seek_frame().
 
-extern int stb_vorbis_seek_start(stb_vorbis *f);
+extern void stb_vorbis_seek_start(stb_vorbis *f);
 // this function is equivalent to stb_vorbis_seek(f,0)
 
 extern unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f);
@@ -554,7 +555,7 @@ enum STBVorbisError
    #include <math.h>
 
    // find definition of alloca if it's not in stdlib.h:
-   #if defined(_MSC_VER) || defined(__MINGW32__)
+   #ifdef _MSC_VER
       #include <malloc.h>
    #endif
    #if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__)
@@ -579,7 +580,6 @@ enum STBVorbisError
    #undef __forceinline
    #endif
    #define __forceinline
-   #define alloca __builtin_alloca
 #elif !defined(_MSC_VER)
    #if __GNUC__
       #define __forceinline inline
@@ -881,7 +881,7 @@ static int error(vorb *f, enum STBVorbisError e)
 
 #define array_size_required(count,size)  (count*(sizeof(void *)+(size)))
 
-#define temp_alloc(f,size)              (f->alloc.alloc_buffer ? setup_temp_malloc(f,size) : alloca(size))
+#define temp_alloc(f,size)              setup_temp_malloc(f,size)//(f->alloc.alloc_buffer ? setup_temp_malloc(f,size) : alloca(size))
 #ifdef dealloca
 #define temp_free(f,p)                  (f->alloc.alloc_buffer ? 0 : dealloca(size))
 #else
@@ -986,18 +986,17 @@ static int ilog(int32 n)
 {
    static signed char log2_4[16] = { 0,1,2,2,3,3,3,3,4,4,4,4,4,4,4,4 };
 
-   if (n < 0) return 0; // signed n returns 0
-
    // 2 compares if n < 16, 3 compares otherwise (4 if signed or n > 1<<29)
    if (n < (1 << 14))
-        if (n < (1 <<  4))            return  0 + log2_4[n      ];
-        else if (n < (1 <<  9))       return  5 + log2_4[n >>  5];
+        if (n < (1 <<  4))        return     0 + log2_4[n      ];
+        else if (n < (1 <<  9))      return  5 + log2_4[n >>  5];
              else                     return 10 + log2_4[n >> 10];
    else if (n < (1 << 24))
-             if (n < (1 << 19))       return 15 + log2_4[n >> 15];
+             if (n < (1 << 19))      return 15 + log2_4[n >> 15];
              else                     return 20 + log2_4[n >> 20];
-        else if (n < (1 << 29))       return 25 + log2_4[n >> 25];
-             else                     return 30 + log2_4[n >> 30];
+        else if (n < (1 << 29))      return 25 + log2_4[n >> 25];
+             else if (n < (1 << 31)) return 30 + log2_4[n >> 30];
+                  else                return 0; // signed n returns 0
 }
 
 #ifndef M_PI
@@ -1011,7 +1010,7 @@ static int ilog(int32 n)
 //
 // these functions are only called at setup, and only a few times
 // per file
-
+/*
 static float float32_unpack(uint32 x)
 {
    // from the specification
@@ -1021,7 +1020,18 @@ static float float32_unpack(uint32 x)
    double res = sign ? -(double)mantissa : (double)mantissa;
    return (float) ldexp((float)res, exp-788);
 }
+*/
+float ldexpi(int m, int e) {
+    return (float)(m * pow(2, e));
+}
 
+static float float32_unpack(uint32 x) {
+   // from the specification
+   uint32 s = x & 0x80000000;
+   int32  m = x & 0x1fffff;
+   int32  e = (x & 0x7fe00000) >> 21;
+   return ldexpi(s ? -m : m, e - 788);
+}
 
 // zlib & jpeg huffman tables assume that the output symbols
 // can either be arbitrarily arranged, or have monotonically
@@ -1092,8 +1102,7 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
 static void compute_accelerated_huffman(Codebook *c)
 {
    int i, len;
-   for (i=0; i < FAST_HUFFMAN_TABLE_SIZE; ++i)
-      c->fast_huffman[i] = -1;
+   memset(c->fast_huffman, 0xFF, sizeof(c->fast_huffman)); // fill by -1
 
    len = c->sparse ? c->sorted_entries : c->entries;
    #ifdef STB_VORBIS_FAST_HUFFMAN_SHORT
@@ -1196,6 +1205,7 @@ static int vorbis_validate(uint8 *data)
 
 // called from setup only, once per code book
 // (formula implied by specification)
+/*
 static int lookup1_values(int entries, int dim)
 {
    int r = (int) floor(exp((float) log((float) entries) / dim));
@@ -1205,30 +1215,95 @@ static int lookup1_values(int entries, int dim)
    assert((int) floor(pow((float) r, dim)) <= entries); // (int),floor() as above
    return r;
 }
+*/
+static int lookup1_values(int a, int b)
+{
+   int r = 0, p = 0;
+      do {
+      r++;
+      p = (int)pow(r, b);
+   } while (p <= a);
+   return r - 1;
+}
+
+#ifdef _PSP
+// pspmath.h
+    extern float vfpu_sinf(float x);
+    extern float vfpu_cosf(float x);
+    extern void  vfpu_sincos(float r, float *s, float *c);
+
+    #define sinf(x)         vfpu_sinf(x)
+    #define cosf(x)         vfpu_cosf(x)
+    #define sincos(a, s, c) vfpu_sincos(a, s, c)
+#else
+    void sincos(float r, float *s, float *c) {
+        *s = sinf(r);
+        *c = cosf(r);
+    }
+#endif
+
+#define rotate(x, y, s, c) {\
+        float t = x*c - y*s;\
+        y = x*s + y*c;\
+        x = t;\
+    }
 
 // called twice per file
 static void compute_twiddle_factors(int n, float *A, float *B, float *C)
 {
    int n4 = n >> 2, n8 = n >> 3;
-   int k,k2;
+   int k, k2;
+   float sA, cA, sB, cB, sC, cC;
+   float xA, yA, xB, yB, xC, yC;
 
-   for (k=k2=0; k < n4; ++k,k2+=2) {
-      A[k2  ] = (float)  cos(4*k*M_PI/n);
-      A[k2+1] = (float) -sin(4*k*M_PI/n);
-      B[k2  ] = (float)  cos((k2+1)*M_PI/n/2) * 0.5f;
-      B[k2+1] = (float)  sin((k2+1)*M_PI/n/2) * 0.5f;
+   sincos(4*M_PI/n, &sA, &cA);
+   sincos(M_PI/n/2, &sB, &cB);
+   sincos(2*M_PI/n, &sC, &cC);
+
+   A[0] = xA = 1.0f;
+   A[1] = yA = 0.0f;
+   xB = cB;
+   yB = sB;
+   B[0] = xB * 0.5f;
+   B[1] = yB * 0.5f;
+   rotate(cB, sB, sB, cB);
+
+   for (k=1, k2=2; k < n4; ++k,k2+=2) {
+      rotate(xA, yA, sA, cA);
+      A[k2  ] =  xA;
+      A[k2+1] = -yA;
+      rotate(xB, yB, sB, cB);
+      B[k2  ] = xB * 0.5f;
+      B[k2+1] = yB * 0.5f;
    }
-   for (k=k2=0; k < n8; ++k,k2+=2) {
-      C[k2  ] = (float)  cos(2*(k2+1)*M_PI/n);
-      C[k2+1] = (float) -sin(2*(k2+1)*M_PI/n);
+
+   xC = cC;
+   yC = sC;
+   C[0] =  xC;
+   C[1] = -yC;
+
+   rotate(cC, sC, sC, cC);
+
+   for (k=1, k2=2; k < n8; ++k,k2+=2) {
+      rotate(xC, yC, sC, cC);
+      C[k2  ] =  xC;
+      C[k2+1] = -yC;
    }
 }
 
 static void compute_window(int n, float *window)
 {
    int n2 = n >> 1, i;
-   for (i=0; i < n2; ++i)
-      window[i] = (float) sin(0.5 * M_PI * square((float) sin((i - 0 + 0.5) / n2 * 0.5 * M_PI)));
+   float s, c, x, y;
+   sincos(0.5f / n2 * 0.5f * M_PI, &s, &c);
+   x = c;
+   y = s;
+   rotate(c, s, s, c);
+
+   for (i=0; i < n2; ++i) {
+      window[i] = sinf(0.5f * M_PI * (y * y));
+      rotate(x, y, s, c);
+   }
 }
 
 static void compute_bitreverse(int n, uint16 *rev)
@@ -1270,13 +1345,13 @@ static void neighbors(uint16 *x, int n, int *plow, int *phigh)
 // this has been repurposed so y is now the original index instead of y
 typedef struct
 {
-   uint16 x,id;
-} stbv__floor_ordering;
+   uint16 x,y;
+} Point;
 
 static int STBV_CDECL point_compare(const void *p, const void *q)
 {
-   stbv__floor_ordering *a = (stbv__floor_ordering *) p;
-   stbv__floor_ordering *b = (stbv__floor_ordering *) q;
+   Point *a = (Point *) p;
+   Point *b = (Point *) q;
    return a->x < b->x ? -1 : a->x > b->x;
 }
 
@@ -2044,8 +2119,6 @@ static int residue_decode(vorb *f, Codebook *book, float *target, int offset, in
    return TRUE;
 }
 
-// n is 1/2 of the blocksize --
-// specification: "Correct per-vector decode length is [n]/2"
 static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int rn, uint8 *do_not_decode)
 {
    int i,j,pass;
@@ -2053,10 +2126,7 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
    int rtype = f->residue_types[rn];
    int c = r->classbook;
    int classwords = f->codebooks[c].dimensions;
-   unsigned int actual_size = rtype == 2 ? n*2 : n;
-   unsigned int limit_r_begin = (r->begin < actual_size ? r->begin : actual_size);
-   unsigned int limit_r_end   = (r->end   < actual_size ? r->end   : actual_size);
-   int n_read = limit_r_end - limit_r_begin;
+   int n_read = r->end - r->begin;
    int part_read = n_read / r->part_size;
    int temp_alloc_point = temp_alloc_save(f);
    #ifndef STB_VORBIS_DIVIDES_IN_RESIDUE
@@ -3398,7 +3468,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
    if (f->last_seg_which == f->end_seg_with_known_loc) {
       // if we have a valid current loc, and this is final:
       if (f->current_loc_valid && (f->page_flag & PAGEFLAG_last_page)) {
-         uint32 current_end = f->known_loc_for_packet;
+         uint32 current_end = f->known_loc_for_packet - (n-right_end);
          // then let's infer the size of the (probably) short final frame
          if (current_end < f->current_loc + (right_end-left_start)) {
             if (current_end < f->current_loc) {
@@ -3407,7 +3477,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
             } else {
                *len = current_end - f->current_loc;
             }
-            *len += left_start; // this doesn't seem right, but has no ill effect on my test files
+            *len += left_start;
             if (*len > right_end) *len = right_end; // this should never happen
             f->current_loc += *len;
             return TRUE;
@@ -3490,13 +3560,11 @@ static int vorbis_finish_frame(stb_vorbis *f, int len, int left, int right)
    return right - left;
 }
 
-static int vorbis_pump_first_frame(stb_vorbis *f)
+static void vorbis_pump_first_frame(stb_vorbis *f)
 {
-   int len, right, left, res;
-   res = vorbis_decode_packet(f, &len, &left, &right);
-   if (res)
+   int len, right, left;
+   if (vorbis_decode_packet(f, &len, &left, &right))
       vorbis_finish_frame(f, len, left, right);
-   return res;
 }
 
 #ifndef STB_VORBIS_NO_PUSHDATA_API
@@ -3879,7 +3947,7 @@ static int start_decoder(vorb *f)
             g->book_list[j] = get_bits(f,8);
          return error(f, VORBIS_feature_not_supported);
       } else {
-         stbv__floor_ordering p[31*8+2];
+         Point p[31*8+2];
          Floor1 *g = &f->floor_config[i].floor1;
          int max_class = -1; 
          g->partitions = get_bits(f, 5);
@@ -3915,11 +3983,11 @@ static int start_decoder(vorb *f)
          // precompute the sorting
          for (j=0; j < g->values; ++j) {
             p[j].x = g->Xlist[j];
-            p[j].id = j;
+            p[j].y = j;
          }
          qsort(p, g->values, sizeof(p[0]), point_compare);
          for (j=0; j < g->values; ++j)
-            g->sorted_order[j] = (uint8) p[j].id;
+            g->sorted_order[j] = (uint8) p[j].y;
          // precompute the neighbors
          for (j=2; j < g->values; ++j) {
             int low,hi;
@@ -4085,10 +4153,7 @@ static int start_decoder(vorb *f)
       int i,max_part_read=0;
       for (i=0; i < f->residue_count; ++i) {
          Residue *r = f->residue_config + i;
-         unsigned int actual_size = f->blocksize_1 / 2;
-         unsigned int limit_r_begin = r->begin < actual_size ? r->begin : actual_size;
-         unsigned int limit_r_end   = r->end   < actual_size ? r->end   : actual_size;
-         int n_read = limit_r_end - limit_r_begin;
+         int n_read = r->end - r->begin;
          int part_read = n_read / r->part_size;
          if (part_read > max_part_read)
             max_part_read = part_read;
@@ -4098,8 +4163,6 @@ static int start_decoder(vorb *f)
       #else
       classify_mem = f->channels * (sizeof(void*) + max_part_read * sizeof(int *));
       #endif
-
-      // maximum reasonable partition size is f->blocksize_1
 
       f->temp_memory_required = classify_mem;
       if (imdct_mem > f->temp_memory_required)
@@ -4629,9 +4692,8 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
 
    // starting from the start is handled differently
    if (sample_number <= left.last_decoded_sample) {
-      if (stb_vorbis_seek_start(f))
-         return 1;
-      return 0;
+      stb_vorbis_seek_start(f);
+      return 1;
    }
 
    while (left.page_end != right.page_start) {
@@ -4732,10 +4794,7 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
       skip(f, f->segments[i]);
 
    // start decoding (optimizable - this frame is generally discarded)
-   if (!vorbis_pump_first_frame(f))
-      return 0;
-   if (f->current_loc > sample_number)
-      return error(f, VORBIS_seek_failed);
+   vorbis_pump_first_frame(f);
    return 1;
 
 error:
@@ -4826,14 +4885,14 @@ int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number)
    return 1;
 }
 
-int stb_vorbis_seek_start(stb_vorbis *f)
+void stb_vorbis_seek_start(stb_vorbis *f)
 {
-   if (IS_PUSH_MODE(f)) { return error(f, VORBIS_invalid_api_mixing); }
+   if (IS_PUSH_MODE(f)) { error(f, VORBIS_invalid_api_mixing); return; }
    set_file_offset(f, f->first_audio_page_offset);
    f->previous_length = 0;
    f->first_decode = TRUE;
    f->next_seg = -1;
-   return vorbis_pump_first_frame(f);
+   vorbis_pump_first_frame(f);
 }
 
 unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f)
@@ -4998,7 +5057,6 @@ stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len, int *err
       if (f) {
          *f = p;
          vorbis_pump_first_frame(f);
-         if (error) *error = VORBIS__no_error;
          return f;
       }
    }
@@ -5364,9 +5422,6 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
 #endif // STB_VORBIS_NO_PULLDATA_API
 
 /* Version history
-    1.12    - 2017/11/21 - limit residue begin/end to blocksize/2 to avoid large temp allocs in bad/corrupt files
-    1.11    - 2017/07/23 - fix MinGW compilation 
-    1.10    - 2017/03/03 - more robust seeking; fix negative ilog(); clear error in open_memory
     1.09    - 2016/04/04 - back out 'avoid discarding last frame' fix from previous version
     1.08    - 2016/04/02 - fixed multiple warnings; fix setup memory leaks;
                            avoid discarding last frame of audio data
@@ -5419,46 +5474,3 @@ int stb_vorbis_get_samples_float(stb_vorbis *f, int channels, float **buffer, in
 */
 
 #endif // STB_VORBIS_HEADER_ONLY
-
-
-/*
-------------------------------------------------------------------------------
-This software is available under 2 licenses -- choose whichever you prefer.
-------------------------------------------------------------------------------
-ALTERNATIVE A - MIT License
-Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
-so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all 
-copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
-SOFTWARE.
-------------------------------------------------------------------------------
-ALTERNATIVE B - Public Domain (www.unlicense.org)
-This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
-commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
-this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-------------------------------------------------------------------------------
-*/
