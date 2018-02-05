@@ -95,7 +95,7 @@ USAGE:
    at the end of the line.)
 
    PNG allows you to set the deflate compression level by setting the global
-   variable 'stbi_write_png_level' (it defaults to 8).
+   variable 'stbi_write_png_compression_level' (it defaults to 8).
 
    HDR expects linear float data. Since the format is always 32-bit rgb(e)
    data, alpha (if provided) is discarded, and for monochrome data it is
@@ -133,7 +133,8 @@ CREDITS:
       github:poppolopoppo
       Patrick Boettcher
       github:xeekworx
-      
+      Cap Petschulat
+
 LICENSE
 
   See end of file for license information.
@@ -234,7 +235,7 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 
 #ifdef STB_IMAGE_WRITE_STATIC
 static stbi__flip_vertically_on_write=0;
-static int stbi_write_png_compression level = 8;
+static int stbi_write_png_compression_level = 8;
 static int stbi_write_tga_with_rle = 1;
 static int stbi_write_force_png_filter = -1;
 #else
