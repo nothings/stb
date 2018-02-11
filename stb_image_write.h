@@ -1,4 +1,4 @@
-/* stb_image_write - v1.08 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v1.09 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA/JPEG/HDR images to C stdio - Sean Barrett 2010-2015
                                      no warranty implied; use at your own risk
 
@@ -154,7 +154,7 @@ extern "C" {
 #endif
 
 STBIWDEF int stbi_write_tga_with_rle;
-STBIWDEF int stbi_write_png_comperssion_level;
+STBIWDEF int stbi_write_png_compression_level;
 STBIWDEF int stbi_write_force_png_filter;
 
 #ifndef STBI_WRITE_NO_STDIO
@@ -1476,6 +1476,8 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
+      1.09  (2018-xx-xx)
+             fix typo in zlib quality API
       1.08  (2018-01-29)
              add stbi__flip_vertically_on_write, external zlib, zlib quality, choose PNG filter
       1.07  (2017-07-24)
