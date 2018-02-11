@@ -29,6 +29,7 @@
 //       Simon Glass
 //       github:IntellectualKitty
 //       Imanol Celaya
+//       Daniel Ribeiro Maciel
 //
 //   Bug/warning reports/fixes:
 //       "Zer" on mollyrocket       Fabian "ryg" Giesen
@@ -48,7 +49,7 @@
 //       
 // VERSION HISTORY
 //
-//   1.19 (2018-xx-xx) STBTT_fmod
+//   1.19 (2018-02-11) GPOS kerning, STBTT_fmod
 //   1.18 (2018-01-29) add missing function
 //   1.17 (2017-07-23) make more arguments const; doc fix
 //   1.16 (2017-07-12) SDF support
@@ -413,7 +414,8 @@ int main(int arg, char **argv)
 ////   INTEGRATION WITH YOUR CODEBASE
 ////
 ////   The following sections allow you to supply alternate definitions
-////   of C library functions used by stb_truetype.
+////   of C library functions used by stb_truetype, e.g. if you don't
+////   link with the C runtime library.
 
 #ifdef STB_TRUETYPE_IMPLEMENTATION
    // #define your own (u)stbtt_int8/16/32 before including to override this
@@ -429,7 +431,7 @@ int main(int arg, char **argv)
    typedef char stbtt__check_size32[sizeof(stbtt_int32)==4 ? 1 : -1];
    typedef char stbtt__check_size16[sizeof(stbtt_int16)==2 ? 1 : -1];
 
-   // #define your own STBTT_ifloor/STBTT_iceil() to avoid math.h
+   // e.g. #define your own STBTT_ifloor/STBTT_iceil() to avoid math.h
    #ifndef STBTT_ifloor
    #include <math.h>
    #define STBTT_ifloor(x)   ((int) floor(x))
@@ -2305,9 +2307,10 @@ static stbtt_int32  stbtt__GetCoverageIndex(stbtt_uint8 *coverageTable, int glyp
             stbtt_int32 l=0, r=glyphCount-1, m;
             int straw, needle=glyph;
             while (l <= r) {
-                m = (l + r) >> 1;
                 stbtt_uint8 *glyphArray = coverageTable + 4;
-                stbtt_uint16 glyphID = ttUSHORT(glyphArray + 2 * m);
+                stbtt_uint16 glyphID;
+                m = (l + r) >> 1;
+                glyphID = ttUSHORT(glyphArray + 2 * m);
                 straw = glyphID;
                 if (needle < straw)
                     r = m - 1;
@@ -2327,8 +2330,9 @@ static stbtt_int32  stbtt__GetCoverageIndex(stbtt_uint8 *coverageTable, int glyp
             stbtt_int32 l=0, r=rangeCount-1, m;
             int strawStart, strawEnd, needle=glyph;
             while (l <= r) {
+                stbtt_uint8 *rangeRecord;
                 m = (l + r) >> 1;
-                stbtt_uint8 *rangeRecord = rangeArray + 6 * m;
+                rangeRecord = rangeArray + 6 * m;
                 strawStart = ttUSHORT(rangeRecord);
                 strawEnd = ttUSHORT(rangeRecord + 2);
                 if (needle < strawStart)
@@ -2344,7 +2348,7 @@ static stbtt_int32  stbtt__GetCoverageIndex(stbtt_uint8 *coverageTable, int glyp
 
         default: {
             // There are no other cases.
-            STBTT_assert(false);
+            STBTT_assert(0);
         } break;
     }
 
@@ -2375,8 +2379,9 @@ static stbtt_int32  stbtt__GetGlyphClass(stbtt_uint8 *classDefTable, int glyph)
             stbtt_int32 l=0, r=classRangeCount-1, m;
             int strawStart, strawEnd, needle=glyph;
             while (l <= r) {
+                stbtt_uint8 *classRangeRecord;
                 m = (l + r) >> 1;
-                stbtt_uint8 *classRangeRecord = classRangeRecords + 6 * m;
+                classRangeRecord = classRangeRecords + 6 * m;
                 strawStart = ttUSHORT(classRangeRecord);
                 strawEnd = ttUSHORT(classRangeRecord + 2);
                 if (needle < strawStart)
@@ -2392,7 +2397,7 @@ static stbtt_int32  stbtt__GetGlyphClass(stbtt_uint8 *classDefTable, int glyph)
 
         default: {
             // There are no other cases.
-            STBTT_assert(false);
+            STBTT_assert(0);
         } break;
     }
 
@@ -2404,18 +2409,24 @@ static stbtt_int32  stbtt__GetGlyphClass(stbtt_uint8 *classDefTable, int glyph)
 
 static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, int glyph1, int glyph2)
 {
+    stbtt_uint16 lookupListOffset;
+    stbtt_uint8 *lookupList;
+    stbtt_uint16 lookupCount;
+    stbtt_uint8 *data;
+    stbtt_int32 i;
+
     if (!info->gpos) return 0;
 
-    stbtt_uint8 *data = info->data + info->gpos;
+    data = info->data + info->gpos;
 
     if (ttUSHORT(data+0) != 1) return 0; // Major version 1
     if (ttUSHORT(data+2) != 0) return 0; // Minor version 0
 
-    stbtt_uint16 lookupListOffset = ttUSHORT(data+8);
-    stbtt_uint8 *lookupList = data + lookupListOffset;
+    lookupListOffset = ttUSHORT(data+8);
+    lookupList = data + lookupListOffset;
+    lookupCount = ttUSHORT(lookupList);
 
-    stbtt_uint16 lookupCount = ttUSHORT(lookupList);
-    for (stbtt_int32 i=0; i<lookupCount; ++i) {
+    for (i=0; i<lookupCount; ++i) {
         stbtt_uint16 lookupOffset = ttUSHORT(lookupList + 2 + 2 * i);
         stbtt_uint8 *lookupTable = lookupList + lookupOffset;
 
@@ -2424,7 +2435,8 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
         stbtt_uint8 *subTableOffsets = lookupTable + 6;
         switch(lookupType) {
             case 2: { // Pair Adjustment Positioning Subtable
-                for (stbtt_int32 sti=0; sti<subTableCount; sti++) {
+                stbtt_int32 sti;
+                for (sti=0; sti<subTableCount; sti++) {
                     stbtt_uint16 subtableOffset = ttUSHORT(subTableOffsets + 2 * sti);
                     stbtt_uint8 *table = lookupTable + subtableOffset;
                     stbtt_uint16 posFormat = ttUSHORT(table);
@@ -2434,30 +2446,35 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
 
                     switch (posFormat) {
                         case 1: {
+                            stbtt_int32 l, r, m;
+                            int straw, needle;
                             stbtt_uint16 valueFormat1 = ttUSHORT(table + 4);
                             stbtt_uint16 valueFormat2 = ttUSHORT(table + 6);
+                            stbtt_int32 valueRecordPairSizeInBytes = 2;
+                            stbtt_uint16 pairSetCount = ttUSHORT(table + 8);
+                            stbtt_uint16 pairPosOffset = ttUSHORT(table + 10 + 2 * coverageIndex);
+                            stbtt_uint8 *pairValueTable = table + pairPosOffset;
+                            stbtt_uint16 pairValueCount = ttUSHORT(pairValueTable);
+                            stbtt_uint8 *pairValueArray = pairValueTable + 2;
                             // TODO: Support more formats.
                             STBTT_GPOS_TODO_assert(valueFormat1 == 4);
                             if (valueFormat1 != 4) return 0;
                             STBTT_GPOS_TODO_assert(valueFormat2 == 0);
                             if (valueFormat2 != 0) return 0;
-                            stbtt_int32 valueRecordPairSizeInBytes = 2;
 
-                            stbtt_uint16 pairSetCount = ttUSHORT(table + 8);
                             STBTT_assert(coverageIndex < pairSetCount);
-                            stbtt_uint16 pairPosOffset = ttUSHORT(table + 10 + 2 * coverageIndex);
-                            stbtt_uint8 *pairValueTable = table + pairPosOffset;
 
-                            stbtt_uint16 pairValueCount = ttUSHORT(pairValueTable);
-                            stbtt_uint8 *pairValueArray = pairValueTable + 2;
+                            needle=glyph2;
+                            r=pairValueCount-1;
+                            l=0;
 
                             // Binary search.
-                            stbtt_int32 l=0, r=pairValueCount-1, m;
-                            int straw, needle=glyph2;
                             while (l <= r) {
+                                stbtt_uint16 secondGlyph;
+                                stbtt_uint8 *pairValue;
                                 m = (l + r) >> 1;
-                                stbtt_uint8 *pairValue = pairValueArray + (2 + valueRecordPairSizeInBytes) * m;
-                                stbtt_uint16 secondGlyph = ttUSHORT(pairValue);
+                                pairValue = pairValueArray + (2 + valueRecordPairSizeInBytes) * m;
+                                secondGlyph = ttUSHORT(pairValue);
                                 straw = secondGlyph;
                                 if (needle < straw)
                                     r = m - 1;
@@ -2473,11 +2490,6 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
                         case 2: {
                             stbtt_uint16 valueFormat1 = ttUSHORT(table + 4);
                             stbtt_uint16 valueFormat2 = ttUSHORT(table + 6);
-                            // TODO: Support more formats.
-                            STBTT_GPOS_TODO_assert(valueFormat1 == 4);
-                            if (valueFormat1 != 4) return 0;
-                            STBTT_GPOS_TODO_assert(valueFormat2 == 0);
-                            if (valueFormat2 != 0) return 0;
 
                             stbtt_uint16 classDef1Offset = ttUSHORT(table + 8);
                             stbtt_uint16 classDef2Offset = ttUSHORT(table + 10);
@@ -2489,6 +2501,12 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
                             STBTT_assert(glyph1class < class1Count);
                             STBTT_assert(glyph2class < class2Count);
 
+                            // TODO: Support more formats.
+                            STBTT_GPOS_TODO_assert(valueFormat1 == 4);
+                            if (valueFormat1 != 4) return 0;
+                            STBTT_GPOS_TODO_assert(valueFormat2 == 0);
+                            if (valueFormat2 != 0) return 0;
+
                             if (glyph1class >= 0 && glyph1class < class1Count && glyph2class >= 0 && glyph2class < class2Count) {
                                 stbtt_uint8 *class1Records = table + 16;
                                 stbtt_uint8 *class2Records = class1Records + 2 * (glyph1class * class2Count);
@@ -2499,15 +2517,17 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
 
                         default: {
                             // There are no other cases.
-                            STBTT_assert(false);
-                        } break;
+                            STBTT_assert(0);
+                            break;
+                        };
                     }
                 }
-            } break;
+                break;
+            };
 
-            default: {
+            default:
                 // TODO: Implement other stuff.
-            } break;
+                break;
         }
     }
 
@@ -4735,6 +4755,9 @@ STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char *s1, int len1, const
 
 // FULL VERSION HISTORY
 //
+//   1.19 (2018-02-11) OpenType GPOS kerning (horizontal only), STBTT_fmod
+//   1.18 (2018-01-29) add missing function
+//   1.17 (2017-07-23) make more arguments const; doc fix
 //   1.16 (2017-07-12) SDF support
 //   1.15 (2017-03-03) make more arguments const
 //   1.14 (2017-01-16) num-fonts-in-TTC function
