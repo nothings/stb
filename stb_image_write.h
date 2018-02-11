@@ -988,13 +988,14 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
    int i;
    int type = mymap[filter_type];
    unsigned char *z = pixels + stride_bytes * (stbi__flip_vertically_on_write ? height-1-y : y);
+   int signed_stride = stbi__flip_vertically_on_write ? -stride_bytes : stride_bytes;
    for (i = 0; i < n; ++i) {
       switch (type) {
          case 0: line_buffer[i] = z[i]; break;
          case 1: line_buffer[i] = z[i]; break;
-         case 2: line_buffer[i] = z[i] - z[i-stride_bytes]; break;
-         case 3: line_buffer[i] = z[i] - (z[i-stride_bytes]>>1); break;
-         case 4: line_buffer[i] = (signed char) (z[i] - stbiw__paeth(0,z[i-stride_bytes],0)); break;
+         case 2: line_buffer[i] = z[i] - z[i-signed_stride]; break;
+         case 3: line_buffer[i] = z[i] - (z[i-signed_stride]>>1); break;
+         case 4: line_buffer[i] = (signed char) (z[i] - stbiw__paeth(0,z[i-signed_stride],0)); break;
          case 5: line_buffer[i] = z[i]; break;
          case 6: line_buffer[i] = z[i]; break;
       }
@@ -1003,9 +1004,9 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
       switch (type) {
          case 0: line_buffer[i] = z[i]; break;
          case 1: line_buffer[i] = z[i] - z[i-n]; break;
-         case 2: line_buffer[i] = z[i] - z[i-stride_bytes]; break;
-         case 3: line_buffer[i] = z[i] - ((z[i-n] + z[i-stride_bytes])>>1); break;
-         case 4: line_buffer[i] = z[i] - stbiw__paeth(z[i-n], z[i-stride_bytes], z[i-stride_bytes-n]); break;
+         case 2: line_buffer[i] = z[i] - z[i-signed_stride]; break;
+         case 3: line_buffer[i] = z[i] - ((z[i-n] + z[i-signed_stride])>>1); break;
+         case 4: line_buffer[i] = z[i] - stbiw__paeth(z[i-n], z[i-signed_stride], z[i-signed_stride-n]); break;
          case 5: line_buffer[i] = z[i] - (z[i-n]>>1); break;
          case 6: line_buffer[i] = z[i] - stbiw__paeth(z[i-n], 0,0); break;
       }
