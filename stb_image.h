@@ -48,7 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
-      2.19  (2018-xx-xx) fix warning
+      2.19  (2018-02-11) fix warning
       2.18  (2018-01-30) fix warnings
       2.17  (2018-01-29) bugfix, 1-bit BMP, 16-bitness query, fix warnings
       2.16  (2017-07-23) all functions have 16-bit variants; optimizations; bugfixes
@@ -7238,6 +7238,8 @@ STBIDEF int stbi_is_16_bit_from_callbacks(stbi_io_callbacks const *c, void *user
 
 /*
    revision history:
+      2.19  (2018-02-11) fix warning
+      2.18  (2018-01-30) fix warnings
       2.17  (2018-01-29) change sbti__shiftsigned to avoid clang -O2 bug
                          1-bit BMP
                          *_is_16_bit api
