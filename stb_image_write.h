@@ -45,8 +45,8 @@ USAGE:
      int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
      int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
+     int stbi_write_jpg(char const *filename, int w, int h, int comp, const void *data, int quality);
      int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
-     int stbi_write_jpg(char const *filename, int w, int h, int comp, const float *data, int quality);
 
      void stbi_flip_vertically_on_write(int flag); // flag is non-zero to flip data vertically
 
@@ -136,6 +136,8 @@ CREDITS:
       Cap Petschulat
       Simon Rodriguez
       Ivan Tikhonov
+      github:ignotion
+      Adam Schackart
 
 LICENSE
 
@@ -146,19 +148,26 @@ LICENSE
 #ifndef INCLUDE_STB_IMAGE_WRITE_H
 #define INCLUDE_STB_IMAGE_WRITE_H
 
+#ifndef STB_IMAGE_WRITE_STATIC
 #ifdef __cplusplus
 extern "C" {
 #endif
+#endif
 
+#ifndef STBIWDEF
 #ifdef STB_IMAGE_WRITE_STATIC
 #define STBIWDEF static
 #else
 #define STBIWDEF extern
 #endif
+#endif
 
+#ifndef STB_IMAGE_WRITE_STATIC
+// C++ forbids static forward declarations
 STBIWDEF int stbi_write_tga_with_rle;
 STBIWDEF int stbi_write_png_compression_level;
 STBIWDEF int stbi_write_force_png_filter;
+#endif
 
 #ifndef STBI_WRITE_NO_STDIO
 STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
@@ -178,8 +187,10 @@ STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x,
 
 STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 
+#ifndef STB_IMAGE_WRITE_STATIC
 #ifdef __cplusplus
 }
+#endif
 #endif
 
 #endif//INCLUDE_STB_IMAGE_WRITE_H
@@ -1480,8 +1491,8 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
-      1.09  (2018-xx-xx)
-             fix typo in zlib quality API
+      1.09  (2018-02-11)
+             fix typo in zlib quality API, improve STB_I_W_STATIC in C++
       1.08  (2018-01-29)
              add stbi__flip_vertically_on_write, external zlib, zlib quality, choose PNG filter
       1.07  (2017-07-24)
