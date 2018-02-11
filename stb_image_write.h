@@ -148,25 +148,23 @@ LICENSE
 #ifndef INCLUDE_STB_IMAGE_WRITE_H
 #define INCLUDE_STB_IMAGE_WRITE_H
 
-#ifndef STB_IMAGE_WRITE_STATIC
-#ifdef __cplusplus
-extern "C" {
-#endif
-#endif
-
+// if STB_IMAGE_WRITE_STATIC causes problems, try defining STBIWDEF to 'inline' or 'static inline'
 #ifndef STBIWDEF
 #ifdef STB_IMAGE_WRITE_STATIC
-#define STBIWDEF static
+#define STBIWDEF  static
 #else
-#define STBIWDEF extern
+#ifdef __cplusplus
+#define STBIWDEF  extern "C"
+#else
+#define STBIWDEF  extern
+#endif
 #endif
 #endif
 
-#ifndef STB_IMAGE_WRITE_STATIC
-// C++ forbids static forward declarations
-STBIWDEF int stbi_write_tga_with_rle;
-STBIWDEF int stbi_write_png_compression_level;
-STBIWDEF int stbi_write_force_png_filter;
+#ifndef STB_IMAGE_WRITE_STATIC  // C++ forbids static forward declarations
+extern int stbi_write_tga_with_rle;
+extern int stbi_write_png_compression_level;
+extern int stbi_write_force_png_filter;
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
@@ -186,12 +184,6 @@ STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w,
 STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, int quality);
 
 STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
-
-#ifndef STB_IMAGE_WRITE_STATIC
-#ifdef __cplusplus
-}
-#endif
-#endif
 
 #endif//INCLUDE_STB_IMAGE_WRITE_H
 
