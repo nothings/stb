@@ -11,10 +11,10 @@ by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
 
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
-**[stb_vorbis.c](stb_vorbis.c)** | 1.14 | audio | 5460 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**[stb_image.h](stb_image.h)** | 2.18 | graphics | 7460 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**[stb_truetype.h](stb_truetype.h)** | 1.19 | graphics | 4595 | parse, decode, and rasterize characters from truetype fonts
-**[stb_image_write.h](stb_image_write.h)** | 1.09 | graphics | 1561 | image writing to disk: PNG, TGA, BMP
+**[stb_vorbis.c](stb_vorbis.c)** | 1.14 | audio | 5462 | decode ogg vorbis files from file/memory to float/16-bit signed output
+**[stb_image.h](stb_image.h)** | 2.18 | graphics | 7462 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**[stb_truetype.h](stb_truetype.h)** | 1.19 | graphics | 4853 | parse, decode, and rasterize characters from truetype fonts
+**[stb_image_write.h](stb_image_write.h)** | 1.09 | graphics | 1568 | image writing to disk: PNG, TGA, BMP
 **[stb_image_resize.h](stb_image_resize.h)** | 0.95 | graphics | 2627 | resize images larger/smaller with good quality
 **[stb_rect_pack.h](stb_rect_pack.h)** | 0.11 | graphics | 624 | simple 2D rectangle packer with decent quality
 **[stb_sprintf.h](stb_sprintf.h)** | 1.05 | utility | 1833 | fast sprintf, snprintf for C/C++
@@ -33,7 +33,7 @@ library    | lastest version | category | LoC | description
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.4 | misc | 186 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 20  
-Total lines of C code: 53385
+Total lines of C code: 53654
 
 
 FAQ
