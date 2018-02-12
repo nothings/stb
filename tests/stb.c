@@ -1490,7 +1490,7 @@ int main(int argc, char **argv)
    }
 
    // the hardcoded compressed lengths being verified _could_
-   // change if you changed the compresser parameters; but pure
+   // change if you changed the compressor parameters; but pure
    // performance optimizations shouldn't change them
    p = stb_file("data/cantrbry.zip", &len2);
    if (p) {

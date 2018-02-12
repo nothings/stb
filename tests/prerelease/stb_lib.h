@@ -1250,13 +1250,13 @@ typedef struct
 // (internal) change the allocated length of the array
 #define stb_arr__grow(a,n)     (stb_arr_check(a), stb_arrhead(a)->len += (n))
 
-// add N new unitialized elements to the end of the array
+// add N new uninitialized elements to the end of the array
 #define stb_arr__addn(a,n)     /*lint --e(826)*/ \
                                ((stb_arr_len(a)+(n) > stb_arrcurmax(a))      \
                                  ? (stb__arr_addlen((void **) &(a),sizeof(*a),(n)),0) \
                                  : ((stb_arr__grow(a,n), 0)))
 
-// add N new unitialized elements to the end of the array, and return
+// add N new uninitialized elements to the end of the array, and return
 // a pointer to the first new one
 #define stb_arr_addn(a,n)      (stb_arr__addn((a),n),(a)+stb_arr_len(a)-(n))
 

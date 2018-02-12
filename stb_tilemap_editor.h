@@ -251,7 +251,7 @@
 //
 //   The following symbols set static limits which determine how much
 //   memory will be allocated for the editor. You can override them
-//   by making similiar definitions, but memory usage will increase.
+//   by making similar definitions, but memory usage will increase.
 //
 //      #define STBTE_MAX_TILEMAP_X      200   // max 4096
 //      #define STBTE_MAX_TILEMAP_Y      200   // max 4096
@@ -2250,7 +2250,7 @@ enum
    STBTE__prop_int,
 };
 
-// id is:      [      24-bit data     : 7-bit identifer ]
+// id is:      [      24-bit data     : 7-bit identifier ]
 // map id is:  [  12-bit y : 12 bit x : 7-bit identifier ]
 
 #define STBTE__ID(n,p)     ((n) + ((p)<<7))
@@ -2878,7 +2878,7 @@ static void stbte__drag_update(stbte_tilemap *tm, int mapx, int mapy, int copy_p
             stbte__set_link(tm, mapx, mapy, -1, -1, STBTE__undo_record);
          else if (moved || (copied && written)) {
             // if we move the target, we update to point to the new target;
-            // or, if we copy the target and the source is part ofthe copy, then update to new target
+            // or, if we copy the target and the source is part of the copy, then update to new target
             int x = k->x + (stbte__ui.drag_dest_x - stbte__ui.drag_x);
             int y = k->y + (stbte__ui.drag_dest_y - stbte__ui.drag_y);
             if (!(x >= 0 && y >= 0 && x < tm->max_x && y < tm->max_y))

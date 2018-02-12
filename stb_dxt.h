@@ -190,7 +190,7 @@ static void stb__DitherBlock(unsigned char *dest, unsigned char *block)
   int err[8],*ep1 = err,*ep2 = err+4, *et;
   int ch,y;
 
-  // process channels seperately
+  // process channels separately
   for (ch=0; ch<3; ++ch) {
       unsigned char *bp = block+ch, *dp = dest+ch;
       unsigned char *quant = (ch == 1) ? stb__QuantGTab+8 : stb__QuantRBTab+8;

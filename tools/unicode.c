@@ -28,7 +28,7 @@
 //        the cluster. Repeat for trimmed & special-trimmed. In the first case, find
 //        previous instances of the cluster (allow don't-care to match in either
 //        direction), both aligned and mis-aligned; in the latter, starting where
-//        things start or mis-aligned. Build an index table specifiying the
+//        things start or mis-aligned. Build an index table specifying the
 //        location of each cluster (and its length). Allow an extra indirection here;
 //        the full-sized index can index a smaller table which has the actual offset
 //        (and lengths).

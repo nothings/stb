@@ -666,7 +666,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                --pr; // when using %e, there is one digit before the decimal
             goto doexpfromg;
          }
-         // this is the insane action to get the pr to match %g sematics for %f
+         // this is the insane action to get the pr to match %g semantics for %f
          if (dp > 0) {
             pr = (dp < (stbsp__int32)l) ? l - dp : 0;
          } else {

@@ -5789,7 +5789,7 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
       //     Else if n is 128, noop.
       // Endloop
 
-      // The RLE-compressed data is preceeded by a 2-byte data count for each row in the data,
+      // The RLE-compressed data is preceded by a 2-byte data count for each row in the data,
       // which we're going to just skip.
       stbi__skip(s, h * channelCount * 2 );
 
@@ -6352,9 +6352,9 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
       g->history = (stbi_uc *) stbi__malloc(g->w * g->h); 
       if (g->out == 0)                      return stbi__errpuc("outofmem", "Out of memory");
 
-      // image is treated as "tranparent" at the start - ie, nothing overwrites the current background; 
+      // image is treated as "transparent" at the start - ie, nothing overwrites the current background; 
       // background colour is only used for pixels that are not rendered first frame, after that "background"
-      // color refers to teh color that was there the previous frame. 
+      // color refers to the color that was there the previous frame. 
       memset( g->out, 0x00, 4 * g->w * g->h ); 
       memset( g->background, 0x00, 4 * g->w * g->h ); // state of the background (starts transparent)
       memset( g->history, 0x00, g->w * g->h );        // pixels that were affected previous frame
