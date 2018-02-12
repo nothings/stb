@@ -5250,6 +5250,8 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
       } else if (info.bpp == 32) {
          if (mb == 0xff && mg == 0xff00 && mr == 0x00ff0000 && ma == 0xff000000)
             easy = 2;
+	 else if (mb==0xFF00 && mg==0xFF0000 && mr==0xFF000000 && ma==0xFF) // GIMP 32-bit ABGR
+	    easy = 3;
       }
       if (!easy) {
          if (!mr || !mg || !mb) { STBI_FREE(out); return stbi__errpuc("bad masks", "Corrupt BMP"); }
@@ -5263,11 +5265,12 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
          if (easy) {
             for (i=0; i < (int) s->img_x; ++i) {
                unsigned char a;
+	       if (easy==3) a=stbi__get8(s);
                out[z+2] = stbi__get8(s);
                out[z+1] = stbi__get8(s);
                out[z+0] = stbi__get8(s);
                z += 3;
-               a = (easy == 2 ? stbi__get8(s) : 255);
+               if (easy!=3) a = (easy == 2 ? stbi__get8(s) : 255);
                all_a |= a;
                if (target == 4) out[z++] = a;
             }
