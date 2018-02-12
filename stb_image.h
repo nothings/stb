@@ -1145,30 +1145,30 @@ static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, in
 
 static FILE *stbi__fopen(char const *filename, char const *mode)
 {
-	FILE *f;
+  FILE *f;
 #if defined(_MSC_VER) && _MSC_VER >= 1400
 #ifdef UNICODE
-	int filenameLength = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-	wchar_t* wFilename = (wchar_t*)stbi__malloc(filenameLength * sizeof(wchar_t));
-	MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFilename, filenameLength);
+  int filenameLength = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+  wchar_t* wFilename = (wchar_t*)stbi__malloc(filenameLength * sizeof(wchar_t));
+  MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFilename, filenameLength);
 
-	int modeLength = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
-	wchar_t* wMode = (wchar_t*)stbi__malloc(modeLength * sizeof(wchar_t));
-	MultiByteToWideChar(CP_UTF8, 0, mode, -1, wMode, modeLength);
+  int modeLength = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
+  wchar_t* wMode = (wchar_t*)stbi__malloc(modeLength * sizeof(wchar_t));
+  MultiByteToWideChar(CP_UTF8, 0, mode, -1, wMode, modeLength);
 
-	if (0 != _wfopen_s(&f, wFilename, wMode))
-		f = 0;
+  if (0 != _wfopen_s(&f, wFilename, wMode))
+    f = 0;
 
-	STBI_FREE(wFilename);
-	STBI_FREE(wMode);
+  STBI_FREE(wFilename);
+  STBI_FREE(wMode);
 #else
-	if (0 != fopen_s(&f, filename, mode))
-		f = 0;
+  if (0 != fopen_s(&f, filename, mode))
+    f = 0;
 #endif
 #else
-	f = fopen(filename, mode);
+  f = fopen(filename, mode);
 #endif
-	return f;
+  return f;
 }
 
 
