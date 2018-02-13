@@ -1847,7 +1847,7 @@ static int stbte__minibutton(int colormode, int x, int y, int ch, int id)
    int x0 = x, y0 = y, x1 = x+8, y1 = y+7;
    int over = stbte__hittest(x0,y0,x1,y1,id);
    if (stbte__ui.event == STBTE__paint) {
-      char str[2] = { ch,0 };
+      char str[2] = { (char)ch, 0 };
       stbte__draw_textbox(x0,y0,x1,y1, str,1,0,colormode, STBTE__INDEX_FOR_ID(id,0,0));
    }
    return stbte__button_core(id);
@@ -1858,7 +1858,7 @@ static int stbte__layerbutton(int x, int y, int ch, int id, int toggled, int dis
    int x0 = x, y0 = y, x1 = x+10, y1 = y+11;
    int over = !disabled && stbte__hittest(x0,y0,x1,y1,id);
    if (stbte__ui.event == STBTE__paint) {
-      char str[2] = { ch,0 };
+      char str[2] = { (char)ch, 0 };
       int off = (9-stbte__get_char_width(ch))/2;
       stbte__draw_textbox(x0,y0,x1,y1, str, off+1,2, colormode, STBTE__INDEX_FOR_ID(id,disabled,toggled));
    }

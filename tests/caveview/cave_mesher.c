@@ -37,7 +37,8 @@ extern void ods(char *fmt, ...);
 #define FAST_CHUNK
 #define IN_PLACE
 
-#define SKIP_TERRAIN   48 // use to avoid building underground stuff
+#define SKIP_TERRAIN   0
+//#define SKIP_TERRAIN   48 // use to avoid building underground stuff
                           // allows you to see what perf would be like if underground was efficiently culled,
                           // or if you were making a game without underground
 
@@ -131,7 +132,8 @@ unsigned char minecraft_info[256][7] =
    { C_solid, 35,35,35,35,4,4, },
 
    // 48
-   { C_solid, 36,36,36,36,36,36 },
+   //{ C_solid, 36,36,36,36,36,36 },
+   { C_force, 36,36,36,36,36,36 },
    { C_solid, 37,37,37,37,37,37 },
    { C_cross, 80,80,80,80,80,80 }, // torch
    { C_empty }, // fire
@@ -142,6 +144,7 @@ unsigned char minecraft_info[256][7] =
 
    // 56
    { C_solid, 50,50,50,50,50,50 },
+   //{ C_force, 50,50,50,50,50,50 },
    { C_solid, 26,26,26,26,26,26 },
    { C_solid, 60,59,59,59,43,43 },
    { C_cross, 95,95,95,95 },
@@ -831,6 +834,8 @@ void mesh_init(void)
       minecraft_color_for_blocktype[161][i] = 37 | 64; // green
       minecraft_color_for_blocktype[10][i] = 63; // emissive lava
       minecraft_color_for_blocktype[11][i] = 63; // emissive
+      //minecraft_color_for_blocktype[56][i] = 63; // emissive diamond
+      minecraft_color_for_blocktype[48][i] = 63; // emissive dungeon
    }
 
    #ifdef VHEIGHT_TEST

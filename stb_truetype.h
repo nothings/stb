@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.17 - public domain
+// stb_truetype.h - v1.19 - public domain
 // authored from 2009-2016 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -22,41 +22,35 @@
 //   Mikko Mononen: compound shape support, more cmap formats
 //   Tor Andersson: kerning, subpixel rendering
 //   Dougall Johnson: OpenType / Type 2 font handling
+//   Daniel Ribeiro Maciel: basic GPOS-based kerning
 //
 //   Misc other:
 //       Ryan Gordon
 //       Simon Glass
 //       github:IntellectualKitty
 //       Imanol Celaya
+//       Daniel Ribeiro Maciel
 //
 //   Bug/warning reports/fixes:
-//       "Zer" on mollyrocket
-//       Cass Everitt
-//       stoiko (Haemimont Games)
-//       Brian Hook 
-//       Walter van Niftrik
-//       David Gow
-//       David Given
-//       Ivan-Assen Ivanov
-//       Anthony Pesch
-//       Johan Duparc
-//       Hou Qiming
-//       Fabian "ryg" Giesen
-//       Martins Mozeiko
-//       Cap Petschulat
-//       Omar Cornut
-//       github:aloucks
-//       Peter LaValle
-//       Sergey Popov
-//       Giumo X. Clanjor
-//       Higor Euripedes
-//       Thomas Fields
-//       Derek Vinyard
-//       Cort Stratton
-//       github:oyvindjam
-//
+//       "Zer" on mollyrocket       Fabian "ryg" Giesen
+//       Cass Everitt               Martins Mozeiko
+//       stoiko (Haemimont Games)   Cap Petschulat
+//       Brian Hook                 Omar Cornut
+//       Walter van Niftrik         github:aloucks
+//       David Gow                  Peter LaValle
+//       David Given                Sergey Popov
+//       Ivan-Assen Ivanov          Giumo X. Clanjor
+//       Anthony Pesch              Higor Euripedes
+//       Johan Duparc               Thomas Fields
+//       Hou Qiming                 Derek Vinyard
+//       Rob Loach                  Cort Stratton
+//       Kenney Phillis Jr.         github:oyvindjam
+//       Brian Costabile            github:vassvik
+//       
 // VERSION HISTORY
 //
+//   1.19 (2018-02-11) GPOS kerning, STBTT_fmod
+//   1.18 (2018-01-29) add missing function
 //   1.17 (2017-07-23) make more arguments const; doc fix
 //   1.16 (2017-07-12) SDF support
 //   1.15 (2017-03-03) make more arguments const
@@ -171,7 +165,7 @@
 //         measurement for describing font size, defined as 72 points per inch.
 //         stb_truetype provides a point API for compatibility. However, true
 //         "per inch" conventions don't make much sense on computer displays
-//         since they different monitors have different number of pixels per
+//         since different monitors have different number of pixels per
 //         inch. For example, Windows traditionally uses a convention that
 //         there are 96 pixels per inch, thus making 'inch' measurements have
 //         nothing to do with inches, and thus effectively defining a point to
@@ -180,6 +174,39 @@
 //         but the author has observed that this scale factor is often wrong
 //         for non-commercial fonts, thus making fonts scaled in points
 //         according to the TrueType spec incoherently sized in practice.
+//
+// DETAILED USAGE:
+//
+//  Scale:
+//    Select how high you want the font to be, in points or pixels.
+//    Call ScaleForPixelHeight or ScaleForMappingEmToPixels to compute
+//    a scale factor SF that will be used by all other functions.
+//
+//  Baseline:
+//    You need to select a y-coordinate that is the baseline of where
+//    your text will appear. Call GetFontBoundingBox to get the baseline-relative
+//    bounding box for all characters. SF*-y0 will be the distance in pixels
+//    that the worst-case character could extend above the baseline, so if
+//    you want the top edge of characters to appear at the top of the
+//    screen where y=0, then you would set the baseline to SF*-y0.
+//
+//  Current point:
+//    Set the current point where the first character will appear. The
+//    first character could extend left of the current point; this is font
+//    dependent. You can either choose a current point that is the leftmost
+//    point and hope, or add some padding, or check the bounding box or
+//    left-side-bearing of the first character to be displayed and set
+//    the current point based on that.
+//
+//  Displaying a character:
+//    Compute the bounding box of the character. It will contain signed values
+//    relative to <current_point, baseline>. I.e. if it returns x0,y0,x1,y1,
+//    then the character should be displayed in the rectangle from
+//    <current_point+SF*x0, baseline+SF*y0> to <current_point+SF*x1,baseline+SF*y1).
+//
+//  Advancing for the next character:
+//    Call GlyphHMetrics, and compute 'current_point += SF * advance'.
+// 
 //
 // ADVANCED USAGE
 //
@@ -387,7 +414,8 @@ int main(int arg, char **argv)
 ////   INTEGRATION WITH YOUR CODEBASE
 ////
 ////   The following sections allow you to supply alternate definitions
-////   of C library functions used by stb_truetype.
+////   of C library functions used by stb_truetype, e.g. if you don't
+////   link with the C runtime library.
 
 #ifdef STB_TRUETYPE_IMPLEMENTATION
    // #define your own (u)stbtt_int8/16/32 before including to override this
@@ -403,7 +431,7 @@ int main(int arg, char **argv)
    typedef char stbtt__check_size32[sizeof(stbtt_int32)==4 ? 1 : -1];
    typedef char stbtt__check_size16[sizeof(stbtt_int16)==2 ? 1 : -1];
 
-   // #define your own STBTT_ifloor/STBTT_iceil() to avoid math.h
+   // e.g. #define your own STBTT_ifloor/STBTT_iceil() to avoid math.h
    #ifndef STBTT_ifloor
    #include <math.h>
    #define STBTT_ifloor(x)   ((int) floor(x))
@@ -416,15 +444,15 @@ int main(int arg, char **argv)
    #define STBTT_pow(x,y)     pow(x,y)
    #endif
 
+   #ifndef STBTT_fmod
+   #include <math.h>
+   #define STBTT_fmod(x,y)    fmod(x,y)
+   #endif
+
    #ifndef STBTT_cos
    #include <math.h>
    #define STBTT_cos(x)       cos(x)
    #define STBTT_acos(x)      acos(x)
-   #endif
-
-   #ifndef STBTT_fabs
-   #include <math.h>
-   #define STBTT_fabs(x)      fabs(x)
    #endif
 
    #ifndef STBTT_fabs
@@ -676,7 +704,7 @@ struct stbtt_fontinfo
 
    int numGlyphs;                     // number of glyphs, needed for range checking
 
-   int loca,head,glyf,hhea,hmtx,kern; // table locations as offset from start of .ttf
+   int loca,head,glyf,hhea,hmtx,kern,gpos; // table locations as offset from start of .ttf
    int index_map;                     // a cmap mapping for our chosen character encoding
    int indexToLocFormat;              // format needed to map from glyph index to glyph
 
@@ -1319,6 +1347,7 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, in
    info->hhea = stbtt__find_table(data, fontstart, "hhea"); // required
    info->hmtx = stbtt__find_table(data, fontstart, "hmtx"); // required
    info->kern = stbtt__find_table(data, fontstart, "kern"); // not required
+   info->gpos = stbtt__find_table(data, fontstart, "GPOS"); // not required
 
    if (!cmap || !info->head || !info->hhea || !info->hmtx)
       return 0;
@@ -2172,7 +2201,7 @@ static int stbtt__run_charstring(const stbtt_fontinfo *info, int glyph_index, st
 
          // push immediate
          if (b0 == 255) {
-            f = (float)stbtt__buf_get32(&b) / 0x10000;
+            f = (float)(stbtt_int32)stbtt__buf_get32(&b) / 0x10000;
          } else {
             stbtt__buf_skip(&b, -1);
             f = (float)(stbtt_int16)stbtt__cff_int(&b);
@@ -2210,12 +2239,10 @@ static int stbtt__GetGlyphInfoT2(const stbtt_fontinfo *info, int glyph_index, in
 {
    stbtt__csctx c = STBTT__CSCTX_INIT(1);
    int r = stbtt__run_charstring(info, glyph_index, &c);
-   if (x0) {
-      *x0 = r ? c.min_x : 0;
-      *y0 = r ? c.min_y : 0;
-      *x1 = r ? c.max_x : 0;
-      *y1 = r ? c.max_y : 0;
-   }
+   if (x0)  *x0 = r ? c.min_x : 0;
+   if (y0)  *y0 = r ? c.min_y : 0;
+   if (x1)  *x1 = r ? c.max_x : 0;
+   if (y1)  *y1 = r ? c.max_y : 0;
    return r ? c.num_vertices : 0;
 }
 
@@ -2239,7 +2266,7 @@ STBTT_DEF void stbtt_GetGlyphHMetrics(const stbtt_fontinfo *info, int glyph_inde
    }
 }
 
-STBTT_DEF int  stbtt_GetGlyphKernAdvance(const stbtt_fontinfo *info, int glyph1, int glyph2)
+static int  stbtt__GetGlyphKernInfoAdvance(const stbtt_fontinfo *info, int glyph1, int glyph2)
 {
    stbtt_uint8 *data = info->data + info->kern;
    stbtt_uint32 needle, straw;
@@ -2269,9 +2296,260 @@ STBTT_DEF int  stbtt_GetGlyphKernAdvance(const stbtt_fontinfo *info, int glyph1,
    return 0;
 }
 
+static stbtt_int32  stbtt__GetCoverageIndex(stbtt_uint8 *coverageTable, int glyph)
+{
+    stbtt_uint16 coverageFormat = ttUSHORT(coverageTable);
+    switch(coverageFormat) {
+        case 1: {
+            stbtt_uint16 glyphCount = ttUSHORT(coverageTable + 2);
+
+            // Binary search.
+            stbtt_int32 l=0, r=glyphCount-1, m;
+            int straw, needle=glyph;
+            while (l <= r) {
+                stbtt_uint8 *glyphArray = coverageTable + 4;
+                stbtt_uint16 glyphID;
+                m = (l + r) >> 1;
+                glyphID = ttUSHORT(glyphArray + 2 * m);
+                straw = glyphID;
+                if (needle < straw)
+                    r = m - 1;
+                else if (needle > straw)
+                    l = m + 1;
+                else {
+                     return m;
+                }
+            }
+        } break;
+
+        case 2: {
+            stbtt_uint16 rangeCount = ttUSHORT(coverageTable + 2);
+            stbtt_uint8 *rangeArray = coverageTable + 4;
+
+            // Binary search.
+            stbtt_int32 l=0, r=rangeCount-1, m;
+            int strawStart, strawEnd, needle=glyph;
+            while (l <= r) {
+                stbtt_uint8 *rangeRecord;
+                m = (l + r) >> 1;
+                rangeRecord = rangeArray + 6 * m;
+                strawStart = ttUSHORT(rangeRecord);
+                strawEnd = ttUSHORT(rangeRecord + 2);
+                if (needle < strawStart)
+                    r = m - 1;
+                else if (needle > strawEnd)
+                    l = m + 1;
+                else {
+                    stbtt_uint16 startCoverageIndex = ttUSHORT(rangeRecord + 4);
+                    return startCoverageIndex + glyph - strawStart;
+                }
+            }
+        } break;
+
+        default: {
+            // There are no other cases.
+            STBTT_assert(0);
+        } break;
+    }
+
+    return -1;
+}
+
+static stbtt_int32  stbtt__GetGlyphClass(stbtt_uint8 *classDefTable, int glyph)
+{
+    stbtt_uint16 classDefFormat = ttUSHORT(classDefTable);
+    switch(classDefFormat)
+    {
+        case 1: {
+            stbtt_uint16 startGlyphID = ttUSHORT(classDefTable + 2);
+            stbtt_uint16 glyphCount = ttUSHORT(classDefTable + 4);
+            stbtt_uint8 *classDef1ValueArray = classDefTable + 6;
+
+            if (glyph >= startGlyphID && glyph < startGlyphID + glyphCount)
+                return (stbtt_int32)ttUSHORT(classDef1ValueArray + 2 * (glyph - startGlyphID));
+
+            classDefTable = classDef1ValueArray + 2 * glyphCount;
+        } break;
+
+        case 2: {
+            stbtt_uint16 classRangeCount = ttUSHORT(classDefTable + 2);
+            stbtt_uint8 *classRangeRecords = classDefTable + 4;
+
+            // Binary search.
+            stbtt_int32 l=0, r=classRangeCount-1, m;
+            int strawStart, strawEnd, needle=glyph;
+            while (l <= r) {
+                stbtt_uint8 *classRangeRecord;
+                m = (l + r) >> 1;
+                classRangeRecord = classRangeRecords + 6 * m;
+                strawStart = ttUSHORT(classRangeRecord);
+                strawEnd = ttUSHORT(classRangeRecord + 2);
+                if (needle < strawStart)
+                    r = m - 1;
+                else if (needle > strawEnd)
+                    l = m + 1;
+                else
+                    return (stbtt_int32)ttUSHORT(classRangeRecord + 4);
+            }
+
+            classDefTable = classRangeRecords + 6 * classRangeCount;
+        } break;
+
+        default: {
+            // There are no other cases.
+            STBTT_assert(0);
+        } break;
+    }
+
+    return -1;
+}
+
+// Define to STBTT_assert(x) if you want to break on unimplemented formats.
+#define STBTT_GPOS_TODO_assert(x)
+
+static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, int glyph1, int glyph2)
+{
+    stbtt_uint16 lookupListOffset;
+    stbtt_uint8 *lookupList;
+    stbtt_uint16 lookupCount;
+    stbtt_uint8 *data;
+    stbtt_int32 i;
+
+    if (!info->gpos) return 0;
+
+    data = info->data + info->gpos;
+
+    if (ttUSHORT(data+0) != 1) return 0; // Major version 1
+    if (ttUSHORT(data+2) != 0) return 0; // Minor version 0
+
+    lookupListOffset = ttUSHORT(data+8);
+    lookupList = data + lookupListOffset;
+    lookupCount = ttUSHORT(lookupList);
+
+    for (i=0; i<lookupCount; ++i) {
+        stbtt_uint16 lookupOffset = ttUSHORT(lookupList + 2 + 2 * i);
+        stbtt_uint8 *lookupTable = lookupList + lookupOffset;
+
+        stbtt_uint16 lookupType = ttUSHORT(lookupTable);
+        stbtt_uint16 subTableCount = ttUSHORT(lookupTable + 4);
+        stbtt_uint8 *subTableOffsets = lookupTable + 6;
+        switch(lookupType) {
+            case 2: { // Pair Adjustment Positioning Subtable
+                stbtt_int32 sti;
+                for (sti=0; sti<subTableCount; sti++) {
+                    stbtt_uint16 subtableOffset = ttUSHORT(subTableOffsets + 2 * sti);
+                    stbtt_uint8 *table = lookupTable + subtableOffset;
+                    stbtt_uint16 posFormat = ttUSHORT(table);
+                    stbtt_uint16 coverageOffset = ttUSHORT(table + 2);
+                    stbtt_int32 coverageIndex = stbtt__GetCoverageIndex(table + coverageOffset, glyph1);
+                    if (coverageIndex == -1) continue;
+
+                    switch (posFormat) {
+                        case 1: {
+                            stbtt_int32 l, r, m;
+                            int straw, needle;
+                            stbtt_uint16 valueFormat1 = ttUSHORT(table + 4);
+                            stbtt_uint16 valueFormat2 = ttUSHORT(table + 6);
+                            stbtt_int32 valueRecordPairSizeInBytes = 2;
+                            stbtt_uint16 pairSetCount = ttUSHORT(table + 8);
+                            stbtt_uint16 pairPosOffset = ttUSHORT(table + 10 + 2 * coverageIndex);
+                            stbtt_uint8 *pairValueTable = table + pairPosOffset;
+                            stbtt_uint16 pairValueCount = ttUSHORT(pairValueTable);
+                            stbtt_uint8 *pairValueArray = pairValueTable + 2;
+                            // TODO: Support more formats.
+                            STBTT_GPOS_TODO_assert(valueFormat1 == 4);
+                            if (valueFormat1 != 4) return 0;
+                            STBTT_GPOS_TODO_assert(valueFormat2 == 0);
+                            if (valueFormat2 != 0) return 0;
+
+                            STBTT_assert(coverageIndex < pairSetCount);
+
+                            needle=glyph2;
+                            r=pairValueCount-1;
+                            l=0;
+
+                            // Binary search.
+                            while (l <= r) {
+                                stbtt_uint16 secondGlyph;
+                                stbtt_uint8 *pairValue;
+                                m = (l + r) >> 1;
+                                pairValue = pairValueArray + (2 + valueRecordPairSizeInBytes) * m;
+                                secondGlyph = ttUSHORT(pairValue);
+                                straw = secondGlyph;
+                                if (needle < straw)
+                                    r = m - 1;
+                                else if (needle > straw)
+                                    l = m + 1;
+                                else {
+                                    stbtt_int16 xAdvance = ttSHORT(pairValue + 2);
+                                    return xAdvance;
+                                }
+                            }
+                        } break;
+
+                        case 2: {
+                            stbtt_uint16 valueFormat1 = ttUSHORT(table + 4);
+                            stbtt_uint16 valueFormat2 = ttUSHORT(table + 6);
+
+                            stbtt_uint16 classDef1Offset = ttUSHORT(table + 8);
+                            stbtt_uint16 classDef2Offset = ttUSHORT(table + 10);
+                            int glyph1class = stbtt__GetGlyphClass(table + classDef1Offset, glyph1);
+                            int glyph2class = stbtt__GetGlyphClass(table + classDef2Offset, glyph2);
+
+                            stbtt_uint16 class1Count = ttUSHORT(table + 12);
+                            stbtt_uint16 class2Count = ttUSHORT(table + 14);
+                            STBTT_assert(glyph1class < class1Count);
+                            STBTT_assert(glyph2class < class2Count);
+
+                            // TODO: Support more formats.
+                            STBTT_GPOS_TODO_assert(valueFormat1 == 4);
+                            if (valueFormat1 != 4) return 0;
+                            STBTT_GPOS_TODO_assert(valueFormat2 == 0);
+                            if (valueFormat2 != 0) return 0;
+
+                            if (glyph1class >= 0 && glyph1class < class1Count && glyph2class >= 0 && glyph2class < class2Count) {
+                                stbtt_uint8 *class1Records = table + 16;
+                                stbtt_uint8 *class2Records = class1Records + 2 * (glyph1class * class2Count);
+                                stbtt_int16 xAdvance = ttSHORT(class2Records + 2 * glyph2class);
+                                return xAdvance;
+                            }
+                        } break;
+
+                        default: {
+                            // There are no other cases.
+                            STBTT_assert(0);
+                            break;
+                        };
+                    }
+                }
+                break;
+            };
+
+            default:
+                // TODO: Implement other stuff.
+                break;
+        }
+    }
+
+    return 0;
+}
+
+STBTT_DEF int  stbtt_GetGlyphKernAdvance(const stbtt_fontinfo *info, int g1, int g2)
+{
+   int xAdvance = 0;
+
+   if (info->gpos)
+      xAdvance += stbtt__GetGlyphGPOSInfoAdvance(info, g1, g2);
+
+   if (info->kern)
+      xAdvance += stbtt__GetGlyphKernInfoAdvance(info, g1, g2);
+
+   return xAdvance;
+}
+
 STBTT_DEF int  stbtt_GetCodepointKernAdvance(const stbtt_fontinfo *info, int ch1, int ch2)
 {
-   if (!info->kern) // if no kerning table, don't waste time looking up both codepoint->glyphs
+   if (!info->kern && !info->gpos) // if no kerning table, don't waste time looking up both codepoint->glyphs
       return 0;
    return stbtt_GetGlyphKernAdvance(info, stbtt_FindGlyphIndex(info,ch1), stbtt_FindGlyphIndex(info,ch2));
 }
@@ -2395,7 +2673,7 @@ static void *stbtt__hheap_alloc(stbtt__hheap *hh, size_t size, void *userdata)
          hh->num_remaining_in_head_chunk = count;
       }
       --hh->num_remaining_in_head_chunk;
-      return (char *) (hh->head) + size * hh->num_remaining_in_head_chunk;
+      return (char *) (hh->head) + sizeof(stbtt__hheap_chunk) + size * hh->num_remaining_in_head_chunk;
    }
 }
 
@@ -3229,8 +3507,9 @@ error:
 
 STBTT_DEF void stbtt_Rasterize(stbtt__bitmap *result, float flatness_in_pixels, stbtt_vertex *vertices, int num_verts, float scale_x, float scale_y, float shift_x, float shift_y, int x_off, int y_off, int invert, void *userdata)
 {
-   float scale = scale_x > scale_y ? scale_y : scale_x;
-   int winding_count, *winding_lengths;
+   float scale            = scale_x > scale_y ? scale_y : scale_x;
+   int winding_count      = 0;
+   int *winding_lengths   = NULL;
    stbtt__point *windings = stbtt_FlattenCurves(vertices, num_verts, flatness_in_pixels / scale, &winding_lengths, &winding_count, userdata);
    if (windings) {
       stbtt__rasterize(result, windings, winding_lengths, winding_count, scale_x, scale_y, shift_x, shift_y, x_off, y_off, invert, userdata);
@@ -3317,6 +3596,11 @@ STBTT_DEF unsigned char *stbtt_GetCodepointBitmapSubpixel(const stbtt_fontinfo *
 {
    return stbtt_GetGlyphBitmapSubpixel(info, scale_x, scale_y,shift_x,shift_y, stbtt_FindGlyphIndex(info,codepoint), width,height,xoff,yoff);
 }   
+
+STBTT_DEF void stbtt_MakeCodepointBitmapSubpixelPrefilter(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride, float scale_x, float scale_y, float shift_x, float shift_y, int oversample_x, int oversample_y, float *sub_x, float *sub_y, int codepoint)
+{
+   stbtt_MakeGlyphBitmapSubpixelPrefilter(info, output, out_w, out_h, out_stride, scale_x, scale_y, shift_x, shift_y, oversample_x, oversample_y, sub_x, sub_y, stbtt_FindGlyphIndex(info,codepoint));
+}
 
 STBTT_DEF void stbtt_MakeCodepointBitmapSubpixel(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride, float scale_x, float scale_y, float shift_x, float shift_y, int codepoint)
 {
@@ -3909,7 +4193,7 @@ static int stbtt__ray_intersect_bezier(float orig[2], float ray[2], float q0[2],
       float discr = b*b - a*c;
       if (discr > 0.0) {
          float rcpna = -1 / a;
-         float d = (float) sqrt(discr);
+         float d = (float) STBTT_sqrt(discr);
          s0 = (b+d) * rcpna;
          s1 = (b-d) * rcpna;
          if (s0 >= 0.0 && s0 <= 1.0)
@@ -3971,7 +4255,7 @@ static int stbtt__compute_crossings_x(float x, float y, int nverts, stbtt_vertex
    orig[1] = y;
 
    // make sure y never passes through a vertex of the shape
-   y_frac = (float) fmod(y, 1.0f);
+   y_frac = (float) STBTT_fmod(y, 1.0f);
    if (y_frac < 0.01f)
       y += 0.01f;
    else if (y_frac > 0.99f)
@@ -4471,6 +4755,9 @@ STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char *s1, int len1, const
 
 // FULL VERSION HISTORY
 //
+//   1.19 (2018-02-11) OpenType GPOS kerning (horizontal only), STBTT_fmod
+//   1.18 (2018-01-29) add missing function
+//   1.17 (2017-07-23) make more arguments const; doc fix
 //   1.16 (2017-07-12) SDF support
 //   1.15 (2017-03-03) make more arguments const
 //   1.14 (2017-01-16) num-fonts-in-TTC function

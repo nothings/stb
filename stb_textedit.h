@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.11  - public domain - Sean Barrett
+// stb_textedit.h - v1.12  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -29,6 +29,7 @@
 //
 // VERSION HISTORY
 //
+//   1.12 (2018-01-29) user can change STB_TEXTEDIT_KEYTYPE, fix redo to avoid crash
 //   1.11 (2017-03-03) fix HOME on last line, dragging off single-line textfield
 //   1.10 (2016-10-25) supress warnings about casting away const with -Wcast-qual
 //   1.9  (2016-08-27) customizable move-by-word
@@ -198,7 +199,7 @@
 //    void stb_textedit_drag(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, float x, float y)
 //    int  stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
 //    int  stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len)
-//    void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, int key)
+//    void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXEDIT_KEYTYPE key)
 //
 //    Each of these functions potentially updates the string and updates the
 //    state.
@@ -232,7 +233,9 @@
 //          inputs, set a high bit to distinguish the two; then you can define the
 //          various definitions like STB_TEXTEDIT_K_LEFT have the is-key-event bit
 //          set, and make STB_TEXTEDIT_KEYTOCHAR check that the is-key-event bit is
-//          clear.
+//          clear. STB_TEXTEDIT_KEYTYPE defaults to int, but you can #define it to
+//          anything other type you wante before including.
+//
 //     
 //   When rendering, you can read the cursor position and selection state from
 //   the STB_TexteditState.
@@ -711,8 +714,12 @@ static int stb_textedit_paste_internal(STB_TEXTEDIT_STRING *str, STB_TexteditSta
    return 0;
 }
 
+#ifndef STB_TEXTEDIT_KEYTYPE
+#define STB_TEXTEDIT_KEYTYPE int
+#endif
+
 // API key: process a keyboard input
-static void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, int key)
+static void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_KEYTYPE key)
 {
 retry:
    switch (key) {
@@ -1112,15 +1119,18 @@ static void stb_textedit_discard_redo(StbUndoState *state)
       // if the k'th undo state has characters, clean those up
       if (state->undo_rec[k].char_storage >= 0) {
          int n = state->undo_rec[k].insert_length, i;
-         // delete n characters from all other records
+         // move the remaining redo character data to the end of the buffer
          state->redo_char_point = state->redo_char_point + (short) n; // vsnet05
-         STB_TEXTEDIT_memmove(state->undo_char + state->redo_char_point, state->undo_char + state->redo_char_point-n, (size_t) ((STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_char_point)*sizeof(STB_TEXTEDIT_CHARTYPE)));
+         STB_TEXTEDIT_memmove(state->undo_char + state->redo_char_point, state->undo_char + state->redo_char_point-n, (size_t) ((STB_TEXTEDIT_UNDOCHARCOUNT - state->redo_char_point)*sizeof(STB_TEXTEDIT_CHARTYPE)));
+         // adjust the position of all the other records to account for above memmove
          for (i=state->redo_point; i < k; ++i)
             if (state->undo_rec[i].char_storage >= 0)
-               state->undo_rec[i].char_storage = state->undo_rec[i].char_storage + (short) n; // vsnet05
+               state->undo_rec[i].char_storage += (short) n; // vsnet05
       }
+      // now move all the redo records towards the end of the buffer; the first one is at 'redo_point'
+      STB_TEXTEDIT_memmove(state->undo_rec + state->redo_point+1, state->undo_rec + state->redo_point, (size_t) ((STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_point)*sizeof(state->undo_rec[0])));
+      // now move redo_point to point to the new one
       ++state->redo_point;
-      STB_TEXTEDIT_memmove(state->undo_rec + state->redo_point-1, state->undo_rec + state->redo_point, (size_t) ((STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_point)*sizeof(state->undo_rec[0])));
    }
 }
 
@@ -1203,11 +1213,11 @@ static void stb_text_undo(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
 
          // there's definitely room to store the characters eventually
          while (s->undo_char_point + u.delete_length > s->redo_char_point) {
-            // there's currently not enough room, so discard a redo record
-            stb_textedit_discard_redo(s);
             // should never happen:
             if (s->redo_point == STB_TEXTEDIT_UNDOSTATECOUNT)
                return;
+            // there's currently not enough room, so discard a redo record
+            stb_textedit_discard_redo(s);
          }
          r = &s->undo_rec[s->redo_point-1];
 
@@ -1278,6 +1288,7 @@ static void stb_text_redo(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
    if (r.insert_length) {
       // easy case: need to insert n characters
       STB_TEXTEDIT_INSERTCHARS(str, r.where, &s->undo_char[r.char_storage], r.insert_length);
+      s->redo_char_point += r.insert_length;
    }
 
    state->cursor = r.where + r.insert_length;

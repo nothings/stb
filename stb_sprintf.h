@@ -1,4 +1,4 @@
-// stb_sprintf - v1.03 - public domain snprintf() implementation
+// stb_sprintf - v1.05 - public domain snprintf() implementation
 // originally by Jeff Roberts / RAD Game Tools, 2015/10/20
 // http://github.com/nothings/stb
 //
@@ -12,6 +12,9 @@
 //    github:d26435
 //    github:trex78
 //    Jari Komppa (SI suffixes)
+//    Rohit Nirmal
+//    Marcin Wojdyr
+//    Leonard Ritter
 //
 // LICENSE:
 //
@@ -927,7 +930,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          fl |= (sizeof(void *) == 8) ? STBSP__INTMAX : 0;
          pr = sizeof(void *) * 2;
          fl &= ~STBSP__LEADINGZERO; // 'p' only prints the pointer with zeros
-                                    // drop through to X
+                                    // fall through - to X
 
       case 'X': // upper hex
       case 'x': // lower hex
@@ -1025,11 +1028,11 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                n64 = 0;
             }
             if ((fl & STBSP__TRIPLET_COMMA) == 0) {
-               while (n) {
+               do {
                   s -= 2;
                   *(stbsp__uint16 *)s = *(stbsp__uint16 *)&stbsp__digitpair[(n % 100) * 2];
                   n /= 100;
-               }
+               } while (n);
             }
             while (n) {
                if ((fl & STBSP__TRIPLET_COMMA) && (l++ == 3)) {
@@ -1259,7 +1262,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          s = num + STBSP__NUMSZ - 1;
          *s = f[0];
          l = 1;
-         fw = pr = fl = 0;
+         fw = fl = 0;
          lead[0] = 0;
          tail[0] = 0;
          pr = 0;
@@ -1341,24 +1344,42 @@ static char *stbsp__clamp_callback(char *buf, void *user, int len)
    return (c->count >= STB_SPRINTF_MIN) ? c->buf : c->tmp; // go direct into buffer if you can
 }
 
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsnprintf)(char *buf, int count, char const *fmt, va_list va)
+static char * stbsp__count_clamp_callback( char * buf, void * user, int len )
+{
+   stbsp__context * c = (stbsp__context*)user;
+
+   c->count += len;
+   return c->tmp; // go direct into buffer if you can
+}
+
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsnprintf )( char * buf, int count, char const * fmt, va_list va )
 {
    stbsp__context c;
    int l;
 
-   if (count == 0)
-      return 0;
+   if ( (count == 0) && !buf )
+   {
+      c.count = 0;
 
-   c.buf = buf;
-   c.count = count;
+      STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__count_clamp_callback, &c, c.tmp, fmt, va );
+      l = c.count;
+   }
+   else
+   {
+      if ( count == 0 )
+         return 0;
 
-   STB_SPRINTF_DECORATE(vsprintfcb)(stbsp__clamp_callback, &c, stbsp__clamp_callback(0, &c, 0), fmt, va);
+      c.buf = buf;
+      c.count = count;
 
-   // zero-terminate
-   l = (int)(c.buf - buf);
-   if (l >= count) // should never be greater, only equal (or less) than count
-      l = count - 1;
-   buf[l] = 0;
+      STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__clamp_callback, &c, stbsp__clamp_callback(0,&c,0), fmt, va );
+
+      // zero-terminate
+      l = (int)( c.buf - buf );
+      if ( l >= count ) // should never be greater, only equal (or less) than count
+         l = count - 1;
+      buf[l] = 0;
+   }
 
    return l;
 }

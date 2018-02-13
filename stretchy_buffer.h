@@ -1,7 +1,8 @@
-// stretchy_buffer.h - v1.02 - public domain - nothings.org/stb
+// stretchy_buffer.h - v1.03 - public domain - nothings.org/stb
 // a vector<>-like dynamic array for C
 //
 // version history:
+//      1.03 -  compile as C++ maybe
 //      1.02 -  tweaks to syntax for no good reason
 //      1.01 -  added a "common uses" documentation section
 //      1.0  -  fixed bug in the version I posted prematurely
@@ -162,6 +163,10 @@
 //    the main trick is in realizing in the first place that it's
 //    possible to do this in a generic, type-safe way in C.
 //
+// Contributors:
+//
+// Timothy Wright (github:ZenToad)
+//
 // LICENSE
 //
 //   See end of file for license information.
@@ -189,7 +194,7 @@
 
 #define stb__sbneedgrow(a,n)  ((a)==0 || stb__sbn(a)+(n) >= stb__sbm(a))
 #define stb__sbmaybegrow(a,n) (stb__sbneedgrow(a,(n)) ? stb__sbgrow(a,n) : 0)
-#define stb__sbgrow(a,n)      ((a) = stb__sbgrowf((a), (n), sizeof(*(a))))
+#define stb__sbgrow(a,n)      (*((void **)&(a)) = stb__sbgrowf((a), (n), sizeof(*(a))))
 
 #include <stdlib.h>
 

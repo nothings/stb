@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.07 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.08b - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -9,7 +9,8 @@
 //     and "high quality" using mode.
 //
 // version history:
-//   v1.07  - bc4; allow not using libc; add STB_DXT_STATIC
+//   v1.08  - (sbt) fix bug in dxt-with-alpha block
+//   v1.07  - (stb) bc4; allow not using libc; add STB_DXT_STATIC
 //   v1.06  - (stb) fix to known-broken 1.05
 //   v1.05  - (stb) support bc5/3dc (Arvids Kokins), use extern "C" in C++ (Pavel Krajcevski)
 //   v1.04  - (ryg) default to no rounding bias for lerped colors (as per S3TC/DX10 spec);
@@ -31,11 +32,6 @@
 #ifndef STB_INCLUDE_STB_DXT_H
 #define STB_INCLUDE_STB_DXT_H
 
-// compression mode (bitflags)
-#define STB_DXT_NORMAL    0
-#define STB_DXT_DITHER    1   // use dithering. dubious win. never use for normal maps and the like!
-#define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
-
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -46,15 +42,21 @@ extern "C" {
 #define STBDDEF extern
 #endif
 
+// compression mode (bitflags)
+#define STB_DXT_NORMAL    0
+#define STB_DXT_DITHER    1   // use dithering. dubious win. never use for normal maps and the like!
+#define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
+
 STBDDEF void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
 STBDDEF void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src_r_one_byte_per_pixel);
 STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel);
 
+#define STB_COMPRESS_DXT_BLOCK
+
 #ifdef __cplusplus
 }
 #endif
-
-#define STB_COMPRESS_DXT_BLOCK
+#endif // STB_INCLUDE_STB_DXT_H
 
 #ifdef STB_DXT_IMPLEMENTATION
 
@@ -88,7 +90,7 @@ STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *sr
 
 #ifndef STBD_MEMSET
 #include <string.h>
-#define STBD_MEMSET(x)        memset(x)
+#define STBD_MEMSET           memset
 #endif
 
 static unsigned char stb__Expand5[32];
@@ -649,6 +651,7 @@ static void stb__InitDXT()
 
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode)
 {
+   unsigned char data[16][4];
    static int init=1;
    if (init) {
       stb__InitDXT();
@@ -656,8 +659,15 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
    }
 
    if (alpha) {
+      int i;
       stb__CompressAlphaBlock(dest,(unsigned char*) src+3, 4);
       dest += 8;
+      // make a new copy of the data in which alpha is opaque,
+      // because code uses a fast test for color constancy
+      memcpy(data, src, 4*16);
+      for (i=0; i < 16; ++i)
+         data[i][3] = 255;
+      src = &data[0][0];
    }
 
    stb__CompressColorBlock(dest,(unsigned char*) src,mode);
@@ -674,7 +684,6 @@ void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)
    stb__CompressAlphaBlock(dest + 8,(unsigned char*) src+1,2);
 }
 #endif // STB_DXT_IMPLEMENTATION
-#endif // STB_INCLUDE_STB_DXT_H
 
 /*
 ------------------------------------------------------------------------------
