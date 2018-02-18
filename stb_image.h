@@ -1082,6 +1082,8 @@ static void stbi__vertical_flip_slices(void *image, int w, int h, int z, int byt
    }
 }
 
+
+
 static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    stbi__result_info ri;
@@ -1143,16 +1145,44 @@ static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, in
 
 #ifndef STBI_NO_STDIO
 
+char* stbi_convert_wchar_to_utf8(wchar_t* input) {
+#ifdef _WINDOWS_
+	int outputSizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &input[0], wcslen(input), NULL, 0, NULL, NULL);
+	char* temp = (char*)STBIW_MALLOC(outputSizeNeeded);
+	int error = WideCharToMultiByte(65001, 0, input, -1, temp, outputSizeNeeded, NULL, NULL);
+	temp[outputSizeNeeded] = '\0';
+	return temp;
+#else
+	return NULL;
+#endif
+}
+
 static FILE *stbi__fopen(char const *filename, char const *mode)
 {
-   FILE *f;
+	FILE *f;
 #if defined(_MSC_VER) && _MSC_VER >= 1400
-   if (0 != fopen_s(&f, filename, mode))
-      f=0;
+#ifdef UNICODE
+	int filenameLength = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+	wchar_t* wFilename = (wchar_t*)stbi__malloc(filenameLength * sizeof(wchar_t));
+	MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFilename, filenameLength);
+
+	int modeLength = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
+	wchar_t* wMode = (wchar_t*)stbi__malloc(modeLength * sizeof(wchar_t));
+	MultiByteToWideChar(CP_UTF8, 0, mode, -1, wMode, modeLength);
+
+	if (0 != _wfopen_s(&f, wFilename, wMode))
+		f = 0;
+
+	STBI_FREE(wFilename);
+	STBI_FREE(wMode);
 #else
-   f = fopen(filename, mode);
+	if (0 != fopen_s(&f, filename, mode))
+		f = 0;
 #endif
-   return f;
+#else
+	f = fopen(filename, mode);
+#endif
+	return f;
 }
 
 

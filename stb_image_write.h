@@ -277,15 +277,31 @@ static void stbi__stdio_write(void *context, void *data, int size)
 
 static int stbi__start_write_file(stbi__write_context *s, const char *filename)
 {
-   FILE *f;
+	FILE *f;
 #ifdef STBI_MSC_SECURE_CRT
-   if (fopen_s(&f, filename, "wb"))
-      f = NULL;
+#ifdef UNICODE
+	printf("FILENAME: %s\n", filename);
+	int filenameLength = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+	wchar_t* wFilename = (wchar_t*)STBIW_MALLOC(filenameLength * sizeof(wchar_t));
+	MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFilename, filenameLength);
+
+	if (0 != _wfopen_s(&f, wFilename, L"wb"))
+		f = NULL;
+
+	STBIW_FREE(wFilename);
+
 #else
-   f = fopen(filename, "wb");
+	if (fopen_s(&f, filename, "wb"))
+		f = NULL;
 #endif
-   stbi__start_write_callbacks(s, stbi__stdio_write, (void *) f);
-   return f != NULL;
+#else
+	f = fopen(filename, "wb");
+#endif
+
+
+
+	stbi__start_write_callbacks(s, stbi__stdio_write, (void *)f);
+	return f != NULL;
 }
 
 static void stbi__end_write_file(stbi__write_context *s)
@@ -1107,23 +1123,48 @@ unsigned char *stbi_write_png_to_mem(unsigned char *pixels, int stride_bytes, in
 #ifndef STBI_WRITE_NO_STDIO
 STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
 {
-   FILE *f;
-   int len;
-   unsigned char *png = stbi_write_png_to_mem((unsigned char *) data, stride_bytes, x, y, comp, &len);
-   if (png == NULL) return 0;
+	FILE *f;
+	int len;
+	unsigned char *png = stbi_write_png_to_mem((unsigned char *)data, stride_bytes, x, y, comp, &len);
+	if (png == NULL) return 0;
 #ifdef STBI_MSC_SECURE_CRT
-   if (fopen_s(&f, filename, "wb"))
-      f = NULL;
+#ifdef UNICODE
+	int filenameLength = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+	wchar_t* wFilename = (wchar_t*)STBIW_MALLOC(filenameLength * sizeof(wchar_t));
+	MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFilename, filenameLength);
+
+
+	if (0 != _wfopen_s(&f, wFilename, L"wb"))
+		f = NULL;
+
+	STBIW_FREE(wFilename);
+
 #else
-   f = fopen(filename, "wb");
+	if (fopen_s(&f, filename, "wb"))
+		f = NULL;
 #endif
-   if (!f) { STBIW_FREE(png); return 0; }
-   fwrite(png, 1, len, f);
-   fclose(f);
-   STBIW_FREE(png);
-   return 1;
+#else
+	f = fopen(filename, "wb");
+#endif
+	if (!f) { STBIW_FREE(png); return 0; }
+	fwrite(png, 1, len, f);
+	fclose(f);
+	STBIW_FREE(png);
+	return 1;
 }
 #endif
+
+char* stbiw_convert_wchar_to_utf8(wchar_t* input) {
+#ifdef _WINDOWS_
+	int outputSizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &input[0], wcslen(input), NULL, 0, NULL, NULL);
+	char* temp = (char*)STBIW_MALLOC(outputSizeNeeded);
+	int error = WideCharToMultiByte(65001, 0, input, -1, temp, outputSizeNeeded, NULL, NULL);
+	temp[outputSizeNeeded] = '\0';
+	return temp;
+#else
+	return NULL;
+#endif
+}
 
 STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int stride_bytes)
 {
