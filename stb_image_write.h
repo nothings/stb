@@ -1180,7 +1180,7 @@ char* stbiw_convert_wchar_to_utf8(wchar_t* input) {
 	temp[outputSizeNeeded] = '\0';
 	return temp;
 #else
-	return nullptr;
+	return NULL;
 #endif
 }
 
