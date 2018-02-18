@@ -1147,11 +1147,15 @@ static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, in
 #ifndef STBI_NO_STDIO
 
 char* stbi_convert_wchar_to_utf8(wchar_t* input) {
+#ifdef _WINDOWS_
 	int outputSizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &input[0], wcslen(input), NULL, 0, NULL, NULL);
-	char* temp = (char*)STBI_MALLOC(outputSizeNeeded);
-	int error = WideCharToMultiByte(CP_UTF8, 0, input, -1, temp, outputSizeNeeded, NULL, NULL);
+	char* temp = (char*)STBIW_MALLOC(outputSizeNeeded);
+	int error = WideCharToMultiByte(65001, 0, input, -1, temp, outputSizeNeeded, NULL, NULL);
 	temp[outputSizeNeeded] = '\0';
 	return temp;
+#else
+	return nullptr;
+#endif
 }
 
 static FILE *stbi__fopen(char const *filename, char const *mode)
