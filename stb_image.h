@@ -500,6 +500,10 @@ extern "C" {
 #endif
 #endif
 
+#ifndef CP_UTF8
+#define CP_UTF8 65001
+#endif
+
 #if defined(STBI_NO_PNG) && !defined(STBI_SUPPORT_ZLIB) && !defined(STBI_NO_ZLIB)
 #define STBI_NO_ZLIB
 #endif
@@ -1144,7 +1148,7 @@ static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, in
 
 char* stbi_convert_wchar_to_utf8(wchar_t* input) {
 	int outputSizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &input[0], wcslen(input), NULL, 0, NULL, NULL);
-	char* temp = (char*)STBIW_MALLOC(outputSizeNeeded);
+	char* temp = (char*)STBI_MALLOC(outputSizeNeeded);
 	int error = WideCharToMultiByte(CP_UTF8, 0, input, -1, temp, outputSizeNeeded, NULL, NULL);
 	temp[outputSizeNeeded] = '\0';
 	return temp;

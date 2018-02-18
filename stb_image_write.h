@@ -198,6 +198,10 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 #endif
 #endif
 
+#ifndef CP_UTF8
+#define CP_UTF8 65001
+#endif
+
 #ifndef STBI_WRITE_NO_STDIO
 #include <stdio.h>
 #endif // STBI_WRITE_NO_STDIO
@@ -1171,7 +1175,7 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
 char* stbi_convert_wchar_to_utf8(wchar_t* input) {
 	int outputSizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &input[0], wcslen(input), NULL, 0, NULL, NULL);
 	char* temp = (char*)STBIW_MALLOC(outputSizeNeeded);
-	int error = WideCharToMultiByte(CP_UTF8, 0, input, -1, temp, outputSizeNeeded, NULL, NULL);
+	int error = WideCharToMultiByte(65001, 0, input, -1, temp, outputSizeNeeded, NULL, NULL);
 	temp[outputSizeNeeded] = '\0';
 	return temp;
 }
