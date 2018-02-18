@@ -1172,7 +1172,7 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
 }
 #endif
 
-char* stbi_convert_wchar_to_utf8(wchar_t* input) {
+char* stbiw_convert_wchar_to_utf8(wchar_t* input) {
 	int outputSizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &input[0], wcslen(input), NULL, 0, NULL, NULL);
 	char* temp = (char*)STBIW_MALLOC(outputSizeNeeded);
 	int error = WideCharToMultiByte(65001, 0, input, -1, temp, outputSizeNeeded, NULL, NULL);
