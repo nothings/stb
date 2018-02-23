@@ -80,6 +80,9 @@ STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *sr
 #if !defined(STBD_ABS) || !defined(STBI_FABS)
 #include <math.h>
 #endif
+#if !defined(STBD_MEMSET) || !defined(STBD_MEMCPY)
+#include <string.h>
+#endif
 
 #ifndef STBD_ABS
 #define STBD_ABS(i)           abs(i)
@@ -90,8 +93,11 @@ STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *sr
 #endif
 
 #ifndef STBD_MEMSET
-#include <string.h>
 #define STBD_MEMSET           memset
+#endif
+
+#ifndef STBD_MEMCPY
+#define STBD_MEMCPY           memcpy
 #endif
 
 static unsigned char stb__Expand5[32];
@@ -593,9 +599,15 @@ static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int 
    }
 
    // encode them
-   ((unsigned char *)dest)[0] = mx;
-   ((unsigned char *)dest)[1] = mn;
+   dest[0] = mx;
+   dest[1] = mn;
    dest += 2;
+   if (mx == mn)
+   {
+      static const unsigned char const_alpha_block[] = { 0x49, 0x92, 0x24, 0x49, 0x92, 0x24 };
+      STBD_MEMCPY(dest, const_alpha_block, sizeof(const_alpha_block));
+      return;
+   }
 
    // determine bias and emit color indices
    // given the choice of mx/mn, these indices are optimal:
