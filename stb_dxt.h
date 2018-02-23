@@ -24,6 +24,7 @@
 // contributors: 
 //   Kevin Schmidt (#defines for "freestanding" compilation)
 //   github:ppiastucki (BC4 support)
+//   Pavel Pavlov (constant color check)
 // 
 // LICENSE
 //
@@ -517,7 +518,7 @@ static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, i
 
    // check if block is constant
    for (i=1;i<16;i++)
-      if (((unsigned int *) block)[i] != ((unsigned int *) block)[0])
+      if ((((unsigned int *) block)[i] & 0xffffff) != (((unsigned int *) block)[0] & 0xffffff))
          break;
 
    if(i == 16) { // constant color
@@ -651,7 +652,6 @@ static void stb__InitDXT()
 
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode)
 {
-   unsigned char data[16][4];
    static int init=1;
    if (init) {
       stb__InitDXT();
@@ -659,15 +659,8 @@ void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int a
    }
 
    if (alpha) {
-      int i;
       stb__CompressAlphaBlock(dest,(unsigned char*) src+3, 4);
       dest += 8;
-      // make a new copy of the data in which alpha is opaque,
-      // because code uses a fast test for color constancy
-      memcpy(data, src, 4*16);
-      for (i=0; i < 16; ++i)
-         data[i][3] = 255;
-      src = &data[0][0];
    }
 
    stb__CompressColorBlock(dest,(unsigned char*) src,mode);
