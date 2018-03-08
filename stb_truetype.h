@@ -733,6 +733,7 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
 // and you want a speed-up, call this function with the character you're
 // going to process, then use glyph-based functions instead of the
 // codepoint-based functions.
+// Returns 0 if the character codepoint is not defined in the font.
 
 
 //////////////////////////////////////////////////////////////////////////////
