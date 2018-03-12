@@ -149,6 +149,7 @@ int main(int argc, char **argv)
             #else
             stb_splitpath(fname, files[i], STB_FILE);
             stbi_write_png(stb_sprintf("output/%s.png", fname), w, h, 4, data, w*4);
+            stbi_write_bmp(stb_sprintf("output/%s.bmp", fname), w, h, 4, data);
             #endif
             free(data);
          }

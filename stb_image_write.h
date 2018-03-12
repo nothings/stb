@@ -1,4 +1,4 @@
-/* stb_image_write - v1.09 - public domain - http://nothings.org/stb/stb_image_write.h
+﻿/* stb_image_write - v1.09 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA/JPEG/HDR images to C stdio - Sean Barrett 2010-2015
                                      no warranty implied; use at your own risk
 
@@ -419,13 +419,112 @@ static int stbiw__outfile(stbi__write_context *s, int rgb_dir, int vdir, int x, 
    }
 }
 
+static int stbiw__bmp_search_colortable(
+   unsigned char r, unsigned char g, unsigned char b,
+   const unsigned char *color_table, int color_count)
+{
+   int i;
+   const unsigned char *p = color_table;
+   for (i = 0; i < color_count; i++) {
+      if (b == p[0] && g == p[1] && r == p[2]) {
+         return i;
+      }
+      p += 4;
+   }
+   return -1;  // not found
+}
+
+static int stbiw__bmp_count_color(int x, int y, int comp, const void *data, unsigned char *color_table)
+{
+   int color_count = 0;
+   int sz = x * y;
+   const unsigned char *p = (unsigned char *)data;
+   while (sz--) {
+      int idx;
+      unsigned char r, g, b;
+      if (comp == 4 || comp == 3) {
+         r = p[0]; g = p[1]; b = p[2];
+      } else if (comp == 2 || comp == 1) {
+         r = g = b = p[0];
+      }
+      p += comp;
+      idx = stbiw__bmp_search_colortable(r, g, b, color_table, color_count);
+      if (idx == -1) {
+         if (color_count == 256) {
+            return 0;   // table full
+         }
+         color_table[color_count*4+0] = b;
+         color_table[color_count*4+1] = g;
+         color_table[color_count*4+2] = r;
+         color_table[color_count*4+3] = 0x00;
+         color_count++;
+      }
+   }
+   return color_count;
+}
+
+static void stbiw__bmp_write_index(stbi__write_context *s, int x, int y, int comp, const void *data, const unsigned char *color_table, int color_count)
+{
+   int i,j,k;
+   int offset_to_image = 14 + 40 + (color_count * 4);
+   int bits_per_pixel = color_count <= 2 ? 1 : (color_count <= 16 ? 4 : 8);    // 1 or 4 or 8
+   int pixels_per_byte = 8 / bits_per_pixel;                         // 8 or 2 or 1
+   int pixel_bytes_per_line = ((x + (pixels_per_byte-1)) & (~(pixels_per_byte-1))) / pixels_per_byte;
+   int bytes_per_line = (pixel_bytes_per_line + (4-1)) & (~(4-1));      // 4bytes align
+   int pad_bytes_per_line = bytes_per_line - pixel_bytes_per_line;
+   int filesize = offset_to_image + bytes_per_line * y;
+   stbiw__writef(s,
+                 "11 4 22 4" "4 44 22 444444",
+                 'B', 'M', filesize, 0,0, offset_to_image,     // file header
+                 40, x,y, 1,bits_per_pixel, 0,0,0,0,color_count,color_count);  // bitmap header
+   s->func(s->context, (void *)color_table, color_count*4);
+   for (j = 0; j < y; j++) {
+      const unsigned char *p = ((unsigned char *)data)+(x*(y-j-1)*comp);
+      for (i = 0; i < pixel_bytes_per_line; i++) {
+         unsigned char output = 0;
+         for (k = 0; k < pixels_per_byte; k++) {
+            unsigned char idx;
+            unsigned char r, g, b;
+            if (comp == 4 || comp == 3) {
+               r = p[0]; g = p[1]; b = p[2];
+            } else if (comp == 2 || comp == 1) {
+               r = g = b = p[0];
+            }
+            p += comp;
+            idx = (unsigned char)stbiw__bmp_search_colortable(r, g, b, color_table, color_count);
+            output |= (idx << (bits_per_pixel * (pixels_per_byte - k - 1)));
+         }
+         stbiw__putc(s, output);
+      }
+      if (pad_bytes_per_line != 0) {
+         static /*const*/ stbiw_uint32 zero = 0;
+         s->func(s->context, &zero, pad_bytes_per_line);
+      }
+   }
+}
+
 static int stbi_write_bmp_core(stbi__write_context *s, int x, int y, int comp, const void *data)
 {
-   int pad = (-x*3) & 3;
-   return stbiw__outfile(s,-1,-1,x,y,comp,1,(void *) data,0,pad,
-           "11 4 22 4" "4 44 22 444444",
-           'B', 'M', 14+40+(x*3+pad)*y, 0,0, 14+40,  // file header
-            40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
+   unsigned char *color_table;
+   int color_count;
+   int r = 1;
+   if (y < 0 || x < 0) {
+      return 0;
+   }
+   color_table = (unsigned char *) STBIW_MALLOC(4*256); // BGRA(4bytes)/color(1pixel)
+   memset(color_table, 0, 4*256);
+   color_count = stbiw__bmp_count_color(x, y, comp, data, color_table);
+   if (color_count == 0) {
+      int pad = (-x*3) & 3;
+      r = stbiw__outfile(s,-1,-1,x,y,comp,1,(void *) data,0,pad,
+                         "11 4 22 4" "4 44 22 444444",
+                         'B', 'M', 14+40+(x*3+pad)*y, 0,0, 14+40, // file header
+                         40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
+   } else {
+      stbiw__bmp_write_index(s, x, y, comp, data, color_table, color_count);
+   }
+   STBIW_FREE(color_table);
+   return r;
 }
 
 STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data)
@@ -1513,7 +1612,7 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
              add HDR output
              fix monochrome BMP
       0.95 (2014-08-17)
-		       add monochrome TGA output
+             add monochrome TGA output
       0.94 (2014-05-31)
              rename private functions to avoid conflicts with stb_image.h
       0.93 (2014-05-27)
