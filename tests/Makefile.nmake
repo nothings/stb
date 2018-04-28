@@ -1,0 +1,7 @@
+INCLUDES = -I..
+CFLAGS = -DSTB_DIVIDE_TEST
+CPPFLAGS = -DSTB_DIVIDE_TEST
+
+all:
+	$(CC) $(INCLUDES) $(CFLAGS) ../stb_vorbis.c test_c_compilation.c
+	$(CC) $(INCLUDES) $(CPPFLAGS) test_cpp_compilation.cpp
