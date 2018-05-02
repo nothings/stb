@@ -138,6 +138,7 @@ CREDITS:
       Ivan Tikhonov
       github:ignotion
       Adam Schackart
+      Torbjørn Viksand
 
 LICENSE
 
