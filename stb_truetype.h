@@ -3967,13 +3967,17 @@ STBTT_DEF int stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, const stb
          int x0,y0,x1,y1;
          int codepoint = ranges[i].array_of_unicode_codepoints == NULL ? ranges[i].first_unicode_codepoint_in_range + j : ranges[i].array_of_unicode_codepoints[j];
          int glyph = stbtt_FindGlyphIndex(info, codepoint);
-         stbtt_GetGlyphBitmapBoxSubpixel(info,glyph,
-                                         scale * spc->h_oversample,
-                                         scale * spc->v_oversample,
-                                         0,0,
-                                         &x0,&y0,&x1,&y1);
-         rects[k].w = (stbrp_coord) (x1-x0 + spc->padding + spc->h_oversample-1);
-         rects[k].h = (stbrp_coord) (y1-y0 + spc->padding + spc->v_oversample-1);
+         if (glyph != 0) {
+            stbtt_GetGlyphBitmapBoxSubpixel(info,glyph,
+                                            scale * spc->h_oversample,
+                                            scale * spc->v_oversample,
+                                            0,0,
+                                            &x0,&y0,&x1,&y1);
+            rects[k].w = (stbrp_coord) (x1-x0 + spc->padding + spc->h_oversample-1);
+            rects[k].h = (stbrp_coord) (y1-y0 + spc->padding + spc->v_oversample-1);
+         } else {
+            rects[k].w = rects[k].h = 0;
+         }
          ++k;
       }
    }
@@ -4026,7 +4030,7 @@ STBTT_DEF int stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, const
       sub_y = stbtt__oversample_shift(spc->v_oversample);
       for (j=0; j < ranges[i].num_chars; ++j) {
          stbrp_rect *r = &rects[k];
-         if (r->was_packed) {
+         if (r->was_packed && r->w != 0 && r->h != 0) {
             stbtt_packedchar *bc = &ranges[i].chardata_for_range[j];
             int advance, lsb, x0,y0,x1,y1;
             int codepoint = ranges[i].array_of_unicode_codepoints == NULL ? ranges[i].first_unicode_codepoint_in_range + j : ranges[i].array_of_unicode_codepoints[j];
