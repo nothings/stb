@@ -1,7 +1,14 @@
 INCLUDES = -I..
-CFLAGS = -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -DSTB_DIVIDE_TEST
-CPPFLAGS = -Wno-write-strings -DSTB_DIVIDE_TEST
+CFLAGS = $(INCLUDES) -Wno-pointer-to-int-cast -Wno-int-to-pointer-cast -DSTB_DIVIDE_TEST -Wall -Wextra -Wstrict-aliasing
+CPPFLAGS = $(INCLUDES) -Wno-write-strings -DSTB_DIVIDE_TEST -Wall -Wextra
 
 all:
-	$(CC) $(INCLUDES) $(CFLAGS) ../stb_vorbis.c test_c_compilation.c -lm
-	$(CC) $(INCLUDES) $(CPPFLAGS) test_cpp_compilation.cpp -lm -lstdc++
+	$(CC) $(CFLAGS) ../stb_vorbis.c test_c_compilation.c -lm
+	$(CC) $(CPPFLAGS) test_cpp_compilation.cpp -lm -lstdc++
+
+sprintf: test_sprintf.o
+	$(CC) $(CFLAGS) $^ -o $@
+
+.PHONY: clean
+clean:
+	rm -f sprintf test_sprintf.o
