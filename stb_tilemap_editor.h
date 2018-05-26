@@ -396,7 +396,7 @@ extern void stbte_tick(stbte_tilemap *tm, float time_in_seconds_since_last_frame
 //  user input
 //
 
-// if you're using SDL, call the next function for SDL_MOUSEMOVE, SDL_MOUSEBUTTON, SDL_MOUSEWHEEL;
+// if you're using SDL, call the next function for SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEWHEEL;
 // the transformation lets you scale from SDL mouse coords to stb_tilemap_editor coords
 extern void stbte_mouse_sdl(stbte_tilemap *tm, const void *sdl_event, float xscale, float yscale, int xoffset, int yoffset);
 
@@ -404,6 +404,8 @@ extern void stbte_mouse_sdl(stbte_tilemap *tm, const void *sdl_event, float xsca
 extern void stbte_mouse_move(stbte_tilemap *tm, int x, int y, int shifted, int scrollkey);
 extern void stbte_mouse_button(stbte_tilemap *tm, int x, int y, int right, int down, int shifted, int scrollkey);
 extern void stbte_mouse_wheel(stbte_tilemap *tm, int x, int y, int vscroll);
+
+// note: at the moment, mouse wheel events (SDL_MOUSEWHEEL) are ignored.
 
 // for keyboard, define your own mapping from keys to the following actions.
 // this is totally optional, as all features are accessible with the mouse
