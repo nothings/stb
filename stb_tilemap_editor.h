@@ -168,7 +168,7 @@
 //      #define STB_TILEMAP_EDITOR_IMPLEMENTATION
 //      // this triggers the implementation
 //
-//      void STBTE_DRAW_RECT(int x0, int y0, int x1, int y1, uint color);
+//      void STBTE_DRAW_RECT(int x0, int y0, int x1, int y1, unsigned int color);
 //      // this must draw a filled rectangle (exclusive on right/bottom)
 //      // color = (r<<16)|(g<<8)|(b)
 //      
