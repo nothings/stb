@@ -84,6 +84,7 @@ RECENT REVISION HISTORY:
     Fabian "ryg" Giesen                    Anael Seghezzi (is-16-bit query)
     Arseny Kapoulkine
     John-Mark Allen
+    Carmelo J Fdez-Agüera
 
  Bug & warning fixes
     Marc LeBlanc            David Woo          Guillaume George   Martins Mozeiko
