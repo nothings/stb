@@ -5244,7 +5244,7 @@ static stbi_uc *stbi__apng_pack_output_buffer(stbi__png *p, size_t *dir_offset)
    result_size *= p->s->img_out_n;
 
    if (p->num_frames > 0) {
-      frame_offsets = stbi__malloc(p->num_frames * sizeof(frame_offsets[0]));
+      frame_offsets = (size_t *) stbi__malloc(p->num_frames * sizeof(frame_offsets[0]));
 
       if (frame_offsets == NULL) {
          stbi__errpuc("outofmem", "Out of memory");
@@ -5264,7 +5264,7 @@ static stbi_uc *stbi__apng_pack_output_buffer(stbi__png *p, size_t *dir_offset)
       result_size += (p->num_frames - 1) * sizeof(stbi__apng_frame_directory_entry); // subtract 1 to account for frames[1] in the directory
    }
 
-   result = stbi__malloc(result_size);
+   result = (stbi_uc *) stbi__malloc(result_size);
 
    if (result == NULL) {
       stbi__errpuc("outofmem", "Out of memory");
