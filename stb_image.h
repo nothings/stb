@@ -5232,7 +5232,6 @@ static stbi_uc *stbi__apng_pack_output_buffer(stbi__png *p, size_t *dir_offset)
    size_t pad_bytes = 0;
    size_t write_cursor = 0;
    size_t write_size = 0;
-   size_t *frame_offsets = NULL;
 
    result_size = p->s->img_x * p->s->img_y;
 
@@ -5244,13 +5243,6 @@ static stbi_uc *stbi__apng_pack_output_buffer(stbi__png *p, size_t *dir_offset)
    result_size *= p->s->img_out_n;
 
    if (p->num_frames > 0) {
-      frame_offsets = (size_t *) stbi__malloc(p->num_frames * sizeof(frame_offsets[0]));
-
-      if (frame_offsets == NULL) {
-         stbi__errpuc("outofmem", "Out of memory");
-         goto cleanup;
-      }
-
       // Make sure the directory is on a byte offset which is a multiple of 4
       if ((result_size & 3) != 0)
          pad_bytes = ((result_size + 3) & ~3) - result_size;
@@ -5268,7 +5260,7 @@ static stbi_uc *stbi__apng_pack_output_buffer(stbi__png *p, size_t *dir_offset)
 
    if (result == NULL) {
       stbi__errpuc("outofmem", "Out of memory");
-      goto cleanup;
+      return result;
    }
 
    write_size = p->s->img_x * p->s->img_y * p->s->img_out_n;
@@ -5277,15 +5269,11 @@ static stbi_uc *stbi__apng_pack_output_buffer(stbi__png *p, size_t *dir_offset)
 
    for (i = 0; i < p->num_frames; ++i) {
       if (p->frames[i].out) {
-         frame_offsets[i] = write_cursor;
-
          write_size = p->frames[i].width * p->frames[i].height * p->s->img_out_n;
 
          memcpy(result + write_cursor, p->frames[i].out, write_size);
 
          write_cursor += write_size;
-      } else {
-         frame_offsets[i] = 0;
       }
    }
 
@@ -5323,9 +5311,6 @@ static stbi_uc *stbi__apng_pack_output_buffer(stbi__png *p, size_t *dir_offset)
          memcpy(result + write_cursor, &entry, sizeof(entry)); write_cursor += sizeof(entry);
       }
    }
-
-cleanup:
-   STBI_FREE(frame_offsets); frame_offsets = NULL;
 
    return result;
 }
