@@ -159,6 +159,8 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 #endif
 
 #include <stdarg.h> // for va_list()
+#include <stdint.h> // for intmax_t
+#include <stddef.h> // for size_t, ptrdiff_t
 
 #ifndef STB_SPRINTF_MIN
 #define STB_SPRINTF_MIN 512 // how many characters per callback
@@ -445,13 +447,17 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          break;
       // are we 64-bit on intmax? (c99)
       case 'j':
-         fl |= STBSP__INTMAX;
+         fl |= ((sizeof(intmax_t) == 8) ? STBSP__INTMAX : 0);
          ++f;
          break;
-      // are we 64-bit on size_t or ptrdiff_t? (c99)
+      // are we 64-bit on size_t? (c99)
       case 'z':
+         fl |= ((sizeof(size_t) == 8) ? STBSP__INTMAX : 0);
+         ++f;
+         break;
+      // are we 64-bit on ptrdiff_t? (c99)
       case 't':
-         fl |= ((sizeof(char *) == 8) ? STBSP__INTMAX : 0);
+         fl |= ((sizeof(ptrdiff_t) == 8) ? STBSP__INTMAX : 0);
          ++f;
          break;
       // are we 64-bit (msft style)
