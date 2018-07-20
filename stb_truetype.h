@@ -46,6 +46,7 @@
 //       Rob Loach                  Cort Stratton
 //       Kenney Phillis Jr.         github:oyvindjam
 //       Brian Costabile            github:vassvik
+//       Krzysztof Kosiński
 //       
 // VERSION HISTORY
 //
@@ -2451,7 +2452,6 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
                             stbtt_uint16 valueFormat1 = ttUSHORT(table + 4);
                             stbtt_uint16 valueFormat2 = ttUSHORT(table + 6);
                             stbtt_int32 valueRecordPairSizeInBytes = 2;
-                            stbtt_uint16 pairSetCount = ttUSHORT(table + 8);
                             stbtt_uint16 pairPosOffset = ttUSHORT(table + 10 + 2 * coverageIndex);
                             stbtt_uint8 *pairValueTable = table + pairPosOffset;
                             stbtt_uint16 pairValueCount = ttUSHORT(pairValueTable);
@@ -2462,7 +2462,8 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
                             STBTT_GPOS_TODO_assert(valueFormat2 == 0);
                             if (valueFormat2 != 0) return 0;
 
-                            STBTT_assert(coverageIndex < pairSetCount);
+                            // ttUSHORT(table + 8) is the pair set count.
+                            STBTT_assert(coverageIndex < ttUSHORT(table + 8));
 
                             needle=glyph2;
                             r=pairValueCount-1;
