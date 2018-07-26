@@ -998,6 +998,14 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
    int type = mymap[filter_type];
    unsigned char *z = pixels + stride_bytes * (stbi__flip_vertically_on_write ? height-1-y : y);
    int signed_stride = stbi__flip_vertically_on_write ? -stride_bytes : stride_bytes;
+    
+   // sorry for not optimizing the other paths
+   if(type==0)
+   {
+      memcpy(line_buffer, z, width*n);
+      return;
+   }
+    
    for (i = 0; i < n; ++i) {
       switch (type) {
          case 0: line_buffer[i] = z[i]; break;
