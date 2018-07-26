@@ -923,6 +923,9 @@ unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_l
 
 static unsigned int stbiw__crc32(unsigned char *buffer, int len)
 {
+#ifdef STBIW_CRC32
+    return STBIW_CRC32(buffer, len);
+#else
    static unsigned int crc_table[256] =
    {
       0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA, 0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
@@ -964,6 +967,7 @@ static unsigned int stbiw__crc32(unsigned char *buffer, int len)
    for (i=0; i < len; ++i)
       crc = (crc >> 8) ^ crc_table[buffer[i] ^ (crc & 0xff)];
    return ~crc;
+#endif
 }
 
 #define stbiw__wpng4(o,a,b,c,d) ((o)[0]=STBIW_UCHAR(a),(o)[1]=STBIW_UCHAR(b),(o)[2]=STBIW_UCHAR(c),(o)[3]=STBIW_UCHAR(d),(o)+=4)
