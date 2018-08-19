@@ -120,6 +120,7 @@ CREDITS:
    Jon Olick              -    original jo_jpeg.cpp code
    Daniel Gibson          -    integrate JPEG, allow external zlib
    Aarni Koskela          -    allow choosing PNG filter
+   Marcos Slomp           -    PFM (Portable FloatMap)
 
    bugfixes:
       github:Chribba
