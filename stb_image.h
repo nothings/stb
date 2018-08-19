@@ -31,6 +31,7 @@
       HDR (radiance rgbE format)
       PIC (Softimage PIC)
       PNM (PPM and PGM binary only)
+      PFM (Portable FloatMap)
 
       Animated GIF still needs a proper API, but here's one way to do it:
           http://gist.github.com/urraka/685d9a6340b26b830d49
@@ -393,10 +394,10 @@ STBIDEF stbi_us *stbi_load_from_file_16(FILE *f, int *x, int *y, int *channels_i
    #endif
 #endif
 
-#ifndef STBI_NO_HDR
+#if !defined(STBI_NO_HDR) || !defined(STBI_NO_PFM)
    STBIDEF void   stbi_hdr_to_ldr_gamma(float gamma);
    STBIDEF void   stbi_hdr_to_ldr_scale(float scale);
-#endif // STBI_NO_HDR
+#endif // STBI_NO_HDR || STBI_NO_PFM
 
 #ifndef STBI_NO_LINEAR
    STBIDEF void   stbi_ldr_to_hdr_gamma(float gamma);
@@ -471,7 +472,7 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 #if defined(STBI_ONLY_JPEG) || defined(STBI_ONLY_PNG) || defined(STBI_ONLY_BMP) \
   || defined(STBI_ONLY_TGA) || defined(STBI_ONLY_GIF) || defined(STBI_ONLY_PSD) \
   || defined(STBI_ONLY_HDR) || defined(STBI_ONLY_PIC) || defined(STBI_ONLY_PNM) \
-  || defined(STBI_ONLY_ZLIB)
+  || defined(STBI_ONLY_PFM) || defined(STBI_ONLY_ZLIB)
    #ifndef STBI_ONLY_JPEG
    #define STBI_NO_JPEG
    #endif
@@ -499,6 +500,9 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
    #ifndef STBI_ONLY_PNM
    #define STBI_NO_PNM
    #endif
+   #ifndef STBI_ONLY_PFM
+   #define STBI_NO_PFM
+   #endif
 #endif
 
 #if defined(STBI_NO_PNG) && !defined(STBI_SUPPORT_ZLIB) && !defined(STBI_NO_ZLIB)
@@ -512,7 +516,7 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 #include <string.h>
 #include <limits.h>
 
-#if !defined(STBI_NO_LINEAR) || !defined(STBI_NO_HDR)
+#if !defined(STBI_NO_LINEAR) || !defined(STBI_NO_HDR) || !defined(STBI_NO_PFM)
 #include <math.h>  // ldexp, pow
 #endif
 
@@ -821,6 +825,12 @@ static float   *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int 
 static int      stbi__hdr_info(stbi__context *s, int *x, int *y, int *comp);
 #endif
 
+#ifndef STBI_NO_PFM
+static int      stbi__pfm_test(stbi__context *s);
+static float   *stbi__pfm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
+static int      stbi__pfm_info(stbi__context *s, int *x, int *y, int *comp);
+#endif
+
 #ifndef STBI_NO_PIC
 static int      stbi__pic_test(stbi__context *s);
 static void    *stbi__pic_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
@@ -958,7 +968,7 @@ STBIDEF void stbi_image_free(void *retval_from_stbi_load)
 static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp);
 #endif
 
-#ifndef STBI_NO_HDR
+#if !defined(STBI_NO_HDR) || !defined(STBI_NO_PFM)
 static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp);
 #endif
 
@@ -1001,6 +1011,13 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    #ifndef STBI_NO_HDR
    if (stbi__hdr_test(s)) {
       float *hdr = stbi__hdr_load(s, x,y,comp,req_comp, ri);
+      return stbi__hdr_to_ldr(hdr, *x, *y, req_comp ? req_comp : *comp);
+   }
+   #endif
+
+   #ifndef STBI_NO_PFM
+   if (stbi__pfm_test(s)) {
+      float *hdr = stbi__pfm_load(s, x,y,comp,req_comp, ri);
       return stbi__hdr_to_ldr(hdr, *x, *y, req_comp ? req_comp : *comp);
    }
    #endif
@@ -1131,7 +1148,7 @@ static stbi__uint16 *stbi__load_and_postprocess_16bit(stbi__context *s, int *x, 
    return (stbi__uint16 *) result;
 }
 
-#if !defined(STBI_NO_HDR) || !defined(STBI_NO_LINEAR)
+#if !defined(STBI_NO_HDR) || !defined(STBI_NO_LINEAR) || !defined(STBI_NO_PFM)
 static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, int req_comp)
 {
    if (stbi__vertically_flip_on_load && result != NULL) {
@@ -1262,6 +1279,15 @@ static float *stbi__loadf_main(stbi__context *s, int *x, int *y, int *comp, int 
       return hdr_data;
    }
    #endif
+   #ifndef STBI_NO_PFM
+   if (stbi__pfm_test(s)) {
+      stbi__result_info ri;
+      float *hdr_data = stbi__pfm_load(s,x,y,comp,req_comp, &ri);
+      if (hdr_data)
+         stbi__float_postprocess(hdr_data,x,y,comp,req_comp);
+      return hdr_data;
+   }
+   #endif
    data = stbi__load_and_postprocess_8bit(s, x, y, comp, req_comp);
    if (data)
       return stbi__ldr_to_hdr(data, *x, *y, req_comp ? req_comp : *comp);
@@ -1309,10 +1335,21 @@ STBIDEF float *stbi_loadf_from_file(FILE *f, int *x, int *y, int *comp, int req_
 
 STBIDEF int stbi_is_hdr_from_memory(stbi_uc const *buffer, int len)
 {
-   #ifndef STBI_NO_HDR
+   #if !defined(STBI_NO_HDR) || !defined(STBI_NO_PFM)
    stbi__context s;
    stbi__start_mem(&s,buffer,len);
-   return stbi__hdr_test(&s);
+   int res = 0;
+   #ifndef STBI_NO_HDR
+   if (!res) {
+     res = stbi__hdr_test(&s);
+   }
+   #endif
+   #ifndef STBI_NO_PFM
+   if (!res) {
+     res = stbi__pfm_test(&s);
+   }
+   #endif
+   return res;
    #else
    STBI_NOTUSED(buffer);
    STBI_NOTUSED(len);
@@ -1334,12 +1371,21 @@ STBIDEF int      stbi_is_hdr          (char const *filename)
 
 STBIDEF int stbi_is_hdr_from_file(FILE *f)
 {
-   #ifndef STBI_NO_HDR
+   #if !defined(STBI_NO_HDR) || !defined(STBI_NO_PFM)
    long pos = ftell(f);
-   int res;
    stbi__context s;
    stbi__start_file(&s,f);
-   res = stbi__hdr_test(&s);
+   int res = 0;
+   #ifndef STBI_NO_HDR
+   if (!res) {
+     res = stbi__hdr_test(&s);
+   }
+   #endif
+   #ifndef STBI_NO_PFM
+   if (!res) {
+     res = stbi__pfm_test(&s);
+   }
+   #endif
    fseek(f, pos, SEEK_SET);
    return res;
    #else
@@ -1351,10 +1397,21 @@ STBIDEF int stbi_is_hdr_from_file(FILE *f)
 
 STBIDEF int      stbi_is_hdr_from_callbacks(stbi_io_callbacks const *clbk, void *user)
 {
-   #ifndef STBI_NO_HDR
+   #if !defined(STBI_NO_HDR) || !defined(STBI_NO_PFM)
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
-   return stbi__hdr_test(&s);
+   int res = 0;
+   #ifndef STBI_NO_HDR
+   if (!res) {
+     res = stbi__hdr_test(&s);
+   }
+   #endif
+   #ifndef STBI_NO_PFM
+   if (!res) {
+     res = stbi__pfm_test(&s);
+   }
+   #endif
+   return res;
    #else
    STBI_NOTUSED(clbk);
    STBI_NOTUSED(user);
@@ -1630,7 +1687,7 @@ static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp)
 }
 #endif
 
-#ifndef STBI_NO_HDR
+#if !defined(STBI_NO_HDR) || !defined(STBI_NO_PFM)
 #define stbi__float2int(x)   ((int) (x))
 static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp)
 {
@@ -6839,6 +6896,213 @@ static int stbi__hdr_info(stbi__context *s, int *x, int *y, int *comp)
 }
 #endif // STBI_NO_HDR
 
+// *************************************************************************************************
+// Portable FloatMap (PFM) loader
+// stb port by Marcos Slomp
+// pfm specs by Paul Debevec http://www.pauldebevec.com/Research/HDR/PFM/
+#ifndef STBI_NO_PFM
+
+static int stbi__pfm_test(stbi__context* s)
+{
+   char MAGIC [4];
+   MAGIC[0] = stbi__get8(s);
+   MAGIC[1] = stbi__get8(s);
+   MAGIC[2] = stbi__get8(s);
+   MAGIC[3] = '\0';
+   stbi__rewind(s);
+
+   int r = (MAGIC[0] == 'P')
+           &&
+          ((MAGIC[1] == 'F') || (MAGIC[1] == 'f'))
+           &&
+           (MAGIC[2] == '\x0a');
+   return r;
+}
+
+#define STBI__PFM_BUFLEN  64
+static char *stbi__pfm_gettoken(stbi__context *z, char *buffer)
+{
+   int i;
+   for (i = 0; i < STBI__PFM_BUFLEN-1; ++i) {
+       buffer[i] = stbi__get8(z);
+       if (buffer[i] == '\x0a')
+           buffer[++i] = '\0';
+       if (!buffer[i])
+           break;
+   }
+   buffer[i] = '\0';
+   return buffer;
+}
+
+static int stbi__pfm_read_header(stbi__context *s, int *x, int *y, int *comp, int* is_little_endian)
+{
+   char buffer[STBI__PFM_BUFLEN];
+   char *token;
+   int width, height;
+   int num_channels;
+   float endianness_;
+
+   // Check identifier
+   token = stbi__pfm_gettoken(s, buffer);
+   if (strcmp(token, "PF\x0a") != 0 && strcmp(token, "Pf\x0a") != 0)
+       return stbi__err("not PFM", "Corrupt PFM image");
+
+   // infer number of channels from the identifier string:
+   num_channels = 0;
+   if (token[1] == 'F')
+       num_channels = 3;
+   else if (token[1] == 'f')
+       num_channels = 1;
+   else
+       return stbi__err("impossible PFM", "impossible PFM image");
+
+   // retrieve image dimensions:
+   token = stbi__pfm_gettoken(s, buffer);
+   width  = (int)strtol(token, &token, 10);
+   if ((width < 0) || (*token != ' '))
+       return stbi__err("bad PFM", "ill-formed PFM image");
+   height = (int)strtol(token, &token, 10);
+   if ((height < 0) || (*token != '\x0a'))
+       return stbi__err("bad PFM", "ill-formed PFM image");
+
+   // retrieve endianness information:
+   token = stbi__pfm_gettoken(s, buffer);
+   endianness_ = strtof(token, &token);
+   if (*token != '\x0a')
+       return stbi__err("bad PFM", "ill-formed PFM image");
+
+   // ensure endianness information is according to the spec:
+   if (endianness_ == -1.0f)
+       *is_little_endian = 1;
+   else if (endianness_ == +1.0f)
+       *is_little_endian = 0;
+   else
+       return stbi__err("bad PFM", "ill-formed PFM image");
+
+   *x = width;
+   *y = height;
+   *comp = num_channels;
+
+   return 1;
+}
+
+static float *stbi__pfm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
+{
+   int width, height;
+   int num_channels;
+   int is_little_endian;
+   float *hdr_data;
+   int num_bytes;
+   int zero;
+   int num_floats;
+   int num_pixels;
+   int i;
+   float* pixel;
+   stbi_uc* dw;
+
+   if (!stbi__pfm_read_header(s, &width, &height, &num_channels, &is_little_endian))
+       return NULL; // stbi__err reason has already been set by stbi__pfm_read_header
+
+    // 'num_channels' should be either 1 (Y) or 3 (RGB)
+    STBI_ASSERT((num_channels == 1) || (num_channels == 3));
+
+   if (req_comp == 0)
+       req_comp = num_channels;
+
+   num_pixels = width * height;
+   // HACK(marcos): adding 3 pixels of padding to simplify the "slow path" below
+   num_bytes = (num_pixels+3) * req_comp * sizeof(float);
+   hdr_data = (float *)STBI_MALLOC(num_bytes);
+   if (!hdr_data)
+       return stbi__errpf("outofmem", "Out of memory");
+
+   // fast path: may read all pixels at once
+   if (req_comp == num_channels)
+   {
+       // ensure the file contains all pixels
+       if (!stbi__getn(s, (stbi_uc *)hdr_data, num_bytes)) {
+           STBI_FREE(hdr_data);
+           return stbi__errpf("trunc PFM", "incomplete PFM image");
+       }
+   } else {
+       // slow path: read pixels one-by-one, converting accordingly
+       pixel = hdr_data;
+       for (i = 0; i < num_pixels; ++i) {
+           stbi__getn(s, (stbi_uc*)pixel, num_channels * sizeof(float));
+           // convert channels based on 'num_channels' -> 'req_comp'
+           // --- RGB => Y, YA,      RGBA
+           // --- Y   =>    YA, RGB, RGBA
+           pixel[3] = 1.0f;
+           if (num_channels == 1)
+               pixel[1] = pixel[2] = pixel[0];
+           if ((num_channels == 3) && (req_comp < 3))
+               pixel[0] = ( pixel[0]
+                          + pixel[1]
+                          + pixel[2] ) / 3.0f;  // <- luminance formula from 'stbi__hdr_convert()'
+           if (req_comp == 2)
+               pixel[1] = 1.0f;
+
+           pixel += req_comp;
+       }
+   }
+
+   // ensure there's nothing else in the file
+   zero = stbi__get8(s);
+   if (!zero && !stbi__at_eof(s)) {
+       STBI_FREE(hdr_data);
+       return stbi__errpf("padded PFM", "overpadded PFM image");
+   }
+
+   // PFM pixels are specified in left to right, BOTTOM to top order...
+   if (stbi__vertically_flip_on_load)   // if user wants flipped image
+      (void)0; // do nothing: image is already flipped as per the spec
+   else
+      stbi__vertical_flip(hdr_data, width, height, num_channels * sizeof(float));
+
+   // ensure all float values are little-endian:
+   if (!is_little_endian) {
+       num_floats = width * height * num_channels;
+       for (i = 0; i < num_floats; ++i) {
+           dw = (stbi_uc*)&hdr_data[i];
+           // swap [0] and [3]
+           dw[0] ^= dw[3];
+           dw[3] ^= dw[0];
+           dw[0] ^= dw[3];
+           // swap [1] and [2]
+           dw[1] ^= dw[2];
+           dw[2] ^= dw[1];
+           dw[1] ^= dw[2];
+       }
+   }
+
+   // All good! Now safe to report back image information:
+
+   *x = width;
+   *y = height;
+   if (comp)
+       *comp = num_channels;
+
+   return hdr_data;
+}
+
+static int stbi__pfm_info(stbi__context *s, int *x, int *y, int *comp)
+{
+   int dummy;
+   int is_little_endian;
+
+   if (!x) x = &dummy;
+   if (!y) y = &dummy;
+   if (!comp) comp = &dummy;
+
+   int ret = stbi__pfm_read_header(s, x, y, comp, &is_little_endian);
+   if (!ret) {
+       stbi__rewind(s);
+       stbi__err(NULL, NULL);   // reset the stbi__err message that has been set by stbi__pfm_read_header
+   }
+   return ret;
+}
+#endif // STBI_NO_PFM
+
 #ifndef STBI_NO_BMP
 static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
 {
@@ -7139,6 +7403,10 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 
    #ifndef STBI_NO_HDR
    if (stbi__hdr_info(s, x, y, comp))  return 1;
+   #endif
+
+   #ifndef STBI_NO_PFM
+   if (stbi__pfm_info(s, x, y, comp))  return 1;
    #endif
 
    // test tga last because it's a crappy test!

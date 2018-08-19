@@ -173,6 +173,7 @@ STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const 
 STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
 STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const void  *data, int quality);
+STBIWDEF int stbi_write_pfm(char const *filename, int w, int h, int comp, const float *data);
 #endif
 
 typedef void stbi_write_func(void *context, void *data, int size);
@@ -182,6 +183,7 @@ STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w,
 STBIWDEF int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
 STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, int quality);
+STBIWDEF int stbi_write_pfm_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
 
 STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 
@@ -713,6 +715,97 @@ STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const 
    stbi__write_context s;
    if (stbi__start_write_file(&s,filename)) {
       int r = stbi_write_hdr_core(&s, x, y, comp, (float *) data);
+      stbi__end_write_file(&s);
+      return r;
+   } else
+      return 0;
+}
+#endif // STBI_WRITE_NO_STDIO
+
+
+// *************************************************************************************************
+// Portable FloatMap (PFM) writer
+// stb port by Marcos Slomp
+// pfm specs by Paul Debevec http://www.pauldebevec.com/Research/HDR/PFM/
+
+static int stbi_write_pfm_core(stbi__write_context *s, int x, int y, int comp, float *data)
+{
+   int i, j, k, len, dcomp;
+   float* scanline;
+   float* src_pixel;
+   float  dst_pixel [3];
+   char header [64];
+
+   if (y <= 0 || x <= 0 || data == NULL)
+      return 0;
+
+   if (comp < 1 || comp > 4)
+       return 0;
+
+   // assume data floats are little-endian, and save PFM also as little-endian
+
+#ifdef STBI_MSC_SECURE_CRT
+   len = sprintf_s(header, "PF\x0a%d %d\x0a-1.0\x0a", x, y);
+#else
+   len = sprintf(header, "PF\x0a%d %d\x0a-1.0\x0a", x, y);
+#endif
+
+   if (comp <= 2) {
+       header[1] = 'f'; // monochromatic (1=Y or 2=YA)
+   }
+
+   s->func(s->context, header, len);
+
+   // handle comp values unsupported by PFM:
+   // - 4 falls-through to 3 (RGBA -> RGB)
+   // - 2 falls-through to 1 (YA -> Y)
+   dcomp = comp;
+   if ((comp == 2) || (comp == 4))
+      dcomp = comp - 1;
+
+   // PFM pixels are specified in left to right, BOTTOM to top order...
+   for(i = 0; i < y; ++i) {
+      if (stbi__flip_vertically_on_write)
+         j = i; // do nothing: image will appear flipped in the file
+      else
+         j = y - i - 1;
+      scanline = &data[j * x * comp];
+      // fast path: write entire scanline
+      // note that for this to happen, dcomp will be either 1 or 3
+      if (comp == dcomp)
+         s->func(s->context, scanline, (x * comp * sizeof(float)));
+      // slow path: write pixels one-by-one, converting accordingly
+      else {
+         // when (comp == 4) then (dcomp == 3)
+         // when (comp == 2) then (dcomp == 1)
+         STBIW_ASSERT(dcomp == comp-1);
+         for (k = 0; k < x; ++k) {
+            src_pixel = &scanline[k * comp];
+            dst_pixel[0] = src_pixel[0];    // R or Y
+            dst_pixel[1] = src_pixel[1];    // G or A
+            dst_pixel[2] = src_pixel[2];    // B or ??? <- HACK(marcos): may page-fault for the very last src_pixel
+            // will write out either 3 or 1 float(s):
+            s->func(s->context, &dst_pixel, (dcomp * sizeof(float)));
+         }
+      }
+   }
+
+   return 1;
+}
+
+STBIWDEF int stbi_write_pfm_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const float *data)
+{
+   stbi__write_context s;
+   stbi__start_write_callbacks(&s, func, context);
+   return stbi_write_pfm_core(&s, x, y, comp, (float *) data);
+}
+
+#ifndef STBI_WRITE_NO_STDIO
+STBIWDEF int stbi_write_pfm(char const *filename, int x, int y, int comp, const float *data)
+{
+   stbi__write_context s;
+   if (stbi__start_write_file(&s,filename)) {
+      int r = stbi_write_pfm_core(&s, x, y, comp, (float *) data);
       stbi__end_write_file(&s);
       return r;
    } else
