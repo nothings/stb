@@ -7010,9 +7010,9 @@ static float *stbi__pfm_load(stbi__context *s, int *x, int *y, int *comp, int re
        req_comp = num_channels;
 
    num_pixels = width * height;
-   // HACK(marcos): adding 3 pixels of padding to simplify the "slow path" below
-   num_bytes = (num_pixels+3) * req_comp * sizeof(float);
-   hdr_data = (float *)STBI_MALLOC(num_bytes);
+   num_bytes = num_pixels * req_comp * sizeof(float);
+   // HACK(marcos): adding 3 floats worth of padding to simplify the "slow path" below
+   hdr_data = (float *)STBI_MALLOC(num_bytes + 3*sizeof(float));
    if (!hdr_data)
        return stbi__errpf("outofmem", "Out of memory");
 
@@ -7057,7 +7057,7 @@ static float *stbi__pfm_load(stbi__context *s, int *x, int *y, int *comp, int re
    if (stbi__vertically_flip_on_load)   // if user wants flipped image
       (void)0; // do nothing: image is already flipped as per the spec
    else
-      stbi__vertical_flip(hdr_data, width, height, num_channels * sizeof(float));
+      stbi__vertical_flip(hdr_data, width, height, req_comp * sizeof(float));
 
    // ensure all float values are little-endian:
    if (!is_little_endian) {
