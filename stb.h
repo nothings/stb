@@ -10467,6 +10467,14 @@ static void outliterals(stb_uchar *in, int numlit)
    }
 }
 
+// 0 = fast compression but worse ratio
+// 1 = slower but better ratio
+static int  stb__level = 0;
+void stb_compress_level(int l)
+{
+   stb__level = l;
+}
+
 static int stb__window = 0x40000; // 256K
 void stb_compress_window(int z)
 {
@@ -10561,7 +10569,7 @@ static int stb_compress_chunk(stb_uchar *history,
       // update hashes through match, gives a small compression ratio improvement
       // things that come to mind: matching inside old match and continuing will be encoded
       // with 1 match instead of two, also closer sub-matches may encode better
-      #define stb__uph()    update_hashes(chash, mask, q+1, end, best-1)
+      #define stb__uph()    if (stb__level>0) update_hashes(chash, mask, q+1, end, best-1)
 
       // rather than search for all matches, only try 4 candidate locations,
       // chosen based on 4 different hash functions of different lengths.
