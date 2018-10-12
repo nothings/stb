@@ -96,7 +96,7 @@ static void stblkck_internal_print(const char *reason, const char *file,  int li
    // and the older ones don't even have %lld either... however, the old compilers
    // without "long long" don't support 64-bit targets either, so here's the
    // compromise:
-   #if defined(_MSC_VER) && _MSC_VER < 1400 // before VS 2005
+   #if (defined(_MSC_VER) && _MSC_VER < 1400) /* before VS 2005 */ || defined(__MINGW32__)
       printf("%-6s: %s (%4d): %8d bytes at %p\n", reason, file, line, (int)size, ptr);
    #else
       printf("%-6s: %s (%4d): %8lld bytes at %p\n", reason, file, line, (long long)size, ptr);
@@ -112,16 +112,20 @@ void stb_leakcheck_dumpmem(void)
    stb_leakcheck_malloc_info *mi = mi_head;
    while (mi) {
       if ((ptrdiff_t) mi->size >= 0)
+      {
          stblkck_internal_print("LEAKED", mi->file, mi->line, mi->size, mi+1);
          printf("LEAKED: %s (%4d): %8d bytes at %p\n", mi->file, mi->line, (int) mi->size, mi+1);
+      }
       mi = mi->next;
    }
    #ifdef STB_LEAKCHECK_SHOWALL
    mi = mi_head;
    while (mi) {
       if ((ptrdiff_t) mi->size < 0)
+      {
          stblkck_internal_print("FREED", mi->file, mi->line, ~mi->size, mi+1);
          printf("FREED : %s (%4d): %8d bytes at %p\n", mi->file, mi->line, (int) ~mi->size, mi+1);
+      }
       mi = mi->next;
    }
    #endif
@@ -130,6 +134,8 @@ void stb_leakcheck_dumpmem(void)
 
 #ifndef INCLUDE_STB_LEAKCHECK_H
 #define INCLUDE_STB_LEAKCHECK_H
+
+#include <stdlib.h> // we want to define the macros *after* stdlib to avoid a slew of errors
 
 #define malloc(sz)    stb_leakcheck_malloc(sz, __FILE__, __LINE__)
 #define free(p)       stb_leakcheck_free(p)
