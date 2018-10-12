@@ -5,3 +5,7 @@ CPPFLAGS = -Wno-write-strings -DSTB_DIVIDE_TEST
 all:
 	$(CC) $(INCLUDES) $(CFLAGS) ../stb_vorbis.c test_c_compilation.c -lm
 	$(CC) $(INCLUDES) $(CPPFLAGS) test_cpp_compilation.cpp -lm -lstdc++
+	$(MAKE) -C tx all || true
+	prove -v -f tx || true
+	$(MAKE) -C t all
+	prove -f
