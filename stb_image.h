@@ -7093,12 +7093,24 @@ static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
    stbi__pnm_skip_whitespace(s, &c);
 
    *x = stbi__pnm_getinteger(s, &c); // read width
+   if(*x < 0) {
+	*x = 0;
+        return stbi__err("x < 0", "PNM image width overflow");
+   }
    stbi__pnm_skip_whitespace(s, &c);
 
    *y = stbi__pnm_getinteger(s, &c); // read height
+   if(*y < 0) {
+	*y = 0;
+        return stbi__err("y < 0", "PNM image height overflow");
+   }
    stbi__pnm_skip_whitespace(s, &c);
 
    maxv = stbi__pnm_getinteger(s, &c);  // read max value
+   if(maxv < 0) {
+	maxv = 0;
+        return stbi__err("max value < 0", "PNM image maximum value overflow");
+   }
 
    if (maxv > 255)
       return stbi__err("max value > 255", "PPM image not 8-bit");
