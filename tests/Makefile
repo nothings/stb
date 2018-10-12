@@ -9,3 +9,10 @@ all:
 	prove -v -f tx || true
 	$(MAKE) -C t all
 	prove -f
+
+clean:
+	rm -f *.o
+	$(MAKE) -C tx clean
+	$(MAKE) -C t clean
+
+.PHONY: all clean
