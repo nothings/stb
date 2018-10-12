@@ -7184,16 +7184,29 @@ static int      stbi__pnm_info_raw(stbi__pnm *p, int *x, int *y, int *comp, char
    } else p->format = STBI__PNM_BINARY;
    *comp = (t == '6' || t == '3') ? 3 : 1;  // '5' is 1-component .pgm; '6' is 3-component .ppm
 
+<<<<<<< HEAD
    *c = (char) stbi__get8(p->s);
    stbi__pnm_skip_whitespace(p->s, c);
    *x = stbi__pnm_getinteger(p->s, c); // read width
+   if(*x < 0) {
+      *x = 0;
+      return stbi__err("x < 0", "PNM image width overflow");
+   }
 
    stbi__pnm_skip_whitespace(p->s, c);
    *y = stbi__pnm_getinteger(p->s, c); // read height
+   if(*y < 0) {
+      *y = 0;
+      return stbi__err("y < 0", "PNM image height overflow");
+   }
 
    if (p->format != STBI__PNM_BITMAP) {
       stbi__pnm_skip_whitespace(p->s, c);
       p->maxv = stbi__pnm_getinteger(p->s, c);  // read max value
+      if(maxv < 0) {
+         maxv = 0;
+         return stbi__err("max value < 0", "PNM image maximum value overflow");
+      }
    } else
       p->maxv = 1;
 
