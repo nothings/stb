@@ -7211,7 +7211,7 @@ static int      stbi__pnm_info_raw(stbi__pnm *p, int *x, int *y, int *comp, char
       p->maxv = 1;
 
    if (p->maxv > 255)
-      return stbi__err("max value > 255", "PPM image not 8-bit");
+      return stbi__err("max value > 255", "PNM image not 8-bit");
    else
       return 1;
 }
