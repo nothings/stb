@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.14 - public domain
+/* Ogg Vorbis audio decoder - v1.14 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
@@ -48,11 +48,11 @@
 //    1.04    - 2014-08-27 - fix missing const-correct case in API
 //    1.03    - 2014-08-07 - warning fixes
 //    1.02    - 2014-07-09 - declare qsort comparison as explicitly _cdecl in Windows
-//    1.01    - 2014-06-18 - fix stb_vorbis_get_samples_float (interleaved was correct)
-//    1.0     - 2014-05-26 - fix memory leaks; fix warnings; fix bugs in >2-channel;
-//                           (API change) report sample rate for decode-full-file funcs
-//
-// See end of file for full version history.
+      1.01    - 2014-06-18 - fix stb_vorbis_get_samples_float (interleaved was correct)
+      1.0     - 2014-05-26 - fix memory leaks; fix warnings; fix bugs in >2-channel;
+                           (API change) report sample rate for decode-full-file funcs
+
+ See end of file for full version history.*/
 
 
 //////////////////////////////////////////////////////////////////////////////
