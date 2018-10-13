@@ -15,6 +15,7 @@
 int main() {
 	printf("1..4\n");
 
+	int maxv = 15;
 	{
 int width, height, channels;
 unsigned char *image = stbi_load("images/feepP5.pgm",
@@ -26,6 +27,9 @@ unsigned char *image = stbi_load("images/feepP5.pgm",
 	if(width != 24 || height != 7 || channels != 1)
 		printf("not ");
 	printf("ok 1 - read grayscale image header\n");
+
+	for(size_t i = 0; i < sizeof(feepP58bit); i++)
+		image[i] = floor(image[i] * (255.0f/maxv) + 0.5f);
 
 	if(!(image && 0 == memcmp(image, feepP58bit, sizeof(feepP58bit))))
 		printf("not ");
@@ -45,6 +49,9 @@ unsigned char *image = stbi_load("images/feepP6.ppm",
 	if(width != 4 || height != 4 || channels != 3)
 		printf("not ");
 	printf("ok 3 - read RGB image header\n");
+
+	for(size_t i = 0; i < sizeof(feepP68bit); i++)
+		image[i] = floor(image[i] * (255.0f/maxv) + 0.5f);
 
 	if(!(image && 0 == memcmp(image, feepP68bit, sizeof(feepP68bit))))
 		printf("not ");
