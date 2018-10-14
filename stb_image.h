@@ -6999,19 +6999,36 @@ static int      stbi__pnm_test(stbi__context *s)
    char p, t;
    p = (char) stbi__get8(s);
    t = (char) stbi__get8(s);
-   if (p != 'P' || (t != '5' && t != '6')) {
+   if (p != 'P' || (t < '1' || t > '6')) {
        stbi__rewind( s );
        return 0;
    }
    return 1;
 }
 
+typedef enum {
+   STBI__PNM_BINARY,
+   STBI__PNM_ASCII,
+   STBI__PNM_BITMAP,
+} stbi__pnm_format;
+
+typedef struct {
+   stbi__context *s;
+   int maxv;
+   stbi__pnm_format format;
+} stbi__pnm;
+
+static int      stbi__pnm_info_raw(stbi__pnm *p, int *x, int *y, int *comp);
+static int      stbi__pnm_getinteger(stbi__context *s, char *c);
+
 static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
 {
    stbi_uc *out;
    STBI_NOTUSED(ri);
 
-   if (!stbi__pnm_info(s, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n))
+   stbi__pnm p;
+   p.s = s;
+   if (!stbi__pnm_info_raw(&p, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n))
       return 0;
 
    *x = s->img_x;
@@ -7023,7 +7040,23 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
 
    out = (stbi_uc *) stbi__malloc_mad3(s->img_n, s->img_x, s->img_y, 0);
    if (!out) return stbi__errpuc("outofmem", "Out of memory");
-   stbi__getn(s, out, s->img_n * s->img_x * s->img_y);
+
+   switch (p.format) {
+   case STBI__PNM_BINARY:
+      stbi__getn(s, out, s->img_n * s->img_x * s->img_y);
+      break;
+   default:
+      STBI_FREE(out);
+      return NULL;
+   }
+
+   if(p.maxv != 255) {
+      /* https://onlinegdb.com/ryWybrS0m */
+      size_t i;
+      int adjust = (255 << 16) / p.maxv;
+      for(i = 0; i < s->img_n * s->img_x * s->img_y; i++)
+         out[i] = (out[i] * adjust + 0x8000) >> 16;
+   }
 
    if (req_comp && req_comp != s->img_n) {
       out = stbi__convert_format(out, s->img_n, req_comp, s->img_x, s->img_y);
@@ -7068,42 +7101,59 @@ static int      stbi__pnm_getinteger(stbi__context *s, char *c)
    return value;
 }
 
-static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
+static int      stbi__pnm_info_raw(stbi__pnm *p, int *x, int *y, int *comp)
 {
-   int maxv, dummy;
-   char c, p, t;
+   int dummy;
+   char c, m, t;
 
    if (!x) x = &dummy;
    if (!y) y = &dummy;
    if (!comp) comp = &dummy;
 
-   stbi__rewind(s);
+   stbi__rewind(p->s);
 
    // Get identifier
-   p = (char) stbi__get8(s);
-   t = (char) stbi__get8(s);
-   if (p != 'P' || (t != '5' && t != '6')) {
-       stbi__rewind(s);
+   m = (char) stbi__get8(p->s);
+   t = (char) stbi__get8(p->s);
+   if (m != 'P') {
+       stbi__rewind(p->s);
        return 0;
    }
 
-   *comp = (t == '6') ? 3 : 1;  // '5' is 1-component .pgm; '6' is 3-component .ppm
+   if (t != '5' && t != '6') {
+       if (t != '2' && t != '3' && t != '1') {
+          if (t != '4') {
+            stbi__rewind(p->s);
+            return 0;
+          } else p->format = STBI__PNM_BITMAP;
+       } else p->format = STBI__PNM_ASCII;
+   } else p->format = STBI__PNM_BINARY;
+   *comp = (t == '6' || t == '3') ? 3 : 1;  // '5' is 1-component .pgm; '6' is 3-component .ppm
 
-   c = (char) stbi__get8(s);
-   stbi__pnm_skip_whitespace(s, &c);
+   c = (char) stbi__get8(p->s);
+   stbi__pnm_skip_whitespace(p->s, &c);
+   *x = stbi__pnm_getinteger(p->s, &c); // read width
 
-   *x = stbi__pnm_getinteger(s, &c); // read width
-   stbi__pnm_skip_whitespace(s, &c);
+   stbi__pnm_skip_whitespace(p->s, &c);
+   *y = stbi__pnm_getinteger(p->s, &c); // read height
 
-   *y = stbi__pnm_getinteger(s, &c); // read height
-   stbi__pnm_skip_whitespace(s, &c);
+   if (p->format != STBI__PNM_BITMAP) {
+      stbi__pnm_skip_whitespace(p->s, &c);
+      p->maxv = stbi__pnm_getinteger(p->s, &c);  // read max value
+   } else
+      p->maxv = 1;
 
-   maxv = stbi__pnm_getinteger(s, &c);  // read max value
-
-   if (maxv > 255)
+   if (p->maxv > 255)
       return stbi__err("max value > 255", "PPM image not 8-bit");
    else
       return 1;
+}
+
+static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
+{
+   stbi__pnm p;
+   p.s = s;
+   return stbi__pnm_info_raw(&p, x, y, comp);
 }
 #endif
 
