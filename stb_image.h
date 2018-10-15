@@ -7018,7 +7018,8 @@ typedef struct {
    stbi__pnm_format format;
 } stbi__pnm;
 
-static int      stbi__pnm_info_raw(stbi__pnm *p, int *x, int *y, int *comp);
+static int      stbi__pnm_info_raw(stbi__pnm *p, int *x, int *y, int *comp, char *c);
+static void     stbi__pnm_skip_whitespace(stbi__context *s, char *c);
 static int      stbi__pnm_getinteger(stbi__context *s, char *c);
 
 static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
@@ -7028,7 +7029,8 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
 
    stbi__pnm p;
    p.s = s;
-   if (!stbi__pnm_info_raw(&p, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n))
+   char c;
+   if (!stbi__pnm_info_raw(&p, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n, &c))
       return 0;
 
    *x = s->img_x;
@@ -7044,6 +7046,20 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
    switch (p.format) {
    case STBI__PNM_BINARY:
       stbi__getn(s, out, s->img_n * s->img_x * s->img_y);
+      break;
+   case STBI__PNM_ASCII: {
+      int y;
+      for(y = 0; y < s->img_y; y++) {
+         int x;
+         for(x = 0; x < s->img_x; x++) {
+            int n;
+            for(n = 0; n < s->img_n; n++) {
+               stbi__pnm_skip_whitespace(s, &c);
+               out[y * s->img_x * s->img_n + x * s->img_n + n] =
+                       stbi__pnm_getinteger(s, &c);
+            }
+         }
+      }}
       break;
    default:
       STBI_FREE(out);
@@ -7100,14 +7116,15 @@ static int      stbi__pnm_getinteger(stbi__context *s, char *c)
    return value;
 }
 
-static int      stbi__pnm_info_raw(stbi__pnm *p, int *x, int *y, int *comp)
+static int      stbi__pnm_info_raw(stbi__pnm *p, int *x, int *y, int *comp, char *c)
 {
    int dummy;
-   char c, m, t;
+   char _c, m, t;
 
    if (!x) x = &dummy;
    if (!y) y = &dummy;
    if (!comp) comp = &dummy;
+   if (!c) c= &_c;
 
    stbi__rewind(p->s);
 
@@ -7129,16 +7146,16 @@ static int      stbi__pnm_info_raw(stbi__pnm *p, int *x, int *y, int *comp)
    } else p->format = STBI__PNM_BINARY;
    *comp = (t == '6' || t == '3') ? 3 : 1;  // '5' is 1-component .pgm; '6' is 3-component .ppm
 
-   c = (char) stbi__get8(p->s);
-   stbi__pnm_skip_whitespace(p->s, &c);
-   *x = stbi__pnm_getinteger(p->s, &c); // read width
+   *c = (char) stbi__get8(p->s);
+   stbi__pnm_skip_whitespace(p->s, c);
+   *x = stbi__pnm_getinteger(p->s, c); // read width
 
-   stbi__pnm_skip_whitespace(p->s, &c);
-   *y = stbi__pnm_getinteger(p->s, &c); // read height
+   stbi__pnm_skip_whitespace(p->s, c);
+   *y = stbi__pnm_getinteger(p->s, c); // read height
 
    if (p->format != STBI__PNM_BITMAP) {
-      stbi__pnm_skip_whitespace(p->s, &c);
-      p->maxv = stbi__pnm_getinteger(p->s, &c);  // read max value
+      stbi__pnm_skip_whitespace(p->s, c);
+      p->maxv = stbi__pnm_getinteger(p->s, c);  // read max value
    } else
       p->maxv = 1;
 
@@ -7152,7 +7169,7 @@ static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
 {
    stbi__pnm p;
    p.s = s;
-   return stbi__pnm_info_raw(&p, x, y, comp);
+   return stbi__pnm_info_raw(&p, x, y, comp, NULL);
 }
 #endif
 
