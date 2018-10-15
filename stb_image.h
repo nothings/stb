@@ -7061,6 +7061,44 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
          }
       }}
       break;
+   case STBI__PNM_BITMAP: {
+      int ctr = 0, y;
+      for(y = 0; y < s->img_y; y++) {
+         int x;
+         for(x = 0; x < s->img_x; x++) {
+            if(ctr == 9) {
+               c = (char) stbi__get8(s);
+               ctr = 0;
+            }
+            switch (ctr++) {
+            case 0:
+               out[y * s->img_x + x] = c < 0;
+               break;
+            case 1:
+               out[y * s->img_x + x] = (c & 01000000) != 0;
+               break;
+            case 2:
+               out[y * s->img_x + x] = (c & 00100000) != 0;
+               break;
+            case 3:
+               out[y * s->img_x + x] = (c & 00010000) != 0;
+               break;
+            case 4:
+               out[y * s->img_x + x] = (c & 00001000) != 0;
+               break;
+            case 6:
+               out[y * s->img_x + x] = (c & 00000100) != 0;
+               break;
+            case 7:
+               out[y * s->img_x + x] = (c & 00000010) != 0;
+               break;
+            case 8:
+               out[y * s->img_x + x] = (c & 00000001) != 0;
+               break;
+            }
+         }
+      }}
+      break;
    default:
       STBI_FREE(out);
       return NULL;
