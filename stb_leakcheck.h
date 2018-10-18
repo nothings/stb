@@ -114,7 +114,7 @@ void stb_leakcheck_dumpmem(void)
       if ((ptrdiff_t) mi->size >= 0)
       {
          stblkck_internal_print("LEAKED", mi->file, mi->line, mi->size, mi+1);
-         printf("LEAKED: %s (%4d): %8d bytes at %p\n", mi->file, mi->line, (int) mi->size, mi+1);
+         printf("LEAKED: %s (%4d): %8d bytes at %p\n", mi->file, mi->line, (int) mi->size, (void*)(mi+1));
       }
       mi = mi->next;
    }
@@ -124,7 +124,7 @@ void stb_leakcheck_dumpmem(void)
       if ((ptrdiff_t) mi->size < 0)
       {
          stblkck_internal_print("FREED", mi->file, mi->line, ~mi->size, mi+1);
-         printf("FREED : %s (%4d): %8d bytes at %p\n", mi->file, mi->line, (int) ~mi->size, mi+1);
+         printf("FREED : %s (%4d): %8d bytes at %p\n", mi->file, mi->line, (int) ~mi->size, (void*)(mi+1));
       }
       mi = mi->next;
    }
