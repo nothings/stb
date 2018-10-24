@@ -224,9 +224,15 @@ static stbsp__int32 stbsp__real_to_parts(stbsp__int64 *bits, stbsp__int32 *expo,
 
 static char stbsp__period = '.';
 static char stbsp__comma = ',';
-static char stbsp__digitpair[201] =
+static union {
+   char digitpair_8bit[201];
+   stbsp__uint16 digitpair_16bit[201 / 2];
+} stbsp__digitpair = {
+   {
    "0001020304050607080910111213141516171819202122232425262728293031323334353637383940414243444546474849505152535455565758596061626364656667686970717273747576"
-   "7778798081828384858687888990919293949596979899";
+   "7778798081828384858687888990919293949596979899"
+   }
+};
 
 STBSP__PUBLICDEF void STB_SPRINTF_DECORATE(set_separators)(char pcomma, char pperiod)
 {
@@ -670,7 +676,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          if (dp > 0) {
             pr = (dp < (stbsp__int32)l) ? l - dp : 0;
          } else {
-            pr = -dp + ((pr > (stbsp__int32)l) ? l : pr);
+            pr = -dp + ((pr > (stbsp__int32)l) ? (stbsp__int32)l : pr);
          }
          goto dofloatfromg;
 
@@ -1030,7 +1036,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             if ((fl & STBSP__TRIPLET_COMMA) == 0) {
                do {
                   s -= 2;
-                  *(stbsp__uint16 *)s = *(stbsp__uint16 *)&stbsp__digitpair[(n % 100) * 2];
+                  *(stbsp__uint16 *)s = stbsp__digitpair.digitpair_16bit[(n % 100)];
                   n /= 100;
                } while (n);
             }
@@ -1428,7 +1434,7 @@ static stbsp__int32 stbsp__real_to_parts(stbsp__int64 *bits, stbsp__int32 *expo,
    *bits = b & ((((stbsp__uint64)1) << 52) - 1);
    *expo = (stbsp__int32)(((b >> 52) & 2047) - 1023);
 
-   return (stbsp__int32)(b >> 63);
+   return (stbsp__int32)((stbsp__uint64)b >> 63);
 }
 
 static double const stbsp__bot[23] = {
@@ -1638,7 +1644,7 @@ static stbsp__int32 stbsp__real_to_str(char const **start, stbsp__uint32 *len, c
    d = value;
    STBSP__COPYFP(bits, d);
    expo = (stbsp__int32)((bits >> 52) & 2047);
-   ng = (stbsp__int32)(bits >> 63);
+   ng = (stbsp__int32)((stbsp__uint64)bits >> 63);
    if (ng)
       d = -d;
 
@@ -1748,7 +1754,7 @@ static stbsp__int32 stbsp__real_to_str(char const **start, stbsp__uint32 *len, c
       }
       while (n) {
          out -= 2;
-         *(stbsp__uint16 *)out = *(stbsp__uint16 *)&stbsp__digitpair[(n % 100) * 2];
+         *(stbsp__uint16 *)out = stbsp__digitpair.digitpair_16bit[(n % 100)];
          n /= 100;
          e += 2;
       }
