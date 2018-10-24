@@ -9,6 +9,7 @@
 //    Fabian "ryg" Giesen (reformatting)
 //
 // Contributors (bugfixes):
+//    Adam Allison
 //    github:d26435
 //    github:trex78
 //    Jari Komppa (SI suffixes)
