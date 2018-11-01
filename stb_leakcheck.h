@@ -89,7 +89,7 @@ void *stb_leakcheck_realloc(void *ptr, size_t sz, const char *file, int line)
    }
 }
 
-static void stblkck_internal_print(const char *reason, const char *file,  int line, size_t size, void *ptr)
+static void stblkck_internal_print(const char *reason, stb_leakcheck_malloc_info *mi)
 {
 #if defined(_MSC_VER) && _MSC_VER < 1900 // 1900=VS 2015
    // Compilers that use the old MS C runtime library don't have %zd
@@ -97,16 +97,16 @@ static void stblkck_internal_print(const char *reason, const char *file,  int li
    // without "long long" don't support 64-bit targets either, so here's the
    // compromise:
    #if defined(_MSC_VER) && _MSC_VER < 1400 // before VS 2005
-      printf("%-6s: %s (%4d): %8d bytes at %p\n", reason, file, line, (int)size, ptr);
+      printf("%s: %s (%4d): %8d bytes at %p\n", reason, mi->file, mi->line, (int)mi->size, (void*)(mi+1));
    #else
-      printf("%-6s: %s (%4d): %8lld bytes at %p\n", reason, file, line, (long long)size, ptr);
+      printf("%s: %s (%4d): %16lld bytes at %p\n", reason, mi->file, mi->line, (long long)mi->size, (void*)(mi+1));
    #endif
 #else
    // Assume we have %zd on other targets.
    #ifdef __MINGW32__
-      __mingw_printf("%-6s: %s (%4d): %zd bytes at %p\n", reason, file, line, size, ptr);
+      __mingw_printf("%s: %s (%4d): %zd bytes at %p\n", reason, mi->file, mi->line, mi->size, (void*)(mi+1));
    #else
-      printf("%-6s: %s (%4d): %zd bytes at %p\n", reason, file, line, size, ptr);
+      printf("%s: %s (%4d): %zd bytes at %p\n", reason, mi->file, mi->line, mi->size, (void*)(mi+1));
    #endif
 #endif
 }
@@ -116,14 +116,14 @@ void stb_leakcheck_dumpmem(void)
    stb_leakcheck_malloc_info *mi = mi_head;
    while (mi) {
       if ((ptrdiff_t) mi->size >= 0)
-         stblkck_internal_print("LEAKED", mi->file, mi->line, mi->size, mi+1);
+         stblkck_internal_print("LEAKED", mi);
       mi = mi->next;
    }
    #ifdef STB_LEAKCHECK_SHOWALL
    mi = mi_head;
    while (mi) {
       if ((ptrdiff_t) mi->size < 0)
-         stblkck_internal_print("FREED", mi->file, mi->line, ~mi->size, mi+1);
+         stblkck_internal_print("FREED ", mi);
       mi = mi->next;
    }
    #endif
