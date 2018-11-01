@@ -91,19 +91,23 @@ void *stb_leakcheck_realloc(void *ptr, size_t sz, const char *file, int line)
 
 static void stblkck_internal_print(const char *reason, const char *file,  int line, size_t size, void *ptr)
 {
-#if (defined(_MSC_VER) && _MSC_VER < 1900) /* 1900=VS 2015 */ || defined(__MINGW32__)
+#if defined(_MSC_VER) && _MSC_VER < 1900 // 1900=VS 2015
    // Compilers that use the old MS C runtime library don't have %zd
    // and the older ones don't even have %lld either... however, the old compilers
    // without "long long" don't support 64-bit targets either, so here's the
    // compromise:
-   #if (defined(_MSC_VER) && _MSC_VER < 1400) /* before VS 2005 */ || defined(__MINGW32__)
+   #if defined(_MSC_VER) && _MSC_VER < 1400 // before VS 2005
       printf("%-6s: %s (%4d): %8d bytes at %p\n", reason, file, line, (int)size, ptr);
    #else
       printf("%-6s: %s (%4d): %8lld bytes at %p\n", reason, file, line, (long long)size, ptr);
    #endif
 #else
    // Assume we have %zd on other targets.
-   printf("%-6s: %s (%4d): %zd bytes at %p\n", reason, file, line, size, ptr);
+   #ifdef __MINGW32__
+      __mingw_printf("%-6s: %s (%4d): %zd bytes at %p\n", reason, file, line, size, ptr);
+   #else
+      printf("%-6s: %s (%4d): %zd bytes at %p\n", reason, file, line, size, ptr);
+   #endif
 #endif
 }
 
