@@ -96,7 +96,7 @@ static void stblkck_internal_print(const char *reason, stb_leakcheck_malloc_info
    // and the older ones don't even have %lld either... however, the old compilers
    // without "long long" don't support 64-bit targets either, so here's the
    // compromise:
-   #if defined(_MSC_VER) && _MSC_VER < 1400 // before VS 2005
+   #if _MSC_VER < 1400 // before VS 2005
       printf("%s: %s (%4d): %8d bytes at %p\n", reason, mi->file, mi->line, (int)mi->size, (void*)(mi+1));
    #else
       printf("%s: %s (%4d): %16lld bytes at %p\n", reason, mi->file, mi->line, (long long)mi->size, (void*)(mi+1));
