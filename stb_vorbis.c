@@ -3579,7 +3579,7 @@ static int start_decoder(vorb *f)
    if (f->page_flag & PAGEFLAG_continued_packet)    return error(f, VORBIS_invalid_first_page);
    // check for expected packet length
    if (f->segment_count != 1)                       return error(f, VORBIS_invalid_first_page);
-   if (f->segments[0] != 30)                        return error(f, VORBIS_invalid_first_page);
+   if (f->segments[0] != 30) {
       // check for the Ogg skeleton fishead identifying header to refine our error
       if (f->segments[0] == 64 &&
           getn(f, header, 6) &&
@@ -3589,9 +3589,12 @@ static int start_decoder(vorb *f)
           header[3] == 'h' &&
           header[4] == 'e' &&
           header[5] == 'a' &&
-          get8(f)   == 'd')                         return error(f, VORBIS_ogg_skeleton_not_supported);
+          get8(f)   == 'd' &&
+          get8(f)   == '\0')                        return error(f, VORBIS_ogg_skeleton_not_supported);
       else
                                                     return error(f, VORBIS_invalid_first_page);
+   }
+
    // read packet
    // check packet header
    if (get8(f) != VORBIS_packet_id)                 return error(f, VORBIS_invalid_first_page);
