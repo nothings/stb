@@ -6375,8 +6375,10 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
             }
          }
       } else if (dispose == 2) { 
-	 // clear canvas to solid black transparency
-	 memset( g->out, 0x00, 4 * g->w * g->h );
+	 // clear canvas region to solid black transparency
+	 for (pi = 0; pi < pcount; ++pi)
+	    if (g->history[pi])
+	       memset( g->out + pi * 4,  0x00, 4 );
       } else {
          // This is a non-disposal case eithe way, so just 
          // leave the pixels as is, and they will become the new background
