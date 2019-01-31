@@ -46,7 +46,8 @@
 //       Rob Loach                  Cort Stratton
 //       Kenney Phillis Jr.         github:oyvindjam
 //       Brian Costabile            github:vassvik
-//       
+//       github:scramsby
+//
 // VERSION HISTORY
 //
 //   1.19 (2018-02-11) GPOS kerning, STBTT_fmod
@@ -2451,7 +2452,9 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
                             stbtt_uint16 valueFormat1 = ttUSHORT(table + 4);
                             stbtt_uint16 valueFormat2 = ttUSHORT(table + 6);
                             stbtt_int32 valueRecordPairSizeInBytes = 2;
+#ifndef NDEBUG
                             stbtt_uint16 pairSetCount = ttUSHORT(table + 8);
+#endif
                             stbtt_uint16 pairPosOffset = ttUSHORT(table + 10 + 2 * coverageIndex);
                             stbtt_uint8 *pairValueTable = table + pairPosOffset;
                             stbtt_uint16 pairValueCount = ttUSHORT(pairValueTable);
