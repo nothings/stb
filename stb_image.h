@@ -669,14 +669,18 @@ static int stbi__cpuid3(void)
 
 #define STBI_SIMD_ALIGN(type, name) __declspec(align(16)) type name
 
+#if !defined(STBI_NO_JPEG) && defined(STBI_SSE2)
 static int stbi__sse2_available(void)
 {
    int info3 = stbi__cpuid3();
    return ((info3 >> 26) & 1) != 0;
 }
+#endif
+
 #else // assume GCC-style if not VC++
 #define STBI_SIMD_ALIGN(type, name) type name __attribute__((aligned(16)))
 
+#if !defined(STBI_NO_JPEG) && defined(STBI_SSE2)
 static int stbi__sse2_available(void)
 {
    // If we're even attempting to compile this on GCC/Clang, that means
@@ -684,6 +688,8 @@ static int stbi__sse2_available(void)
    // instructions at will, and so are we.
    return 1;
 }
+#endif
+
 #endif
 #endif
 
@@ -1090,6 +1096,7 @@ static void stbi__vertical_flip(void *image, int w, int h, int bytes_per_pixel)
    }
 }
 
+#ifndef STBI_NO_GIF
 static void stbi__vertical_flip_slices(void *image, int w, int h, int z, int bytes_per_pixel)
 {
    int slice;
@@ -1101,6 +1108,7 @@ static void stbi__vertical_flip_slices(void *image, int w, int h, int z, int byt
       bytes += slice_size; 
    }
 }
+#endif
 
 static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
@@ -1151,7 +1159,7 @@ static stbi__uint16 *stbi__load_and_postprocess_16bit(stbi__context *s, int *x, 
    return (stbi__uint16 *) result;
 }
 
-#if !defined(STBI_NO_HDR) || !defined(STBI_NO_LINEAR)
+#if !defined(STBI_NO_HDR) && !defined(STBI_NO_LINEAR)
 static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, int req_comp)
 {
    if (stbi__vertically_flip_on_load && result != NULL) {
