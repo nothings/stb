@@ -5263,6 +5263,8 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
                out[z++] = pal[color][0];
                out[z++] = pal[color][1];
                out[z++] = pal[color][2];
+               if (target == 4) out[z++] = 255;
+               if (i+1 == (int) s->img_x) break;
                if((--bit_offset) < 0) {
                   bit_offset = 7;
                   v = stbi__get8(s);
