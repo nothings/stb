@@ -6394,11 +6394,11 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
 // two back is the image from two frames ago, used for a very specific disposal format
 static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, int req_comp, stbi_uc *two_back)
 {
-   STBI_NOTUSED(req_comp);
    int dispose; 
    int first_frame; 
    int pi; 
    int pcount; 
+   STBI_NOTUSED(req_comp);
 
    // on first frame, any non-written pixels get the background colour (non-transparent)
    first_frame = 0; 
@@ -6619,10 +6619,10 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
 
 static void *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
 {
-   STBI_NOTUSED(ri);
    stbi_uc *u = 0;
    stbi__gif g;
    memset(&g, 0, sizeof(g));
+   STBI_NOTUSED(ri);
 
    u = stbi__gif_load_next(s, &g, comp, req_comp, 0);
    if (u == (stbi_uc *) s) u = 0;  // end of animated gif marker
