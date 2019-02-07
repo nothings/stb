@@ -1,4 +1,4 @@
-/* stb_image - v2.19 - public domain image loader - http://nothings.org/stb
+/* stb_image - v2.20 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 
    Do this:
@@ -48,6 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.20  (2019-02-07) support utf8 filenames in Windows; fix warnings and platform ifdefs 
       2.19  (2018-02-11) fix warning
       2.18  (2018-01-30) fix warnings
       2.17  (2018-01-29) bugfix, 1-bit BMP, 16-bitness query, fix warnings
@@ -7303,6 +7304,7 @@ STBIDEF int stbi_is_16_bit_from_callbacks(stbi_io_callbacks const *c, void *user
 
 /*
    revision history:
+      2.20  (2019-02-07) support utf8 filenames in Windows; fix warnings and platform ifdefs 
       2.19  (2018-02-11) fix warning
       2.18  (2018-01-30) fix warnings
       2.17  (2018-01-29) change sbti__shiftsigned to avoid clang -O2 bug

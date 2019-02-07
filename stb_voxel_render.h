@@ -1,4 +1,4 @@
-// stb_voxel_render.h - v0.85 - Sean Barrett, 2015 - public domain
+// stb_voxel_render.h - v0.86 - Sean Barrett, 2015 - public domain
 //
 // This library helps render large-scale "voxel" worlds for games,
 // in this case, one with blocks that can have textures and that
@@ -192,6 +192,7 @@
 //
 // VERSION HISTORY
 //
+//   0.86   (2019-02-07)  fix typos in comments
 //   0.85   (2017-03-03)  add block_selector (by guitarfreak)
 //   0.84   (2016-04-02)  fix GLSL syntax error on glModelView path
 //   0.83   (2015-09-13)  remove non-constant struct initializers to support more compilers

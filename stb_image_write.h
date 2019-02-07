@@ -1,4 +1,4 @@
-/* stb_image_write - v1.09 - public domain - http://nothings.org/stb/stb_image_write.h
+/* stb_image_write - v1.10 - public domain - http://nothings.org/stb/stb_image_write.h
    writes out PNG/BMP/TGA/JPEG/HDR images to C stdio - Sean Barrett 2010-2015
                                      no warranty implied; use at your own risk
 
@@ -1538,6 +1538,8 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
+      1.10  (2019-02-07)
+             support utf8 filenames in Windows; fix warnings and platform ifdefs 
       1.09  (2018-02-11)
              fix typo in zlib quality API, improve STB_I_W_STATIC in C++
       1.08  (2018-01-29)

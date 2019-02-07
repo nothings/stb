@@ -1,4 +1,4 @@
-// stb_leakcheck.h - v0.4 - quick & dirty malloc leak-checking - public domain
+// stb_leakcheck.h - v0.5 - quick & dirty malloc leak-checking - public domain
 // LICENSE
 //
 //   See end of file.

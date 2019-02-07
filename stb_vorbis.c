@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.14 - public domain
+// Ogg Vorbis audio decoder - v1.15 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
@@ -33,6 +33,7 @@
 //    Timur Gagiev
 //
 // Partial history:
+//    1.15    - 2019-02-07 - explicit failure if Ogg Skeleton data is found
 //    1.14    - 2018-02-11 - delete bogus dealloca usage
 //    1.13    - 2018-01-29 - fix truncation of last frame (hopefully)
 //    1.12    - 2017-11-21 - limit residue begin/end to blocksize/2 to avoid large temp allocs in bad/corrupt files

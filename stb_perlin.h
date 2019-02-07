@@ -1,4 +1,4 @@
-// stb_perlin.h - v0.3 - perlin noise
+// stb_perlin.h - v0.4 - perlin noise
 // public domain single-file C implementation by Sean Barrett
 //
 // LICENSE

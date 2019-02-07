@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.12  - public domain - Sean Barrett
+// stb_textedit.h - v1.13  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -29,6 +29,7 @@
 //
 // VERSION HISTORY
 //
+//   1.13 (2019-02-07) fix bug in undo size management
 //   1.12 (2018-01-29) user can change STB_TEXTEDIT_KEYTYPE, fix redo to avoid crash
 //   1.11 (2017-03-03) fix HOME on last line, dragging off single-line textfield
 //   1.10 (2016-10-25) supress warnings about casting away const with -Wcast-qual
