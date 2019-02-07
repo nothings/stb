@@ -32,6 +32,19 @@
 // details of the implementation, even if you ask for larger or no
 // wrapping.)
 //
+// float  stb_perlin_noise3_seed( float x,
+//                                float y,
+//                                float z,
+//                                int   x_wrap=0,
+//                                int   y_wrap=0,
+//                                int   z_wrap=0,
+//                                int   seed)
+//
+// As above, but 'seed' selects from multiple different variations of the
+// noise function. The current implementation only uses the bottom 8 bits
+// of 'seed', but possibly in the future more bits will be used.
+//
+//
 // Fractal Noise:
 //
 // Three common fractal noise functions are included, which produce 
@@ -252,6 +265,11 @@ float stb_perlin_noise3(float x, float y, float z, int x_wrap, int y_wrap, int z
     return stb_perlin_noise3_internal(x,y,z,x_wrap,y_wrap,z_wrap,0);
 }
 
+float stb_perlin_noise3_seed(float x, float y, float z, int x_wrap, int y_wrap, int z_wrap, int seed)
+{
+    return stb_perlin_noise3_internal(x,y,z,x_wrap,y_wrap,z_wrap, (unsigned char) seed);
+}
+
 float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float gain, float offset, int octaves)
 {
    int i;
@@ -262,7 +280,7 @@ float stb_perlin_ridge_noise3(float x, float y, float z, float lacunarity, float
 
    for (i = 0; i < octaves; i++) {
       float r = stb_perlin_noise3_internal(x*frequency,y*frequency,z*frequency,0,0,0,(unsigned char)i);
-      r = offset - fabs(r);
+      r = offset - (float) fabs(r);
       r = r*r;
       sum += r*amplitude*prev;
       prev = r;
@@ -296,7 +314,7 @@ float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, 
    
    for (i = 0; i < octaves; i++) {
       float r = stb_perlin_noise3_internal(x*frequency,y*frequency,z*frequency,0,0,0,(unsigned char)i)*amplitude;
-      sum += fabs(r);
+      sum += (float) fabs(r);
       frequency *= lacunarity;
       amplitude *= gain;
    }
