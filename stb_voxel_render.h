@@ -276,7 +276,7 @@ extern "C" {
 //        NOT IMPLEMENTED! Define HLSL shaders instead of GLSL shaders
 //
 //    STBVOX_CONFIG_PREFER_TEXBUFFER
-//        Stores many of the uniform arrays in texture buffers intead,
+//        Stores many of the uniform arrays in texture buffers instead,
 //        so they can be larger and may be more efficient on some hardware.
 //
 //    STBVOX_CONFIG_LIGHTING_SIMPLE
@@ -1066,7 +1066,7 @@ enum
 // split into two triangles, each with their own normal/lighting.
 // (Note that since all output from stb_voxel_render is quad meshes,
 // triangles are actually rendered as degenerate quads.) In this case,
-// the distinction betwen STBVOX_GEOM_floor_vheight_03 and
+// the distinction between STBVOX_GEOM_floor_vheight_03 and
 // STBVOX_GEOM_floor_vheight_12 comes into play; the former introduces
 // an edge from the SW to NE corner (i.e. from <0,0,?> to <1,1,?>),
 // while the latter introduces an edge from the NW to SE corner

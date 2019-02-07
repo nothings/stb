@@ -75,7 +75,7 @@
 //
 // USAGE
 //
-//   Include this file in whatever places neeed to refer to it. In ONE C/C++
+//   Include this file in whatever places need to refer to it. In ONE C/C++
 //   file, write:
 //      #define STB_TRUETYPE_IMPLEMENTATION
 //   before the #include of this file. This expands out the actual
@@ -247,8 +247,8 @@
 //   Documentation & header file        520 LOC  \___ 660 LOC documentation
 //   Sample code                        140 LOC  /
 //   Truetype parsing                   620 LOC  ---- 620 LOC TrueType
-//   Software rasterization             240 LOC  \                           .
-//   Curve tesselation                  120 LOC   \__ 550 LOC Bitmap creation
+//   Software rasterization             240 LOC  \                           
+//   Curve tessellation                 120 LOC   \__ 550 LOC Bitmap creation
 //   Bitmap management                  100 LOC   /
 //   Baked bitmap interface              70 LOC  /
 //   Font name matching & access        150 LOC  ---- 150 
@@ -696,7 +696,7 @@ STBTT_DEF int stbtt_GetFontOffsetForIndex(const unsigned char *data, int index);
 // file will only define one font and it always be at offset 0, so it will
 // return '0' for index 0, and -1 for all other indices.
 
-// The following structure is defined publically so you can declare one on
+// The following structure is defined publicly so you can declare one on
 // the stack or as a global or etc, but you should treat it as opaque.
 struct stbtt_fontinfo
 {
@@ -822,7 +822,7 @@ STBTT_DEF int stbtt_GetGlyphShape(const stbtt_fontinfo *info, int glyph_index, s
 // returns # of vertices and fills *vertices with the pointer to them
 //   these are expressed in "unscaled" coordinates
 //
-// The shape is a series of countours. Each one starts with
+// The shape is a series of contours. Each one starts with
 // a STBTT_moveto, then consists of a series of mixed
 // STBTT_lineto and STBTT_curveto segments. A lineto
 // draws a line from previous endpoint to its x,y; a curveto
@@ -918,7 +918,7 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
 STBTT_DEF unsigned char * stbtt_GetCodepointSDF(const stbtt_fontinfo *info, float scale, int codepoint, int padding, unsigned char onedge_value, float pixel_dist_scale, int *width, int *height, int *xoff, int *yoff);
 // These functions compute a discretized SDF field for a single character, suitable for storing
 // in a single-channel texture, sampling with bilinear filtering, and testing against
-// larger than some threshhold to produce scalable fonts.
+// larger than some threshold to produce scalable fonts.
 //        info              --  the font
 //        scale             --  controls the size of the resulting SDF bitmap, same as it would be creating a regular bitmap
 //        glyph/codepoint   --  the character to generate the SDF for
@@ -3237,7 +3237,7 @@ static void stbtt__sort_edges_ins_sort(stbtt__edge *p, int n)
 
 static void stbtt__sort_edges_quicksort(stbtt__edge *p, int n)
 {
-   /* threshhold for transitioning to insertion sort */
+   /* threshold for transitioning to insertion sort */
    while (n > 12) {
       stbtt__edge t;
       int c01,c12,c,m,i,j;
@@ -3372,7 +3372,7 @@ static void stbtt__add_point(stbtt__point *points, int n, float x, float y)
    points[n].y = y;
 }
 
-// tesselate until threshhold p is happy... @TODO warped to compensate for non-linear stretching
+// tessellate until threshold p is happy... @TODO warped to compensate for non-linear stretching
 static int stbtt__tesselate_curve(stbtt__point *points, int *num_points, float x0, float y0, float x1, float y1, float x2, float y2, float objspace_flatness_squared, int n)
 {
    // midpoint

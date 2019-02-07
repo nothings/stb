@@ -3106,13 +3106,13 @@ typedef struct
 // (internal) change the allocated length of the array
 #define stb_arr__grow(a,n)     (stb_arr_check(a), stb_arrhead(a)->len += (n))
 
-// add N new unitialized elements to the end of the array
+// add N new uninitialized elements to the end of the array
 #define stb_arr__addn(a,n)     /*lint --e(826)*/ \
                                ((stb_arr_len(a)+(n) > stb_arrcurmax(a))      \
                                  ? (stb__arr_addlen((void **) &(a),sizeof(*a),(n)),0) \
                                  : ((stb_arr__grow(a,n), 0)))
 
-// add N new unitialized elements to the end of the array, and return
+// add N new uninitialized elements to the end of the array, and return
 // a pointer to the first new one
 #define stb_arr_addn(a,n)      (stb_arr__addn((a),n),(a)+stb_arr_len(a)-(n))
 
@@ -8682,7 +8682,7 @@ static void STB_(FUNCNAME,_ins_sort)(TYPE *p, int n)                          \
                                                                               \
 static void STB_(FUNCNAME,_quicksort)(TYPE *p, int n)                         \
 {                                                                             \
-   /* threshhold for transitioning to insertion sort */                       \
+   /* threshold for transitioning to insertion sort */                       \
    while (n > 12) {                                                           \
       TYPE *a,*b,t;                                                           \
       int c01,c12,c,m,i,j;                                                    \
@@ -13864,7 +13864,7 @@ static void stu__pop_func_comp(void)
 
 // if an id is a reference to an outer lexical scope, this
 // function returns the "name" of it, and updates the stack
-// structures to make sure the names are propogated in.
+// structures to make sure the names are propagated in.
 static int stu__nonlocal_id(stua_obj var_obj)
 {
    stua_obj dummy, var = var_obj;
@@ -13879,7 +13879,7 @@ static int stu__nonlocal_id(stua_obj var_obj)
    for (i=0; i < stb_arr_len(stu__pfunc.non_local_refs); ++i)
       if (stu__pfunc.non_local_refs[i] == j) return j-n;
    stb_arr_push(stu__pfunc.non_local_refs, j-n);
-   // now make sure all the parents propogate it down
+   // now make sure all the parents propagate it down
    for (k=n-1; k > 1; --k) {
       if (j-k >= 0) return j-n; // comes direct from this parent
       for(i=0; i < stb_arr_len(func_stack[k].non_local_refs); ++i)
