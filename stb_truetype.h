@@ -556,6 +556,8 @@ STBTT_DEF void stbtt_GetBakedQuad(const stbtt_bakedchar *chardata, int pw, int p
 //
 // It's inefficient; you might want to c&p it and optimize it.
 
+STBTT_DEF void stbtt_GetScaledFontVMetrics(const unsigned char *fontdata, int index, float size, float *ascent, float *descent, float *lineGap);
+// Query the font vertical metrics without having to create a font first.
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -3160,7 +3162,13 @@ static void stbtt__rasterize_sorted_edges(stbtt__bitmap *result, stbtt__edge *e,
          if (e->y0 != e->y1) {
             stbtt__active_edge *z = stbtt__new_active(&hh, e, off_x, scan_y_top, userdata);
             if (z != NULL) {
-               STBTT_assert(z->ey >= scan_y_top);
+               if (j == 0 && off_y != 0) {
+                  if (z->ey < scan_y_top) {
+                     // this can happen due to subpixel positioning and some kind of fp rounding error i think
+                     z->ey = scan_y_top;
+                  }
+               }
+               STBTT_assert(z->ey >= scan_y_top); // if we get really unlucky a tiny bit of an edge can be out of bounds
                // insert at front
                z->next = active;
                active = z;
@@ -4138,6 +4146,19 @@ STBTT_DEF int stbtt_PackFontRange(stbtt_pack_context *spc, const unsigned char *
    range.chardata_for_range          = chardata_for_range;
    range.font_size                   = font_size;
    return stbtt_PackFontRanges(spc, fontdata, font_index, &range, 1);
+}
+
+STBTT_DEF void stbtt_GetScaledFontVMetrics(const unsigned char *fontdata, int index, float size, float *ascent, float *descent, float *lineGap)
+{
+   int i_ascent, i_descent, i_lineGap;
+   float scale;
+   stbtt_fontinfo info;
+   stbtt_InitFont(&info, fontdata, stbtt_GetFontOffsetForIndex(fontdata, index));
+   scale = size > 0 ? stbtt_ScaleForPixelHeight(&info, size) : stbtt_ScaleForMappingEmToPixels(&info, -size);
+   stbtt_GetFontVMetrics(&info, &i_ascent, &i_descent, &i_lineGap);
+   *ascent  = (float) i_ascent  * scale;
+   *descent = (float) i_descent * scale;
+   *lineGap = (float) i_lineGap * scale;
 }
 
 STBTT_DEF void stbtt_GetPackedQuad(const stbtt_packedchar *chardata, int pw, int ph, int char_index, float *xpos, float *ypos, stbtt_aligned_quad *q, int align_to_integer)
