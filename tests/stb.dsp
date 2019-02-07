@@ -158,6 +158,10 @@ SOURCE=..\stb_sprintf.h
 # End Source File
 # Begin Source File
 
+SOURCE=.\stb_static.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_textedit.h
 # End Source File
 # Begin Source File
