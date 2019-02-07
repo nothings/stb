@@ -99,7 +99,7 @@ RECENT REVISION HISTORY:
     Aldo Culquicondor       Philipp Wiesemann  Dale Weiler        github:sammyhw
     Oriol Ferrer Mesia      Josh Tobin         Matthew Gregan     github:phprus
     Julian Raschke          Gregory Mullen     Baldur Karlsson    github:poppolopoppo
-    Christian Floisand      Kevin Schmidt                         github:darealshinji
+    Christian Floisand      Kevin Schmidt      JR Smith           github:darealshinji
     Blazej Dariusz Roszkowski                                     github:Michaelangel007
 */
 
@@ -161,6 +161,16 @@ RECENT REVISION HISTORY:
 //
 // ===========================================================================
 //
+// UNICODE:
+//
+//   If compiling for Windows and you wish to use Unicode filenames, compile
+//   with
+//       #define STBI_WINDOWS_UTF8
+//   and pass utf8-encoded filenames. Call stbiw_convert_wchar_to_utf8 to convert
+//   Windows wchar_t filenames to utf8.
+//
+// ===========================================================================
+//
 // Philosophy
 //
 // stb libraries are designed with the following priorities:
@@ -171,12 +181,12 @@ RECENT REVISION HISTORY:
 //
 // Sometimes I let "good performance" creep up in priority over "easy to maintain",
 // and for best performance I may provide less-easy-to-use APIs that give higher
-// performance, in addition to the easy to use ones. Nevertheless, it's important
+// performance, in addition to the easy-to-use ones. Nevertheless, it's important
 // to keep in mind that from the standpoint of you, a client of this library,
 // all you care about is #1 and #3, and stb libraries DO NOT emphasize #3 above all.
 //
 // Some secondary priorities arise directly from the first two, some of which
-// make more explicit reasons why performance can't be emphasized.
+// provide more explicit reasons why performance can't be emphasized.
 //
 //    - Portable ("ease of use")
 //    - Small source code footprint ("easy to maintain")
@@ -219,11 +229,10 @@ RECENT REVISION HISTORY:
 //
 // HDR image support   (disable by defining STBI_NO_HDR)
 //
-// stb_image now supports loading HDR images in general, and currently
-// the Radiance .HDR file format, although the support is provided
-// generically. You can still load any file through the existing interface;
-// if you attempt to load an HDR file, it will be automatically remapped to
-// LDR, assuming gamma 2.2 and an arbitrary scale factor defaulting to 1;
+// stb_image supports loading HDR images in general, and currently the Radiance
+// .HDR file format specifically. You can still load any file through the existing
+// interface; if you attempt to load an HDR file, it will be automatically remapped
+// to LDR, assuming gamma 2.2 and an arbitrary scale factor defaulting to 1;
 // both of these constants can be reconfigured through this interface:
 //
 //     stbi_hdr_to_ldr_gamma(2.2f);
@@ -257,7 +266,7 @@ RECENT REVISION HISTORY:
 //
 // By default we convert iphone-formatted PNGs back to RGB, even though
 // they are internally encoded differently. You can disable this conversion
-// by by calling stbi_convert_iphone_png_to_rgb(0), in which case
+// by calling stbi_convert_iphone_png_to_rgb(0), in which case
 // you will always just get the native iphone "format" through (which
 // is BGR stored in RGB).
 //
@@ -319,6 +328,7 @@ enum
    STBI_rgb_alpha  = 4
 };
 
+#include <stdlib.h>
 typedef unsigned char stbi_uc;
 typedef unsigned short stbi_us;
 
@@ -355,15 +365,19 @@ typedef struct
 
 STBIDEF stbi_uc *stbi_load_from_memory   (stbi_uc           const *buffer, int len   , int *x, int *y, int *channels_in_file, int desired_channels);
 STBIDEF stbi_uc *stbi_load_from_callbacks(stbi_io_callbacks const *clbk  , void *user, int *x, int *y, int *channels_in_file, int desired_channels);
-#ifndef STBI_NO_GIF
-STBIDEF stbi_uc *stbi_load_gif_from_memory(stbi_uc const *buffer, int len, int **delays, int *x, int *y, int *z, int *comp, int req_comp);
-#endif
-
 
 #ifndef STBI_NO_STDIO
 STBIDEF stbi_uc *stbi_load            (char const *filename, int *x, int *y, int *channels_in_file, int desired_channels);
 STBIDEF stbi_uc *stbi_load_from_file  (FILE *f, int *x, int *y, int *channels_in_file, int desired_channels);
 // for stbi_load_from_file, file pointer is left pointing immediately after image
+#endif
+
+#ifndef STBI_NO_GIF
+STBIDEF stbi_uc *stbi_load_gif_from_memory(stbi_uc const *buffer, int len, int **delays, int *x, int *y, int *z, int *comp, int req_comp);
+#endif
+
+#ifdef STBI_WINDOWS_UTF8
+STBIDEF int stbi_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input);
 #endif
 
 ////////////////////////////////////
@@ -523,6 +537,12 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 #ifndef STBI_ASSERT
 #include <assert.h>
 #define STBI_ASSERT(x) assert(x)
+#endif
+
+#ifdef __cplusplus
+#define STBI_EXTERN extern "C"
+#else
+#define STBI_EXTERN extern
 #endif
 
 
@@ -1143,40 +1163,40 @@ static void stbi__float_postprocess(float *result, int *x, int *y, int *comp, in
 
 #ifndef STBI_NO_STDIO
 
-char* stbi_convert_wchar_to_utf8(wchar_t* input) {
-#ifdef _WINDOWS_
-	int outputSizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &input[0], wcslen(input), NULL, 0, NULL, NULL);
-	char* temp = (char*)STBI_MALLOC(outputSizeNeeded);
-	int error = WideCharToMultiByte(65001, 0, input, -1, temp, outputSizeNeeded, NULL, NULL);
-	temp[outputSizeNeeded] = '\0';
-	return temp;
-#else
-	return NULL;
-	#endif
+#if defined(_MSC_VER) && defined(STBI_WINDOWS_UTF8)
+STBI_EXTERN __declspec(dllimport) int __stdcall MultiByteToWideChar(unsigned int cp, unsigned long flags, const char *str, int cbmb, wchar_t *widestr, int cchwide);
+STBI_EXTERN __declspec(dllimport) int __stdcall WideCharToMultiByte(unsigned int cp, unsigned long flags, const wchar_t *widestr, int cchwide, char *str, int cbmb, const char *defchar, int *used_default);
+#endif
+
+#if defined(_MSC_VER) && defined(STBI_WINDOWS_UTF8)
+STBIDEF int stbi_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input)
+{
+	return WideCharToMultiByte(65001 /* UTF8 */, 0, input, -1, buffer, bufferlen, NULL, NULL);
 }
+#endif
 
 static FILE *stbi__fopen(char const *filename, char const *mode)
 {
    FILE *f;
-#if defined(_MSC_VER) && _MSC_VER >= 1400
-#ifdef UNICODE
-	int filenameLength = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-	wchar_t* wFilename = (wchar_t*)stbi__malloc(filenameLength * sizeof(wchar_t));
-	MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFilename, filenameLength);
+#if defined(_MSC_VER) && defined(STBI_WINDOWS_UTF8)
+   wchar_t wMode[64];
+   wchar_t wFilename[1024];
+	if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, filename, -1, wFilename, sizeof(wFilename)))
+      return 0;
 	
-	int modeLength = MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
-	wchar_t* wMode = (wchar_t*)stbi__malloc(modeLength * sizeof(wchar_t));
-	MultiByteToWideChar(CP_UTF8, 0, mode, -1, wMode, modeLength);
+	if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, mode, -1, wMode, sizeof(wMode)))
+      return 0;
 
+#if _MSC_VER >= 1400
 	if (0 != _wfopen_s(&f, wFilename, wMode))
 		f = 0;
-	
-	STBI_FREE(wFilename);
-	STBI_FREE(wMode);
 #else
+   f = _wfopen(wFilename, wMode);
+#endif
+
+#elif defined(_MSC_VER) && _MSC_VER >= 1400
    if (0 != fopen_s(&f, filename, mode))
       f=0;
-#endif
 #else
    f = fopen(filename, mode);
 #endif

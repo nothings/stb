@@ -17,8 +17,7 @@
 
 ABOUT:
 
-   This header file is a library for writing images to C stdio. It could be
-   adapted to write to memory or a general streaming interface; let me know.
+   This header file is a library for writing images to C stdio or a callback.
 
    The PNG output is not optimal; it is 20-50% larger than the file
    written by a decent optimizing implementation; though providing a custom
@@ -37,6 +36,14 @@ BUILDING:
    unsigned char * my_compress(unsigned char *data, int data_len, int *out_len, int quality);
    The returned data will be freed with STBIW_FREE() (free() by default),
    so it must be heap allocated with STBIW_MALLOC() (malloc() by default),
+
+UNICODE:
+
+   If compiling for Windows and you wish to use Unicode filenames, compile
+   with
+       #define STBIW_WINDOWS_UTF8
+   and pass utf8-encoded filenames. Call stbiw_convert_wchar_to_utf8 to convert
+   Windows wchar_t filenames to utf8.
 
 USAGE:
 
@@ -148,6 +155,8 @@ LICENSE
 #ifndef INCLUDE_STB_IMAGE_WRITE_H
 #define INCLUDE_STB_IMAGE_WRITE_H
 
+#include <stdlib.h>
+
 // if STB_IMAGE_WRITE_STATIC causes problems, try defining STBIWDEF to 'inline' or 'static inline'
 #ifndef STBIWDEF
 #ifdef STB_IMAGE_WRITE_STATIC
@@ -173,6 +182,10 @@ STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const 
 STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
 STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const void  *data, int quality);
+
+#ifdef STBI_WINDOWS_UTF8
+STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input);
+#endif
 #endif
 
 typedef void stbi_write_func(void *context, void *data, int size);
@@ -275,24 +288,52 @@ static void stbi__stdio_write(void *context, void *data, int size)
    fwrite(data,1,size,(FILE*) context);
 }
 
-static int stbi__start_write_file(stbi__write_context *s, const char *filename)
+#if defined(_MSC_VER) && defined(STBI_WINDOWS_UTF8)
+#ifdef __cplusplus
+#define STBIW_EXTERN extern "C"
+#else
+#define STBIW_EXTERN extern
+#endif
+STBIW_EXTERN __declspec(dllimport) int __stdcall MultiByteToWideChar(unsigned int cp, unsigned long flags, const char *str, int cbmb, wchar_t *widestr, int cchwide);
+STBIW_EXTERN __declspec(dllimport) int __stdcall WideCharToMultiByte(unsigned int cp, unsigned long flags, const wchar_t *widestr, int cchwide, char *str, int cbmb, const char *defchar, int *used_default);
+
+STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input)
+{
+	return WideCharToMultiByte(65001 /* UTF8 */, 0, input, -1, buffer, bufferlen, NULL, NULL);
+}
+#endif
+
+static FILE *stbiw__fopen(char const *filename, char const *mode)
 {
    FILE *f;
-#ifdef STBI_MSC_SECURE_CRT
-#ifdef UNICODE
-	int filenameLength = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-	wchar_t* wFilename = (wchar_t*)STBIW_MALLOC(filenameLength * sizeof(wchar_t));
-	MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFilename, filenameLength);
+#if defined(_MSC_VER) && defined(STBI_WINDOWS_UTF8)
+   wchar_t wMode[64];
+   wchar_t wFilename[1024];
+	if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, filename, -1, wFilename, sizeof(wFilename)))
+      return 0;
 	
-	if (0 != _wfopen_s(&f, wFilename, L"wb"))
-		f = NULL;
+	if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, mode, -1, wMode, sizeof(wMode)))
+      return 0;
+
+#if _MSC_VER >= 1400
+	if (0 != _wfopen_s(&f, wFilename, wMode))
+		f = 0;
 #else
-   if (fopen_s(&f, filename, "wb"))
-      f = NULL;
+   f = _wfopen(wFilename, wMode);
 #endif
+
+#elif defined(_MSC_VER) && _MSC_VER >= 1400
+   if (0 != fopen_s(&f, filename, mode))
+      f=0;
 #else
-   f = fopen(filename, "wb");
+   f = fopen(filename, mode);
 #endif
+   return f;
+}
+
+static int stbi__start_write_file(stbi__write_context *s, const char *filename)
+{
+   FILE *f = stbiw__fopen(filename, "wb");
    stbi__start_write_callbacks(s, stbi__stdio_write, (void *) f);
    return f != NULL;
 }
@@ -1120,23 +1161,8 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
    int len;
    unsigned char *png = stbi_write_png_to_mem((unsigned char *) data, stride_bytes, x, y, comp, &len);
    if (png == NULL) return 0;
-#ifdef STBI_MSC_SECURE_CRT
-#ifdef UNICODE
-	int filenameLength = MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
-	wchar_t* wFilename = (wchar_t*)STBIW_MALLOC(filenameLength * sizeof(wchar_t));
-	MultiByteToWideChar(CP_UTF8, 0, filename, -1, wFilename, filenameLength);
-	
-	if (0 != _wfopen_s(&f, wFilename, L"wb"))
-		f = NULL;
-	
-	STBIW_FREE(wFilename);
-#else
-   if (fopen_s(&f, filename, "wb"))
-      f = NULL;
-#endif
-#else
-   f = fopen(filename, "wb");
-#endif
+
+   f = stbiw__fopen(filename, "wb");
    if (!f) { STBIW_FREE(png); return 0; }
    fwrite(png, 1, len, f);
    fclose(f);
@@ -1144,18 +1170,6 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
    return 1;
 }
 #endif
-
-char* stbiw_convert_wchar_to_utf8(wchar_t* input) {
-#ifdef _WINDOWS_
-	int outputSizeNeeded = WideCharToMultiByte(CP_UTF8, 0, &input[0], wcslen(input), NULL, 0, NULL, NULL);
-	char* temp = (char*)STBIW_MALLOC(outputSizeNeeded);
-	int error = WideCharToMultiByte(65001, 0, input, -1, temp, outputSizeNeeded, NULL, NULL);
-	temp[outputSizeNeeded] = '\0';
-	return temp;
-#else
-	return NULL;
-#endif
-}
 
 STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int stride_bytes)
 {
