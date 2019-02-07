@@ -2,9 +2,10 @@
 #define WIN32_LEAN_AND_MEAN
 //#include <windows.h>
 #include <conio.h>
-#define STB_STUA
 #define STB_DEFINE
+#ifndef _M_AMD64
 #define STB_NPTR
+#endif
 #define STB_ONLY
 #include "stb.h"
 //#include "stb_file.h"
