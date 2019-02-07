@@ -460,7 +460,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          break;
       // are we 64-bit (unix style)
       case 'l':
-         fl |= ((sizeof(long int) == 8) ? STBSP__INTMAX : 0);
+         fl |= ((sizeof(long) == 8) ? STBSP__INTMAX : 0);
          ++f;
          if (f[0] == 'l') {
             fl |= STBSP__INTMAX;
