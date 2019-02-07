@@ -643,6 +643,12 @@ STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h
 // To use with PackFontRangesGather etc., you must set it before calls
 // call to PackFontRangesGatherRects.
 
+// If skip != 0, this tells stb_truetype to skip any codepoints for which
+// there is no corresponding glyph. If skip=0, which is the default, then
+// codepoints without a glyph recived the font's "missing character" glyph,
+// typically an empty box by convention.
+STBTT_DEF void stbtt_PackSetSkipMissingGlyphs(stbtt_pack_context *spc, int skip);
+
 STBTT_DEF void stbtt_GetPackedQuad(const stbtt_packedchar *chardata, int pw, int ph,  // same data as above
                                int char_index,             // character to display
                                float *xpos, float *ypos,   // pointers to current position in screen pixel space
@@ -671,6 +677,7 @@ struct stbtt_pack_context {
    int   height;
    int   stride_in_bytes;
    int   padding;
+   int   skip_empty;
    unsigned int   h_oversample, v_oversample;
    unsigned char *pixels;
    void  *nodes;
@@ -3824,6 +3831,11 @@ STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h
       spc->v_oversample = v_oversample;
 }
 
+STBTT_DEF void stbtt_PackSetSkipMissingGlyphs(stbtt_pack_context *spc, int skip)
+{
+   spc->skip_empty = skip;
+}
+
 #define STBTT__OVER_MASK  (STBTT_MAX_OVERSAMPLE-1)
 
 static void stbtt__h_prefilter(unsigned char *pixels, int w, int h, int stride_in_bytes, unsigned int kernel_width)
@@ -3977,7 +3989,9 @@ STBTT_DEF int stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, const stb
          int x0,y0,x1,y1;
          int codepoint = ranges[i].array_of_unicode_codepoints == NULL ? ranges[i].first_unicode_codepoint_in_range + j : ranges[i].array_of_unicode_codepoints[j];
          int glyph = stbtt_FindGlyphIndex(info, codepoint);
-         if (glyph != 0) {
+         if (glyph == 0 && spc->skip_empty) {
+            rects[k].w = rects[k].h = 0;
+         } else {
             stbtt_GetGlyphBitmapBoxSubpixel(info,glyph,
                                             scale * spc->h_oversample,
                                             scale * spc->v_oversample,
@@ -3985,8 +3999,6 @@ STBTT_DEF int stbtt_PackFontRangesGatherRects(stbtt_pack_context *spc, const stb
                                             &x0,&y0,&x1,&y1);
             rects[k].w = (stbrp_coord) (x1-x0 + spc->padding + spc->h_oversample-1);
             rects[k].h = (stbrp_coord) (y1-y0 + spc->padding + spc->v_oversample-1);
-         } else {
-            rects[k].w = rects[k].h = 0;
          }
          ++k;
       }
