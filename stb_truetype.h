@@ -647,7 +647,7 @@ STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h
 // there is no corresponding glyph. If skip=0, which is the default, then
 // codepoints without a glyph recived the font's "missing character" glyph,
 // typically an empty box by convention.
-STBTT_DEF void stbtt_PackSetSkipMissingGlyphs(stbtt_pack_context *spc, int skip);
+STBTT_DEF void stbtt_PackSetSkipMissingCodepoints(stbtt_pack_context *spc, int skip);
 
 STBTT_DEF void stbtt_GetPackedQuad(const stbtt_packedchar *chardata, int pw, int ph,  // same data as above
                                int char_index,             // character to display
@@ -3831,7 +3831,7 @@ STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h
       spc->v_oversample = v_oversample;
 }
 
-STBTT_DEF void stbtt_PackSetSkipMissingGlyphs(stbtt_pack_context *spc, int skip)
+STBTT_DEF void stbtt_PackSetSkipMissingCodepoints(stbtt_pack_context *spc, int skip)
 {
    spc->skip_empty = skip;
 }
