@@ -1469,6 +1469,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
          for(x = 0; x < width; x += 8) {
             float YDU[64], UDU[64], VDU[64];
             for(row = y, pos = 0; row < y+8; ++row) {
+               int p;
                if(row < height) {
                   p = (stbi__flip_vertically_on_write ? (height-1-row) : row)*width*comp;
                } else {
@@ -1477,7 +1478,6 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
                }
                for(col = x; col < x+8; ++col, ++pos) {
                   float r, g, b;
-                  int p;
                   // if col >= width => use pixel from last input column
                   p += ((col < width) ? col : (width-1))*comp;
 
