@@ -1663,7 +1663,7 @@ static stbsp__int32 stbsp__real_to_str(char const **start, stbsp__uint32 *len, c
    d = value;
    STBSP__COPYFP(bits, d);
    expo = (stbsp__int32)((bits >> 52) & 2047);
-   ng = (stbsp__int32)((stbsp__int64) bits >> 63);
+   ng = (stbsp__int32)((stbsp__uint64) bits >> 63);
    if (ng)
       d = -d;
 
