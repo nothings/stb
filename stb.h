@@ -791,7 +791,7 @@ STB_EXTERN __declspec(dllimport) int __stdcall SetConsoleTextAttribute(void *, u
 static void stb__print_one(void *handle, char *s, int len)
 {
    if (len)
-      if (WriteConsoleA(handle, s, len, NULL,NULL))
+      if (0==WriteConsoleA(handle, s, len, NULL,NULL))
          fwrite(s, 1, len, stdout); // if it fails, maybe redirected, so do normal
 }
 
@@ -1543,6 +1543,7 @@ int stb_lowbit8(unsigned int n)
 
 
 STB_EXTERN int (*stb_intcmp(int offset))(const void *a, const void *b);
+STB_EXTERN int (*stb_intcmprev(int offset))(const void *a, const void *b);
 STB_EXTERN int (*stb_qsort_strcmp(int offset))(const void *a, const void *b);
 STB_EXTERN int (*stb_qsort_stricmp(int offset))(const void *a, const void *b);
 STB_EXTERN int (*stb_floatcmp(int offset))(const void *a, const void *b);
@@ -1558,6 +1559,13 @@ int stb__intcmp(const void *a, const void *b)
    const int p = *(const int *) ((const char *) a + stb__intcmpoffset);
    const int q = *(const int *) ((const char *) b + stb__intcmpoffset);
    return p < q ? -1 : p > q;
+}
+
+int stb__intcmprev(const void *a, const void *b)
+{
+   const int p = *(const int *) ((const char *) a + stb__intcmpoffset);
+   const int q = *(const int *) ((const char *) b + stb__intcmpoffset);
+   return q < p ? -1 : q > p;
 }
 
 int stb__ucharcmp(const void *a, const void *b)
@@ -1599,6 +1607,12 @@ int (*stb_intcmp(int offset))(const void *, const void *)
 {
    stb__intcmpoffset = offset;
    return &stb__intcmp;
+}
+
+int (*stb_intcmprev(int offset))(const void *, const void *)
+{
+   stb__intcmpoffset = offset;
+   return &stb__intcmprev;
 }
 
 int (*stb_ucharcmp(int offset))(const void *, const void *)
@@ -4080,13 +4094,13 @@ static void STB_(N, rehash)(TYPE *a, int count)                               \
 #define STB_equal(a,b)  ((a) == (b))
 
 #define stb_define_hash(TYPE,N,KEY,EMPTY,DEL,HASH,VALUE)                      \
-   stb_define_hash_base(STB_noprefix, TYPE,STB_nofields,N,NC,0.85f,              \
+   stb_define_hash_base(STB_noprefix, TYPE,STB_nofields,N,NC,0.85f,           \
               KEY,EMPTY,DEL,STB_nocopy,STB_nodelete,STB_nosafe,               \
               STB_equal,STB_equal,HASH,                                       \
               VALUE,STB_nonullvalue,0)
 
 #define stb_define_hash_vnull(TYPE,N,KEY,EMPTY,DEL,HASH,VALUE,VNULL)          \
-   stb_define_hash_base(STB_noprefix, TYPE,STB_nofields,N,NC,0.85f,              \
+   stb_define_hash_base(STB_noprefix, TYPE,STB_nofields,N,NC,0.85f,           \
               KEY,EMPTY,DEL,STB_nocopy,STB_nodelete,STB_nosafe,               \
               STB_equal,STB_equal,HASH,                                       \
               VALUE,STB_nullvalue,VNULL)
@@ -4101,12 +4115,14 @@ static void STB_(N, rehash)(TYPE *a, int count)                               \
 
 stb_declare_hash(STB_EXTERN, stb_ptrmap, stb_ptrmap_, void *, void *)
 stb_declare_hash(STB_EXTERN, stb_idict, stb_idict_, stb_int32, stb_int32)
+stb_declare_hash(STB_EXTERN, stb_uidict, stbi_uidict_, stb_uint32, stb_uint32)
 
 STB_EXTERN void        stb_ptrmap_delete(stb_ptrmap *e, void (*free_func)(void *));
 STB_EXTERN stb_ptrmap *stb_ptrmap_new(void);
 
 STB_EXTERN stb_idict * stb_idict_new_size(int size);
 STB_EXTERN void        stb_idict_remove_all(stb_idict *e);
+STB_EXTERN void        stb_uidict_reset(stb_uidict *e);
 
 #ifdef STB_DEFINE
 
@@ -4163,6 +4179,23 @@ void stb_idict_remove_all(stb_idict *e)
    for (n=0; n < e->limit; ++n)
       e->table[n].k = STB_IEMPTY;
    e->has_empty = e->has_del = 0;
+   e->count = 0;
+   e->deleted = 0;
+}
+
+stb_define_hash_base(STB_noprefix, stb_uidict, STB_nofields, stb_uidict_,stb_uidict_,0.85f,
+              stb_int32,0xffffffff,0xfffffffe,STB_nocopy,STB_nodelete,STB_nosafe,
+              STB_equal,STB_equal,
+              return stb_rehash_improved(k);,stb_uint32,STB_nonullvalue,0)
+
+void stb_uidict_reset(stb_uidict *e)
+{
+   int n;
+   for (n=0; n < e->limit; ++n)
+      e->table[n].k = 0xffffffff;
+   e->has_empty = e->has_del = 0;
+   e->count = 0;
+   e->deleted = 0;
 }
 #endif
 
@@ -5934,6 +5967,9 @@ char **stb_getopt_param(int *argc, char **argv, char *param)
             while (i < *argc)
                argv[j++] = argv[i++];
             break;
+         } else if (argv[i][1] == '-') {
+            // copy argument through including initial '-' for clarity
+            stb_arr_push(opts, strdup(argv[i]));
          } else {
             int k;
             char *q = argv[i];  // traverse options list
@@ -6595,15 +6631,23 @@ STB_EXTERN __declspec(dllimport) long __stdcall  RegOpenKeyExA ( HKEY hKey, cons
 #define STB__REG_KEY_ALL_ACCESS       0x000f003f
 #define STB__REG_KEY_READ             0x00020019
 
+#ifdef _M_AMD64
+#define STB__HKEY_CURRENT_USER        0x80000001ull
+#define STB__HKEY_LOCAL_MACHINE       0x80000002ull
+#else
+#define STB__HKEY_CURRENT_USER        0x80000001
+#define STB__HKEY_LOCAL_MACHINE       0x80000002
+#endif
+
 void *stb_reg_open(char *mode, char *where)
 {
    long res;
    HKEY base;
    HKEY zreg;
    if (!stb_stricmp(mode+1, "cu") || !stb_stricmp(mode+1, "hkcu"))
-      base = (HKEY) 0x80000001; // HKCU
+      base = (HKEY) STB__HKEY_CURRENT_USER;
    else if (!stb_stricmp(mode+1, "lm") || !stb_stricmp(mode+1, "hklm"))
-      base = (HKEY) 0x80000002; // HKLM
+      base = (HKEY) STB__HKEY_LOCAL_MACHINE;
    else
       return NULL;
 
@@ -7011,6 +7055,8 @@ static void stb__dirtree_load_db(char *filename, stb_dirtree *data, char *dir)
    fclose(f);
 }
 
+FILE *hlog;
+
 static int stb__dircount, stb__dircount_mask, stb__showfile;
 static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *active)
 {
@@ -7036,9 +7082,9 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
       swprintf(full_path, L"%s/*", stb__from_utf8(path));
 #else
    if (has_slash)
-      swprintf(full_path, 1024, L"%s*", stb__from_utf8(path));
+      swprintf((wchar_t *) full_path, (size_t) 1024, L"%s*", (wchar_t *) stb__from_utf8(path));
    else
-      swprintf(full_path, 1024, L"%s/*", stb__from_utf8(path));
+      swprintf((wchar_t *) full_path, (size_t) 1024, L"%s/*", (wchar_t *) stb__from_utf8(path));
 #endif
 
    // it's possible this directory is already present: that means it was in the
@@ -7056,14 +7102,14 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
    n = stb_arr_lastn(active->dirs);
 
    if (stb__showfile) printf("[");
-   if( (hFile = _wfindfirsti64( full_path, &c_file )) != -1L ) {
+   if( (hFile = _wfindfirsti64( (wchar_t *) full_path, &c_file )) != -1L ) {
       do {
          if (stb__showfile) printf(")");
          if (c_file.attrib & _A_SUBDIR) {
             // ignore subdirectories starting with '.', e.g. "." and ".."
             if (c_file.name[0] != '.') {
                char *new_path = (char *) full_path;
-               char *temp = stb__to_utf8(c_file.name);
+               char *temp = stb__to_utf8((stb__wchar *) c_file.name);
 
                if (has_slash)
                   sprintf(new_path, "%s%s", path, temp);
@@ -7073,14 +7119,30 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
                if (stb__dircount_mask) {
                   ++stb__dircount;
                   if (!(stb__dircount & stb__dircount_mask)) {
-                     printf("%s\r", new_path);
+                     char dummy_path[128], *pad;
+                     stb_strncpy(dummy_path, new_path, sizeof(dummy_path)-1);
+                     if (strlen(dummy_path) > 96) {
+                        strcpy(dummy_path+96/2-1, "...");
+                        strcpy(dummy_path+96/2+2, new_path + strlen(new_path)-96/2+2);
+                     }
+                     pad = dummy_path + strlen(dummy_path);
+                     while (pad < dummy_path+98)
+                        *pad++ = ' ';
+                     *pad = 0;
+                     printf("%s\r", dummy_path);
+                     #if 0
+                     if (hlog == 0) {
+                        hlog = fopen("c:/x/temp.log", "w");
+                        fprintf(hlog, "%s\n", dummy_path);
+                     }
+                     #endif
                   }
                }
 
                stb__dirtree_scandir(new_path, c_file.time_write, active);
             }
          } else {
-            char *temp = stb__to_utf8(c_file.name);
+            char *temp = stb__to_utf8((stb__wchar *) c_file.name);
             stb__dirtree_add_file(temp, n, c_file.size, c_file.time_write, active);
          }
          if (stb__showfile) printf("(");
@@ -7113,12 +7175,12 @@ static int stb__dirtree_update_db(stb_dirtree *db, stb_dirtree *active)
       if (0 == _stat(db->dirs[i].path, &info)) {
          if (info.st_mode & _S_IFDIR) {
             // it's still a directory, as expected
-            int n = abs(info.st_mtime - db->dirs[i].last_modified);
+            int n = abs((int) (info.st_mtime - db->dirs[i].last_modified));
             if (n > 1 && n != 3600) {  // the 3600 is a hack because sometimes this jumps for no apparent reason, even when no time zone or DST issues are at play
                // it's changed! force a rescan
                // we don't want to scan it until we've stat()d its
                // subdirs, though, so we queue it
-               if (stb__showfile) printf("Changed: %s - %08x:%08x\n", db->dirs[i].path, db->dirs[i].last_modified, info.st_mtime);
+               if (stb__showfile) printf("Changed: %s - %08x:%08x\n", db->dirs[i].path, (unsigned int) db->dirs[i].last_modified, (unsigned int) info.st_mtime);
                stb_arr_push(rescan, i);
                // update the last_mod time
                db->dirs[i].last_modified = info.st_mtime;
@@ -7259,7 +7321,7 @@ stb_dirtree *stb_dirtree_get_dir(char *dir, char *cache_dir)
 stb_dirtree *stb_dirtree_get(char *dir)
 {
    char cache_dir[256];
-   strcpy(cache_dir, "c:/stb");
+   strcpy(cache_dir, "c:/bindata");
    #ifdef STB_HAS_REGISTRY
    {
       void *reg = stb_reg_open("rHKLM", "Software\\SilverSpaceship\\stb");
@@ -8206,44 +8268,44 @@ int stb_ps_eq(stb_ps *p0, stb_ps *p1)
 //               Random Numbers via Meresenne Twister or LCG
 //
 
-STB_EXTERN unsigned long stb_srandLCG(unsigned long seed);
-STB_EXTERN unsigned long stb_randLCG(void);
+STB_EXTERN unsigned int  stb_srandLCG(unsigned long seed);
+STB_EXTERN unsigned int  stb_randLCG(void);
 STB_EXTERN double        stb_frandLCG(void);
 
-STB_EXTERN void          stb_srand(unsigned long seed);
-STB_EXTERN unsigned long stb_rand(void);
+STB_EXTERN void          stb_srand(unsigned int seed);
+STB_EXTERN unsigned int  stb_rand(void);
 STB_EXTERN double        stb_frand(void);
 STB_EXTERN void          stb_shuffle(void *p, size_t n, size_t sz,
                                         unsigned long seed);
 STB_EXTERN void stb_reverse(void *p, size_t n, size_t sz);
 
-STB_EXTERN unsigned long stb_randLCG_explicit(unsigned long seed);
+STB_EXTERN unsigned int  stb_randLCG_explicit(unsigned int  seed);
 
 #define stb_rand_define(x,y)                                         \
                                                                      \
-   unsigned long x(void)                                             \
+   unsigned int  x(void)                                             \
    {                                                                 \
-      static unsigned long stb__rand = y;                            \
+      static unsigned int  stb__rand = y;                            \
       stb__rand = stb__rand * 2147001325 + 715136305; /* BCPL */     \
       return 0x31415926 ^ ((stb__rand >> 16) + (stb__rand << 16));   \
    }
 
 #ifdef STB_DEFINE
-unsigned long stb_randLCG_explicit(unsigned long seed)
+unsigned int  stb_randLCG_explicit(unsigned int seed)
 {
    return seed * 2147001325 + 715136305;
 }
 
-static unsigned long stb__rand_seed=0;
+static unsigned int  stb__rand_seed=0;
 
-unsigned long stb_srandLCG(unsigned long seed)
+unsigned int  stb_srandLCG(unsigned long seed)
 {
-   unsigned long previous = stb__rand_seed;
+   unsigned int  previous = stb__rand_seed;
    stb__rand_seed = seed;
    return previous;
 }
 
-unsigned long stb_randLCG(void)
+unsigned int  stb_randLCG(void)
 {
    stb__rand_seed = stb__rand_seed * 2147001325 + 715136305; // BCPL generator
    // shuffle non-random bits to the middle, and xor to decorrelate with seed
@@ -8284,17 +8346,17 @@ void stb_reverse(void *p, size_t n, size_t sz)
 // public domain Mersenne Twister by Michael Brundage
 #define STB__MT_LEN       624
 
-int stb__mt_index = STB__MT_LEN*sizeof(unsigned long)+1;
-unsigned long stb__mt_buffer[STB__MT_LEN];
+int stb__mt_index = STB__MT_LEN*sizeof(int)+1;
+unsigned int stb__mt_buffer[STB__MT_LEN];
 
-void stb_srand(unsigned long seed)
+void stb_srand(unsigned int seed)
 {
    int i;
-   unsigned long old = stb_srandLCG(seed);
+   unsigned int old = stb_srandLCG(seed);
    for (i = 0; i < STB__MT_LEN; i++)
       stb__mt_buffer[i] = stb_randLCG();
    stb_srandLCG(old);
-   stb__mt_index = STB__MT_LEN*sizeof(unsigned long);
+   stb__mt_index = STB__MT_LEN*sizeof(unsigned int);
 }
 
 #define STB__MT_IA           397
@@ -8305,15 +8367,15 @@ void stb_srand(unsigned long seed)
 #define STB__TWIST(b,i,j)    ((b)[i] & STB__UPPER_MASK) | ((b)[j] & STB__LOWER_MASK)
 #define STB__MAGIC(s)        (((s)&1)*STB__MATRIX_A)
 
-unsigned long stb_rand()
+unsigned int stb_rand()
 {
-   unsigned long * b = stb__mt_buffer;
+   unsigned int  * b = stb__mt_buffer;
    int idx = stb__mt_index;
-   unsigned long s,r;
+   unsigned int  s,r;
    int i;
 	
-   if (idx >= STB__MT_LEN*sizeof(unsigned long)) {
-      if (idx > STB__MT_LEN*sizeof(unsigned long))
+   if (idx >= STB__MT_LEN*sizeof(unsigned int)) {
+      if (idx > STB__MT_LEN*sizeof(unsigned int))
          stb_srand(0);
       idx = 0;
       i = 0;
@@ -8329,9 +8391,9 @@ unsigned long stb_rand()
       s = STB__TWIST(b, STB__MT_LEN-1, 0);
       b[STB__MT_LEN-1] = b[STB__MT_IA-1] ^ (s >> 1) ^ STB__MAGIC(s);
    }
-   stb__mt_index = idx + sizeof(unsigned long);
+   stb__mt_index = idx + sizeof(unsigned int);
    
-   r = *(unsigned long *)((unsigned char *)b + idx);
+   r = *(unsigned int *)((unsigned char *)b + idx);
    
    r ^= (r >> 11);
    r ^= (r << 7) & 0x9D2C5680;
@@ -12401,7 +12463,7 @@ STB_EXTERN int stb_bgio_stat    (char *filename, stb_bgstat *result)
 //   everywhere is 3MB. (That is, if you allocate 1 object of each size,
 //   you'll use 3MB.)
 
-#if defined(STB_DEFINE) && (defined(_WIN32) || defined(STB_FASTMALLOC))
+#if defined(STB_DEFINE) && ((defined(_WIN32) && !defined(_M_AMD64)) || defined(STB_FASTMALLOC))
 
 #ifdef _WIN32
    #ifndef _WINDOWS_
@@ -13012,6 +13074,7 @@ char * stb__string_constant(char *file, int line, char *x)
 
 
 #ifdef STB_STUA
+#error "STUA is no longer supported"
 //////////////////////////////////////////////////////////////////////////
 //
 //  stua: little scripting language
