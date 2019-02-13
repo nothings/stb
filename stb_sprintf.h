@@ -3,7 +3,7 @@
 // http://github.com/nothings/stb
 //
 // allowed types:  sc uidBboXx p AaGgEef n
-// lengths      :  h ll j z t I64 I32 I
+// lengths      :  hh h l ll j z t I64 I32 I
 //
 // Contributors:
 //    Fabian "ryg" Giesen (reformatting)
@@ -234,6 +234,8 @@ STBSP__PUBLICDEF void STB_SPRINTF_DECORATE(set_separators)(char pcomma, char ppe
    stbsp__comma = pcomma;
 }
 
+// Half-width integers (all flavors of 'short') and quarter-width integers (all flavors of 'char') are always promoted to 'signed int' or 'unsigned int'
+// at the call site of printf-like functions. No need to track them.
 #define STBSP__LEFTJUST 1
 #define STBSP__LEADINGPLUS 2
 #define STBSP__LEADINGSPACE 4
@@ -243,7 +245,7 @@ STBSP__PUBLICDEF void STB_SPRINTF_DECORATE(set_separators)(char pcomma, char ppe
 #define STBSP__TRIPLET_COMMA 64
 #define STBSP__NEGATIVE 128
 #define STBSP__METRIC_SUFFIX 256
-#define STBSP__HALFWIDTH 512
+// #define STBSP__HALFWIDTH 512
 #define STBSP__METRIC_NOSPACE 1024
 #define STBSP__METRIC_1024 2048
 #define STBSP__METRIC_JEDEC 4096
@@ -430,10 +432,12 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
 
       // handle integer size overrides
       switch (f[0]) {
-      // are we halfwidth?
+      // are we half- or quarter-width?
       case 'h':
-         fl |= STBSP__HALFWIDTH;
          ++f;
+         if (f[0] == 'h') {
+            ++f;
+         }
          break;
       // are we 64-bit (unix style)
       case 'l':
