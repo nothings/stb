@@ -196,6 +196,7 @@ CREDITS
   Tim Sjostrand
   github:infatum
   Dave Butler (Croepha)
+  Ethan Lee (flibitijibibo)
 */
 
 #include <stdarg.h>
@@ -8269,7 +8270,7 @@ int stb_ps_eq(stb_ps *p0, stb_ps *p1)
 //               Random Numbers via Meresenne Twister or LCG
 //
 
-STB_EXTERN unsigned int  stb_srandLCG(unsigned long seed);
+STB_EXTERN unsigned int  stb_srandLCG(unsigned int seed);
 STB_EXTERN unsigned int  stb_randLCG(void);
 STB_EXTERN double        stb_frandLCG(void);
 
@@ -8277,7 +8278,7 @@ STB_EXTERN void          stb_srand(unsigned int seed);
 STB_EXTERN unsigned int  stb_rand(void);
 STB_EXTERN double        stb_frand(void);
 STB_EXTERN void          stb_shuffle(void *p, size_t n, size_t sz,
-                                        unsigned long seed);
+                                        unsigned int seed);
 STB_EXTERN void stb_reverse(void *p, size_t n, size_t sz);
 
 STB_EXTERN unsigned int  stb_randLCG_explicit(unsigned int  seed);
@@ -8299,7 +8300,7 @@ unsigned int  stb_randLCG_explicit(unsigned int seed)
 
 static unsigned int  stb__rand_seed=0;
 
-unsigned int  stb_srandLCG(unsigned long seed)
+unsigned int  stb_srandLCG(unsigned int seed)
 {
    unsigned int  previous = stb__rand_seed;
    stb__rand_seed = seed;
@@ -8318,10 +8319,10 @@ double stb_frandLCG(void)
    return stb_randLCG() / ((double) (1 << 16) * (1 << 16));
 }
 
-void stb_shuffle(void *p, size_t n, size_t sz, unsigned long seed)
+void stb_shuffle(void *p, size_t n, size_t sz, unsigned int seed)
 {
    char *a;
-   unsigned long old_seed;
+   unsigned int old_seed;
    int i;
    if (seed)
       old_seed = stb_srandLCG(seed);
