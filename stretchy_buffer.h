@@ -67,6 +67,7 @@
 //         sb_push(TYPE *a, TYPE v)   adds v on the end of the array, a la push_back
 //         sb_add(TYPE *a, int n)     adds n uninitialized elements at end of array & returns pointer to first added
 //         sb_last(TYPE *a)           returns an lvalue of the last item in the array
+//         sb_clear(TYPE *a)          clears the array without resizing or freeing its memory
 //         a[n]                       access the nth (counting from 0) element of the array
 //
 //     #define STRETCHY_BUFFER_NO_SHORT_NAMES to only export
@@ -166,6 +167,7 @@
 // Contributors:
 //
 // Timothy Wright (github:ZenToad)
+// Marcus Ramse   (github:JerwuQu)
 //
 // LICENSE
 //
@@ -180,6 +182,7 @@
 #define sb_count  stb_sb_count
 #define sb_add    stb_sb_add
 #define sb_last   stb_sb_last
+#define sb_clear  stb_sb_clear
 #endif
 
 #define stb_sb_free(a)         ((a) ? free(stb__sbraw(a)),0 : 0)
@@ -187,6 +190,7 @@
 #define stb_sb_count(a)        ((a) ? stb__sbn(a) : 0)
 #define stb_sb_add(a,n)        (stb__sbmaybegrow(a,n), stb__sbn(a)+=(n), &(a)[stb__sbn(a)-(n)])
 #define stb_sb_last(a)         ((a)[stb__sbn(a)-1])
+#define stb_sb_clear(a)        ((a) ? (stb__sbn(a) = 0) : 0)
 
 #define stb__sbraw(a) ((int *) (a) - 2)
 #define stb__sbm(a)   stb__sbraw(a)[0]
