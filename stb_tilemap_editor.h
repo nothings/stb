@@ -1,4 +1,4 @@
-// stb_tilemap_editor.h - v0.38 - Sean Barrett - http://nothings.org/stb
+// stb_tilemap_editor.h - v0.39 - Sean Barrett - http://nothings.org/stb
 // placed in the public domain - not copyrighted - first released 2014-09
 //
 // Embeddable tilemap editor for C/C++
@@ -168,7 +168,7 @@
 //      #define STB_TILEMAP_EDITOR_IMPLEMENTATION
 //      // this triggers the implementation
 //
-//      void STBTE_DRAW_RECT(int x0, int y0, int x1, int y1, uint color);
+//      void STBTE_DRAW_RECT(int x0, int y0, int x1, int y1, unsigned int color);
 //      // this must draw a filled rectangle (exclusive on right/bottom)
 //      // color = (r<<16)|(g<<8)|(b)
 //      
@@ -251,7 +251,7 @@
 //
 //   The following symbols set static limits which determine how much
 //   memory will be allocated for the editor. You can override them
-//   by making similiar definitions, but memory usage will increase.
+//   by making similar definitions, but memory usage will increase.
 //
 //      #define STBTE_MAX_TILEMAP_X      200   // max 4096
 //      #define STBTE_MAX_TILEMAP_Y      200   // max 4096
@@ -396,7 +396,7 @@ extern void stbte_tick(stbte_tilemap *tm, float time_in_seconds_since_last_frame
 //  user input
 //
 
-// if you're using SDL, call the next function for SDL_MOUSEMOVE, SDL_MOUSEBUTTON, SDL_MOUSEWHEEL;
+// if you're using SDL, call the next function for SDL_MOUSEMOTION, SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEWHEEL;
 // the transformation lets you scale from SDL mouse coords to stb_tilemap_editor coords
 extern void stbte_mouse_sdl(stbte_tilemap *tm, const void *sdl_event, float xscale, float yscale, int xoffset, int yoffset);
 
@@ -404,6 +404,8 @@ extern void stbte_mouse_sdl(stbte_tilemap *tm, const void *sdl_event, float xsca
 extern void stbte_mouse_move(stbte_tilemap *tm, int x, int y, int shifted, int scrollkey);
 extern void stbte_mouse_button(stbte_tilemap *tm, int x, int y, int right, int down, int shifted, int scrollkey);
 extern void stbte_mouse_wheel(stbte_tilemap *tm, int x, int y, int vscroll);
+
+// note: at the moment, mouse wheel events (SDL_MOUSEWHEEL) are ignored.
 
 // for keyboard, define your own mapping from keys to the following actions.
 // this is totally optional, as all features are accessible with the mouse
@@ -2250,7 +2252,7 @@ enum
    STBTE__prop_int,
 };
 
-// id is:      [      24-bit data     : 7-bit identifer ]
+// id is:      [      24-bit data     : 7-bit identifier ]
 // map id is:  [  12-bit y : 12 bit x : 7-bit identifier ]
 
 #define STBTE__ID(n,p)     ((n) + ((p)<<7))
@@ -2878,7 +2880,7 @@ static void stbte__drag_update(stbte_tilemap *tm, int mapx, int mapy, int copy_p
             stbte__set_link(tm, mapx, mapy, -1, -1, STBTE__undo_record);
          else if (moved || (copied && written)) {
             // if we move the target, we update to point to the new target;
-            // or, if we copy the target and the source is part ofthe copy, then update to new target
+            // or, if we copy the target and the source is part of the copy, then update to new target
             int x = k->x + (stbte__ui.drag_dest_x - stbte__ui.drag_x);
             int y = k->y + (stbte__ui.drag_dest_y - stbte__ui.drag_y);
             if (!(x >= 0 && y >= 0 && x < tm->max_x && y < tm->max_y))

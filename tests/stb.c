@@ -13,12 +13,13 @@
 #include <crtdbg.h>
 #endif
 
-#define STB_STUA
 //#define STB_FASTMALLOC
 #ifdef _DEBUG
 #define STB_MALLOC_WRAPPER_DEBUG
 #endif
+#ifndef _M_AMD64
 #define STB_NPTR
+#endif
 #define STB_DEFINE
 #include "stb.h"
 
@@ -119,7 +120,7 @@ void test_classes(void)
   return;
 }
 
-
+#ifdef STB_STUA
 void test_script(void)
 {
    stua_run_script(
@@ -193,6 +194,7 @@ void test_script(void)
       " // final comment with no newline"
    );
 }
+#endif
 
 #ifdef STB_THREADS
 extern void __stdcall Sleep(unsigned long);
@@ -1490,7 +1492,7 @@ int main(int argc, char **argv)
    }
 
    // the hardcoded compressed lengths being verified _could_
-   // change if you changed the compresser parameters; but pure
+   // change if you changed the compressor parameters; but pure
    // performance optimizations shouldn't change them
    p = stb_file("data/cantrbry.zip", &len2);
    if (p) {
@@ -2254,11 +2256,13 @@ void test_packed_floats(void)
 void do_compressor(int argc,char**argv)
 {
    char *p;
+   size_t slen;
    int len;
 
    int window;
    if (argc == 2) {
-      p = stb_file(argv[1], &len);
+      p = stb_file(argv[1], &slen);
+      len = (int) slen;
       if (p) {
          int dlen, clen = stb_compress_tofile("data/dummy.bin", p, len);
          char *q = stb_decompress_fromfile("data/dummy.bin", &dlen);
@@ -2278,7 +2282,8 @@ void do_compressor(int argc,char**argv)
 
    window = atoi(argv[1]);
    if (window && argc == 4) {
-      p = stb_file(argv[3], &len);
+      p = stb_file(argv[3], &slen);
+      len = (int) slen;
       if (p) {
          stb_compress_hashsize(window);
          stb_compress_tofile(argv[2], p, len);
@@ -2506,10 +2511,10 @@ void first_for_prod_plus_sym(stb_bitset **first, stb_bitset *out, short *prod, i
    stb_bitset_unioneq_changed(out, first[symbol], symset);
 }
 
-#define Item(p,c,t)       ((void *) (((t) << 18) + ((c) << 12) + ((p) << 2)))
-#define ItemProd(i)       ((((uint32) (i)) >> 2) & 1023)
-#define ItemCursor(i)     ((((uint32) (i)) >> 12) & 63)
-#define ItemLookahead(i)  (((uint32) (i)) >> 18)
+#define Item(p,c,t)       ((void *) (size_t) (((t) << 18) + ((c) << 12) + ((p) << 2)))
+#define ItemProd(i)       ((((uint32) (size_t) (i)) >> 2) & 1023)
+#define ItemCursor(i)     ((((uint32) (size_t) (i)) >> 12) & 63)
+#define ItemLookahead(i)  (((uint32) (size_t) (i)) >> 18)
 
 static void pc(stb_ps *p)
 {
