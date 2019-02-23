@@ -1476,17 +1476,13 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
          for(x = 0; x < width; x += 8) {
             float YDU[64], UDU[64], VDU[64];
             for(row = y, pos = 0; row < y+8; ++row) {
-               int p;
-               if(row < height) {
-                  p = (stbi__flip_vertically_on_write ? (height-1-row) : row)*width*comp;
-               } else {
-                  // row >= height => use last input row (=> first if flipping)
-                  p = stbi__flip_vertically_on_write ? 0 : ((height-1)*width*comp);
-               }
+               // row >= height => use last input row
+               int clamped_row = (row < height) ? row : height - 1;
+               int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
                for(col = x; col < x+8; ++col, ++pos) {
                   float r, g, b;
                   // if col >= width => use pixel from last input column
-                  p += ((col < width) ? col : (width-1))*comp;
+                  int p = base_p + ((col < width) ? col : (width-1))*comp;
 
                   r = imageData[p+0];
                   g = imageData[p+ofsG];
