@@ -245,13 +245,13 @@
 //
 // SOURCE STATISTICS (based on v0.6c, 2050 LOC)
 //
-//   Documentation & header file        520 LOC  \___ 660 LOC documentation
-//   Sample code                        140 LOC  /
+//   Documentation & header file        520 LOC  )___ 660 LOC documentation
+//   Sample code                        140 LOC  )
 //   Truetype parsing                   620 LOC  ---- 620 LOC TrueType
-//   Software rasterization             240 LOC  \                           
-//   Curve tessellation                 120 LOC   \__ 550 LOC Bitmap creation
-//   Bitmap management                  100 LOC   /
-//   Baked bitmap interface              70 LOC  /
+//   Software rasterization             240 LOC  )
+//   Curve tessellation                 120 LOC  )___ 550 LOC Bitmap creation
+//   Bitmap management                  100 LOC  )
+//   Baked bitmap interface              70 LOC  )
 //   Font name matching & access        150 LOC  ---- 150 
 //   C runtime library abstraction       60 LOC  ----  60
 //
