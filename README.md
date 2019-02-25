@@ -30,11 +30,11 @@ library    | lastest version | category | LoC | description
 **[stb_c_lexer.h](stb_c_lexer.h)** | 0.09 | parsing | 962 | simplify writing parsers for C-like languages
 **[stb_divide.h](stb_divide.h)** | 0.92 | math | 421 | more useful 32-bit modulus e.g. "euclidean divide"
 **[stb_connected_comp...](stb_connected_components.h)** | 0.95 | misc | 1045 | incrementally compute reachability on grids
-**[stb.h](stb.h)** | 2.32 | misc | 14470 | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**[stb.h](stb.h)** | 2.33 | misc | 14471 | helper functions for C, mostly redundant in C++; basically author's personal stuff
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.5 | misc | 190 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 21  
-Total lines of C code: 55608
+Total lines of C code: 55609
 
 
 FAQ

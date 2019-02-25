@@ -1,4 +1,4 @@
-/* stb.h - v2.32 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.33 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
@@ -25,6 +25,7 @@
 
 Version History
 
+   2.33   more fixes to random numbers
    2.32   stb_intcmprev, stb_uidict, fix random numbers on Linux
    2.31   stb_ucharcmp
    2.30   MinGW fix
