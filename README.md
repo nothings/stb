@@ -17,7 +17,7 @@ library    | lastest version | category | LoC | description
 **[stb_image_write.h](stb_image_write.h)** | 1.11 | graphics | 1621 | image writing to disk: PNG, TGA, BMP
 **[stb_image_resize.h](stb_image_resize.h)** | 0.95 | graphics | 2627 | resize images larger/smaller with good quality
 **[stb_rect_pack.h](stb_rect_pack.h)** | 1.00 | graphics | 628 | simple 2D rectangle packer with decent quality
-**[stb_ds.h](stb_ds.h)** | 0.2 | utility | 1627 | typesafe dynamic array and hash tables for C, will compile in C++
+**[stb_ds.h](stb_ds.h)** | 0.3 | utility | 1638 | typesafe dynamic array and hash tables for C, will compile in C++
 **[stb_sprintf.h](stb_sprintf.h)** | 1.06 | utility | 1860 | fast sprintf, snprintf for C/C++
 **[stretchy_buffer.h](stretchy_buffer.h)** | 1.03 | utility | 262 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **[stb_textedit.h](stb_textedit.h)** | 1.13 | user&nbsp;interface | 1404 | guts of a text editor for games etc implementing them from scratch
@@ -34,7 +34,7 @@ library    | lastest version | category | LoC | description
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.5 | misc | 190 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 21  
-Total lines of C code: 55609
+Total lines of C code: 55620
 
 
 FAQ

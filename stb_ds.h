@@ -1,4 +1,4 @@
-/* stb_ds.h - v0.2 - public domain data structures - Sean Barrett 2019
+/* stb_ds.h - v0.3 - public domain data structures - Sean Barrett 2019
   
    This is a single-header-file library that provides easy-to-use
    dynamic arrays and hash tables for C (also works in C++).
@@ -402,7 +402,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #if defined(__GNUC__) || defined(__clang__)
 #define STBDS_HAS_TYPEOF
 #ifdef __cplusplus
-#define STBDS_HAS_LITERAL_ARRAY
+//#define STBDS_HAS_LITERAL_ARRAY  // this is currently broken for clang
 #endif
 #endif
 
@@ -414,7 +414,11 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 
 // this macro takes the address of the argument, but on gcc/clang can accept rvalues
 #if defined(STBDS_HAS_LITERAL_ARRAY) && defined(STBDS_HAS_TYPEOF)
-#define STBDS_ADDRESSOF(typevar, value)     ((typeof(typevar)[1]){value}) // literal array decays to pointer to value
+  #if __clang__
+  #define STBDS_ADDRESSOF(typevar, value)     ((__typeof__(typevar)[1]){value}) // literal array decays to pointer to value
+  #else
+  #define STBDS_ADDRESSOF(typevar, value)     ((typeof(typevar)[]){value}) // literal array decays to pointer to value
+  #endif
 #else
 #define STBDS_ADDRESSOF(typevar, value)     &(value)
 #endif
@@ -443,10 +447,10 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrmaybegrow(a,n)  ((!(a) || stbds_header(a)->length + (n) > stbds_header(a)->capacity) \
                                   ? (stbds_arrgrow(a,n,0),0) : 0)
 
-#define stbds_arrgrow(a,b,c)   ((a) = stbds_arrgrowf((a), sizeof *(a), (b), (c)))
+#define stbds_arrgrow(a,b,c)   ((a) = stbds_arrgrowf_wrapper((a), sizeof *(a), (b), (c)))
 
 #define stbds_hmput(t, k, v) \
-    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, 0),   \
+    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, 0),   \
      (t)[stbds_temp((t)-1)].key = (k), \
      (t)[stbds_temp((t)-1)].value = (v))
 
@@ -455,14 +459,14 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
      (t)[stbds_temp((t)-1)] = (s))
 
 #define stbds_hmgeti(t,k) \
-    ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, STBDS_HM_BINARY), \
+    ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, STBDS_HM_BINARY), \
       stbds_temp((t)-1))
 
 #define stbds_hmgetp(t, k) \
     ((void) stbds_hmgeti(t,k), &(t)[stbds_temp((t)-1)])
 
 #define stbds_hmdel(t,k) \
-    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, STBDS_OFFSETOF((t),key), STBDS_HM_BINARY)),(t)?stbds_temp((t)-1):0)
+    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, STBDS_OFFSETOF((t),key), STBDS_HM_BINARY)),(t)?stbds_temp((t)-1):0)
 
 #define stbds_hmdefault(t, v) \
     ((t) = stbds_hmput_default_wrapper((t), sizeof *(t)), (t)[-1].value = (v))
@@ -479,22 +483,22 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_hmlenu(t)    (stbds_arrlenu((t)-1)-1)
 
 #define stbds_shput(t, k, v) \
-    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (k), sizeof (t)->key, STBDS_HM_STRING),   \
+    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING),   \
      (t)[stbds_temp(t-1)].value = (v))
 
 #define stbds_shputs(t, s) \
-    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (s).key, sizeof (s).key, STBDS_HM_STRING), \
+    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (s).key, sizeof (s).key, STBDS_HM_STRING), \
      (t)[stbds_temp(t-1)] = (s))
 
 #define stbds_shgeti(t,k) \
-     ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (k), sizeof (t)->key, STBDS_HM_STRING), \
+     ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
       stbds_temp(t))
 
 #define stbds_shgetp(t, k) \
     ((void) stbds_shgeti(t,k), &(t)[stbds_temp(t-1)])
 
 #define stbds_shdel(t,k) \
-    (((t) = stbds_hmdel_key((t),sizeof *(t), (k), sizeof (t)->key, STBDS_OFFSETOF((t),key), STBDS_HM_STRING)),(t)?stbds_temp((t)-1):0)
+    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_OFFSETOF((t),key), STBDS_HM_STRING)),(t)?stbds_temp((t)-1):0)
 
 #define stbds_sh_new_arena(t)  \
     ((t) = stbds_shmode_func_wrapper(t, sizeof *(t), STBDS_SH_ARENA))
@@ -565,7 +569,7 @@ template<class T> static T * stbds_hmdel_key_wrapper(T *a, size_t elemsize, void
   return (T*)stbds_hmdel_key((void*)a, elemsize, key, keysize, keyoffset, mode);
 }
 template<class T> static T * stbds_shmode_func_wrapper(T *, size_t elemsize, int mode) {
-  return stbds_shmode_func(elemsize, mode);
+  return (T*)stbds_shmode_func(elemsize, mode);
 }
 #else
 #define stbds_arrgrowf_wrapper            stbds_arrgrowf
@@ -1444,6 +1448,10 @@ char *strkey(int n)
 
 void stbds_unit_tests(void)
 {
+#if defined(_MSC_VER) && _MSC_VER <= 1200 && defined(__cplusplus)
+  // VC6 C++ doesn't like the template<> trick on unnamed structures, so do nothing!
+  STBDS_ASSERT(0);
+#else
   const int testsize = 100000;
   int *arr=NULL;
   struct { int   key;        int value; } *intmap = NULL;
@@ -1472,46 +1480,48 @@ void stbds_unit_tests(void)
   for (i=0; i < 5; ++i) {
     arrpush(arr,1); arrpush(arr,2); arrpush(arr,3); arrpush(arr,4);
     stbds_arrins(arr,i,5);
-    assert(arr[i] == 5);
+    STBDS_ASSERT(arr[i] == 5);
     if (i < 4)
-      assert(arr[4] == 4);
+      STBDS_ASSERT(arr[4] == 4);
     arrfree(arr);
   }
 
   hmdefault(intmap, -1);
-  i=1; assert(hmget(intmap, i) == -1);
+  i=1; STBDS_ASSERT(hmget(intmap, i) == -1);
   for (i=0; i < testsize; i+=2)
     hmput(intmap, i, i*5);
   for (i=0; i < testsize; i+=1)
-    if (i & 1) assert(hmget(intmap, i) == -1 );
-    else       assert(hmget(intmap, i) == i*5);
+    if (i & 1) STBDS_ASSERT(hmget(intmap, i) == -1 );
+    else       STBDS_ASSERT(hmget(intmap, i) == i*5);
   for (i=0; i < testsize; i+=2)
     hmput(intmap, i, i*3);
   for (i=0; i < testsize; i+=1)
-    if (i & 1) assert(hmget(intmap, i) == -1 );
-    else       assert(hmget(intmap, i) == i*3);
+    if (i & 1) STBDS_ASSERT(hmget(intmap, i) == -1 );
+    else       STBDS_ASSERT(hmget(intmap, i) == i*3);
   for (i=2; i < testsize; i+=4)
     hmdel(intmap, i); // delete half the entries
   for (i=0; i < testsize; i+=1)
-    if (i & 3) assert(hmget(intmap, i) == -1 );
-    else       assert(hmget(intmap, i) == i*3);
+    if (i & 3) STBDS_ASSERT(hmget(intmap, i) == -1 );
+    else       STBDS_ASSERT(hmget(intmap, i) == i*3);
   for (i=0; i < testsize; i+=1)
     hmdel(intmap, i); // delete the rest of the entries    
   for (i=0; i < testsize; i+=1)
-    assert(hmget(intmap, i) == -1 );
+    STBDS_ASSERT(hmget(intmap, i) == -1 );
   hmfree(intmap);
   for (i=0; i < testsize; i+=2)
     hmput(intmap, i, i*3);
   hmfree(intmap);
 
-  #ifdef __clang__
+  #if defined(__clang__) || defined(__GNUC__)
+  #ifndef __cplusplus
   intmap = NULL;
   hmput(intmap, 15, 7);
   hmput(intmap, 11, 3);
   hmput(intmap,  9, 5);
-  assert(hmget(intmap, 9) == 5);
-  assert(hmget(intmap, 11) == 3);
-  assert(hmget(intmap, 15) == 7);
+  STBDS_ASSERT(hmget(intmap, 9) == 5);
+  STBDS_ASSERT(hmget(intmap, 11) == 3);
+  STBDS_ASSERT(hmget(intmap, 15) == 7);
+  #endif
   #endif
 
   for (i=0; i < testsize; ++i)
@@ -1527,17 +1537,17 @@ void stbds_unit_tests(void)
     for (i=0; i < testsize; i+=2)
       shput(strmap, strkey(i), i*3);
     for (i=0; i < testsize; i+=1)
-      if (i & 1) assert(shget(strmap, strkey(i)) == -1 );
-      else       assert(shget(strmap, strkey(i)) == i*3);
+      if (i & 1) STBDS_ASSERT(shget(strmap, strkey(i)) == -1 );
+      else       STBDS_ASSERT(shget(strmap, strkey(i)) == i*3);
     for (i=2; i < testsize; i+=4)
       shdel(strmap, strkey(i)); // delete half the entries
     for (i=0; i < testsize; i+=1)
-      if (i & 3) assert(shget(strmap, strkey(i)) == -1 );
-      else       assert(shget(strmap, strkey(i)) == i*3);
+      if (i & 3) STBDS_ASSERT(shget(strmap, strkey(i)) == -1 );
+      else       STBDS_ASSERT(shget(strmap, strkey(i)) == i*3);
     for (i=0; i < testsize; i+=1)
       shdel(strmap, strkey(i)); // delete the rest of the entries    
     for (i=0; i < testsize; i+=1)
-      assert(shget(strmap, strkey(i)) == -1 );
+      STBDS_ASSERT(shget(strmap, strkey(i)) == -1 );
     shfree(strmap);
   }
 
@@ -1562,9 +1572,9 @@ void stbds_unit_tests(void)
   for (i=0; i < testsize; i += 1) {
     stbds_struct s = { i,i*2,i*3  ,i*4 };
     stbds_struct t = { i,i*2,i*3+1,i*4 };
-    if (i & 1) assert(hmget(map, s) == 0);
-    else       assert(hmget(map, s) == i*5);
-    assert(hmget(map, t) == 0);
+    if (i & 1) STBDS_ASSERT(hmget(map, s) == 0);
+    else       STBDS_ASSERT(hmget(map, s) == i*5);
+    STBDS_ASSERT(hmget(map, t) == 0);
   }
 
   for (i=0; i < testsize; i += 2) {
@@ -1576,10 +1586,11 @@ void stbds_unit_tests(void)
   for (i=0; i < testsize; i += 1) {
     stbds_struct s = { i,i*2,i*3,i*4 };
     stbds_struct t = { i,i*2,i*3,i*4 };
-    if (i & 1) assert(hmgets(map2, s.key).d == 0);
-    else       assert(hmgets(map2, s.key).d == i*4);
+    if (i & 1) STBDS_ASSERT(hmgets(map2, s.key).d == 0);
+    else       STBDS_ASSERT(hmgets(map2, s.key).d == i*4);
   }
   hmfree(map2);
+#endif
 }
 #endif
 
