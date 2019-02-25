@@ -12,29 +12,29 @@ by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **[stb_vorbis.c](stb_vorbis.c)** | 1.15 | audio | 5479 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**[stb_image.h](stb_image.h)** | 2.20 | graphics | 7529 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**[stb_truetype.h](stb_truetype.h)** | 1.20 | graphics | 4881 | parse, decode, and rasterize characters from truetype fonts
-**[stb_image_write.h](stb_image_write.h)** | 1.10 | graphics | 1621 | image writing to disk: PNG, TGA, BMP
+**[stb_image.h](stb_image.h)** | 2.21 | graphics | 7530 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**[stb_truetype.h](stb_truetype.h)** | 1.21 | graphics | 4882 | parse, decode, and rasterize characters from truetype fonts
+**[stb_image_write.h](stb_image_write.h)** | 1.11 | graphics | 1621 | image writing to disk: PNG, TGA, BMP
 **[stb_image_resize.h](stb_image_resize.h)** | 0.95 | graphics | 2627 | resize images larger/smaller with good quality
-**[stb_rect_pack.h](stb_rect_pack.h)** | 0.99 | graphics | 627 | simple 2D rectangle packer with decent quality
+**[stb_rect_pack.h](stb_rect_pack.h)** | 1.00 | graphics | 628 | simple 2D rectangle packer with decent quality
 **[stb_ds.h](stb_ds.h)** | 0.2 | utility | 1627 | typesafe dynamic array and hash tables for C, will compile in C++
 **[stb_sprintf.h](stb_sprintf.h)** | 1.06 | utility | 1860 | fast sprintf, snprintf for C/C++
 **[stretchy_buffer.h](stretchy_buffer.h)** | 1.03 | utility | 262 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **[stb_textedit.h](stb_textedit.h)** | 1.13 | user&nbsp;interface | 1404 | guts of a text editor for games etc implementing them from scratch
-**[stb_voxel_render.h](stb_voxel_render.h)** | 0.86 | 3D&nbsp;graphics | 3804 | Minecraft-esque voxel rendering "engine" with many more features
+**[stb_voxel_render.h](stb_voxel_render.h)** | 0.87 | 3D&nbsp;graphics | 3805 | Minecraft-esque voxel rendering "engine" with many more features
 **[stb_dxt.h](stb_dxt.h)** | 1.08b | 3D&nbsp;graphics | 728 | Fabian "ryg" Giesen's real-time DXT compressor
 **[stb_perlin.h](stb_perlin.h)** | 0.4 | 3D&nbsp;graphics | 366 | revised Perlin noise (3D input, 1D output)
 **[stb_easy_font.h](stb_easy_font.h)** | 1.0 | 3D&nbsp;graphics | 303 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
-**[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.39 | game&nbsp;dev | 4176 | embeddable tilemap editor
+**[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.40 | game&nbsp;dev | 4178 | embeddable tilemap editor
 **[stb_herringbone_wa...](stb_herringbone_wang_tile.h)** | 0.6 | game&nbsp;dev | 1220 | herringbone Wang tile map generator
 **[stb_c_lexer.h](stb_c_lexer.h)** | 0.09 | parsing | 962 | simplify writing parsers for C-like languages
-**[stb_divide.h](stb_divide.h)** | 0.91 | math | 420 | more useful 32-bit modulus e.g. "euclidean divide"
+**[stb_divide.h](stb_divide.h)** | 0.92 | math | 421 | more useful 32-bit modulus e.g. "euclidean divide"
 **[stb_connected_comp...](stb_connected_components.h)** | 0.95 | misc | 1045 | incrementally compute reachability on grids
 **[stb.h](stb.h)** | 2.32 | misc | 14470 | helper functions for C, mostly redundant in C++; basically author's personal stuff
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.5 | misc | 190 | quick-and-dirty malloc/free leak-checking
 
 Total libraries: 21  
-Total lines of C code: 55601
+Total lines of C code: 55608
 
 
 FAQ
