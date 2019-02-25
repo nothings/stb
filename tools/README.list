@@ -4,6 +4,7 @@ stb_truetype.h              | graphics         | parse, decode, and rasterize ch
 stb_image_write.h           | graphics         | image writing to disk: PNG, TGA, BMP
 stb_image_resize.h          | graphics         | resize images larger/smaller with good quality
 stb_rect_pack.h             | graphics         | simple 2D rectangle packer with decent quality
+stb_ds.h                    | utility          | typesafe dynamic array and hash tables for C, will compile in C++
 stb_sprintf.h               | utility          | fast sprintf, snprintf for C/C++
 stretchy_buffer.h           | utility          | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 stb_textedit.h              | user interface   | guts of a text editor for games etc implementing them from scratch
