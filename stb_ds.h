@@ -916,9 +916,9 @@ static size_t stbds_siphash_bytes(void *p, size_t len, size_t seed)
   }
   data = len << (STBDS_SIZE_T_BITS-8);
   switch (len - i) {
-    case 7: data |= ((size_t) d[6] << 48);
-    case 6: data |= ((size_t) d[5] << 40);
-    case 5: data |= ((size_t) d[4] << 32);
+    case 7: data |= ((size_t) d[6] << 24) << 24;
+    case 6: data |= ((size_t) d[5] << 20) << 20;
+    case 5: data |= ((size_t) d[4] << 16) << 16;
     case 4: data |= (d[3] << 24);
     case 3: data |= (d[2] << 16);
     case 2: data |= (d[1] << 8);
@@ -1000,7 +1000,8 @@ size_t stbds_hash_bytes(void *p, size_t len, size_t seed)
 
     return (((size_t) hash << 16 << 16) | hash) ^ seed;
   } else if (len == 8 && sizeof(size_t) == 8) {
-    size_t hash = d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24) | ((size_t)d[4] << 32) | ((size_t)d[5] << 40) | ((size_t)d[6] << 48) | ((size_t)d[7] << 56);
+    size_t hash = d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24);
+    hash |= (size_t) (d[4] | (d[5] << 8) | (d[6] << 16) | (d[7] << 24)) << 16 << 16; // avoid warning if size_t == 4
     hash ^= seed ^ len;
     hash = (~hash) + (hash << 21);
     hash ^= STBDS_ROTATE_RIGHT(hash,24);
