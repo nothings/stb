@@ -1,3 +1,4 @@
+#define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
@@ -13,7 +14,7 @@ static const char img6x5_template[] =
    ".*...."
    ".*....";
 
-int main(int argc, char **argv)
+void image_write_test(void)
 {
    // make a RGB version of the template image
    // use red on blue to detect R<->B swaps
@@ -32,19 +33,25 @@ int main(int argc, char **argv)
       img6x5_rgbf[i*3 + 2] = on ? 0.0f : 1.0f;
    }
 
-   stbi_write_png("wr6x5_regular.png", 6, 5, 3, img6x5_rgb, 6*3);
-   stbi_write_bmp("wr6x5_regular.bmp", 6, 5, 3, img6x5_rgb);
-   stbi_write_tga("wr6x5_regular.tga", 6, 5, 3, img6x5_rgb);
-   stbi_write_jpg("wr6x5_regular.jpg", 6, 5, 3, img6x5_rgb, 95);
-   stbi_write_hdr("wr6x5_regular.hdr", 6, 5, 3, img6x5_rgbf);
+   stbi_write_png("output/wr6x5_regular.png", 6, 5, 3, img6x5_rgb, 6*3);
+   stbi_write_bmp("output/wr6x5_regular.bmp", 6, 5, 3, img6x5_rgb);
+   stbi_write_tga("output/wr6x5_regular.tga", 6, 5, 3, img6x5_rgb);
+   stbi_write_jpg("output/wr6x5_regular.jpg", 6, 5, 3, img6x5_rgb, 95);
+   stbi_write_hdr("output/wr6x5_regular.hdr", 6, 5, 3, img6x5_rgbf);
 
    stbi_flip_vertically_on_write(1);
 
-   stbi_write_png("wr6x5_flip.png", 6, 5, 3, img6x5_rgb, 6*3);
-   stbi_write_bmp("wr6x5_flip.bmp", 6, 5, 3, img6x5_rgb);
-   stbi_write_tga("wr6x5_flip.tga", 6, 5, 3, img6x5_rgb);
-   stbi_write_jpg("wr6x5_flip.jpg", 6, 5, 3, img6x5_rgb, 95);
-   stbi_write_hdr("wr6x5_flip.hdr", 6, 5, 3, img6x5_rgbf);
+   stbi_write_png("output/wr6x5_flip.png", 6, 5, 3, img6x5_rgb, 6*3);
+   stbi_write_bmp("output/wr6x5_flip.bmp", 6, 5, 3, img6x5_rgb);
+   stbi_write_tga("output/wr6x5_flip.tga", 6, 5, 3, img6x5_rgb);
+   stbi_write_jpg("output/wr6x5_flip.jpg", 6, 5, 3, img6x5_rgb, 95);
+   stbi_write_hdr("output/wr6x5_flip.hdr", 6, 5, 3, img6x5_rgbf);
+}
 
+#ifdef IWT_TEST
+int main(int argc, char **argv)
+{
+   image_write_test();
    return 0;
 }
+#endif

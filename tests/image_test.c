@@ -62,10 +62,14 @@ void dummy_write(void *context, void *data, int len)
    memcpy(dummy, data, len);
 }
 
+extern void image_write_test(void);
+
 int main(int argc, char **argv)
 {
    int w,h;
    //test_ycbcr();
+
+   image_write_test();
 
    #if 0
    // test hdr asserts

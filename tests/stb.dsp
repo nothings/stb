@@ -66,7 +66,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /GX /Zi /Od /I ".." /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /D "TT_TEST" /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /GX /Zi /Od /I ".." /D "WIN32" /D "_DEBUG" /D "_CONSOLE" /D "_MBCS" /D "DS_TEST" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -110,6 +110,10 @@ SOURCE=..\stb_divide.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_ds.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_dxt.h
 # End Source File
 # Begin Source File
@@ -147,6 +151,10 @@ SOURCE=..\stb_perlin.h
 # Begin Source File
 
 SOURCE=..\stb_pg.h
+# End Source File
+# Begin Source File
+
+SOURCE=.\stb_query.h
 # End Source File
 # Begin Source File
 
@@ -195,6 +203,10 @@ SOURCE=.\test_c_compilation.c
 # Begin Source File
 
 SOURCE=.\test_c_lexer.c
+# End Source File
+# Begin Source File
+
+SOURCE=.\test_ds.c
 # End Source File
 # Begin Source File
 
