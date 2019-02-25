@@ -31,6 +31,7 @@
 //    
 //  Bugfixes / warning fixes
 //    Jeremy Jaussaud
+//    Fabian Giesen
 //
 // Version history:
 //
@@ -348,6 +349,13 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
    width -= width % c->align;
    STBRP_ASSERT(width % c->align == 0);
 
+   // if it can't possibly fit, bail immediately
+   if (width > c->width || height > c->height) {
+      fr.prev_link = NULL;
+      fr.x = fr.y = 0;
+      return fr;
+   }
+
    node = c->active_head;
    prev = &c->active_head;
    while (node->x + width <= c->width) {
@@ -411,7 +419,7 @@ static stbrp__findresult stbrp__skyline_find_best_pos(stbrp_context *c, int widt
          }
          STBRP_ASSERT(node->next->x > xpos && node->x <= xpos);
          y = stbrp__skyline_find_min_y(c, node, xpos, width, &waste);
-         if (y + height < c->height) {
+         if (y + height <= c->height) {
             if (y <= best_y) {
                if (y < best_y || waste < best_waste || (waste==best_waste && xpos < best_x)) {
                   best_x = xpos;
