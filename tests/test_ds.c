@@ -43,6 +43,7 @@ void churn(int a, int b, int count)
 }
 
 #ifdef DS_TEST
+#include <stdio.h>
 int main(int argc, char **argv)
 {
   stbds_unit_tests();
@@ -54,6 +55,7 @@ int main(int argc, char **argv)
   churn(200,500, 5000);
   churn(2000,5000, 500);
   churn(20000,50000, 50);
+  printf("Ok!");
   return 0;
 }
 #endif
