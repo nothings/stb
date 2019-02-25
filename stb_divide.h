@@ -1,8 +1,9 @@
-// stb_divide.h - v0.91 - public domain - Sean Barrett, Feb 2010
+// stb_divide.h - v0.92 - public domain - Sean Barrett, Feb 2010
 // Three kinds of divide/modulus of signed integers.
 //
 // HISTORY
 //
+//   v0.92  2019-02-25  Fix warning
 //   v0.91  2010-02-27  Fix euclidean division by INT_MIN for non-truncating C
 //                      Check result with 64-bit math to catch such cases
 //   v0.90  2010-02-24  First public release

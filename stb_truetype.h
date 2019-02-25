@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.20 - public domain
+// stb_truetype.h - v1.21 - public domain
 // authored from 2009-2016 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -49,6 +49,7 @@
 //       
 // VERSION HISTORY
 //
+//   1.21 (2019-02-25) fix warning
 //   1.20 (2019-02-07) PackFontRange skips missing codepoints; GetScaleFontVMetrics()
 //   1.19 (2018-02-11) GPOS kerning, STBTT_fmod
 //   1.18 (2018-01-29) add missing function
