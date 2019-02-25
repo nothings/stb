@@ -2370,16 +2370,16 @@ static unsigned short stbvox_face_visible[STBVOX_FT_count] =
 {
    // we encode the table by listing which cases cause *obscuration*, and bitwise inverting that
    // table is pre-shifted by 5 to save a shift when it's accessed
-   (unsigned short) ((~0x07ff                                          )<<5),  // none is completely obscured by everything
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_upper)   ))<<5),  // upper
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_lower)   ))<<5),  // lower
-   (unsigned short) ((~((1<<STBVOX_FT_solid)                          ))<<5),  // solid is only completely obscured only by solid
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_013)))<<5),  // diag012 matches diag013
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_123)))<<5),  // diag023 matches diag123
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_012)))<<5),  // diag013 matches diag012
-   (unsigned short) ((~((1<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_023)))<<5),  // diag123 matches diag023
-   (unsigned short) ((~0                                               )<<5),  // force is always rendered regardless, always forces neighbor
-   (unsigned short) ((~((1<<STBVOX_FT_solid)                          ))<<5),  // partial is only completely obscured only by solid
+   (unsigned short) ((~0x07ffu                                          )<<5),  // none is completely obscured by everything
+   (unsigned short) ((~((1u<<STBVOX_FT_solid) | (1<<STBVOX_FT_upper)   ))<<5),  // upper
+   (unsigned short) ((~((1u<<STBVOX_FT_solid) | (1<<STBVOX_FT_lower)   ))<<5),  // lower
+   (unsigned short) ((~((1u<<STBVOX_FT_solid)                          ))<<5),  // solid is only completely obscured only by solid
+   (unsigned short) ((~((1u<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_013)))<<5),  // diag012 matches diag013
+   (unsigned short) ((~((1u<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_123)))<<5),  // diag023 matches diag123
+   (unsigned short) ((~((1u<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_012)))<<5),  // diag013 matches diag012
+   (unsigned short) ((~((1u<<STBVOX_FT_solid) | (1<<STBVOX_FT_diag_023)))<<5),  // diag123 matches diag023
+   (unsigned short) ((~0u                                               )<<5),  // force is always rendered regardless, always forces neighbor
+   (unsigned short) ((~((1u<<STBVOX_FT_solid)                          ))<<5),  // partial is only completely obscured only by solid
 };
 
 // the vertex heights of the block types, in binary vertex order (zyx):

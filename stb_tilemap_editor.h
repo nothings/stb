@@ -1061,8 +1061,9 @@ stbte_tilemap *stbte_create_map(int map_x, int map_y, int map_layers, int spacin
 void stbte_set_background_tile(stbte_tilemap *tm, short id)
 {
    int i;
-   STBTE_ASSERT(id >= -1 && id < 32768);
-   if (id >= 32768 || id < -1)
+   STBTE_ASSERT(id >= -1);
+   // STBTE_ASSERT(id < 32768);
+   if (id < -1)
       return;
    for (i=0; i < STBTE_MAX_TILEMAP_X * STBTE_MAX_TILEMAP_Y; ++i)
       if (tm->data[0][i][0] == -1)
@@ -1222,7 +1223,8 @@ void stbte_set_tile(stbte_tilemap *tm, int x, int y, int layer, signed short til
 {
    STBTE_ASSERT(x >= 0 && x < tm->max_x && y >= 0 && y < tm->max_y);
    STBTE_ASSERT(layer >= 0 && layer < tm->num_layers);
-   STBTE_ASSERT(tile >= -1 && tile < 32768);
+   STBTE_ASSERT(tile >= -1);
+   //STBTE_ASSERT(tile < 32768);
    if (x < 0 || x >= STBTE_MAX_TILEMAP_X || y < 0 || y >= STBTE_MAX_TILEMAP_Y)
       return;
    if (layer < 0 || layer >= tm->num_layers || tile < -1)

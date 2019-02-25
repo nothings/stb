@@ -168,7 +168,7 @@ RECENT REVISION HISTORY:
 //   If compiling for Windows and you wish to use Unicode filenames, compile
 //   with
 //       #define STBI_WINDOWS_UTF8
-//   and pass utf8-encoded filenames. Call stbiw_convert_wchar_to_utf8 to convert
+//   and pass utf8-encoded filenames. Call stbi_convert_wchar_to_utf8 to convert
 //   Windows wchar_t filenames to utf8.
 //
 // ===========================================================================
