@@ -212,7 +212,8 @@ DOCUMENTATION
       shputs
         T hmputs(T*, T item)
         T shputs(T*, T item)
-          Returns the structure corresponding to 'key' in the hashmap.
+          Inserts a struct with T.key and T.value into the hashmap. If the struct is already
+          present in the hashmap, updates it.
 
       hmdel
       shdel
