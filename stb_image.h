@@ -3659,7 +3659,7 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
       int k;
       unsigned int i,j;
       stbi_uc *output;
-      stbi_uc *coutput[4];
+      stbi_uc *coutput[4] = { NULL, NULL, NULL, NULL };
 
       stbi__resample res_comp[4];
 
