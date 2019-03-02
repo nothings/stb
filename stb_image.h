@@ -6416,7 +6416,8 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
       g->out = (stbi_uc *) stbi__malloc(4 * g->w * g->h);
       g->background = (stbi_uc *) stbi__malloc(4 * g->w * g->h); 
       g->history = (stbi_uc *) stbi__malloc(g->w * g->h); 
-      if (g->out == 0)                      return stbi__errpuc("outofmem", "Out of memory");
+      if (!g->out || !g->background || !g->history)
+         return stbi__errpuc("outofmem", "Out of memory");
 
       // image is treated as "transparent" at the start - ie, nothing overwrites the current background; 
       // background colour is only used for pixels that are not rendered first frame, after that "background"
@@ -6484,6 +6485,13 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
             g->cur_x   = g->start_x;
             g->cur_y   = g->start_y;
 
+            // if the width of the specified rectangle is 0, that means
+            // we may not see *any* pixels or the image is malformed;
+            // to make sure this is caught, move the current y down to
+            // max_y (which is what out_gif_code checks).
+            if (w == 0)
+               g->cur_y = g->max_y;
+
             g->lflags = stbi__get8(s);
 
             if (g->lflags & 0x40) {
@@ -6503,7 +6511,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
                return stbi__errpuc("missing color table", "Corrupt GIF");            
             
             o = stbi__process_gif_raster(s, g);
-            if (o == NULL) return NULL;
+            if (!o) return NULL;
 
             // if this was the first frame, 
             pcount = g->w * g->h; 
@@ -6643,6 +6651,9 @@ static void *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req
       // can be done for multiple frames. 
       if (req_comp && req_comp != 4)
          u = stbi__convert_format(u, 4, req_comp, g.w, g.h);
+   } else if (g.out) {
+      // if there was an error and we allocated an image buffer, free it!
+      STBI_FREE(g.out);
    }
 
    // free buffers needed for multiple frame loading; 
