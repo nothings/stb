@@ -6412,18 +6412,22 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
    // on first frame, any non-written pixels get the background colour (non-transparent)
    first_frame = 0; 
    if (g->out == 0) {
-      if (!stbi__gif_header(s, g, comp,0))     return 0; // stbi__g_failure_reason set by stbi__gif_header
-      g->out = (stbi_uc *) stbi__malloc(4 * g->w * g->h);
-      g->background = (stbi_uc *) stbi__malloc(4 * g->w * g->h); 
-      g->history = (stbi_uc *) stbi__malloc(g->w * g->h); 
-      if (g->out == 0)                      return stbi__errpuc("outofmem", "Out of memory");
+      if (!stbi__gif_header(s, g, comp,0)) return 0; // stbi__g_failure_reason set by stbi__gif_header
+      if (!stbi__mad3sizes_valid(4, g->w, g->h, 0))
+         return stbi__errpuc("too large", "GIF image is too large");
+      pcount = g->w * g->h;
+      g->out = (stbi_uc *) stbi__malloc(4 * pcount);
+      g->background = (stbi_uc *) stbi__malloc(4 * pcount);
+      g->history = (stbi_uc *) stbi__malloc(pcount);
+      if (!g->out || !g->background || !g->history)
+         return stbi__errpuc("outofmem", "Out of memory");
 
       // image is treated as "transparent" at the start - ie, nothing overwrites the current background; 
       // background colour is only used for pixels that are not rendered first frame, after that "background"
       // color refers to the color that was there the previous frame. 
-      memset( g->out, 0x00, 4 * g->w * g->h ); 
-      memset( g->background, 0x00, 4 * g->w * g->h ); // state of the background (starts transparent)
-      memset( g->history, 0x00, g->w * g->h );        // pixels that were affected previous frame
+      memset(g->out, 0x00, 4 * pcount);
+      memset(g->background, 0x00, 4 * pcount); // state of the background (starts transparent)
+      memset(g->history, 0x00, pcount);        // pixels that were affected previous frame
       first_frame = 1; 
    } else {
       // second frame - how do we dispoase of the previous one?
@@ -6484,6 +6488,13 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
             g->cur_x   = g->start_x;
             g->cur_y   = g->start_y;
 
+            // if the width of the specified rectangle is 0, that means
+            // we may not see *any* pixels or the image is malformed;
+            // to make sure this is caught, move the current y down to
+            // max_y (which is what out_gif_code checks).
+            if (w == 0)
+               g->cur_y = g->max_y;
+
             g->lflags = stbi__get8(s);
 
             if (g->lflags & 0x40) {
@@ -6503,7 +6514,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
                return stbi__errpuc("missing color table", "Corrupt GIF");            
             
             o = stbi__process_gif_raster(s, g);
-            if (o == NULL) return NULL;
+            if (!o) return NULL;
 
             // if this was the first frame, 
             pcount = g->w * g->h; 
@@ -6643,6 +6654,9 @@ static void *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req
       // can be done for multiple frames. 
       if (req_comp && req_comp != 4)
          u = stbi__convert_format(u, 4, req_comp, g.w, g.h);
+   } else if (g.out) {
+      // if there was an error and we allocated an image buffer, free it!
+      STBI_FREE(g.out);
    }
 
    // free buffers needed for multiple frame loading; 
