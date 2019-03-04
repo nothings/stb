@@ -3,6 +3,7 @@
 #include "stb_sprintf.h"
 
 #define STB_IMAGE_WRITE_STATIC
+#define STBIWDEF static inline
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define STB_TRUETYPE_IMPLEMENTATION
@@ -57,8 +58,17 @@ void my_free(void *) { }
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
 #include "stb_image_resize.h"
 
-#include "stretchy_buffer.h"
+//#include "stretchy_buffer.h"  // deprecating
 
+
+// avoid unused-function complaints
+void dummy2(void)
+{
+   stb_easy_font_spacing(1.0);
+   stb_easy_font_print(0,0,NULL,NULL,NULL,0);
+   stb_easy_font_width(NULL);
+   stb_easy_font_height(NULL);
+}
 
 
 ////////////////////////////////////////////////////////////
@@ -113,7 +123,7 @@ int insert_chars(STB_TEXTEDIT_STRING *str, int pos, STB_TEXTEDIT_CHARTYPE *newte
 
 // define all the #defines needed 
 
-#define KEYDOWN_BIT                    0x80000000
+#define KEYDOWN_BIT                    0x40000000
 
 #define STB_TEXTEDIT_STRINGLEN(tc)     ((tc)->stringlen)
 #define STB_TEXTEDIT_LAYOUTROW         layout_func
@@ -125,8 +135,8 @@ int insert_chars(STB_TEXTEDIT_STRING *str, int pos, STB_TEXTEDIT_CHARTYPE *newte
 #define STB_TEXTEDIT_DELETECHARS       delete_chars
 #define STB_TEXTEDIT_INSERTCHARS       insert_chars
 
-#define STB_TEXTEDIT_K_SHIFT           0x40000000
-#define STB_TEXTEDIT_K_CONTROL         0x20000000
+#define STB_TEXTEDIT_K_SHIFT           0x20000000
+#define STB_TEXTEDIT_K_CONTROL         0x10000000
 #define STB_TEXTEDIT_K_LEFT            (KEYDOWN_BIT | 1) // actually use VK_LEFT, SDLK_LEFT, etc
 #define STB_TEXTEDIT_K_RIGHT           (KEYDOWN_BIT | 2) // VK_RIGHT
 #define STB_TEXTEDIT_K_UP              (KEYDOWN_BIT | 3) // VK_UP
@@ -149,3 +159,12 @@ int insert_chars(STB_TEXTEDIT_STRING *str, int pos, STB_TEXTEDIT_CHARTYPE *newte
 #include "stb_textedit.h"
 
 
+void dummy3(void)
+{
+  stb_textedit_click(0,0,0,0);
+  stb_textedit_drag(0,0,0,0);
+  stb_textedit_cut(0,0);
+  stb_textedit_key(0,0,0);
+  stb_textedit_initialize_state(0,0);
+  stb_textedit_paste(0,0,0,0);
+}

@@ -1,0 +1,37 @@
+[compilers]
+VS2015 for x64, vcvars_2015_x64
+VC6           , vcvars_vc6
+VS2008 for x86, vcvars_2008_x86
+VS2013 for x86, vcvars_2013_x86
+VS2015 for x86, vcvars_2015_x86
+clang-cl for x64, vcvars_2015_x64, clang-cl
+clang-cl for x86, vcvars_2015_x86, clang32-cl
+#these batch files don't work on my machine
+#VS2008 for x64, vcvars_2008_x64
+#VS2013 for x64, vcvars_2013_x64
+
+[args]
+-I .. -W3 -WX -D_DEBUG
+
+[link]
+advapi32.lib
+
+[projects]
+c_lexer_test.c
+image_test.c image_write_test.c
+test_cpp_compilation.cpp stb_cpp.cpp ../stb_vorbis.c
+resample_test.cpp 
+-DTT_TEST test_c_compilation.c test_truetype.c 
+main.c stb.c 
+main.c stretchy_buffer_test.c
+main.c test_c_compilation.c
+main.c test_c_lexer.c
+main.c test_dxt.c
+main.c test_easyfont.c
+main.c test_image.c
+main.c test_image_write.c
+main.c test_perlin.c
+main.c test_sprintf.c
+main.c test_vorbis.c ../stb_vorbis.c
+main.c test_voxel.c
+main.c textedit_sample.c

@@ -3552,7 +3552,7 @@ void stbvox_set_buffer(stbvox_mesh_maker *mm, int mesh, int slot, void *buffer, 
    stbvox_bring_up_to_date(mm);
    mm->output_buffer[mesh][slot] = (char *) buffer;
    mm->output_cur   [mesh][slot] = (char *) buffer;
-   mm->output_len   [mesh][slot] = len;
+   mm->output_len   [mesh][slot] = (int) len;
    mm->output_end   [mesh][slot] = (char *) buffer + len;
    for (i=0; i < STBVOX_MAX_MESH_SLOTS; ++i) {
       if (mm->output_buffer[mesh][i]) {
@@ -3568,7 +3568,7 @@ void stbvox_set_default_mesh(stbvox_mesh_maker *mm, int mesh)
 
 int stbvox_get_quad_count(stbvox_mesh_maker *mm, int mesh)
 {
-   return (mm->output_cur[mesh][0] - mm->output_buffer[mesh][0]) / mm->output_size[mesh][0];
+   return (int) ((mm->output_cur[mesh][0] - mm->output_buffer[mesh][0]) / mm->output_size[mesh][0]);
 }
 
 stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm)

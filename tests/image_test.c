@@ -113,7 +113,7 @@ int main(int argc, char **argv)
             printf("FAILED 4\n");
       }
    } else {
-      int i, nope=0;
+      int i;
       #ifdef PNGSUITE_PRIMARY
       char **files = stb_readdir_files("pngsuite/primary");
       #else

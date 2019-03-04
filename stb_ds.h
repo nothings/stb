@@ -308,6 +308,10 @@ CREDITS
   Per Vognsen  -- idea for hash table API/implementation
 */
 
+#ifdef STBDS_UNIT_TESTS
+#define _CRT_SECURE_NO_WARNINGS
+#endif
+
 #ifndef INCLUDE_STB_DS_H
 #define INCLUDE_STB_DS_H
 
@@ -593,6 +597,7 @@ template<class T> static T * stbds_shmode_func_wrapper(T *, size_t elemsize, int
 #include <string.h>
 
 #ifndef STBDS_ASSERT
+#define STBDS_ASSERT_WAS_UNDEFINED
 #define STBDS_ASSERT(x)   ((void) 0)
 #endif
 
@@ -1442,6 +1447,9 @@ void stbds_strreset(stbds_string_arena *a)
 
 #ifdef STBDS_UNIT_TESTS
 #include <stdio.h>
+#ifdef STBDS_ASSERT_WAS_UNDEFINED
+#undef STBDS_ASSERT
+#endif
 #ifndef STBDS_ASSERT
 #define STBDS_ASSERT assert
 #include <assert.h>
@@ -1452,7 +1460,11 @@ typedef struct { int key,b,c,d; } stbds_struct;
 static char buffer[256];
 char *strkey(int n)
 {
+#if defined(_WIN32) && defined(__STDC_WANT_SECURE_LIB__)
+   sprintf_s(buffer, sizeof(buffer), "test_%d", n);
+#else
    sprintf(buffer, "test_%d", n);
+#endif
    return buffer;
 }
 
@@ -1595,9 +1607,10 @@ void stbds_unit_tests(void)
 
   for (i=0; i < testsize; i += 1) {
     stbds_struct s = { i,i*2,i*3,i*4 };
-    stbds_struct t = { i,i*2,i*3,i*4 };
+    stbds_struct t = { i,i*2,i*3+1,i*4 };
     if (i & 1) STBDS_ASSERT(hmgets(map2, s.key).d == 0);
     else       STBDS_ASSERT(hmgets(map2, s.key).d == i*4);
+    STBDS_ASSERT(hmget(map, t) == 0);
   }
   hmfree(map2);
 #endif

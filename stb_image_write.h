@@ -299,7 +299,7 @@ STBIW_EXTERN __declspec(dllimport) int __stdcall WideCharToMultiByte(unsigned in
 
 STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input)
 {
-	return WideCharToMultiByte(65001 /* UTF8 */, 0, input, -1, buffer, bufferlen, NULL, NULL);
+	return WideCharToMultiByte(65001 /* UTF8 */, 0, input, -1, buffer, (int) bufferlen, NULL, NULL);
 }
 #endif
 
@@ -736,8 +736,8 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
       char header[] = "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n";
       s->func(s->context, header, sizeof(header)-1);
 
-#ifdef STBI_MSC_SECURE_CRT
-      len = sprintf_s(buffer, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
+#ifdef __STDC_WANT_SECURE_LIB__
+      len = sprintf_s(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
 #else
       len = sprintf(buffer, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
 #endif

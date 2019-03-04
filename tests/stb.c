@@ -2,6 +2,7 @@
  * Unit tests for "stb.h"
  */
 
+#define _CRT_SECURE_NO_WARNINGS
 //#include <windows.h>
 #include <stdio.h>
 #include <string.h>
@@ -110,8 +111,8 @@ void test_classes(void)
     while ((psize % s) > (psize >> 3)) {
       psize += kPageSize;
     }
-    class_to_pages[cl] = psize >> kPageShift;
-    wasted_pages += psize;
+    class_to_pages[cl] = (int) (psize >> kPageShift);
+    wasted_pages += (int) psize;
   }
 
   printf("TCMalloc can waste as much as %d memory on one-shot allocations\n", wasted_pages);
@@ -356,10 +357,10 @@ void test_threads2(void)
 
 char tc[] = "testing compression test quick test voila woohoo what the hell";
 
-char storage1[1 << 23];
-int test_compression(char *buffer, int length)
+unsigned char storage1[1 << 23];
+int test_compression(unsigned char *buffer, int length)
 {
-   char *storage2;
+   unsigned char *storage2;
    int c_len = stb_compress(storage1, buffer, length);
    int dc_len;
    printf("Compressed %d to %d\n", length, c_len);
@@ -421,7 +422,7 @@ stb_uint stb_adler32_old(stb_uint adler32, stb_uchar *buffer, stb_uint buflen)
    return (s2 << 16) + s1;
 }
 
-static int sample_test[3][5] =
+int sample_test[3][5] =
 {
    { 1,2,3,4,5 },
    { 6,7,8,9,10, },
@@ -1579,10 +1580,10 @@ struct
    char *digest;
 } sha1_tests[] =
 {
-   24,
+{   24,
 "616263",
 "a9993e364706816aba3e25717850c26c9cd0d89d",
-
+},{
    1304,
 "ec29561244ede706b6eb30a1c371d74450a105c3f9735f7fa9fe38cf67f304a5736a106e"
 "92e17139a6813b1c81a4f3d3fb9546ab4296fa9f722826c066869edacd73b25480351858"
@@ -1590,7 +1591,7 @@ struct
 "e31cb413ae29810fd794cad5dfaf29ec43cb38d198fe4ae1da2359780221405bd6712a53"
 "05da4b1b737fce7cd21c0eb7728d08235a9011",
 "970111c4e77bcc88cc20459c02b69b4aa8f58217",
-
+},{
    2096,
 "5fc2c3f6a7e79dc94be526e5166a238899d54927ce470018fbfd668fd9dd97cbf64e2c91"
 "584d01da63be3cc9fdff8adfefc3ac728e1e335b9cdc87f069172e323d094b47fa1e652a"
@@ -1601,7 +1602,7 @@ struct
 "e485050e4bbb6235574fc0102be8f7a306d6e8de6ba6becf80f37415b57f9898a5824e77"
 "414197422be3d36a6080",
    "0423dc76a8791107d14e13f5265b343f24cc0f19",
-
+},{
    2888,
 "0f865f46a8f3aed2da18482aa09a8f390dc9da07d51d1bd10fe0bf5f3928d5927d08733d"
 "32075535a6d1c8ac1b2dc6ba0f2f633dc1af68e3f0fa3d85e6c60cb7b56c239dc1519a00"
@@ -1615,7 +1616,7 @@ struct
 "6afbb27dbbd300477d70c371e7b8963812f5ed4fb784fb2f3bd1d3afe883cdd47ef32bea"
 "ea",
    "6692a71d73e00f27df976bc56df4970650d90e45",
-
+},{
    3680,
 "4893f1c763625f2c6ce53aacf28026f14b3cd8687e1a1d3b60a81e80fcd1e2b038f9145a"
 "b64a0718f948f7c3c9ac92e3d86fb669a5257da1a18c776291653688338210a3242120f1"
@@ -1631,7 +1632,7 @@ struct
 "73c30b39920e726fe861b72483a3f886269ab7a8eefe952f35d25c4eb7f443f4f3f26e43"
 "d51fb54591e6a6dad25fcdf5142033084e5624bdd51435e77dea86b8",
    "dc5859dd5163c4354d5d577b855fa98e37f04384",
-
+},{
    4472,
 "cf494c18a4e17bf03910631471bca5ba7edea8b9a63381e3463517961749848eb03abefd"
 "4ce676dece3740860255f57c261a558aa9c7f11432f549a9e4ce31d8e17c79450ce2ccfc"
@@ -1650,7 +1651,7 @@ struct
 "317746270599424b9248791a0780449c1eabbb9459cc1e588bfd74df9b1b711c85c09d8a"
 "a171b309281947e8f4b6ac438753158f4f36fa",
    "4c17926feb6e87f5bca7890d8a5cde744f231dab",
-
+},{
    5264,
 "8236153781bd2f1b81ffe0def1beb46f5a70191142926651503f1b3bb1016acdb9e7f7ac"
 "ced8dd168226f118ff664a01a8800116fd023587bfba52a2558393476f5fc69ce9c65001"
@@ -1672,7 +1673,7 @@ struct
 "5cf62845c2009980a4dfa69fbc7e5a0b1bb20a5958ca967aec68eb31dd8fccca9afcd30a"
 "26bab26279f1bf6724ff",
    "11863b483809ef88413ca9b0084ac4a5390640af",
-
+},{
    6056,
 "31ec3c3636618c7141441294fde7e72366a407fa7ec6a64a41a7c8dfda150ca417fac868"
 "1b3c5be253e3bff3ab7a5e2c01b72790d95ee09b5362be835b4d33bd20e307c3c702aa15"
@@ -1697,7 +1698,7 @@ struct
 "386719b28a09a8e5934722202beb3429899b016dfeb972fee487cdd8d18f8a681042624f"
 "51",
    "f43937922444421042f76756fbed0338b354516f",
-
+},{
    6848,
 "21b9a9686ec200456c414f2e6963e2d59e8b57e654eced3d4b57fe565b51c9045c697566"
 "44c953178f0a64a6e44d1b46f58763c6a71ce4c373b0821c0b3927a64159c32125ec916b"
@@ -1724,7 +1725,7 @@ struct
 "aac4130293f6f62ae6d50c0d0c3b9876f0728923a94843785966a27555dd3ce68602e7d9"
 "0f7c7c552f9bda4969ec2dc3e30a70620db6300e822a93e633ab9a7a",
    "5d4d18b24b877092188a44be4f2e80ab1d41e795",
-
+},{
    7640,
 "1c87f48f4409c3682e2cf34c63286dd52701b6c14e08669851a6dc8fa15530ad3bef692c"
 "7d2bf02238644561069df19bdec3bccae5311fce877afc58c7628d08d32d9bd2dc1df0a6"
@@ -1754,7 +1755,7 @@ struct
 "e147c723aca999015230d22c917730b935e902092f83e0a8e6db9a75d2626e0346e67e40"
 "8d5b815439dab8ccb8ea23f828fff6916c4047",
    "32e0f5d40ceec1fbe45ddd151c76c0b3fef1c938",
-
+},{
    8432,
 "084f04f8d44b333dca539ad2f45f1d94065fbb1d86d2ccf32f9486fe98f7c64011160ec0"
 "cd66c9c7478ed74fde7945b9c2a95cbe14cedea849978cc2d0c8eb0df48d4834030dfac2"
@@ -1787,7 +1788,7 @@ struct
 "b5200b7892554b59532ac63af3bdef590b57bd5df4fbf38d2b3fa540fa5bf89455802963"
 "036bd173fe3967ed1b7d",
    "ee976e4ad3cad933b283649eff9ffdb41fcccb18",
-
+},{
    9224,
 "bd8320703d0cac96a96aeefa3abf0f757456bf42b3e56f62070fc03e412d3b8f4e4e427b"
 "c47c4600bb423b96de6b4910c20bc5c476c45feb5b429d4b35088813836fa5060ceb26db"
@@ -1823,7 +1824,7 @@ struct
 "42a756a3e22123cbf38c429373c6a8663130c24b24b2690b000013960b1c46a32d1d5397"
 "47",
    "2df09b10933afedfcd3f2532dfd29e7cb6213859",
-
+},{
    10016,
 "7a94978bec7f5034b12c96b86498068db28cd2726b676f54d81d8d7350804cc106bead8a"
 "252b465a1f413b1c41e5697f8cece49ec0dea4dfb9fa7b1bfe7a4a00981875b420d094bb"
@@ -1861,7 +1862,7 @@ struct
 "5740090c1b165ecae7dec0b341d60a88f46d7ad8624aac231a90c93fad61fcfbbea12503"
 "59fcd203862a6b0f1d71ac43db6c58a6b60c2c546edc12dd658998e8",
    "f32e70862a16e3e8b199e9d81a9949d66f812cad",
-
+},{
    10808,
 "88dd7f273acbe799219c23184782ac0b07bade2bc46b4f8adbd25ed3d59c0fd3e2931638"
 "837d31998641bbb7374c7f03d533ca60439ac4290054ff7659cc519bdda3dff2129a7bdb"
@@ -1902,7 +1903,7 @@ struct
 "1fd561274392ee6ee1a14424d5c134a69bcb4333079400f03615952fc4c99bf03f5733a8"
 "dc71524269fc5c648371f5f3098314d9d10258",
    "08632c75676571a5db5971f5d99cb8de6bf1792a",
-
+},{
    11600,
 "85d43615942fcaa449329fd1fe9efb17545eb252cac752228f1e9d90955a3cf4e72cb116"
 "3c3d8e93ccb7e4826206ff58b3e05009ee82ab70943db3f18a32925d6d5aed1525c91673"
@@ -1946,7 +1947,7 @@ struct
 "b16dcde529248a477628067d13d0cb3bf51776f4d39fb3fbc5f669e91019323e40360e4b"
 "78b6584f077bf9e03b66",
    "ab7213f6becb980d40dc89fbda0ca39f225a2d33",
-
+},{
    12392,
 "7ae3ca60b3a96be914d24980fb5652eb68451fed5fa47abe8e771db8301fbd5331e64753"
 "93d96a4010d6551701e5c23f7ecb33bec7dd7bade21381e9865d410c383a139cb4863082"
@@ -1993,7 +1994,7 @@ struct
 "09d1af296eb3121d782650e7d038063bab5fa854aac77de5ffebeb53d263f521e3fc02ac"
 "70",
    "b0e15d39025f5263e3efa255c1868d4a37041382",
-
+},{
    13184,
 "fa922061131282d91217a9ff07463843ae34ff7f8c28b6d93b23f1ea031d5020aa92f660"
 "8c3d3df0ee24a8958fd41af880ee454e36e26438defb2de8f09c018607c967d2f0e8b80a"
@@ -2042,7 +2043,7 @@ struct
 "b409cc322354672a21ea383e870d047551a3af71aaf2f44f49a859cf001e61b592dd036f"
 "c6625bf7b91ea0fb78c1563cceb8c4345bf4a9fbe6ee2b6bf5e81083",
    "8b6d59106f04300cb57c7c961945cd77f3536b0a",
-
+},{
    13976,
 "162cca41155de90f6e4b76a34261be6666ef65bdb92b5831b47604ce42e0c6c8d2eda265"
 "ab9a3716809bf2e745e7831a41768d0f6349a268d9ac6e6adfb832a5d51b75d7951cf60e"
@@ -2094,7 +2095,7 @@ struct
 "7635eed03558ac673d17280769b2368056276d5d72f5dbc75525f8a7558bd90b544aa6cb"
 "dd964e6c70be79441969bfdf471f17a2dc0c92",
    "6144c4786145852e2a01b20604c369d1b9721019",
-
+},{
    14768,
 "c9bed88d93806b89c2d028866842e6542ab88c895228c96c1f9f05125f8697c7402538b0"
 "6465b7ae33daef847500f73d20c598c86e4804e633e1c4466e61f3ed1e9baadc5723bbed"
@@ -2149,6 +2150,7 @@ struct
 "f5e1f03c2280e71c6e1ae21312d4ff163eee16ebb1fdee8e887bb0d453829b4e6ed5fa70"
 "8f2053f29b81e277be46",
    "a757ead499a6ec3d8ab9814f839117354ae563c8"
+}
 };
 
 void test_sha1(void)
@@ -2257,14 +2259,14 @@ void do_compressor(int argc,char**argv)
 {
    char *p;
    size_t slen;
-   int len;
+   unsigned int len;
 
    int window;
    if (argc == 2) {
       p = stb_file(argv[1], &slen);
-      len = (int) slen;
+      len = (unsigned int) slen;
       if (p) {
-         int dlen, clen = stb_compress_tofile("data/dummy.bin", p, len);
+         unsigned int dlen, clen = stb_compress_tofile("data/dummy.bin", p, len);
          char *q = stb_decompress_fromfile("data/dummy.bin", &dlen);
 
          if (len != dlen) {
@@ -2398,7 +2400,7 @@ done:
 
 
 
-
+#if 0 // parser generator
 //////////////////////////////////////////////////////////////////////////
 //
 //   stb_parser
@@ -2946,7 +2948,7 @@ void test_parser_generator(void)
    parser_destroy(p);
 }
 #endif
-
+#endif // parser generator
 
 #if 0
 // stb_threadtest.c
