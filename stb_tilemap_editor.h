@@ -1,4 +1,4 @@
-// stb_tilemap_editor.h - v0.40 - Sean Barrett - http://nothings.org/stb
+// stb_tilemap_editor.h - v0.41 - Sean Barrett - http://nothings.org/stb
 // placed in the public domain - not copyrighted - first released 2014-09
 //
 // Embeddable tilemap editor for C/C++
@@ -275,6 +275,7 @@
 //   either approach allows cut&pasting between levels.)
 //
 // REVISION HISTORY
+//   0.41  fix warnings
 //   0.40  fix warning
 //   0.39  fix warning
 //   0.38  fix warning

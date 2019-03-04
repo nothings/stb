@@ -1,4 +1,4 @@
-// stb_connected_components - v0.95 - public domain connected components on grids
+// stb_connected_components - v0.96 - public domain connected components on grids
 //                                                 http://github.com/nothings/stb
 //
 // Finds connected components on 2D grids for testing reachability between
@@ -37,6 +37,7 @@
 //
 // CHANGELOG
 //
+//    0.96  (2019-03-04)  Fix warnings
 //    0.95  (2016-10-16)  Bugfix if multiple clumps in one cluster connect to same clump in another
 //    0.94  (2016-04-17)  Bugfix & optimize worst case (checkerboard & random)
 //    0.93  (2016-04-16)  Reduce memory by 10x for 1Kx1K map; small speedup

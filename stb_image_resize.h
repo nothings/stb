@@ -1,4 +1,4 @@
-/* stb_image_resize - v0.95 - public domain image resizing
+/* stb_image_resize - v0.96 - public domain image resizing
    by Jorge L Rodriguez (@VinoBS) - 2014
    http://github.com/nothings/stb
 
@@ -159,6 +159,7 @@
       Nathan Reed: warning fixes
 
    REVISIONS
+      0.96 (2019-03-04) fixed warnings
       0.95 (2017-07-23) fixed warnings
       0.94 (2017-03-18) fixed warnings
       0.93 (2017-03-03) fixed bug with certain combinations of heights
