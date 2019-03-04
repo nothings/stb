@@ -514,7 +514,7 @@ static int stb__clex_parse_string(stb_lexer *lexer, char *p, int type)
    }
    *out = 0;
    lexer->string = lexer->string_storage;
-   lexer->string_len = out - lexer->string_storage;
+   lexer->string_len = (int) (out - lexer->string_storage);
    return stb__clex_token(lexer, type, start, p);
 }
 
@@ -824,7 +824,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
 #endif // STB_C_LEXER_IMPLEMENTATION
 
 #ifdef STB_C_LEXER_SELF_TEST
-
+#define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -884,11 +884,12 @@ void dummy(void)
 {
    double some_floats[] = {
       1.0501, -10.4e12, 5E+10,
-#if 0   // not support in C++ or C-pre-99, so don't try to compile it
+#if 0   // not supported in C++ or C-pre-99, so don't try to compile it, but let our parser test it
       0x1.0p+24, 0xff.FP-8, 0x1p-23,
 #endif
       4.
    };
+   (void) sizeof(some_floats);
 
    printf("test %d",1); // https://github.com/nothings/stb/issues/13
 }
@@ -897,7 +898,7 @@ int main(int argc, char **argv)
 {
    FILE *f = fopen("stb_c_lexer.h","rb");
    char *text = (char *) malloc(1 << 20);
-   int len = f ? fread(text, 1, 1<<20, f) : -1;
+   int len = f ? (int) fread(text, 1, 1<<20, f) : -1;
    stb_lexer lex;
    if (len < 0) {
       fprintf(stderr, "Error opening file\n");

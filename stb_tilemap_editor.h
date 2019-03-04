@@ -971,7 +971,7 @@ struct stbte_tilemap
     short *undo_buffer;
 };
 
-static char *default_category = "[unassigned]";
+static char *default_category = (char*) "[unassigned]";
 
 static void stbte__init_gui(void)
 {
@@ -1172,7 +1172,9 @@ void stbte_set_property(stbte_tilemap *tm, int x, int y, int n, float val)
    tm->props[y][x][n] = val;
 }
 
+#ifdef STBTE_ALLOW_LINK
 static void stbte__set_link(stbte_tilemap *tm, int src_x, int src_y, int dest_x, int dest_y, int undo_mode);
+#endif
 
 enum
 {
@@ -1254,7 +1256,7 @@ static int stbte__strequal(char *p, char *q)
 
 static void stbte__compute_tileinfo(stbte_tilemap *tm)
 {
-   int i,j,n=0;
+   int i,j;
 
    tm->num_categories=0;
 
@@ -1649,6 +1651,7 @@ static void stbte__draw_rect(int x0, int y0, int x1, int y1, unsigned int color)
    STBTE_DRAW_RECT(x0,y0,x1,y1, color);
 }
 
+#ifdef STBTE_ALLOW_LINK
 static void stbte__draw_line(int x0, int y0, int x1, int y1, unsigned int color)
 {
    int temp;
@@ -1662,18 +1665,13 @@ static void stbte__draw_link(int x0, int y0, int x1, int y1, unsigned int color)
    stbte__draw_line(x0,y0,x0,y1, color);
    stbte__draw_line(x0,y1,x1,y1, color);
 }
+#endif
 
 static void stbte__draw_frame(int x0, int y0, int x1, int y1, unsigned int color)
 {
    stbte__draw_rect(x0,y0,x1-1,y0+1,color);
    stbte__draw_rect(x1-1,y0,x1,y1-1,color);
    stbte__draw_rect(x0+1,y1-1,x1,y1,color);
-   stbte__draw_rect(x0,y0+1,x0+1,y1,color);
-}
-
-static void stbte__draw_halfframe(int x0, int y0, int x1, int y1, unsigned int color)
-{
-   stbte__draw_rect(x0,y0,x1,y0+1,color);
    stbte__draw_rect(x0,y0+1,x0+1,y1,color);
 }
 
@@ -1817,15 +1815,13 @@ static void stbte__draw_textbox(int x0, int y0, int x1, int y1, char *text, int 
    stbte__draw_text(x0+xoff,y0+yoff, text, x1-x0-xoff-1, stbte__color_table[colormode][STBTE__text][colorindex]);
 }
 
-static int stbte__button(int colormode, char *label, int x, int y, int textoff, int width, int id, int toggled, int disabled)
+static int stbte__button(int colormode, const char *label, int x, int y, int textoff, int width, int id, int toggled, int disabled)
 {
    int x0=x,y0=y, x1=x+width,y1=y+STBTE__BUTTON_HEIGHT;
    int s = STBTE__BUTTON_INTERNAL_SPACING;
 
-   int over = !disabled && stbte__hittest(x0,y0,x1,y1,id);
-      
    if (stbte__ui.event == STBTE__paint)
-      stbte__draw_textbox(x0,y0,x1,y1, label,s+textoff,s, colormode, STBTE__INDEX_FOR_ID(id,disabled,toggled));
+      stbte__draw_textbox(x0,y0,x1,y1, (char*) label,s+textoff,s, colormode, STBTE__INDEX_FOR_ID(id,disabled,toggled));
    if (disabled)
       return 0;
    return (stbte__button_core(id) == 1);
@@ -1836,8 +1832,6 @@ static int stbte__button_icon(int colormode, char ch, int x, int y, int width, i
    int x0=x,y0=y, x1=x+width,y1=y+STBTE__BUTTON_HEIGHT;
    int s = STBTE__BUTTON_INTERNAL_SPACING;
 
-   int over = stbte__hittest(x0,y0,x1,y1,id);
-      
    if (stbte__ui.event == STBTE__paint) {
       char label[2] = { ch, 0 };
       int pad = (9 - stbte__get_char_width(ch))/2;
@@ -1851,7 +1845,6 @@ static int stbte__button_icon(int colormode, char ch, int x, int y, int width, i
 static int stbte__minibutton(int colormode, int x, int y, int ch, int id)
 {
    int x0 = x, y0 = y, x1 = x+8, y1 = y+7;
-   int over = stbte__hittest(x0,y0,x1,y1,id);
    if (stbte__ui.event == STBTE__paint) {
       char str[2] = { (char)ch, 0 };
       stbte__draw_textbox(x0,y0,x1,y1, str,1,0,colormode, STBTE__INDEX_FOR_ID(id,0,0));
@@ -1862,7 +1855,6 @@ static int stbte__minibutton(int colormode, int x, int y, int ch, int id)
 static int stbte__layerbutton(int x, int y, int ch, int id, int toggled, int disabled, int colormode)
 {
    int x0 = x, y0 = y, x1 = x+10, y1 = y+11;
-   int over = !disabled && stbte__hittest(x0,y0,x1,y1,id);
    if (stbte__ui.event == STBTE__paint) {
       char str[2] = { (char)ch, 0 };
       int off = (9-stbte__get_char_width(ch))/2;
@@ -1876,7 +1868,6 @@ static int stbte__layerbutton(int x, int y, int ch, int id, int toggled, int dis
 static int stbte__microbutton(int x, int y, int size, int id, int colormode)
 {
    int x0 = x, y0 = y, x1 = x+size, y1 = y+size;
-   int over = stbte__hittest(x0,y0,x1,y1,id);
    if (stbte__ui.event == STBTE__paint) {
       stbte__draw_box(x0,y0,x1,y1, colormode, STBTE__INDEX_FOR_ID(id,0,0));
    }
@@ -1886,7 +1877,6 @@ static int stbte__microbutton(int x, int y, int size, int id, int colormode)
 static int stbte__microbutton_dragger(int x, int y, int size, int id, int *pos)
 {
    int x0 = x, y0 = y, x1 = x+size, y1 = y+size;
-   int over = stbte__hittest(x0,y0,x1,y1,id);
    switch (stbte__ui.event) {
       case STBTE__paint:
          stbte__draw_box(x0,y0,x1,y1, STBTE__cexpander, STBTE__INDEX_FOR_ID(id,0,0));
@@ -1912,15 +1902,13 @@ static int stbte__microbutton_dragger(int x, int y, int size, int id, int *pos)
    return 0;
 }
 
-static int stbte__category_button(char *label, int x, int y, int width, int id, int toggled)
+static int stbte__category_button(const char *label, int x, int y, int width, int id, int toggled)
 {
    int x0=x,y0=y, x1=x+width,y1=y+STBTE__BUTTON_HEIGHT;
    int s = STBTE__BUTTON_INTERNAL_SPACING;
-
-   int over = stbte__hittest(x0,y0,x1,y1,id);
       
    if (stbte__ui.event == STBTE__paint)
-      stbte__draw_textbox(x0,y0,x1,y1, label, s,s, STBTE__ccategory_button, STBTE__INDEX_FOR_ID(id,0,toggled));
+      stbte__draw_textbox(x0,y0,x1,y1, (char*) label, s,s, STBTE__ccategory_button, STBTE__INDEX_FOR_ID(id,0,toggled));
 
    return (stbte__button_core(id) == 1);
 }
@@ -1938,7 +1926,6 @@ static int stbte__slider(int x0, int w, int y, int range, int *value, int id)
 {
    int x1 = x0+w;
    int pos = *value * w / (range+1);
-   int over = stbte__hittest(x0,y-2,x1,y+3,id);
    int event_mouse_move = STBTE__change;
    switch (stbte__ui.event) {
       case STBTE__paint:
@@ -1969,15 +1956,22 @@ static int stbte__slider(int x0, int w, int y, int range, int *value, int id)
    return STBTE__none;
 }
 
-static int stbte__float_control(int x0, int y0, int w, float minv, float maxv, float scale, char *fmt, float *value, int colormode, int id)
+#if defined(_WIN32) && defined(__STDC_WANT_SECURE_LIB__)
+   #define stbte__sprintf      sprintf_s
+   #define stbte__sizeof(s)    , sizeof(s)
+#else
+   #define stbte__sprintf      sprintf
+   #define stbte__sizeof(s)    
+#endif
+
+static int stbte__float_control(int x0, int y0, int w, float minv, float maxv, float scale, const char *fmt, float *value, int colormode, int id)
 {
    int x1 = x0+w;
    int y1 = y0+11;
-   int over = stbte__hittest(x0,y0,x1,y1,id);
    switch (stbte__ui.event) {
       case STBTE__paint: {
          char text[32];
-         sprintf(text, fmt ? fmt : "%6.2f", *value);
+         stbte__sprintf(text stbte__sizeof(text), fmt ? fmt : "%6.2f", *value);
          stbte__draw_textbox(x0,y0,x1,y1, text, 1,2, colormode, STBTE__INDEX_FOR_ID(id,0,0));
          break;
       }
@@ -2283,7 +2277,6 @@ static void stbte__alert(const char *msg)
 
 static void stbte__brush_predict(stbte_tilemap *tm, short result[])
 {
-   int layer_to_paint = tm->cur_layer;
    stbte__tileinfo *ti;
    int i;
 
@@ -2322,7 +2315,6 @@ static void stbte__brush_predict(stbte_tilemap *tm, short result[])
 
 static void stbte__brush(stbte_tilemap *tm, int x, int y)
 {
-   int layer_to_paint = tm->cur_layer;
    stbte__tileinfo *ti;
 
    // find lowest legit layer to paint it on, and put it there
@@ -2634,7 +2626,6 @@ static void stbte__clear_stack(stbte_tilemap *tm, short result[])
 static void stbte__fillrect(stbte_tilemap *tm, int x0, int y0, int x1, int y1, int fill)
 {
    int i,j;
-   int x=x0,y=y0;
 
    stbte__begin_undo(tm);
    if (x0 > x1) i=x0,x0=x1,x1=i;
@@ -2734,6 +2725,7 @@ static int stbte__in_rect(int x, int y, int x0, int y0, int w, int h)
    return x >= x0 && x < x0+w && y >= y0 && y < y0+h;
 }
 
+#ifdef STBTE_ALLOW_LINK
 static int stbte__in_src_rect(int x, int y)
 {
    return stbte__in_rect(x,y, stbte__ui.copy_src_x, stbte__ui.copy_src_y, stbte__ui.copy_width, stbte__ui.copy_height);
@@ -2743,6 +2735,7 @@ static int stbte__in_dest_rect(int x, int y, int destx, int desty)
 {
    return stbte__in_rect(x,y, destx, desty, stbte__ui.copy_width, stbte__ui.copy_height);
 }
+#endif
 
 static void stbte__paste(stbte_tilemap *tm, int mapx, int mapy)
 {
@@ -2934,9 +2927,6 @@ static void stbte__tile_paint(stbte_tilemap *tm, int sx, int sy, int mapx, int m
 {
    int i;
    int id = STBTE__IDMAP(mapx,mapy);
-   int x0=sx, y0=sy;
-   int x1=sx+tm->spacing_x, y1=sy+tm->spacing_y;
-   int over = stbte__hittest(x0,y0,x1,y1, id);
    short *data = tm->data[mapy][mapx];
    short temp[STBTE_MAX_LAYERS];
 
@@ -3366,7 +3356,7 @@ static int stbte__info_value(const char *label, int x, int y, int val, int digit
    if (stbte__ui.event == STBTE__paint) {
       int off = 9-stbte__get_char_width(label[0]);
       char text[16];
-      sprintf(text, label, digits, val);
+      stbte__sprintf(text stbte__sizeof(text), label, digits, val);
       stbte__draw_text_core(x+off,y, text, 999, STBTE__TEXTCOLOR(STBTE__cpanel),1);
    }
    if (id) {
@@ -3414,7 +3404,7 @@ static void stbte__info(stbte_tilemap *tm, int x0, int y0, int w, int h)
 
 static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
 {
-   static char *propmodes[3] = {
+   static const char *propmodes[3] = {
       "default", "always", "never"
    };
    int num_rows;
@@ -3449,7 +3439,7 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
       int disabled = (tm->solo_layer >= 0 && tm->solo_layer != i);
       if (i-tm->layer_scroll >= 0 && i-tm->layer_scroll < num_rows) {
          if (str == NULL)
-            sprintf(str=text, "%2d", i+1);
+            stbte__sprintf(str=text stbte__sizeof(text), "%2d", i+1);
          if (stbte__button(STBTE__clayer_button, str, x0,y,(i+1<10)*2,xoff-2, STBTE__ID(STBTE__layer,i), tm->cur_layer==i,0))
             tm->cur_layer = (tm->cur_layer == i ? -1 : i);
          if (stbte__layerbutton(x0+xoff +  0,y+1,'H',STBTE__ID(STBTE__hide,i), tm->layerinfo[i].hidden,disabled,STBTE__clayer_hide))
@@ -3501,10 +3491,7 @@ static void stbte__categories(stbte_tilemap *tm, int x0, int y0, int w, int h)
 
 static void stbte__tile_in_palette(stbte_tilemap *tm, int x, int y, int slot)
 {
-   stbte__tileinfo *t = &tm->tiles[slot];
-   int x0=x, y0=y, x1 = x+tm->palette_spacing_x - 1, y1 = y+tm->palette_spacing_y;
    int id = STBTE__ID(STBTE__palette, slot);
-   int over = stbte__hittest(x0,y0,x1,y1, id);
    switch (stbte__ui.event) {
       case STBTE__paint:
          stbte__draw_rect(x,y,x+tm->palette_spacing_x-1,y+tm->palette_spacing_x-1, STBTE_COLOR_TILEPALETTE_BACKGROUND);
@@ -3561,15 +3548,10 @@ static void stbte__palette_of_tiles(stbte_tilemap *tm, int x0, int y0, int w, in
    stbte__scrollbar(x1-4, y0+6, y1-2, &tm->palette_scroll, 0, num_total_rows, num_vis_rows, STBTE__ID(STBTE__scrollbar_id, STBTE__palette));
 }
 
-static float stbte__linear_remap(float n, float x0, float x1, float y0, float y1)
-{
-   return (n-x0)/(x1-x0)*(y1-y0) + y0;
-}
-
 static float stbte__saved;
 static void stbte__props_panel(stbte_tilemap *tm, int x0, int y0, int w, int h)
 {
-   int x1 = x0+w, y1 = y0+h;
+   int x1 = x0+w;
    int i;
    int y = y0 + 5, x = x0+2;
    int slider_width = 60;
@@ -3585,8 +3567,8 @@ static void stbte__props_panel(stbte_tilemap *tm, int x0, int y0, int w, int h)
    for (i=0; i < STBTE_MAX_PROPERTIES; ++i) {
       unsigned int n = STBTE_PROP_TYPE(i, data, p);
       if (n) {
-         char *s = STBTE_PROP_NAME(i, data, p);
-         if (s == NULL) s = "";
+         char *s = (char*) STBTE_PROP_NAME(i, data, p);
+         if (s == NULL) s = (char*) "";
          switch (n & 3) {
             case STBTE_PROP_bool: {
                int flag = (int) p[i];

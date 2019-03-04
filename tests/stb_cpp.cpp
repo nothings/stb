@@ -11,7 +11,7 @@
 //#include "stb_file.h"
 
 int count;
-void c(int truth, char *error)
+void c(int truth, const char *error)
 {
    if (!truth) {
       fprintf(stderr, "Test failed: %s\n", error);
@@ -19,7 +19,7 @@ void c(int truth, char *error)
    }
 }
 
-char *expects(stb_matcher *m, char *s, int result, int len, char *str)
+char *expects(stb_matcher *m, char *s, int result, int len, const char *str)
 {
    int res2,len2=0;
    res2 = stb_lex(m, s, &len2);
@@ -31,7 +31,7 @@ void test_lex(void)
 {
    stb_matcher *m = stb_lex_matcher();
    //         tok_en5 .3 20.1 20. .20 .1
-   char *s = "tok_en5.3 20.1 20. .20.1";
+   char *s = (char*) "tok_en5.3 20.1 20. .20.1";
 
    stb_lex_item(m, "[a-zA-Z_][a-zA-Z0-9_]*", 1   );
    stb_lex_item(m, "[0-9]*\\.?[0-9]*"      , 2   );
@@ -53,22 +53,22 @@ void test_lex(void)
 int main(int argc, char **argv)
 {
    char *p;
-   p = "abcdefghijklmnopqrstuvwxyz";
+   p = (char*) "abcdefghijklmnopqrstuvwxyz";
    c(stb_ischar('c', p), "stb_ischar 1");
    c(stb_ischar('x', p), "stb_ischar 2");
    c(!stb_ischar('#', p), "stb_ischar 3");
    c(!stb_ischar('X', p), "stb_ischar 4");
-   p = "0123456789";
+   p = (char*) "0123456789";
    c(!stb_ischar('c', p), "stb_ischar 5");
    c(!stb_ischar('x', p), "stb_ischar 6");
    c(!stb_ischar('#', p), "stb_ischar 7");
    c(!stb_ischar('X', p), "stb_ischar 8");
-   p = "#####";
+   p = (char*) "#####";
    c(!stb_ischar('c', p), "stb_ischar a");
    c(!stb_ischar('x', p), "stb_ischar b");
    c(stb_ischar('#', p), "stb_ischar c");
    c(!stb_ischar('X', p), "stb_ischar d");
-   p = "xXyY";
+   p = (char*) "xXyY";
    c(!stb_ischar('c', p), "stb_ischar e");
    c(stb_ischar('x', p), "stb_ischar f");
    c(!stb_ischar('#', p), "stb_ischar g");

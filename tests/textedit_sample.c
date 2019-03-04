@@ -82,3 +82,13 @@ int insert_chars(STB_TEXTEDIT_STRING *str, int pos, STB_TEXTEDIT_CHARTYPE *newte
 
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "stb_textedit.h"
+
+void dummy3(void)
+{
+  stb_textedit_click(0,0,0,0);
+  stb_textedit_drag(0,0,0,0);
+  stb_textedit_cut(0,0);
+  stb_textedit_key(0,0,0);
+  stb_textedit_initialize_state(0,0);
+  stb_textedit_paste(0,0,0,0);
+}

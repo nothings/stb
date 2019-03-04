@@ -709,7 +709,7 @@ static void stbcc__remove_clump_connection(stbcc_grid *g, int x1, int y1, int x2
 
 static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, int cy, int dx, int dy)
 {
-   unsigned char connected[STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER][STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER/8] = { 0 };
+   unsigned char connected[STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER][STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER/8] = { { 0 } };
    int x = cx * STBCC__CLUSTER_SIZE_X;
    int y = cy * STBCC__CLUSTER_SIZE_Y;
    int step_x, step_y=0, i, j, k, n;
@@ -751,6 +751,7 @@ static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, in
       n = STBCC__CLUSTER_SIZE_X;
    } else {
       assert(0);
+      return;
    }
 
    for (k=0; k < n; ++k) {
@@ -772,7 +773,7 @@ static void stbcc__add_connections_to_adjacent_cluster(stbcc_grid *g, int cx, in
 
 static void stbcc__remove_connections_to_adjacent_cluster(stbcc_grid *g, int cx, int cy, int dx, int dy)
 {
-   unsigned char disconnected[STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER][STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER/8] = { 0 };
+   unsigned char disconnected[STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER][STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER/8] = { { 0 } };
    int x = cx * STBCC__CLUSTER_SIZE_X;
    int y = cy * STBCC__CLUSTER_SIZE_Y;
    int step_x, step_y=0, i, j, k, n;
@@ -811,6 +812,7 @@ static void stbcc__remove_connections_to_adjacent_cluster(stbcc_grid *g, int cx,
       n = STBCC__CLUSTER_SIZE_X;
    } else {
       assert(0);
+      return;
    }
 
    for (k=0; k < n; ++k) {
@@ -954,11 +956,12 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
    for (j=1; j < STBCC__CLUSTER_SIZE_Y-1; ++j) {
       for (i=1; i < STBCC__CLUSTER_SIZE_X-1; ++i) {
          stbcc__tinypoint p = cbi.parent[j][i];
-         if (p.x == i && p.y == j)
+         if (p.x == i && p.y == j) {
             if (STBCC__MAP_OPEN(g,x+i,y+j))
                cbi.label[j][i] = label++;
             else
                cbi.label[j][i] = STBCC__NULL_CLUMPID;
+         }
       }
    }
 
