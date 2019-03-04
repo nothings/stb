@@ -212,7 +212,8 @@ DOCUMENTATION
       shputs
         T hmputs(T*, T item)
         T shputs(T*, T item)
-          Returns the structure corresponding to 'key' in the hashmap.
+          Inserts a struct with T.key and T.value into the hashmap. If the struct is already
+          present in the hashmap, updates it.
 
       hmdel
       shdel
@@ -320,6 +321,7 @@ CREDITS
 #define arrlenu     stbds_arrlenu
 #define arrput      stbds_arrput
 #define arrpush     stbds_arrput
+#define arrpop      stbds_arrpop
 #define arrfree     stbds_arrfree
 #define arraddn     stbds_arraddn
 #define arrsetlen   stbds_arrsetlen
@@ -435,6 +437,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrlenu(a)      ((a) ?             stbds_header(a)->length : 0)
 #define stbds_arrput(a,v)     (stbds_arrmaybegrow(a,1), (a)[stbds_header(a)->length++] = (v))
 #define stbds_arrpush         stbds_arrput  // synonym
+#define stbds_arrpop(a)       (stbds_header(a)->length--, (a)[stbds_header(a)->length])
 #define stbds_arraddn(a,n)    (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n))
 #define stbds_arrlast(a)      ((a)[stbds_header(a)->length-1])
 #define stbds_arrfree(a)      ((void) ((a) ? realloc(stbds_header(a),0) : 0), (a)=NULL)
