@@ -46,6 +46,7 @@
 //       Rob Loach                  Cort Stratton
 //       Kenney Phillis Jr.         github:oyvindjam
 //       Brian Costabile            github:vassvik
+//       Ken Voskuil (kaesve)
 //       
 // VERSION HISTORY
 //
@@ -4389,12 +4390,7 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
    int w,h;
    unsigned char *data;
 
-   // if one scale is 0, use same scale for both
-   if (scale_x == 0) scale_x = scale_y;
-   if (scale_y == 0) {
-      if (scale_x == 0) return NULL;  // if both scales are 0, return NULL
-      scale_y = scale_x;
-   }
+   if (scale == 0) return NULL;
 
    stbtt_GetGlyphBitmapBoxSubpixel(info, glyph, scale, scale, 0.0f,0.0f, &ix0,&iy0,&ix1,&iy1);
 
