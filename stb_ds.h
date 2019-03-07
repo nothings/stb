@@ -108,6 +108,11 @@ DOCUMENTATION
           Changes the length of the array to n. Allocates uninitialized
           slots at the end if necessary.
 
+      arrreset:
+        void arrreset(T* a);
+          Changes the length of the array to 0. It will not free the array
+          or it contents.
+
       arrsetcap:
         size_t arrsetcap(T* a, int n);
           Sets the length of allocated storage to at least n. It will not
@@ -342,6 +347,7 @@ CREDITS
 #define arrdelswap  stbds_arrdelswap
 #define arrcap      stbds_arrcap
 #define arrsetcap   stbds_arrsetcap
+#define arrreset    stbds_arrreset
 
 #define hmput       stbds_hmput
 #define hmputs      stbds_hmputs
@@ -455,6 +461,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrdelswap(a,i) ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
 #define stbds_arrinsn(a,i,n)  (stbds_arraddn((a),(n)), memmove(&(a)[(i)+(n)], &(a)[i], sizeof *(a) * (stbds_header(a)->length-(n)-(i))))
 #define stbds_arrins(a,i,v)   (stbds_arrinsn((a),(i),1), (a)[i]=(v))
+#define stbds_arrreset(a)     ((a) ? stbds_header(a)->length = 0: 0)
 
 #define stbds_arrmaybegrow(a,n)  ((!(a) || stbds_header(a)->length + (n) > stbds_header(a)->capacity) \
                                   ? (stbds_arrgrow(a,n,0),0) : 0)
