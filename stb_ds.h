@@ -1053,7 +1053,13 @@ static int stbds_is_key_equal(void *a, size_t elemsize, void *key, size_t keysiz
 
 #define STBDS_HASH_TO_ARR(x,elemsize) ((char*) (x) - (elemsize))
 #define STBDS_ARR_TO_HASH(x,elemsize) ((char*) (x) + (elemsize))
-#define STBDS_FREE(x)  realloc(x,0)
+#define STBDS_FREE(x)  stbds_free((x))
+
+static void stbds_free(void *a)
+{
+  //ignore realloc return value and avoid compiler warnings
+  if(realloc(a,0));
+}
 
 #define stbds_hash_table(a)  ((stbds_hash_index *) stbds_header(a)->hash_table)
  
@@ -1440,7 +1446,7 @@ void stbds_strreset(stbds_string_arena *a)
   x = a->storage;
   while (x) {
     y = x->next;
-    realloc(x,0);
+    STBDS_FREE(x);
     x = y;
   }
   memset(a, 0, sizeof(*a));
