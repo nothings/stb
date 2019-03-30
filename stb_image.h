@@ -5110,7 +5110,7 @@ static int stbi__shiftsigned(unsigned int v, int shift, int bits)
       v <<= -shift;
    else
       v >>= shift;
-   STBI_ASSERT(v >= 0 && v < 256);
+   STBI_ASSERT(v < 256);
    v >>= (8-bits);
    STBI_ASSERT(bits >= 0 && bits <= 8);
    return (int) ((unsigned) v * mul_table[bits]) >> shift_table[bits];
