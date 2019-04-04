@@ -275,24 +275,32 @@ int stb_mod_eucl(int v1, int v2)
 #include <limits.h>
 
 int show=0;
+int err=0;
 
 void stbdiv_check(int q, int r, int a, int b, char *type, int dir)
 {
-   if ((dir > 0 && r < 0) || (dir < 0 && r > 0))
+   if ((dir > 0 && r < 0) || (dir < 0 && r > 0)) {
       fprintf(stderr, "FAILED: %s(%d,%d) remainder %d in wrong direction\n", type,a,b,r);
-   else
+      err++;
+   } else
       if (b != INT_MIN) // can't compute abs(), but if b==INT_MIN all remainders are valid
-         if (r <= -abs(b) || r >= abs(b))
+         if (r <= -abs(b) || r >= abs(b)) {
             fprintf(stderr, "FAILED: %s(%d,%d) remainder %d out of range\n", type,a,b,r);
+            err++;
+         }
    #ifdef STB_DIVIDE_TEST_64
    {
       STB_DIVIDE_TEST_64 q64 = q, r64=r, a64=a, b64=b;
-      if (q64*b64+r64 != a64)
+      if (q64*b64+r64 != a64) {
          fprintf(stderr, "FAILED: %s(%d,%d) remainder %d doesn't match quotient %d\n", type,a,b,r,q);
+         err++;
+      }
    }
    #else
-   if (q*b+r != a)
+   if (q*b+r != a) {
       fprintf(stderr, "FAILED: %s(%d,%d) remainder %d doesn't match quotient %d\n", type,a,b,r,q);
+      err++;
+   }
    #endif
 }
 
@@ -372,7 +380,7 @@ int main(int argc, char **argv)
    testh(INT_MIN  , INT_MAX);
    testh(INT_MIN+1, INT_MAX);
 
-   return 0;
+   return err > 0 ? 1 : 0;
 }
 #endif // STB_DIVIDE_TEST
 #endif // STB_DIVIDE_IMPLEMENTATION
