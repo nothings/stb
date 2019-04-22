@@ -6589,11 +6589,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
             stride = g.w * g.h * 4; 
          
             if (out) {
-               void *tmp = (stbi_uc*) STBI_REALLOC( out, layers * stride );
-               if (NULL == tmp)
-                  return NULL;
-               else
-                  out = tmp;
+               out = (stbi_uc*) STBI_REALLOC( out, layers * stride ); 
                if (delays) {
                   *delays = (int*) STBI_REALLOC( *delays, sizeof(int) * layers ); 
                }
