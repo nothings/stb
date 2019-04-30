@@ -331,6 +331,9 @@ int main(int argc, char **argv)
          putchar(" .:ioVM@"[bitmap[j*w+i]>>5]);
       putchar('\n');
    }
+   
+   stbtt_FreeBitmap(bitmap, NULL);
+   
    return 0;
 }
 #endif 
