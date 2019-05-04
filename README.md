@@ -5,6 +5,14 @@ stb
 
 single-file public domain (or MIT licensed) libraries for C/C++ <a name="stb_libs"></a>
 
+Noteworthy:
+
+* image loader: <a href="/nothings/stb/blob/master/stb_image.h">stb_image.h</a>
+* image writer: <a href="/nothings/stb/blob/master/stb_image_write.h">stb_image_write.h</a>
+* image resizer: <a href="/nothings/stb/blob/master/stb_image_resize.h">stb_image_resize.h></a>
+* font text rasterizer: <a href="/nothings/stb/blob/master/stb_truetype.h">stb_truetype.h</a>
+* typesafe containers: <a href="/nothings/stb/blob/master/stb_ds.h">stb_ds.h</a>
+
 Most libraries by stb, except: stb_dxt by Fabian "ryg" Giesen, stb_image_resize
 by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
 
@@ -12,7 +20,7 @@ by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **[stb_vorbis.c](stb_vorbis.c)** | 1.16 | audio | 5486 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**[stb_image.h](stb_image.h)** | 2.22 | graphics | 7547 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**[stb_image.h](stb_image.h)** | 2.22 | graphics | 7555 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **[stb_truetype.h](stb_truetype.h)** | 1.21 | graphics | 4882 | parse, decode, and rasterize characters from truetype fonts
 **[stb_image_write.h](stb_image_write.h)** | 1.13 | graphics | 1622 | image writing to disk: PNG, TGA, BMP
 **[stb_image_resize.h](stb_image_resize.h)** | 0.96 | graphics | 2630 | resize images larger/smaller with good quality
@@ -23,18 +31,19 @@ library    | lastest version | category | LoC | description
 **[stb_textedit.h](stb_textedit.h)** | 1.13 | user&nbsp;interface | 1404 | guts of a text editor for games etc implementing them from scratch
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.88 | 3D&nbsp;graphics | 3806 | Minecraft-esque voxel rendering "engine" with many more features
 **[stb_dxt.h](stb_dxt.h)** | 1.08b | 3D&nbsp;graphics | 728 | Fabian "ryg" Giesen's real-time DXT compressor
-**[stb_perlin.h](stb_perlin.h)** | 0.4 | 3D&nbsp;graphics | 366 | revised Perlin noise (3D input, 1D output)
+**[stb_perlin.h](stb_perlin.h)** | 0.4 | 3D&nbsp;graphics | 427 | revised Perlin noise (3D input, 1D output)
 **[stb_easy_font.h](stb_easy_font.h)** | 1.0 | 3D&nbsp;graphics | 303 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
 **[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.41 | game&nbsp;dev | 4161 | embeddable tilemap editor
 **[stb_herringbone_wa...](stb_herringbone_wang_tile.h)** | 0.7 | game&nbsp;dev | 1221 | herringbone Wang tile map generator
 **[stb_c_lexer.h](stb_c_lexer.h)** | 0.10 | parsing | 964 | simplify writing parsers for C-like languages
 **[stb_divide.h](stb_divide.h)** | 0.92 | math | 421 | more useful 32-bit modulus e.g. "euclidean divide"
 **[stb_connected_comp...](stb_connected_components.h)** | 0.96 | misc | 1049 | incrementally compute reachability on grids
-**[stb.h](stb.h)** | 2.34 | misc | 14453 | helper functions for C, mostly redundant in C++; basically author's personal stuff
+**[stb.h](stb.h)** | 2.34 | misc | 14451 | helper functions for C, mostly redundant in C++; basically author's personal stuff
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.5 | misc | 190 | quick-and-dirty malloc/free leak-checking
+**[stb_include.h](stb_include.h)** | 0.01 | misc | 288 | implement recursive #include support, particularly for GLSL
 
-Total libraries: 21  
-Total lines of C code: 55652
+Total libraries: 22  
+Total lines of C code: 56007
 
 
 FAQ
