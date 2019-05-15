@@ -105,6 +105,7 @@ RECENT REVISION HISTORY:
     Julian Raschke          Gregory Mullen     Baldur Karlsson    github:poppolopoppo
     Christian Floisand      Kevin Schmidt      JR Smith           github:darealshinji
     Blazej Dariusz Roszkowski                                     github:Michaelangel007
+    Matvey Cherevko
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -1022,6 +1023,8 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    #endif
    #ifndef STBI_NO_PSD
    if (stbi__psd_test(s))  return stbi__psd_load(s,x,y,comp,req_comp, ri, bpc);
+   #else
+   STBI_NOTUSED(bpc);
    #endif
    #ifndef STBI_NO_PIC
    if (stbi__pic_test(s))  return stbi__pic_load(s,x,y,comp,req_comp, ri);
