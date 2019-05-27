@@ -44,7 +44,7 @@ COMPILE-TIME OPTIONS
   #define STBDS_REALLOC better_realloc
   #define STBDS_FREE better_free
 
-     These defines need to be set globally.
+     These defines only need to be set in the file containing #define STB_DS_IMPLEMENTATION.
 
      By default stb_ds uses stdlib realloc() and free() for memory management. You can
      substitute your own functions (with the same signatures) instead by defining these
@@ -423,6 +423,7 @@ extern void * stbds_hmput_default(void *a, size_t elemsize);
 extern void * stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int mode);
 extern void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode);
 extern void * stbds_shmode_func(size_t elemsize, int mode);
+extern void   stbds_free(void *p);
 
 #ifdef __cplusplus
 }
@@ -467,7 +468,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrpop(a)       (stbds_header(a)->length--, (a)[stbds_header(a)->length])
 #define stbds_arraddn(a,n)    (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n))
 #define stbds_arrlast(a)      ((a)[stbds_header(a)->length-1])
-#define stbds_arrfree(a)      ((void) ((a) ? STBDS_FREE(stbds_header(a)) : (void)0), (a)=NULL)
+#define stbds_arrfree(a)      ((void) ((a) ? stbds_free(stbds_header(a)) : (void)0), (a)=NULL)
 #define stbds_arrdel(a,i)     stbds_arrdeln(a,i,1)
 #define stbds_arrdeln(a,i,n)  (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
 #define stbds_arrdelswap(a,i) ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
@@ -640,6 +641,11 @@ size_t stbds_rehash_items;
 #else
 #define STBDS_STATS(x)
 #endif
+
+void stbds_free(void *p)
+{
+  STBDS_FREE(p);
+}
 
 //
 // stbds_arr implementation
