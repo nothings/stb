@@ -232,7 +232,7 @@ DOCUMENTATION
         void sh_new_strdup(T*);
           Overwrites the existing pointer with a newly allocated
           string hashmap which will automatically allocate and free
-          each string key using malloc/free
+          each string key using realloc/free
 
       sh_new_arena
         void sh_new_arena(T*);
@@ -449,7 +449,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrpop(a)       (stbds_header(a)->length--, (a)[stbds_header(a)->length])
 #define stbds_arraddn(a,n)    (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n))
 #define stbds_arrlast(a)      ((a)[stbds_header(a)->length-1])
-#define stbds_arrfree(a)      ((void) ((a) ? realloc(stbds_header(a),0) : 0), (a)=NULL)
+#define stbds_arrfree(a)      ((void) ((a) ? free(stbds_header(a)) : (void)0), (a)=NULL)
 #define stbds_arrdel(a,i)     stbds_arrdeln(a,i,1)
 #define stbds_arrdeln(a,i,n)  (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
 #define stbds_arrdelswap(a,i) ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
@@ -1053,7 +1053,7 @@ static int stbds_is_key_equal(void *a, size_t elemsize, void *key, size_t keysiz
 
 #define STBDS_HASH_TO_ARR(x,elemsize) ((char*) (x) - (elemsize))
 #define STBDS_ARR_TO_HASH(x,elemsize) ((char*) (x) + (elemsize))
-#define STBDS_FREE(x)  realloc(x,0)
+#define STBDS_FREE(x)  free(x)
 
 #define stbds_hash_table(a)  ((stbds_hash_index *) stbds_header(a)->hash_table)
  
@@ -1440,7 +1440,7 @@ void stbds_strreset(stbds_string_arena *a)
   x = a->storage;
   while (x) {
     y = x->next;
-    realloc(x,0);
+    free(x);
     x = y;
   }
   memset(a, 0, sizeof(*a));
