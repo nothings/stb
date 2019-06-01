@@ -312,6 +312,7 @@ CREDITS
   Sean Barrett -- library, idea for dynamic array API/implementation
   Per Vognsen  -- idea for hash table API/implementation
   Rafael Sachetto -- arrpop()
+  Vinh Truong
 */
 
 #ifdef STBDS_UNIT_TESTS
