@@ -491,8 +491,8 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 
 #define stbds_hmgets(t, k) (*stbds_hmgetp(t,k))
 #define stbds_hmget(t, k)  (stbds_hmgetp(t,k)->value)
-#define stbds_hmlen(t)     (stbds_arrlen((t)-1)-1)
-#define stbds_hmlenu(t)    (stbds_arrlenu((t)-1)-1)
+#define stbds_hmlen(t)     ((t) ? (ptrdiff_t) stbds_header((t)-1)->length-1 : 0)
+#define stbds_hmlenu(t)    ((t) ?             stbds_header((t)-1)->length-1 : 0)
 
 #define stbds_shput(t, k, v) \
     ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING),   \
