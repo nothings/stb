@@ -1,4 +1,4 @@
-/* stb_ds.h - v0.4 - public domain data structures - Sean Barrett 2019
+/* stb_ds.h - v0.5 - public domain data structures - Sean Barrett 2019
   
    This is a single-header-file library that provides easy-to-use
    dynamic arrays and hash tables for C (also works in C++).
@@ -322,7 +322,10 @@ CREDITS
   Sean Barrett -- library, idea for dynamic array API/implementation
   Per Vognsen  -- idea for hash table API/implementation
   Rafael Sachetto -- arrpop()
-  Vinh Truong
+
+  Bugfixes:
+    Vinh Truong
+    Andy Durdin
 */
 
 #ifdef STBDS_UNIT_TESTS
