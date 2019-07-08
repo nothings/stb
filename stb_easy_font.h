@@ -1,4 +1,4 @@
-// stb_easy_font.h - v1.0 - bitmap font for 3D rendering - public domain
+// stb_easy_font.h - v1.1 - bitmap font for 3D rendering - public domain
 // Sean Barrett, Feb 2015
 //
 //    Easy-to-deploy,
@@ -22,7 +22,7 @@
 //      vertical size (which can vary if 'text' has newlines).
 //
 //   int stb_easy_font_print(float x, float y,
-//                           char *text, unsigned char color[4],
+//                           const char *text, unsigned char color[4],
 //                           void *vertex_buffer, int vbuf_size)
 //
 //      Takes a string (which can contain '\n') and fills out a
@@ -71,6 +71,7 @@
 //
 // VERSION HISTORY
 //
+//   (2019-07-08)  1.1   split declarations and definitions and some other improvements
 //   (2017-01-15)  1.0   space character takes same space as numbers; fix bad spacing of 'f'
 //   (2016-01-22)  0.7   width() supports multiline text; add height()
 //   (2015-09-13)  0.6   #include <math.h>; updated license
@@ -78,7 +79,8 @@
 //
 // CONTRIBUTORS
 //
-//   github:vassvik  --  bug report
+//   github:vassvik    --  bug report
+//   github:podsvirov  --  solve multiple definitions error
 
 #if 0
 // SAMPLE CODE:
@@ -86,7 +88,11 @@
 //    Here's sample code for old OpenGL; it's a lot more complicated
 //    to make work on modern APIs, and that's your problem.
 //
-void print_string(float x, float y, char *text, float r, float g, float b)
+
+#define STB_EASY_FONT_IMPLEMENTATION  // force following include to generate implementation
+#include "stb_easy_font.h"
+
+void print_string(float x, float y, const char *text, float r, float g, float b)
 {
   static char buffer[99999]; // ~500 chars
   int num_quads;
@@ -104,10 +110,18 @@ void print_string(float x, float y, char *text, float r, float g, float b)
 #ifndef INCLUDE_STB_EASY_FONT_H
 #define INCLUDE_STB_EASY_FONT_H
 
-#include <stdlib.h>
+int stb_easy_font_width(char *text);
+int stb_easy_font_height(char *text);
+int stb_easy_font_print(float x, float y, const char *text, unsigned char color[4], void *vertex_buffer, int vbuf_size);
+void stb_easy_font_spacing(float spacing);
+
+#endif // INCLUDE_STB_EASY_FONT_H
+
+#ifdef STB_EASY_FONT_IMPLEMENTATION
+
 #include <math.h>
 
-struct stb_easy_font_info_struct {
+static struct stb_easy_font_info_struct {
     unsigned char advance;
     unsigned char h_seg;
     unsigned char v_seg;
@@ -138,7 +152,7 @@ struct stb_easy_font_info_struct {
     {  3,203,252 },  {  5,203,253 },  { 22,210,253 },  {  0,214,253 },
 };
 
-unsigned char stb_easy_font_hseg[214] = {
+static unsigned char stb_easy_font_hseg[214] = {
    97,37,69,84,28,51,2,18,10,49,98,41,65,25,81,105,33,9,97,1,97,37,37,36,
     81,10,98,107,3,100,3,99,58,51,4,99,58,8,73,81,10,50,98,8,73,81,4,10,50,
     98,8,25,33,65,81,10,50,17,65,97,25,33,25,49,9,65,20,68,1,65,25,49,41,
@@ -150,7 +164,7 @@ unsigned char stb_easy_font_hseg[214] = {
     84,73,57,41,49,25,33,65,81,9,97,1,97,25,33,65,81,57,33,25,41,25,
 };
 
-unsigned char stb_easy_font_vseg[253] = {
+static unsigned char stb_easy_font_vseg[253] = {
    4,2,8,10,15,8,15,33,8,15,8,73,82,73,57,41,82,10,82,18,66,10,21,29,1,65,
     27,8,27,9,65,8,10,50,97,74,66,42,10,21,57,41,29,25,14,81,73,57,26,8,8,
     26,66,3,8,8,15,19,21,90,58,26,18,66,18,105,89,28,74,17,8,73,57,26,21,
@@ -188,13 +202,13 @@ static int stb_easy_font_draw_segs(float x, float y, unsigned char *segs, int nu
     return offset;
 }
 
-float stb_easy_font_spacing_val = 0;
-static void stb_easy_font_spacing(float spacing)
+static float stb_easy_font_spacing_val = 0;
+void stb_easy_font_spacing(float spacing)
 {
    stb_easy_font_spacing_val = spacing;
 }
 
-static int stb_easy_font_print(float x, float y, char *text, unsigned char color[4], void *vertex_buffer, int vbuf_size)
+int stb_easy_font_print(float x, float y, const char *text, unsigned char color[4], void *vertex_buffer, int vbuf_size)
 {
     char *vbuf = (char *) vertex_buffer;
     float start_x = x;
@@ -225,7 +239,7 @@ static int stb_easy_font_print(float x, float y, char *text, unsigned char color
     return (unsigned) offset/64;
 }
 
-static int stb_easy_font_width(char *text)
+int stb_easy_font_width(char *text)
 {
     float len = 0;
     float max_len = 0;
@@ -243,7 +257,7 @@ static int stb_easy_font_width(char *text)
     return (int) ceil(max_len);
 }
 
-static int stb_easy_font_height(char *text)
+int stb_easy_font_height(char *text)
 {
     float y = 0;
     int nonempty_line=0;
@@ -258,7 +272,8 @@ static int stb_easy_font_height(char *text)
     }
     return (int) ceil(y + (nonempty_line ? 12 : 0));
 }
-#endif
+
+#endif // STB_EASY_FONT_IMPLEMENTATION
 
 /*
 ------------------------------------------------------------------------------

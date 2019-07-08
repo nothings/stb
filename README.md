@@ -24,7 +24,7 @@ library    | lastest version | category | LoC | description
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.88 | 3D&nbsp;graphics | 3806 | Minecraft-esque voxel rendering "engine" with many more features
 **[stb_dxt.h](stb_dxt.h)** | 1.08b | 3D&nbsp;graphics | 728 | Fabian "ryg" Giesen's real-time DXT compressor
 **[stb_perlin.h](stb_perlin.h)** | 0.4 | 3D&nbsp;graphics | 366 | revised Perlin noise (3D input, 1D output)
-**[stb_easy_font.h](stb_easy_font.h)** | 1.0 | 3D&nbsp;graphics | 303 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
+**[stb_easy_font.h](stb_easy_font.h)** | 1.1 | 3D&nbsp;graphics | 318 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
 **[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.41 | game&nbsp;dev | 4161 | embeddable tilemap editor
 **[stb_herringbone_wa...](stb_herringbone_wang_tile.h)** | 0.7 | game&nbsp;dev | 1221 | herringbone Wang tile map generator
 **[stb_c_lexer.h](stb_c_lexer.h)** | 0.10 | parsing | 964 | simplify writing parsers for C-like languages
