@@ -147,7 +147,7 @@
 //      while I'm editing? Will I lose my work?
 //
 //   A: The library allocates all editor memory when you create
-//      the tilemap. It allocates a maximally-sized map and a 
+//      the tilemap. It allocates a maximally-sized map and a
 //      fixed-size undo buffer (and the fixed-size copy buffer
 //      is static), and never allocates memory while it's running.
 //      So it can't fail due to running out of memory.
@@ -171,7 +171,7 @@
 //      void STBTE_DRAW_RECT(int x0, int y0, int x1, int y1, unsigned int color);
 //      // this must draw a filled rectangle (exclusive on right/bottom)
 //      // color = (r<<16)|(g<<8)|(b)
-//      
+//
 //      void STBTE_DRAW_TILE(int x0, int y0,
 //                    unsigned short id, int highlight, float *data);
 //      // this draws the tile image identified by 'id' in one of several
@@ -206,7 +206,7 @@
 //      // Changing the type of a parameter does not cause the underlying
 //      // value to be clamped to the type min/max except when the tile is
 //      // explicitly selected.
-// 
+//
 //      #define STBTE_PROP_NAME(int n, short *tiledata, float *params) ...
 //      // these return a string with the name for slot #n in the float
 //      // property list for the tile.
@@ -297,7 +297,7 @@
 //          - fix bug when pasting into protected layer
 //          - better color scheme
 //          - internal-use color picker
-//   0.10  initial release 
+//   0.10  initial release
 //
 // TODO
 //
@@ -436,7 +436,7 @@ extern void stbte_action(stbte_tilemap *tm, enum stbte_action act);
 
 ////////////////
 //
-//  save/load 
+//  save/load
 //
 //  There is no editor file format. You have to save and load the data yourself
 //  through the following functions. You can also use these functions to get the
@@ -485,7 +485,7 @@ extern void stbte_set_link(stbte_tilemap *tm, int x, int y, int destx, int desty
 
 extern void stbte_set_background_tile(stbte_tilemap *tm, short id);
 // selects the tile to fill the bottom layer with and used to clear bottom tiles to;
-// should be same ID as 
+// should be same ID as
 
 extern void stbte_set_sidewidths(int left, int right);
 // call this once to set the left & right side widths. don't call
@@ -1011,7 +1011,7 @@ stbte_tilemap *stbte_create_map(int map_x, int map_y, int map_layers, int spacin
    if (map_x < 0 || map_y < 0 || map_layers < 0 ||
        map_x > STBTE_MAX_TILEMAP_X || map_y > STBTE_MAX_TILEMAP_Y || map_layers > STBTE_MAX_LAYERS)
       return NULL;
-   
+
    if (!stbte__ui.initted)
       stbte__init_gui();
 
@@ -1295,7 +1295,7 @@ static void stbte__prepare_tileinfo(stbte_tilemap *tm)
 
 // the undo system works by storing "commands" into a buffer, and
 // then playing back those commands. undo and redo have to store
-// the commands in different order. 
+// the commands in different order.
 //
 // the commands are:
 //
@@ -1549,7 +1549,7 @@ static void stbte__redo(stbte_tilemap *tm)
 
    // we found a complete redo record
    pos = stbte__wrap(tm->undo_pos+1);
-   
+
    // start an undo record
    stbte__write_undo(tm, STBTE__undo_record);
 
@@ -1594,7 +1594,7 @@ static void stbte__redo(stbte_tilemap *tm)
    tm->undo_buffer[tm->undo_pos] = STBTE__undo_junk;
 }
 
-// because detecting that undo is available 
+// because detecting that undo is available
 static void stbte__recompute_undo_available(stbte_tilemap *tm)
 {
    tm->undo_available = (stbte__undo_find_end(tm) >= 0);
@@ -1692,7 +1692,7 @@ static void stbte__draw_bitmask_as_columns(int x, int y, short bitmask, int colo
    while (bitmask) {
       if (bitmask & (1<<i)) {
          if (start_i < 0)
-            start_i = i;   
+            start_i = i;
       } else if (start_i >= 0) {
          stbte__draw_rect(x, y+start_i, x+1, y+i, color);
          start_i = -1;
@@ -1890,7 +1890,7 @@ static int stbte__microbutton_dragger(int x, int y, int size, int id, int *pos)
          break;
       case STBTE__mousemove:
          if (STBTE__IS_ACTIVE(id) && stbte__ui.active_event == STBTE__leftdown) {
-            *pos = stbte__ui.mx - stbte__ui.sx;  
+            *pos = stbte__ui.mx - stbte__ui.sx;
          }
          break;
       case STBTE__leftup:
@@ -1907,7 +1907,7 @@ static int stbte__category_button(const char *label, int x, int y, int width, in
 {
    int x0=x,y0=y, x1=x+width,y1=y+STBTE__BUTTON_HEIGHT;
    int s = STBTE__BUTTON_INTERNAL_SPACING;
-      
+
    if (stbte__ui.event == STBTE__paint)
       stbte__draw_textbox(x0,y0,x1,y1, (char*) label, s,s, STBTE__ccategory_button, STBTE__INDEX_FOR_ID(id,0,toggled));
 
@@ -1962,7 +1962,7 @@ static int stbte__slider(int x0, int w, int y, int range, int *value, int id)
    #define stbte__sizeof(s)    , sizeof(s)
 #else
    #define stbte__sprintf      sprintf
-   #define stbte__sizeof(s)    
+   #define stbte__sizeof(s)
 #endif
 
 static int stbte__float_control(int x0, int y0, int w, float minv, float maxv, float scale, const char *fmt, float *value, int colormode, int id)
@@ -2192,7 +2192,7 @@ static void stbte__compute_panel_locations(stbte_tilemap *tm)
    limit = 6 + stbte__ui.panel[STBTE__panel_categories].delta_height;
    height[STBTE__panel_categories] = (tm->num_categories+1 > limit ? limit : tm->num_categories+1)*11 + 14;
    if (stbte__ui.panel[STBTE__panel_categories].side == stbte__ui.panel[STBTE__panel_categories].side)
-      height[STBTE__panel_categories] -= 4;   
+      height[STBTE__panel_categories] -= 4;
 
    // palette
    k =  (stbte__region[p[STBTE__panel_tiles].side].width - 8) / tm->palette_spacing_x;
@@ -3413,7 +3413,7 @@ static void stbte__layers(stbte_tilemap *tm, int x0, int y0, int w, int h)
    int x1 = x0+w;
    int y1 = y0+h;
    int xoff = 20;
-   
+
    if (tm->has_layer_names) {
       int side = stbte__ui.panel[STBTE__panel_layers].side;
       xoff = stbte__region[side].width - 42;
@@ -3524,7 +3524,7 @@ static void stbte__palette_of_tiles(stbte_tilemap *tm, int x0, int y0, int w, in
    num_total_rows = (tm->cur_palette_count + num_columns-1) / num_columns; // ceil()
 
    column = 0;
-   row    = -tm->palette_scroll;   
+   row    = -tm->palette_scroll;
    for (i=0; i < tm->num_tiles; ++i) {
       stbte__tileinfo *t = &tm->tiles[i];
 
@@ -3676,8 +3676,8 @@ static void stbte__colorpicker(int x0, int y0, int w, int h)
 
    y += 5;
    x += 8;
-   
-   
+
+
    {
       int color = stbte__color_table[stbte__cp_mode][stbte__cp_aspect][stbte__cp_index];
       int rgb[3];
@@ -4124,38 +4124,38 @@ This software is available under 2 licenses -- choose whichever you prefer.
 ------------------------------------------------------------------------------
 ALTERNATIVE A - MIT License
 Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all 
+The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ------------------------------------------------------------------------------
 ALTERNATIVE B - Public Domain (www.unlicense.org)
 This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
 commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
 this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */
