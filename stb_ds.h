@@ -527,7 +527,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 
 #define stbds_shgeti(t,k) \
      ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
-      stbds_temp(t))
+      stbds_temp(t-1))
 
 #define stbds_shgetp(t, k) \
     ((void) stbds_shgeti(t,k), &(t)[stbds_temp(t-1)])
