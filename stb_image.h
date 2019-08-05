@@ -85,7 +85,7 @@ RECENT REVISION HISTORY:
                                            Jeremy Sawicki (handle all ImageNet JPGs)
  Optimizations & bugfixes                  Mikhail Morozov (1-bit BMP)
     Fabian "ryg" Giesen                    Anael Seghezzi (is-16-bit query)
-    Arseny Kapoulkine
+    Arseny Kapoulkine                      Katelyn Gadd (indexed color loading)
     John-Mark Allen
     Carmelo J Fdez-Aguera
 
@@ -388,6 +388,16 @@ STBIDEF int stbi_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wch
 
 ////////////////////////////////////
 //
+// 8-bits-per-channel indexed color
+// Will fail if image is not an 8-bit PNG or TGA with a palette. 
+// Palette buffer needs to be at least 256 entries for PNG.
+//
+
+STBIDEF stbi_uc *stbi_load_from_memory_with_palette   (stbi_uc           const *buffer, int len , int *x, int *y, unsigned int *palette_buffer, int palette_buffer_len);
+STBIDEF stbi_uc *stbi_load_from_callbacks_with_palette(stbi_io_callbacks const *clbk, void *user, int *x, int *y, unsigned int *palette_buffer, int palette_buffer_len);
+
+////////////////////////////////////
+//
 // 16-bits-per-channel interface
 //
 
@@ -574,6 +584,10 @@ typedef uint16_t stbi__uint16;
 typedef int16_t  stbi__int16;
 typedef uint32_t stbi__uint32;
 typedef int32_t  stbi__int32;
+#endif
+
+#ifndef STBI_BUFFER_SIZE
+#define STBI_BUFFER_SIZE 128
 #endif
 
 // should produce compiler error if size is wrong
@@ -823,7 +837,7 @@ static int      stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp);
 
 #ifndef STBI_NO_PNG
 static int      stbi__png_test(stbi__context *s);
-static void    *stbi__png_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
+static void    *stbi__png_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, unsigned int *palette_buffer, int palette_buffer_len, stbi__result_info *ri);
 static int      stbi__png_info(stbi__context *s, int *x, int *y, int *comp);
 static int      stbi__png_is16(stbi__context *s);
 #endif
@@ -836,7 +850,7 @@ static int      stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp);
 
 #ifndef STBI_NO_TGA
 static int      stbi__tga_test(stbi__context *s);
-static void    *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
+static void    *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, unsigned int *palette_buffer, int palette_buffer_len, stbi__result_info *ri);
 static int      stbi__tga_info(stbi__context *s, int *x, int *y, int *comp);
 #endif
 
@@ -1001,7 +1015,7 @@ STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip)
     stbi__vertically_flip_on_load = flag_true_if_should_flip;
 }
 
-static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc)
+static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc, unsigned int *palette_buffer, int palette_buffer_len)
 {
    memset(ri, 0, sizeof(*ri)); // make sure it's initialized if we add new fields
    ri->bits_per_channel = 8; // default is 8 so most paths don't have to be changed
@@ -1012,7 +1026,7 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    if (stbi__jpeg_test(s)) return stbi__jpeg_load(s,x,y,comp,req_comp, ri);
    #endif
    #ifndef STBI_NO_PNG
-   if (stbi__png_test(s))  return stbi__png_load(s,x,y,comp,req_comp, ri);
+   if (stbi__png_test(s))  return stbi__png_load(s,x,y,comp,req_comp, palette_buffer, palette_buffer_len, ri);
    #endif
    #ifndef STBI_NO_BMP
    if (stbi__bmp_test(s))  return stbi__bmp_load(s,x,y,comp,req_comp, ri);
@@ -1040,7 +1054,7 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    #ifndef STBI_NO_TGA
    // test tga last because it's a crappy test!
    if (stbi__tga_test(s))
-      return stbi__tga_load(s,x,y,comp,req_comp, ri);
+      return stbi__tga_load(s,x,y,comp,req_comp, palette_buffer, palette_buffer_len, ri);
    #endif
 
    return stbi__errpuc("unknown image type", "Image not of any known type, or corrupt");
@@ -1116,10 +1130,42 @@ static void stbi__vertical_flip_slices(void *image, int w, int h, int z, int byt
 }
 #endif
 
+static unsigned char *stbi__load_indexed(stbi__context *s, int *x, int *y, unsigned int *palette_buffer, int palette_buffer_len)
+{
+   if (!palette_buffer)
+       return NULL;
+
+   stbi__result_info ri;
+   int comp;
+   void *result = stbi__load_main(s, x, y, &comp, 1, &ri, 8, palette_buffer, palette_buffer_len);
+
+   if (result == NULL)
+      return NULL;
+
+   if (comp != 1) {
+       stbi_image_free(result);
+       return NULL;
+   }
+
+   if (ri.bits_per_channel != 8) {
+      stbi_image_free(result);
+      return NULL;
+   }
+
+   // @TODO: move stbi__convert_format to here
+
+   if (stbi__vertically_flip_on_load) {
+      int channels = 1;
+      stbi__vertical_flip(result, *x, *y, channels * sizeof(stbi_uc));
+   }
+
+   return (unsigned char *) result;
+}
+
 static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    stbi__result_info ri;
-   void *result = stbi__load_main(s, x, y, comp, req_comp, &ri, 8);
+   void *result = stbi__load_main(s, x, y, comp, req_comp, &ri, 8, NULL, 0);
 
    if (result == NULL)
       return NULL;
@@ -1143,7 +1189,7 @@ static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, 
 static stbi__uint16 *stbi__load_and_postprocess_16bit(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    stbi__result_info ri;
-   void *result = stbi__load_main(s, x, y, comp, req_comp, &ri, 16);
+   void *result = stbi__load_main(s, x, y, comp, req_comp, &ri, 16, NULL, 0);
 
    if (result == NULL)
       return NULL;
@@ -1293,6 +1339,20 @@ STBIDEF stbi_uc *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *u
    stbi__context s;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
    return stbi__load_and_postprocess_8bit(&s,x,y,comp,req_comp);
+}
+
+STBIDEF stbi_uc *stbi_load_from_memory_with_palette(stbi_uc const *buffer, int len, int *x, int *y, unsigned int *palette_buffer, int palette_buffer_len)
+{
+    stbi__context s;
+    stbi__start_mem(&s, buffer, len);
+    return stbi__load_indexed(&s, x, y, palette_buffer, palette_buffer_len);
+}
+
+STBIDEF stbi_uc *stbi_load_from_callbacks_with_palette(stbi_io_callbacks const *clbk, void *user, int *x, int *y, unsigned int *palette_buffer, int palette_buffer_len)
+{
+    stbi__context s;
+    stbi__start_callbacks(&s, (stbi_io_callbacks *)clbk, user);
+    return stbi__load_indexed(&s, x, y, palette_buffer, palette_buffer_len);
 }
 
 #ifndef STBI_NO_GIF
@@ -4794,14 +4854,24 @@ static void stbi__de_iphone(stbi__png *z)
 
 #define STBI__PNG_TYPE(a,b,c,d)  (((unsigned) (a) << 24) + ((unsigned) (b) << 16) + ((unsigned) (c) << 8) + (unsigned) (d))
 
-static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
+static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp, unsigned int *palette_buffer, int palette_buffer_len)
 {
-   stbi_uc palette[1024], pal_img_n=0;
+   stbi_uc _palette[1024], pal_img_n=0;
+   stbi_uc *palette = _palette;
    stbi_uc has_trans=0, tc[3]={0};
    stbi__uint16 tc16[3];
    stbi__uint32 ioff=0, idata_limit=0, i, pal_len=0;
    int first=1,k,interlace=0, color=0, is_iphone=0;
    stbi__context *s = z->s;
+
+   if (palette_buffer) {
+       if (palette_buffer_len < 256)
+           return stbi__err("palette buffer too small", "palette buffer len must be 256");
+       else if (req_comp != 1)
+           return stbi__err("invalid req_comp", "req_comp must be 1 when loading paletted");
+       else
+           palette = (stbi_uc *)(void *)palette_buffer;
+   }
 
    z->expanded = NULL;
    z->idata = NULL;
@@ -4934,8 +5004,9 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                s->img_n = pal_img_n; // record the actual colors we had
                s->img_out_n = pal_img_n;
                if (req_comp >= 3) s->img_out_n = req_comp;
-               if (!stbi__expand_png_palette(z, palette, pal_len, s->img_out_n))
-                  return 0;
+               if (!palette_buffer)
+                   if (!stbi__expand_png_palette(z, palette, pal_len, s->img_out_n))
+                       return 0;
             } else if (has_trans) {
                // non-paletted image with tRNS -> source image has (constant) alpha
                ++s->img_n;
@@ -4966,11 +5037,18 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
    }
 }
 
-static void *stbi__do_png(stbi__png *p, int *x, int *y, int *n, int req_comp, stbi__result_info *ri)
+static void *stbi__do_png(stbi__png *p, int *x, int *y, int *n, int req_comp, unsigned int *palette_buffer, int palette_buffer_len, stbi__result_info *ri)
 {
    void *result=NULL;
-   if (req_comp < 0 || req_comp > 4) return stbi__errpuc("bad req_comp", "Internal error");
-   if (stbi__parse_png_file(p, STBI__SCAN_load, req_comp)) {
+   if (palette_buffer && req_comp != 1) {
+       stbi__err("bad req_comp", "req_comp must be 1 if loading paletted image without expansion"); 
+       return NULL;
+   }
+   if (req_comp < 0 || req_comp > 4) {
+       stbi__err("bad req_comp", "Internal error"); 
+       return NULL;
+   }
+   if (stbi__parse_png_file(p, STBI__SCAN_load, req_comp, palette_buffer, palette_buffer_len)) {
       if (p->depth < 8)
          ri->bits_per_channel = 8;
       else
@@ -4978,7 +5056,9 @@ static void *stbi__do_png(stbi__png *p, int *x, int *y, int *n, int req_comp, st
       result = p->out;
       p->out = NULL;
       if (req_comp && req_comp != p->s->img_out_n) {
-         if (ri->bits_per_channel == 8)
+         if (palette_buffer)
+            ;
+         else if (ri->bits_per_channel == 8)
             result = stbi__convert_format((unsigned char *) result, p->s->img_out_n, req_comp, p->s->img_x, p->s->img_y);
          else
             result = stbi__convert_format16((stbi__uint16 *) result, p->s->img_out_n, req_comp, p->s->img_x, p->s->img_y);
@@ -4987,7 +5067,12 @@ static void *stbi__do_png(stbi__png *p, int *x, int *y, int *n, int req_comp, st
       }
       *x = p->s->img_x;
       *y = p->s->img_y;
-      if (n) *n = p->s->img_n;
+      if (n) {
+         if (palette_buffer)
+            *n = 1;
+         else
+            *n = p->s->img_n;
+      }
    }
    STBI_FREE(p->out);      p->out      = NULL;
    STBI_FREE(p->expanded); p->expanded = NULL;
@@ -4996,11 +5081,11 @@ static void *stbi__do_png(stbi__png *p, int *x, int *y, int *n, int req_comp, st
    return result;
 }
 
-static void *stbi__png_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
+static void *stbi__png_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, unsigned int *palette_buffer, int palette_buffer_len, stbi__result_info *ri)
 {
    stbi__png p;
    p.s = s;
-   return stbi__do_png(&p, x,y,comp,req_comp, ri);
+   return stbi__do_png(&p, x,y,comp,req_comp, palette_buffer, palette_buffer_len, ri);
 }
 
 static int stbi__png_test(stbi__context *s)
@@ -5013,7 +5098,7 @@ static int stbi__png_test(stbi__context *s)
 
 static int stbi__png_info_raw(stbi__png *p, int *x, int *y, int *comp)
 {
-   if (!stbi__parse_png_file(p, STBI__SCAN_header, 0)) {
+   if (!stbi__parse_png_file(p, STBI__SCAN_header, NULL, 0, NULL)) {
       stbi__rewind( p->s );
       return 0;
    }
@@ -5520,7 +5605,7 @@ static void stbi__tga_read_rgb16(stbi__context *s, stbi_uc* out)
    // so let's treat all 15 and 16bit TGAs as RGB with no alpha.
 }
 
-static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
+static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, unsigned int *palette_buffer, int palette_buffer_len, stbi__result_info *ri)
 {
    //   read in the TGA header stuff
    int tga_offset = stbi__get8(s);
@@ -5590,10 +5675,18 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
          //   any data to skip? (offset usually = 0)
          stbi__skip(s, tga_palette_start );
          //   load the palette
-         tga_palette = (unsigned char*)stbi__malloc_mad2(tga_palette_len, tga_comp, 0);
-         if (!tga_palette) {
-            STBI_FREE(tga_data);
-            return stbi__errpuc("outofmem", "Out of memory");
+         if (palette_buffer) {
+            if (palette_buffer_len < tga_palette_len * tga_comp) {
+               STBI_FREE(tga_data);
+               return stbi__errpuc("buffer too small", "Palette buffer too small");
+            }
+            tga_palette = (unsigned char*)(void*)palette_buffer;
+         } else {
+            tga_palette = (unsigned char*)stbi__malloc_mad2(tga_palette_len, tga_comp, 0);
+            if (!tga_palette) {
+               STBI_FREE(tga_data);
+               return stbi__errpuc("outofmem", "Out of memory");
+            }
          }
          if (tga_rgb16) {
             stbi_uc *pal_entry = tga_palette;
@@ -5604,7 +5697,8 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
             }
          } else if (!stbi__getn(s, tga_palette, tga_palette_len * tga_comp)) {
                STBI_FREE(tga_data);
-               STBI_FREE(tga_palette);
+               if (!palette_buffer)
+                  STBI_FREE(tga_palette);
                return stbi__errpuc("bad palette", "Corrupt TGA");
          }
       }
@@ -5633,7 +5727,7 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
          if ( read_next_pixel )
          {
             //   load however much data we did have
-            if ( tga_indexed )
+            if ( tga_indexed && !palette_buffer )
             {
                // read in index, then perform the lookup
                int pal_idx = (tga_bits_per_pixel == 8) ? stbi__get8(s) : stbi__get16le(s);
@@ -5683,7 +5777,7 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
          }
       }
       //   clear my palette, if I had one
-      if ( tga_palette != NULL )
+      if ( tga_palette != NULL && !palette_buffer )
       {
          STBI_FREE( tga_palette );
       }
