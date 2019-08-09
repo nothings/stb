@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.16 - public domain
+// Ogg Vorbis audio decoder - v1.17 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
@@ -30,7 +30,7 @@
 //    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
 //    Phillip Bennefall  Rohit               Thiago Goulart
 //    manxorist@github   saga musix          github:infatum
-//    Timur Gagiev
+//    Timur Gagiev       Maxwell Koo
 //
 // Partial history:
 //    1.17    - 2019-07-08 - fix CVE-2019-13217..CVE-2019-13223 (by ForAllSecure)
