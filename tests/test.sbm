@@ -1,3 +1,20 @@
+[link]
+-Xlinker advapi32.lib
+
+[args]
+-I .. -Wall -D_DEBUG
+
+[compilers]
+clang for x64,vcvars_2015_x64,clang --analyze
+clang for x64,vcvars_2015_x64,clang
+clang for x86,vcvars_2015_x86,clang --target=i386-pc-windows-msvc
+
+[link]
+advapi32.lib
+
+[args]
+/nologo -I .. -W3 -WX -D_DEBUG
+
 [compilers]
 VS2015 for x64, vcvars_2015_x64
 VC6           , vcvars_vc6
@@ -5,16 +22,10 @@ VS2008 for x86, vcvars_2008_x86
 VS2013 for x86, vcvars_2013_x86
 VS2015 for x86, vcvars_2015_x86
 clang-cl for x64, vcvars_2015_x64, clang-cl
-clang-cl for x86, vcvars_2015_x86, clang32-cl
-#these batch files don't work on my machine
+clang-cl for x86, vcvars_2015_x86, clang-cl --target=i386-pc-windows-msvc
+#these batch files don't path a cl executable on my machine?!?
 #VS2008 for x64, vcvars_2008_x64
 #VS2013 for x64, vcvars_2013_x64
-
-[args]
--I .. -W3 -WX -D_DEBUG
-
-[link]
-advapi32.lib
 
 [projects]
 c_lexer_test.c
