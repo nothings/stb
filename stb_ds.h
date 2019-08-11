@@ -325,7 +325,7 @@ CREDITS
 
   Bugfixes:
     Andy Durdin
-    Shane Liesgang
+    Shane Liesegang
     Vinh Truong
 */
 
