@@ -5237,7 +5237,10 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
          psize = (info.offset - 14 - info.hsz) >> 2;
    }
 
-   s->img_n = ma ? 4 : 3;
+   if (info.bpp == 24 && ma == 0xff000000)
+      s->img_n = 3;
+   else
+      s->img_n = ma ? 4 : 3;
    if (req_comp && req_comp >= 3) // we can directly decode 3 or 4
       target = req_comp;
    else
@@ -6936,7 +6939,12 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
       return 0;
    if (x) *x = s->img_x;
    if (y) *y = s->img_y;
-   if (comp) *comp = info.ma ? 4 : 3;
+   if (comp) {
+      if (info.bpp == 24 && info.ma == 0xff000000)
+         *comp = 3;
+      else
+         *comp = info.ma ? 4 : 3;
+   }
    return 1;
 }
 #endif
