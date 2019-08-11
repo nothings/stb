@@ -5,9 +5,21 @@
 -I .. -Wall -D_DEBUG
 
 [compilers]
-clang for x64,vcvars_2015_x64,clang --analyze
+#clang for x64,vcvars_2015_x64,clang --analyze
 clang for x64,vcvars_2015_x64,clang
 clang for x86,vcvars_2015_x86,clang --target=i386-pc-windows-msvc
+
+#####    STATIC ANALYSIS
+#
+#[link]
+#
+#[args]
+#-I .. -Wall -D_DEBUG
+#
+#[compilers]
+#clang for x64,vcvars_2015_x64,clang --analyze
+#
+#####
 
 [link]
 advapi32.lib
