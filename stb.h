@@ -471,6 +471,7 @@ static char *stb_p_strncpy_s(char *a, size_t size, const char *b, size_t count)
 #else
 #define stb_p_vsnprintf  vsnprintf
 #endif
+#endif // STB_DEFINE
 
 #if defined(_WIN32) && (_MSC_VER >= 1300)
 #define stb_p_stricmp    _stricmp
@@ -481,9 +482,6 @@ static char *stb_p_strncpy_s(char *a, size_t size, const char *b, size_t count)
 #define stb_p_stricmp    stricmp
 #define stb_p_strnicmp   strnicmp
 #endif
-
-#endif // STB_DEFINE
-
 
 STB_EXTERN void stb_wrapper_malloc(void *newp, size_t sz, char *file, int line);
 STB_EXTERN void stb_wrapper_free(void *oldp, char *file, int line);
@@ -7151,7 +7149,7 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
 
    // @TODO: do this concatenation without using swprintf to avoid this mess:
 #if (defined(_MSC_VER) && _MSC_VER < 1400) // || (defined(__clang__))
-   // confusingly, Windows Kits\10 goes down this path?!?
+   // confusingly, Windows Kits\10 needs to go down this path?!?
    if (has_slash)
       swprintf(full_path, L"%s*", stb__from_utf8(path));
    else
