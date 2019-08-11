@@ -5079,7 +5079,7 @@ static int stbi__high_bit(unsigned int z)
    if (z >= 0x00100) { n +=  8; z >>=  8; }
    if (z >= 0x00010) { n +=  4; z >>=  4; }
    if (z >= 0x00004) { n +=  2; z >>=  2; }
-   if (z >= 0x00002) { n +=  1; z >>=  1; }
+   if (z >= 0x00002) { n +=  1;/* >>=  1;*/ }
    return n;
 }
 
@@ -5550,6 +5550,8 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    int RLE_repeating = 0;
    int read_next_pixel = 1;
    STBI_NOTUSED(ri);
+   STBI_NOTUSED(tga_x_origin); // @TODO
+   STBI_NOTUSED(tga_y_origin); // @TODO
 
    //   do a tiny bit of precessing
    if ( tga_image_type >= 8 )
@@ -5713,6 +5715,7 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    //   Microsoft's C compilers happy... [8^(
    tga_palette_start = tga_palette_len = tga_palette_bits =
          tga_x_origin = tga_y_origin = 0;
+   STBI_NOTUSED(tga_palette_start);
    //   OK, done
    return tga_data;
 }
