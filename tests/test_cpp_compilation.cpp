@@ -17,9 +17,7 @@
 #define STB_VOXEL_RENDER_IMPLEMENTATION
 #define STB_CONNECTED_COMPONENTS_IMPLEMENTATION
 #define STB_DS_IMPLEMENTATION
-#ifndef TRAVIS
 #define STBDS_UNIT_TESTS
-#endif
 
 #define STBI_MALLOC     my_malloc
 #define STBI_FREE       my_free
