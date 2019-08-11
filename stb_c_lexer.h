@@ -891,6 +891,7 @@ void dummy(void)
       4.
    };
    (void) sizeof(some_floats);
+   (void) some_floats[1];
 
    printf("test %d",1); // https://github.com/nothings/stb/issues/13
 }
