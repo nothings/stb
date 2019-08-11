@@ -1,4 +1,4 @@
-/* stb_ds.h - v0.6 - public domain data structures - Sean Barrett 2019
+/* stb_ds.h - v0.61 - public domain data structures - Sean Barrett 2019
   
    This is a single-header-file library that provides easy-to-use
    dynamic arrays and hash tables for C (also works in C++).
@@ -573,11 +573,8 @@ struct stbds_string_arena
   unsigned char mode;  // this isn't used by the string arena itself
 };
 
-enum
-{
-   STBDS_HM_BINARY,
-   STBDS_HM_STRING,
-};
+#define STBDS_HM_BINARY  0
+#define STBDS_HM_STRING  1
 
 enum
 {
