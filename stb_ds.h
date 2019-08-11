@@ -314,8 +314,8 @@ NOTES - HASH MAP
     a strong random number to stbds_rand_seed.
      
   * The default value for the hash table is stored in foo[-1], so if you
-    use code like 'hmget(T,k)->value = 5' you can overwrite the value
-    stored by hmdefault if 'k' is not present.
+    use code like 'hmget(T,k)->value = 5' you can accidentally overwrite
+    the value stored by hmdefault if 'k' is not present.
 
 CREDITS
 
@@ -324,8 +324,9 @@ CREDITS
   Rafael Sachetto -- arrpop()
 
   Bugfixes:
-    Vinh Truong
     Andy Durdin
+    Shane Liesgang
+    Vinh Truong
 */
 
 #ifdef STBDS_UNIT_TESTS
@@ -519,18 +520,18 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 
 #define stbds_shput(t, k, v) \
     ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING),   \
-     (t)[stbds_temp(t-1)].value = (v))
+     (t)[stbds_temp((t)-1)].value = (v))
 
 #define stbds_shputs(t, s) \
     ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (s).key, sizeof (s).key, STBDS_HM_STRING), \
-     (t)[stbds_temp(t-1)] = (s))
+     (t)[stbds_temp((t)-1)] = (s))
 
 #define stbds_shgeti(t,k) \
      ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
-      stbds_temp(t))
+      stbds_temp((t)-1))
 
 #define stbds_shgetp(t, k) \
-    ((void) stbds_shgeti(t,k), &(t)[stbds_temp(t-1)])
+    ((void) stbds_shgeti(t,k), &(t)[stbds_temp((t)-1)])
 
 #define stbds_shdel(t,k) \
     (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_OFFSETOF((t),key), STBDS_HM_STRING)),(t)?stbds_temp((t)-1):0)
@@ -1514,6 +1515,7 @@ void stbds_unit_tests(void)
 
   int i,j;
 
+  STBDS_ASSERT(arrlen(arr)==0);
   for (i=0; i < 20000; i += 50) {
     for (j=0; j < i; ++j)
       arrpush(arr,j);
@@ -1538,27 +1540,30 @@ void stbds_unit_tests(void)
     arrfree(arr);
   }
 
-  hmdefault(intmap, -1);
-  i=1; STBDS_ASSERT(hmget(intmap, i) == -1);
+  i = 1;
+  STBDS_ASSERT(hmgeti(intmap,i) == -1);
+  hmdefault(intmap, -2);
+  STBDS_ASSERT(hmgeti(intmap, i) == -1);
+  STBDS_ASSERT(hmget (intmap, i) == -2);
   for (i=0; i < testsize; i+=2)
     hmput(intmap, i, i*5);
   for (i=0; i < testsize; i+=1)
-    if (i & 1) STBDS_ASSERT(hmget(intmap, i) == -1 );
+    if (i & 1) STBDS_ASSERT(hmget(intmap, i) == -2 );
     else       STBDS_ASSERT(hmget(intmap, i) == i*5);
   for (i=0; i < testsize; i+=2)
     hmput(intmap, i, i*3);
   for (i=0; i < testsize; i+=1)
-    if (i & 1) STBDS_ASSERT(hmget(intmap, i) == -1 );
+    if (i & 1) STBDS_ASSERT(hmget(intmap, i) == -2 );
     else       STBDS_ASSERT(hmget(intmap, i) == i*3);
   for (i=2; i < testsize; i+=4)
     hmdel(intmap, i); // delete half the entries
   for (i=0; i < testsize; i+=1)
-    if (i & 3) STBDS_ASSERT(hmget(intmap, i) == -1 );
+    if (i & 3) STBDS_ASSERT(hmget(intmap, i) == -2 );
     else       STBDS_ASSERT(hmget(intmap, i) == i*3);
   for (i=0; i < testsize; i+=1)
     hmdel(intmap, i); // delete the rest of the entries    
   for (i=0; i < testsize; i+=1)
-    STBDS_ASSERT(hmget(intmap, i) == -1 );
+    STBDS_ASSERT(hmget(intmap, i) == -2 );
   hmfree(intmap);
   for (i=0; i < testsize; i+=2)
     hmput(intmap, i, i*3);
@@ -1581,25 +1586,28 @@ void stbds_unit_tests(void)
   strreset(&sa);
 
   for (j=0; j < 2; ++j) {
+    STBDS_ASSERT(shgeti(strmap,"foo") == -1);
     if (j == 0)
       sh_new_strdup(strmap);
     else
       sh_new_arena(strmap);
-    shdefault(strmap, -1);
+    STBDS_ASSERT(shgeti(strmap,"foo") == -1);
+    shdefault(strmap, -2);
+    STBDS_ASSERT(shgeti(strmap,"foo") == -1);
     for (i=0; i < testsize; i+=2)
       shput(strmap, strkey(i), i*3);
     for (i=0; i < testsize; i+=1)
-      if (i & 1) STBDS_ASSERT(shget(strmap, strkey(i)) == -1 );
+      if (i & 1) STBDS_ASSERT(shget(strmap, strkey(i)) == -2 );
       else       STBDS_ASSERT(shget(strmap, strkey(i)) == i*3);
     for (i=2; i < testsize; i+=4)
       shdel(strmap, strkey(i)); // delete half the entries
     for (i=0; i < testsize; i+=1)
-      if (i & 3) STBDS_ASSERT(shget(strmap, strkey(i)) == -1 );
+      if (i & 3) STBDS_ASSERT(shget(strmap, strkey(i)) == -2 );
       else       STBDS_ASSERT(shget(strmap, strkey(i)) == i*3);
     for (i=0; i < testsize; i+=1)
       shdel(strmap, strkey(i)); // delete the rest of the entries    
     for (i=0; i < testsize; i+=1)
-      STBDS_ASSERT(shget(strmap, strkey(i)) == -1 );
+      STBDS_ASSERT(shget(strmap, strkey(i)) == -2 );
     shfree(strmap);
   }
 
