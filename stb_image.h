@@ -1,4 +1,4 @@
-/* stb_image - v2.22 - public domain image loader - http://nothings.org/stb
+/* stb_image - v2.23 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 
    Do this:
@@ -48,6 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.23  (2019-08-11) fix clang static analysis warning
       2.22  (2019-03-04) gif fixes, fix warnings
       2.21  (2019-02-25) fix typo in comment
       2.20  (2019-02-07) support utf8 filenames in Windows; fix warnings and platform ifdefs 

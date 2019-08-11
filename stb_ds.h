@@ -1,4 +1,4 @@
-/* stb_ds.h - v0.5 - public domain data structures - Sean Barrett 2019
+/* stb_ds.h - v0.6 - public domain data structures - Sean Barrett 2019
   
    This is a single-header-file library that provides easy-to-use
    dynamic arrays and hash tables for C (also works in C++).

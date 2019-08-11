@@ -1,4 +1,4 @@
-/* stb.h - v2.34 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.35 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities
@@ -25,6 +25,7 @@
 
 Version History
 
+   2.35   fix clang-cl issues with swprintf
    2.34   fix warnings
    2.33   more fixes to random numbers
    2.32   stb_intcmprev, stb_uidict, fix random numbers on Linux
@@ -7150,6 +7151,7 @@ static void stb__dirtree_scandir(char *path, time_t last_time, stb_dirtree *acti
    // @TODO: do this concatenation without using swprintf to avoid this mess:
 #if (defined(_MSC_VER) && _MSC_VER < 1400) // || (defined(__clang__))
    // confusingly, Windows Kits\10 needs to go down this path?!?
+   // except now it doesn't, I don't know what changed
    if (has_slash)
       swprintf(full_path, L"%s*", stb__from_utf8(path));
    else

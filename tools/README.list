@@ -19,3 +19,4 @@ stb_divide.h                | math             | more useful 32-bit modulus e.g.
 stb_connected_components.h  | misc             | incrementally compute reachability on grids
 stb.h                       | misc             | helper functions for C, mostly redundant in C++; basically author's personal stuff
 stb_leakcheck.h             | misc             | quick-and-dirty malloc/free leak-checking
+stb_include.h               | misc             | implement recursive #include support, particularly for GLSL
