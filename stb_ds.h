@@ -1,4 +1,4 @@
-/* stb_ds.h - v0.61 - public domain data structures - Sean Barrett 2019
+/* stb_ds.h - v0.62 - public domain data structures - Sean Barrett 2019
   
    This is a single-header-file library that provides easy-to-use
    dynamic arrays and hash tables for C (also works in C++).
@@ -50,6 +50,14 @@ COMPILE-TIME OPTIONS
      substitute your own functions instead by defining these symbols. You must either
      define both, or neither. Note that at the moment, 'context' will always be NULL.
      @TODO add an array/hash initialization function that takes a memory context pointer.
+
+  #define STBDS_UNIT_TESTS
+
+     Defines a function stbds_unit_tests() that checks the functioning of the data structures.
+
+  Note that on older versions of gcc (e.g. 5.x.x) you may need to build with '-std=c++0x'
+     (or equivalentally '-std=c++11') when using anonymous structures as seen on the web
+     page or in STBDS_UNIT_TESTS.
 
 LICENSE
 
