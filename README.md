@@ -17,6 +17,7 @@ Most libraries by stb, except: stb_dxt by Fabian "ryg" Giesen, stb_image_resize
 by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
 
 <a name="stb_libs"></a>
+
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **[stb_vorbis.c](stb_vorbis.c)** | 1.17 | audio | 5502 | decode ogg vorbis files from file/memory to float/16-bit signed output
