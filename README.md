@@ -3,20 +3,20 @@
 stb
 ===
 
-single-file public domain (or MIT licensed) libraries for C/C++ <a name="stb_libs"></a>
+single-file public domain (or MIT licensed) libraries for C/C++
 
 Noteworthy:
 
-* image loader: <a href="/nothings/stb/blob/master/stb_image.h">stb_image.h</a>
-* image writer: <a href="/nothings/stb/blob/master/stb_image_write.h">stb_image_write.h</a>
-* image resizer: <a href="/nothings/stb/blob/master/stb_image_resize.h">stb_image_resize.h></a>
-* font text rasterizer: <a href="/nothings/stb/blob/master/stb_truetype.h">stb_truetype.h</a>
-* typesafe containers: <a href="/nothings/stb/blob/master/stb_ds.h">stb_ds.h</a>
+* image loader: [stb_image.h](stb_image.h)
+* image writer: [stb_image_write.h](stb_image_write.h)
+* image resizer: [stb_image_resize.h](stb_image_resize.h)
+* font text rasterizer: [stb_textedit.h](stb_textedit.h)
+* typesafe containers: [stb_ds.h](stb_ds.h)
 
 Most libraries by stb, except: stb_dxt by Fabian "ryg" Giesen, stb_image_resize
 by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
 
-
+<a name="stb_libs"></a>
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **[stb_vorbis.c](stb_vorbis.c)** | 1.17 | audio | 5502 | decode ogg vorbis files from file/memory to float/16-bit signed output
@@ -25,7 +25,7 @@ library    | lastest version | category | LoC | description
 **[stb_image_write.h](stb_image_write.h)** | 1.13 | graphics | 1619 | image writing to disk: PNG, TGA, BMP
 **[stb_image_resize.h](stb_image_resize.h)** | 0.96 | graphics | 2630 | resize images larger/smaller with good quality
 **[stb_rect_pack.h](stb_rect_pack.h)** | 1.00 | graphics | 628 | simple 2D rectangle packer with decent quality
-**[stb_ds.h](stb_ds.h)** | 0.61 | utility | 1696 | typesafe dynamic array and hash tables for C, will compile in C++
+**[stb_ds.h](stb_ds.h)** | 0.62 | utility | 1723 | typesafe dynamic array and hash tables for C, will compile in C++
 **[stb_sprintf.h](stb_sprintf.h)** | 1.06 | utility | 1860 | fast sprintf, snprintf for C/C++
 **[stretchy_buffer.h](stretchy_buffer.h)** | 1.03 | utility | 262 | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 **[stb_textedit.h](stb_textedit.h)** | 1.13 | user&nbsp;interface | 1404 | guts of a text editor for games etc implementing them from scratch
@@ -43,7 +43,7 @@ library    | lastest version | category | LoC | description
 **[stb_include.h](stb_include.h)** | 0.01 | misc | 288 | implement recursive #include support, particularly for GLSL
 
 Total libraries: 22  
-Total lines of C code: 56061
+Total lines of C code: 56088
 
 
 FAQ
