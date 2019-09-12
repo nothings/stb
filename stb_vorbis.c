@@ -130,8 +130,19 @@ typedef struct
    int max_frame_size;
 } stb_vorbis_info;
 
+typedef struct
+{
+   char *vendor;
+
+   int comment_list_length;
+   char **comment_list;
+} stb_vorbis_comment;
+
 // get general information about the file
 extern stb_vorbis_info stb_vorbis_get_info(stb_vorbis *f);
+
+// get ogg comments
+extern stb_vorbis_comment stb_vorbis_get_comment(stb_vorbis *f);
 
 // get the last error detected (clears it, too)
 extern int stb_vorbis_get_error(stb_vorbis *f);
@@ -758,6 +769,10 @@ struct stb_vorbis
    unsigned int setup_memory_required;
    unsigned int temp_memory_required;
    unsigned int setup_temp_memory_required;
+
+   char *vendor;
+   int comment_list_length;
+   char **comment_list;
 
   // input config
 #ifndef STB_VORBIS_NO_STDIO
@@ -1536,6 +1551,16 @@ static int get8_packet(vorb *f)
 {
    int x = get8_packet_raw(f);
    f->valid_bits = 0;
+   return x;
+}
+
+static int get32_packet(vorb *f)
+{
+   uint32 x;
+   x = get8_packet(f);
+   x += get8_packet(f) << 8;
+   x += get8_packet(f) << 16;
+   x += (uint32) get8_packet(f) << 24;
    return x;
 }
 
@@ -3631,8 +3656,43 @@ static int start_decoder(vorb *f)
 
    // second packet!
    if (!start_page(f))                              return FALSE;
-
+   
    if (!start_packet(f))                            return FALSE;
+
+   if (!next_segment(f))                            return FALSE;
+
+   if (get8_packet(f) != VORBIS_packet_comment)            return error(f, VORBIS_invalid_setup);
+   for (i=0; i < 6; ++i) header[i] = get8_packet(f);
+   if (!vorbis_validate(header))                    return error(f, VORBIS_invalid_setup);
+   //file vendor
+   len = get32_packet(f);
+   f->vendor = (char*)setup_malloc(f, sizeof(char) * (len+1));
+   for(i=0; i < len; ++i) {
+      f->vendor[i] = get8_packet(f);
+   }
+   f->vendor[len] = (char)NULL;
+   //user comments
+   f->comment_list_length = get32_packet(f);
+   f->comment_list = (char**)setup_malloc(f, sizeof(char*) * (f->comment_list_length));
+   
+   for(i=0; i < f->comment_list_length; ++i) {
+      len = get32_packet(f);
+      f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * (len+1));
+
+      for(j=0; j < len; ++j) {
+         f->comment_list[i][j] = get8_packet(f);
+      }
+      f->comment_list[i][len] = (char)NULL;
+   }
+
+   // framing_flag
+   x = get8_packet(f);
+   if (!(x & 1))                                    return error(f, VORBIS_invalid_setup);
+
+   
+   skip(f, f->bytes_in_seg);
+   f->bytes_in_seg = 0;
+
    do {
       len = next_segment(f);
       skip(f, len);
@@ -4149,6 +4209,13 @@ static int start_decoder(vorb *f)
 static void vorbis_deinit(stb_vorbis *p)
 {
    int i,j;
+
+   setup_free(p, p->vendor);
+   for (i=0; i < p->comment_list_length; ++i) {
+      setup_free(p, p->comment_list[i]);
+   }
+   setup_free(p, p->comment_list);
+
    if (p->residue_config) {
       for (i=0; i < p->residue_count; ++i) {
          Residue *r = p->residue_config+i;
@@ -4245,6 +4312,15 @@ stb_vorbis_info stb_vorbis_get_info(stb_vorbis *f)
    d.setup_temp_memory_required = f->setup_temp_memory_required;
    d.temp_memory_required = f->temp_memory_required;
    d.max_frame_size = f->blocksize_1 >> 1;
+   return d;
+}
+
+stb_vorbis_comment stb_vorbis_get_comment(stb_vorbis *f)
+{
+   stb_vorbis_comment d;
+   d.vendor = f->vendor;
+   d.comment_list_length = f->comment_list_length;
+   d.comment_list = f->comment_list;
    return d;
 }
 
