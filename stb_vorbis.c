@@ -4625,7 +4625,7 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
 {
    ProbedPage left, right, mid;
    int i, start_seg_with_known_loc, end_pos, page_start;
-   uint32 delta, stream_length, padding;
+   uint32 delta, stream_length, padding, last_sample_limit;
    double offset, bytes_per_sample;
    int probe = 0;
 
@@ -4639,9 +4639,9 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
    // indicates should be the granule position (give or take one)).
    padding = ((f->blocksize_1 - f->blocksize_0) >> 2);
    if (sample_number < padding)
-      sample_number = 0;
+      last_sample_limit = 0;
    else
-      sample_number -= padding;
+      last_sample_limit = sample_number - padding;
 
    left = f->p_first;
    while (left.last_decoded_sample == ~0U) {
@@ -4654,7 +4654,7 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
    assert(right.last_decoded_sample != ~0U);
 
    // starting from the start is handled differently
-   if (sample_number <= left.last_decoded_sample) {
+   if (last_sample_limit <= left.last_decoded_sample) {
       if (stb_vorbis_seek_start(f))
          return 1;
       return 0;
@@ -4673,10 +4673,10 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
                // first probe (interpolate)
                double data_bytes = right.page_end - left.page_start;
                bytes_per_sample = data_bytes / right.last_decoded_sample;
-               offset = left.page_start + bytes_per_sample * (sample_number - left.last_decoded_sample);
+               offset = left.page_start + bytes_per_sample * (last_sample_limit - left.last_decoded_sample);
             } else {
                // second probe (try to bound the other side)
-               double error = ((double) sample_number - mid.last_decoded_sample) * bytes_per_sample;
+               double error = ((double) last_sample_limit - mid.last_decoded_sample) * bytes_per_sample;
                if (error >= 0 && error <  8000) error =  8000;
                if (error <  0 && error > -8000) error = -8000;
                offset += error * 2;
