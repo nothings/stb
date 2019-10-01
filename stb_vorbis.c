@@ -774,8 +774,11 @@ struct stb_vorbis
 
    uint8  push_mode;
 
+   // the page to seek to when seeking to start, may be zero
    uint32 first_audio_page_offset;
 
+   // p_first is the page on which the first audio packet ends
+   // (but not necessarily the page on which it starts)
    ProbedPage p_first, p_last;
 
   // memory management
@@ -1404,6 +1407,9 @@ static int capture_pattern(vorb *f)
 static int start_page_no_capturepattern(vorb *f)
 {
    uint32 loc0,loc1,n;
+   if (f->first_decode && !IS_PUSH_MODE(f)) {
+      f->p_first.page_start = stb_vorbis_get_file_offset(f) - 4;
+   }
    // stream structure version
    if (0 != get8(f)) return error(f, VORBIS_invalid_stream_structure_version);
    // header flag
@@ -1440,15 +1446,12 @@ static int start_page_no_capturepattern(vorb *f)
    }
    if (f->first_decode) {
       int i,len;
-      ProbedPage p;
       len = 0;
       for (i=0; i < f->segment_count; ++i)
          len += f->segments[i];
       len += 27 + f->segment_count;
-      p.page_start = f->first_audio_page_offset;
-      p.page_end = p.page_start + len;
-      p.last_decoded_sample = loc0;
-      f->p_first = p;
+      f->p_first.page_end = f->p_first.page_start + len;
+      f->p_first.last_decoded_sample = loc0;
    }
    f->next_seg = 0;
    return TRUE;
@@ -3576,6 +3579,7 @@ static int start_decoder(vorb *f)
    int longest_floorlist=0;
 
    // first page, first packet
+   f->first_decode = TRUE;
 
    if (!start_page(f))                              return FALSE;
    // validate page flag
@@ -4132,7 +4136,6 @@ static int start_decoder(vorb *f)
          f->temp_memory_required = imdct_mem;
    }
 
-   f->first_decode = TRUE;
 
    if (f->alloc.alloc_buffer) {
       assert(f->temp_offset == f->alloc.alloc_buffer_length_in_bytes);
@@ -4141,7 +4144,17 @@ static int start_decoder(vorb *f)
          return error(f, VORBIS_outofmem);
    }
 
-   f->first_audio_page_offset = stb_vorbis_get_file_offset(f);
+   // @TODO: stb_vorbis_seek_start expects first_audio_page_offset to point to a page
+   // without PAGEFLAG_continued_packet, so this either points to the first page, or
+   // the page after the end of the headers. It might be cleaner to point to a page
+   // in the middle of the headers, when that's the page where the first audio packet
+   // starts, but we'd have to also correctly skip the end of any continued packet in
+   // stb_vorbis_seek_start.
+   if (f->next_seg == -1) {
+      f->first_audio_page_offset = stb_vorbis_get_file_offset(f);
+   } else {
+      f->first_audio_page_offset = 0;
+   }
 
    return TRUE;
 }
