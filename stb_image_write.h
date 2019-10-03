@@ -247,16 +247,16 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 #define STBIW_UCHAR(x) (unsigned char) ((x) & 0xff)
 
 #ifdef STB_IMAGE_WRITE_STATIC
-static int stbi__flip_vertically_on_write=0;
 static int stbi_write_png_compression_level = 8;
 static int stbi_write_tga_with_rle = 1;
 static int stbi_write_force_png_filter = -1;
 #else
 int stbi_write_png_compression_level = 8;
-int stbi__flip_vertically_on_write=0;
 int stbi_write_tga_with_rle = 1;
 int stbi_write_force_png_filter = -1;
 #endif
+
+static int stbi__flip_vertically_on_write = 0;
 
 STBIWDEF void stbi_flip_vertically_on_write(int flag)
 {
