@@ -105,7 +105,7 @@ RECENT REVISION HISTORY:
     Oriol Ferrer Mesia      Josh Tobin         Matthew Gregan     github:phprus
     Julian Raschke          Gregory Mullen     Baldur Karlsson    github:poppolopoppo
     Christian Floisand      Kevin Schmidt      JR Smith           github:darealshinji
-    Blazej Dariusz Roszkowski                                     github:Michaelangel007
+    Blazej Dariusz Roszkowski Nicolas Sauzede                     github:Michaelangel007
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -5111,7 +5111,7 @@ static int stbi__shiftsigned(unsigned int v, int shift, int bits)
       v <<= -shift;
    else
       v >>= shift;
-   STBI_ASSERT(v >= 0 && v < 256);
+   STBI_ASSERT(/*v >= 0 && */v < 256); // v is unsigned int, so '>= 0' is always true
    v >>= (8-bits);
    STBI_ASSERT(bits >= 0 && bits <= 8);
    return (int) ((unsigned) v * mul_table[bits]) >> shift_table[bits];
