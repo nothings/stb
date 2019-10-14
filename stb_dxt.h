@@ -488,11 +488,11 @@ static int stb__RefineBlock(unsigned char *block, unsigned short *pmax16, unsign
       fg = frb * 63.0f / 31.0f;
 
       // solve.
-      max16 =   (unsigned short)(stb__sclamp((At1_r*yy - At2_r*xy)*frb+0.5f,0,31) << 11);
+      max16 =  (unsigned short)(stb__sclamp((At1_r*yy - At2_r*xy)*frb+0.5f,0,31) << 11);
       max16 |= (unsigned short)(stb__sclamp((At1_g*yy - At2_g*xy)*fg +0.5f,0,63) << 5);
       max16 |= (unsigned short)(stb__sclamp((At1_b*yy - At2_b*xy)*frb+0.5f,0,31) << 0);
 
-      min16 = (unsigned short)(stb__sclamp((At2_r*xx - At1_r*xy)*frb+0.5f,0,31) << 11);
+      min16 =  (unsigned short)(stb__sclamp((At2_r*xx - At1_r*xy)*frb+0.5f,0,31) << 11);
       min16 |= (unsigned short)(stb__sclamp((At2_g*xx - At1_g*xy)*fg +0.5f,0,63) << 5);
       min16 |= (unsigned short)(stb__sclamp((At2_b*xx - At1_b*xy)*frb+0.5f,0,31) << 0);
    }
