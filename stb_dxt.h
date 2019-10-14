@@ -21,10 +21,10 @@
 //   v1.01  - (stb) fix bug converting to RGB that messed up quality, thanks ryg & cbloom
 //   v1.00  - (stb) first release
 //
-// contributors: 
+// contributors:
 //   Kevin Schmidt (#defines for "freestanding" compilation)
 //   github:ppiastucki (BC4 support)
-// 
+//
 // LICENSE
 //
 //   See end of file for license information.
@@ -66,7 +66,7 @@ STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *sr
 // STB_DXT_USE_ROUNDING_BIAS
 //     use a rounding bias during color interpolation. this is closer to what "ideal"
 //     interpolation would do but doesn't match the S3TC/DX10 spec. old versions (pre-1.03)
-//     implicitly had this turned on. 
+//     implicitly had this turned on.
 //
 //     in case you're targeting a specific type of hardware (e.g. console programmers):
 //     NVidia and Intel GPUs (as of 2010) as well as DX9 ref use DXT decoders that are closer
@@ -157,7 +157,7 @@ static void stb__PrepareOptTable(unsigned char *Table,const unsigned char *expan
             int mine = expand[mn];
             int maxe = expand[mx];
             int err = STBD_ABS(stb__Lerp13(maxe, mine) - i);
-            
+
             // DX10 spec says that interpolation must be within 3% of "correct" result,
             // add this as error term. (normally we'd expect a random distribution of
             // +-1.5% error, but nowhere in the spec does it say that the error has to be
@@ -236,7 +236,7 @@ static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *c
    // relying on this 1d approximation isn't always optimal in terms of euclidean distance,
    // but it's very close and a lot faster.
    // http://cbloomrants.blogspot.com/2008/12/12-08-08-dxtc-summary.html
-   
+
    c0Point   = (stops[1] + stops[3]) >> 1;
    halfPoint = (stops[3] + stops[2]) >> 1;
    c3Point   = (stops[2] + stops[0]) >> 1;
@@ -488,11 +488,11 @@ static int stb__RefineBlock(unsigned char *block, unsigned short *pmax16, unsign
       fg = frb * 63.0f / 31.0f;
 
       // solve.
-      max16 =   (unsigned short)(stb__sclamp((At1_r*yy - At2_r*xy)*frb+0.5f,0,31) << 11);
+      max16 =  (unsigned short)(stb__sclamp((At1_r*yy - At2_r*xy)*frb+0.5f,0,31) << 11);
       max16 |= (unsigned short)(stb__sclamp((At1_g*yy - At2_g*xy)*fg +0.5f,0,63) << 5);
       max16 |= (unsigned short)(stb__sclamp((At1_b*yy - At2_b*xy)*frb+0.5f,0,31) << 0);
 
-      min16 = (unsigned short)(stb__sclamp((At2_r*xx - At1_r*xy)*frb+0.5f,0,31) << 11);
+      min16 =  (unsigned short)(stb__sclamp((At2_r*xx - At1_r*xy)*frb+0.5f,0,31) << 11);
       min16 |= (unsigned short)(stb__sclamp((At2_g*xx - At1_g*xy)*fg +0.5f,0,63) << 5);
       min16 |= (unsigned short)(stb__sclamp((At2_b*xx - At1_b*xy)*frb+0.5f,0,31) << 0);
    }
@@ -511,7 +511,7 @@ static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, i
    int refinecount;
    unsigned short max16, min16;
    unsigned char dblock[16*4],color[4*4];
-   
+
    dither = mode & STB_DXT_DITHER;
    refinecount = (mode & STB_DXT_HIGHQUAL) ? 2 : 1;
 
@@ -541,7 +541,7 @@ static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, i
       // third step: refine (multiple times if requested)
       for (i=0;i<refinecount;i++) {
          unsigned int lastmask = mask;
-         
+
          if (stb__RefineBlock(dither ? dblock : block,&max16,&min16,mask)) {
             if (max16 != min16) {
                stb__EvalColors(color,max16,min16);
@@ -551,7 +551,7 @@ static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, i
                break;
             }
          }
-         
+
          if(mask == lastmask)
             break;
       }
@@ -605,7 +605,7 @@ static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int 
    bias = (dist < 8) ? (dist - 1) : (dist/2 + 2);
    bias -= mn * 7;
    bits = 0,mask=0;
-   
+
    for (i=0;i<16;i++) {
       int a = src[i*stride]*7 + bias;
       int ind,t;
@@ -614,7 +614,7 @@ static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int 
       t = (a >= dist4) ? -1 : 0; ind =  t & 4; a -= dist4 & t;
       t = (a >= dist2) ? -1 : 0; ind += t & 2; a -= dist2 & t;
       ind += (a >= dist);
-      
+
       // turn linear scale into DXT index (0/1 are extremal pts)
       ind = -ind & 7;
       ind ^= (2 > ind);
@@ -691,38 +691,38 @@ This software is available under 2 licenses -- choose whichever you prefer.
 ------------------------------------------------------------------------------
 ALTERNATIVE A - MIT License
 Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all 
+The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ------------------------------------------------------------------------------
 ALTERNATIVE B - Public Domain (www.unlicense.org)
 This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
 commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
 this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */
