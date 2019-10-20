@@ -3507,7 +3507,7 @@ static int vorbis_pump_first_frame(stb_vorbis *f)
 }
 
 #ifndef STB_VORBIS_NO_PUSHDATA_API
-static int is_whole_packet_present(stb_vorbis *f, int end_page)
+static int is_whole_packet_present(stb_vorbis *f)
 {
    // make sure that we have the packet available before continuing...
    // this requires a full ogg parse, but we know we can fetch from f->stream
@@ -3527,8 +3527,6 @@ static int is_whole_packet_present(stb_vorbis *f, int end_page)
             break;
       }
       // either this continues, or it ends it...
-      if (end_page)
-         if (s < f->segment_count-1)             return error(f, VORBIS_invalid_stream);
       if (s == f->segment_count)
          s = -1; // set 'crosses page' flag
       if (p > f->stream_end)                     return error(f, VORBIS_need_more_data);
@@ -3561,8 +3559,6 @@ static int is_whole_packet_present(stb_vorbis *f, int end_page)
          if (q[s] < 255)
             break;
       }
-      if (end_page)
-         if (s < n-1)                            return error(f, VORBIS_invalid_stream);
       if (s == n)
          s = -1; // set 'crosses page' flag
       if (p > f->stream_end)                     return error(f, VORBIS_need_more_data);
@@ -3648,7 +3644,7 @@ static int start_decoder(vorb *f)
 
    #ifndef STB_VORBIS_NO_PUSHDATA_API
    if (IS_PUSH_MODE(f)) {
-      if (!is_whole_packet_present(f, TRUE)) {
+      if (!is_whole_packet_present(f)) {
          // convert error in ogg header to write type
          if (f->error == VORBIS_invalid_stream)
             f->error = VORBIS_invalid_setup;
@@ -4402,7 +4398,7 @@ int stb_vorbis_decode_frame_pushdata(
    f->error      = VORBIS__no_error;
 
    // check that we have the entire packet in memory
-   if (!is_whole_packet_present(f, FALSE)) {
+   if (!is_whole_packet_present(f)) {
       *samples = 0;
       return 0;
    }
