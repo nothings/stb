@@ -4664,8 +4664,11 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
 
    // starting from the start is handled differently
    if (last_sample_limit <= left.last_decoded_sample) {
-      if (stb_vorbis_seek_start(f))
+      if (stb_vorbis_seek_start(f)) {
+         if (f->current_loc > sample_number)
+            return error(f, VORBIS_seek_failed);
          return 1;
+      }
       return 0;
    }
 
@@ -4841,8 +4844,8 @@ int stb_vorbis_seek_frame(stb_vorbis *f, unsigned int sample_number)
          flush_packet(f);
       }
    }
-   // the next frame will start with the sample
-   assert(f->current_loc == sample_number);
+   // the next frame should start with the sample
+   if (f->current_loc != sample_number) return error(f, VORBIS_seek_failed);
    return 1;
 }
 
