@@ -4721,7 +4721,7 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
       // if we've just found the last page again then we're in a tricky file,
       // and we're close enough (if it wasn't an interpolation probe).
       if (mid.page_start == right.page_start) {
-         if (probe >= 2)
+         if (probe >= 2 || delta <= 65536)
             break;
       } else {
          if (last_sample_limit < mid.last_decoded_sample)
