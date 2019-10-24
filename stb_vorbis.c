@@ -640,7 +640,7 @@ typedef float codetype;
 // integers. It should be safe to freely rearrange the structures or change
 // the sizes larger--nothing relies on silently truncating etc., nor the
 // order of variables.
-
+//order of work
 #define FAST_HUFFMAN_TABLE_SIZE   (1 << STB_VORBIS_FAST_HUFFMAN_LENGTH)
 #define FAST_HUFFMAN_TABLE_MASK   (FAST_HUFFMAN_TABLE_SIZE - 1)
 
