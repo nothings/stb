@@ -3828,8 +3828,9 @@ static int start_decoder(vorb *f)
             CHECK(f);
             c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->lookup_values);
             if (c->multiplicands == NULL) { setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
+            float val;
             for (j=0; j < (int) c->lookup_values; ++j) {
-               float val = mults[j] * c->delta_value + c->minimum_value + last;
+               val = mults[j] * c->delta_value + c->minimum_value + last;
                c->multiplicands[j] = val;
                if (c->sequence_p)
                   last = val;
