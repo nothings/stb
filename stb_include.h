@@ -26,6 +26,13 @@
 //      stdio.h     FILE, fopen, fclose, fseek, ftell
 //      stdlib.h    malloc, realloc, free
 //      string.h    strcpy, strncmp, memcpy
+//
+// Credits:
+// 
+// Written by Sean Barrett.
+// 
+// Fixes:
+//  Michal Klos
 
 #ifndef STB_INCLUDE_STB_INCLUDE_H
 #define STB_INCLUDE_STB_INCLUDE_H
