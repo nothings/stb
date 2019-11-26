@@ -50,15 +50,14 @@ Total lines of C code: 56088
 FAQ
 ---
 
-#### What's the license?
+#### What type of license does this repo use?
 
-These libraries are in the public domain. You can do anything you
-want with them. You have no legal obligation
-to do anything else, although I appreciate attribution.
+These libraries are in the public domain meaning anything can be done to them without legal obligation.
+Being public domain I would still appreciate attribution.
 
-They are also licensed under the MIT open source license, if you have lawyers
+Libraries are also licensed under the MIT open source license, if you have lawyers
 who are unhappy with public domain. Every source file includes an explicit
-dual-license for you to choose from.
+dual-license to choose from.
 
 #### <a name="other_libs"></a> Are there other single-file public-domain/open source libraries with minimal dependencies out there?
 
@@ -66,7 +65,7 @@ dual-license for you to choose from.
 
 #### If I wrap an stb library in a new library, does the new library have to be public domain/MIT?
 
-No, because it's public domain you can freely relicense it to whatever license your new
+No. Since it is public domain you can freely relicense it to whatever your new
 library wants to be.
 
 #### What's the deal with SSE support in GCC-based compilers?
