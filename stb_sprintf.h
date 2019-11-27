@@ -2,7 +2,7 @@
 // originally by Jeff Roberts / RAD Game Tools, 2015/10/20
 // http://github.com/nothings/stb
 //
-// allowed types:  sc uidBboXx p AaGgEef n
+// allowed types:  sc uidBboXx p AaGgEef n S
 // lengths      :  h ll j z t I64 I32 I
 //
 // Contributors:
@@ -69,8 +69,8 @@ int stbsp_vsnprintf( char * buf, int count, char const * fmt, va_list va )
   Convert a va_list arg list into a buffer.  stbsp_vsnprintf always returns
   a zero-terminated string (unlike regular snprintf).
 
-int stbsp_vsprintfcb( STBSP_SPRINTFCB * callback, void * user, char * buf, char const * fmt, va_list va )
-    typedef char * STBSP_SPRINTFCB( char const * buf, void * user, int len );
+int stbsp_vsprintfcb( STBSP_SPRINTFCB * callback, void * user, char * buf, int size_per_char, char const * fmt, va_list va )
+    typedef void * STBSP_SPRINTFCB( void const * buf, void * user, int len );
   Convert into a buffer, calling back every STB_SPRINTF_MIN chars.
   Your callback can then copy the chars out, print them or whatever.
   This function is actually the workhorse for everything else.
@@ -79,6 +79,21 @@ int stbsp_vsprintfcb( STBSP_SPRINTFCB * callback, void * user, char * buf, char 
 
 void stbsp_set_separators( char comma, char period )
   Set the comma and period characters to use.
+
+Notes on wchar_t:
+   This changes _only_ your target buffer, and allows the use of '%S'
+      to represent a wchar_t string
+   The function name follows the same format as above,
+      but appends 'W' to the end of function name
+      IE: int stbsp_sprintfW( wchar_t * buf, char const * fmt, ...)
+
+Example:
+   wchar_t bufferA[20];
+   stbsp_snprintfW(bufferA, 20, "Hello");
+   wchar_t bufferB[20];
+   stbsp_snprintfW(bufferB, 20, "%S World", bufferA);
+
+It is not a snwprintf replacement.
 
 FLOATS/DOUBLES:
 ===============
@@ -167,7 +182,7 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 #ifndef STB_SPRINTF_MIN
 #define STB_SPRINTF_MIN 512 // how many characters per callback
 #endif
-typedef char *STBSP_SPRINTFCB(char *buf, void *user, int len);
+typedef void *STBSP_SPRINTFCB(void *buf, void *user, int len);
 
 #ifndef STB_SPRINTF_DECORATE
 #define STB_SPRINTF_DECORATE(name) stbsp_##name // define this before including if you want to change the names
@@ -178,7 +193,13 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsnprintf)(char *buf, int count, char 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(sprintf)(char *buf, char const *fmt, ...);
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(snprintf)(char *buf, int count, char const *fmt, ...);
 
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, char *buf, char const *fmt, va_list va);
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfW)(wchar_t *buf, char const *fmt, va_list va);
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsnprintfW)(wchar_t *buf, int count, char const *fmt, va_list va);
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(sprintfW)(wchar_t *buf, char const *fmt, ...);
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(snprintfW)(wchar_t *buf, int count, char const *fmt, ...);
+
+
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, void* buf, const int size_per_char, char const *fmt, va_list va);
 STBSP__PUBLICDEF void STB_SPRINTF_DECORATE(set_separators)(char comma, char period);
 
 #endif // STB_SPRINTF_H_INCLUDE
@@ -276,11 +297,11 @@ static void stbsp__lead_sign(stbsp__uint32 fl, char *sign)
    }
 }
 
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, char *buf, char const *fmt, va_list va)
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, void* buf, const int size_per_char, char const *fmt, va_list va)
 {
-   static char hex[] = "0123456789abcdefxp";
-   static char hexu[] = "0123456789ABCDEFXP";
-   char *bf;
+   const char hex[] = "0123456789abcdefxp";
+   const char hexu[] = "0123456789ABCDEFXP";
+   void *bf;
    char const *f;
    int tlen = 0;
 
@@ -291,32 +312,57 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       stbsp__uint32 fl;
 
       // macros for the callback buffer stuff
-      #define stbsp__chk_cb_bufL(bytes)                        \
+      #define stbsp__chk_cb_bufL(req_count)                    \
          {                                                     \
-            int len = (int)(bf - buf);                         \
-            if ((len + (bytes)) >= STB_SPRINTF_MIN) {          \
+            int len = (int)((char*)bf - (char*)buf);           \
+            if (size_per_char != 1) len /= size_per_char;      \
+            if ((len + (req_count)) >= STB_SPRINTF_MIN) {      \
                tlen += len;                                    \
                if (0 == (bf = buf = callback(buf, user, len))) \
                   goto done;                                   \
             }                                                  \
          }
-      #define stbsp__chk_cb_buf(bytes)    \
-         {                                \
-            if (callback) {               \
-               stbsp__chk_cb_bufL(bytes); \
-            }                             \
+      #define stbsp__chk_cb_buf(req_count)    \
+         {                                    \
+            if (callback) {                   \
+               stbsp__chk_cb_bufL(req_count); \
+            }                                 \
          }
       #define stbsp__flush_cb()                      \
          {                                           \
             stbsp__chk_cb_bufL(STB_SPRINTF_MIN - 1); \
          } // flush if there is even one byte in the buffer
-      #define stbsp__cb_buf_clamp(cl, v)                \
-         cl = v;                                        \
-         if (callback) {                                \
-            int lg = STB_SPRINTF_MIN - (int)(bf - buf); \
-            if (cl > lg)                                \
-               cl = lg;                                 \
+      #define stbsp__cb_buf_clamp(cl, v)                  \
+         cl = v;                                          \
+         if (callback) {                                  \
+            int lg = (int)((char*)bf - (char*)buf);       \
+            if (size_per_char != 1) lg /= size_per_char;  \
+            lg = STB_SPRINTF_MIN - lg;                    \
+            if (cl > lg)                                  \
+               cl = lg;                                   \
          }
+
+      #define stbsp__push_char(bf, c) do {                \
+         if (size_per_char == 1) {                        \
+            char * bf_c = (char*)bf;                      \
+            *bf_c++ = (c);                                \
+            bf = bf_c;                                    \
+         } else  {                                        \
+            wchar_t * bf_w = (wchar_t*)bf;                \
+            *bf_w++ = (c);                                \
+            bf = bf_w;                                    \
+         } } while(0)
+
+      #define stbsp__add4units(bf) do {                   \
+         if (size_per_char == 1) {                        \
+            char * bf_c = (char*)bf;                      \
+            bf_c += 4;                                    \
+            bf = bf_c;                                    \
+         } else  {                                        \
+            wchar_t * bf_c = (wchar_t*)bf;                \
+            bf_c += 4;                                    \
+            bf = bf_c;                                    \
+         } } while(0)
 
       // fast copy everything up to the next % (or end of string)
       for (;;) {
@@ -328,7 +374,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             if (f[0] == 0)
                goto endfmt;
             stbsp__chk_cb_buf(1);
-            *bf++ = f[0];
+            stbsp__push_char(bf, f[0]);
             ++f;
          }
          for (;;) {
@@ -343,20 +389,38 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             if ((v - 0x01010101) & c)
                goto schk2;
             if (callback)
-               if ((STB_SPRINTF_MIN - (int)(bf - buf)) < 4)
+               if ((STB_SPRINTF_MIN - ((int)((char*)bf - (char*)buf) / size_per_char) ) < 4)
                   goto schk1;
             #ifdef STB_SPRINTF_NOUNALIGNED
                 if(((stbsp__uintptr)bf) & 3) {
-                    bf[0] = f[0];
-                    bf[1] = f[1];
-                    bf[2] = f[2];
-                    bf[3] = f[3];
+                   if (size_per_char == 1)
+                   {
+                      char * bf_c = (char*)bf;
+                      bf_c[0] = f[0];
+                      bf_c[1] = f[1];
+                      bf_c[2] = f[2];
+                      bf_c[3] = f[3];
+                   } else {
+                      wchar_t * bf_w = (wchar_t*)bf;
+                      bf_w[0] = f[0];
+                      bf_w[1] = f[1];
+                      bf_w[2] = f[2];
+                      bf_w[3] = f[3];
+                   }
                 } else
             #endif
+            if (size_per_char == 1)
             {
                 *(stbsp__uint32 *)bf = v;
+            } else {
+               wchar_t * bf_w = (wchar_t*)bf;
+               bf_w[0] = f[0];
+               bf_w[1] = f[1];
+               bf_w[2] = f[2];
+               bf_w[3] = f[3];
+               bf = &bf_w[3];
             }
-            bf += 4;
+            stbsp__add4units(bf);
             f += 4;
          }
       }
@@ -571,7 +635,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       case 'n': // weird write-bytes specifier
       {
          int *d = va_arg(va, int *);
-         *d = tlen + (int)(bf - buf);
+         *d = tlen + (int)((char*)bf - (char*)buf);
       } break;
 
 #ifdef STB_SPRINTF_NOFLOAT
@@ -1133,16 +1197,22 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                   while (i) {
                      if ((((stbsp__uintptr)bf) & 3) == 0)
                         break;
-                     *bf++ = ' ';
+                     stbsp__push_char(bf, ' ');
                      --i;
                   }
                   while (i >= 4) {
-                     *(stbsp__uint32 *)bf = 0x20202020;
-                     bf += 4;
+                     if (size_per_char == 1)
+                        *(stbsp__uint32 *)bf = 0x20202020;
+                     else {
+                        ((stbsp__uint32 *)bf)[0] = 0x00200020;
+                        ((stbsp__uint32 *)bf)[1] = 0x00200020;
+                     }
+
+                     stbsp__add4units(bf);
                      i -= 4;
                   }
                   while (i) {
-                     *bf++ = ' ';
+                     stbsp__push_char(bf, ' ');
                      --i;
                   }
                   stbsp__chk_cb_buf(1);
@@ -1154,7 +1224,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                stbsp__cb_buf_clamp(i, lead[0]);
                lead[0] -= (char)i;
                while (i) {
-                  *bf++ = *sn++;
+                  stbsp__push_char(bf, *sn++);
                   --i;
                }
                stbsp__chk_cb_buf(1);
@@ -1171,21 +1241,30 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                   while (i) {
                      if ((((stbsp__uintptr)bf) & 3) == 0)
                         break;
-                     *bf++ = '0';
+                     
+                     stbsp__push_char(bf, '0');
                      --i;
                   }
                   while (i >= 4) {
-                     *(stbsp__uint32 *)bf = 0x30303030;
-                     bf += 4;
+                     if (size_per_char == 1)
+                        *(stbsp__uint32 *)bf = 0x30303030;
+                     else {
+                        ((stbsp__uint32 *)bf)[0] = 0x00300030;
+                        ((stbsp__uint32 *)bf)[1] = 0x00300030;
+                     }
+
+                     stbsp__add4units(bf);
                      i -= 4;
                   }
                }
                while (i) {
+                  char next_c;
                   if ((fl & STBSP__TRIPLET_COMMA) && (cs++ == c)) {
                      cs = 0;
-                     *bf++ = stbsp__comma;
-                  } else
-                     *bf++ = '0';
+                     next_c = stbsp__comma;
+                  } else next_c = '0';
+                  
+                  stbsp__push_char(bf, next_c);
                   --i;
                }
                stbsp__chk_cb_buf(1);
@@ -1199,7 +1278,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             stbsp__cb_buf_clamp(i, lead[0]);
             lead[0] -= (char)i;
             while (i) {
-               *bf++ = *sn++;
+               stbsp__push_char(bf, *sn++);
                --i;
             }
             stbsp__chk_cb_buf(1);
@@ -1211,15 +1290,28 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             stbsp__int32 i;
             stbsp__cb_buf_clamp(i, n);
             n -= i;
-            STBSP__UNALIGNED(while (i >= 4) {
-               *(stbsp__uint32 *)bf = *(stbsp__uint32 *)s;
-               bf += 4;
-               s += 4;
-               i -= 4;
-            })
-            while (i) {
-               *bf++ = *s++;
-               --i;
+            if (size_per_char == 1) {
+               char * bf_c = (char*)bf;
+               STBSP__UNALIGNED(while (i >= 4) {
+                  *(stbsp__uint32 *)bf_c = *(stbsp__uint32 *)s;
+                  bf_c += 4;
+                  s += 4;
+                  i -= 4;
+               })
+
+               while (i) {
+                  *bf_c++ = *s++;
+                  --i;
+               }
+               bf = (void*)bf_c;
+            } else {
+               // No advantages of u32 copies :(
+               wchar_t * bf_w = (wchar_t *)bf;
+               while (i) {
+                  *bf_w++ = *s++;
+                  --i;
+               }
+               bf = (void*)bf_w;
             }
             stbsp__chk_cb_buf(1);
          }
@@ -1232,16 +1324,22 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             while (i) {
                if ((((stbsp__uintptr)bf) & 3) == 0)
                   break;
-               *bf++ = '0';
+               stbsp__push_char(bf, '0');
                --i;
             }
             while (i >= 4) {
-               *(stbsp__uint32 *)bf = 0x30303030;
-               bf += 4;
+               if (size_per_char == 1)
+                  *(stbsp__uint32 *)bf = 0x30303030;
+               else {
+                  ((stbsp__uint32 *)bf)[0] = 0x00300030;
+                  ((stbsp__uint32 *)bf)[1] = 0x00300030;
+               }
+
+               stbsp__add4units(bf);
                i -= 4;
             }
             while (i) {
-               *bf++ = '0';
+               stbsp__push_char(bf, '0');
                --i;
             }
             stbsp__chk_cb_buf(1);
@@ -1254,7 +1352,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             stbsp__cb_buf_clamp(i, tail[0]);
             tail[0] -= (char)i;
             while (i) {
-               *bf++ = *sn++;
+               stbsp__push_char(bf, *sn++);
                --i;
             }
             stbsp__chk_cb_buf(1);
@@ -1270,20 +1368,50 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
                   while (i) {
                      if ((((stbsp__uintptr)bf) & 3) == 0)
                         break;
-                     *bf++ = ' ';
+                     stbsp__push_char(bf, ' ');
                      --i;
                   }
                   while (i >= 4) {
-                     *(stbsp__uint32 *)bf = 0x20202020;
-                     bf += 4;
+                     if (size_per_char == 1)
+                        *(stbsp__uint32 *)bf = 0x20202020;
+                     else {
+                        ((stbsp__uint32 *)bf)[0] = 0x00200020;
+                        ((stbsp__uint32 *)bf)[1] = 0x00200020;
+                     }
+
+                     stbsp__add4units(bf);
                      i -= 4;
                   }
-                  while (i--)
-                     *bf++ = ' ';
+                  while (i--) {
+                     stbsp__push_char(bf, ' ');
+                  }
                   stbsp__chk_cb_buf(1);
                }
             }
          break;
+
+      case 'S': // wchar string (only valid if the input string is wchar
+      {
+         if (size_per_char != 1)
+         {
+            const wchar_t* us = va_arg(va, const wchar_t *);
+            const wchar_t us_null[] = { 'n','u','l','l','\0' };
+            if (us == 0)
+               us = us_null;
+            
+            do
+            {
+               stbsp__chk_cb_buf(1);
+               /* note, bf can change in chk_cb_buf */
+               wchar_t * bf_w = (wchar_t *)bf; 
+               bf_w[0] = us[0];
+               bf_w++;
+               bf = bf_w;
+               us++;
+            } while (us[0]);
+            break;
+         }
+      } // Fall-through
 
       default: // unknown, just copy code
          s = num + STBSP__NUMSZ - 1;
@@ -1301,13 +1429,14 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
    }
 endfmt:
 
-   if (!callback)
-      *bf = 0;
-   else
+   if (!callback) {
+      if (size_per_char == 1) ((char*)bf)[0] = 0;
+      else ((wchar_t*)bf)[0] = 0;
+   } else
       stbsp__flush_cb();
 
 done:
-   return tlen + (int)(bf - buf);
+   return tlen + ((int)((char*)bf - (char*)buf) / size_per_char);
 }
 
 // cleanup
@@ -1325,6 +1454,8 @@ done:
 #undef stbsp__chk_cb_buf
 #undef stbsp__flush_cb
 #undef stbsp__cb_buf_clamp
+#undef stbsp__push_char
+#undef stbsp__add4units
 
 // ============================================================================
 //   wrapper functions
@@ -1334,20 +1465,25 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(sprintf)(char *buf, char const *fmt, .
    int result;
    va_list va;
    va_start(va, fmt);
-   result = STB_SPRINTF_DECORATE(vsprintfcb)(0, 0, buf, fmt, va);
+   result = STB_SPRINTF_DECORATE(vsprintfcb)(0, 0, buf, sizeof(buf[0]), fmt, va);
    va_end(va);
    return result;
 }
 
-typedef struct stbsp__context {
+typedef struct stbsp__context_char {
    char *buf;
    int count;
    char tmp[STB_SPRINTF_MIN];
-} stbsp__context;
+} stbsp__context_char;
+typedef struct stbsp__context_wchar {
+   wchar_t *buf;
+   int count;
+   wchar_t tmp[STB_SPRINTF_MIN];
+} stbsp__context_wchar;
 
-static char *stbsp__clamp_callback(char *buf, void *user, int len)
+static void *stbsp__clamp_callback_char(void *buf, void *user, int len)
 {
-   stbsp__context *c = (stbsp__context *)user;
+   stbsp__context_char *c = (stbsp__context_char *)user;
 
    if (len > c->count)
       len = c->count;
@@ -1357,7 +1493,7 @@ static char *stbsp__clamp_callback(char *buf, void *user, int len)
          char *s, *d, *se;
          d = c->buf;
          s = buf;
-         se = buf + len;
+         se = (char*)buf + len;
          do {
             *d++ = *s++;
          } while (s < se);
@@ -1371,9 +1507,43 @@ static char *stbsp__clamp_callback(char *buf, void *user, int len)
    return (c->count >= STB_SPRINTF_MIN) ? c->buf : c->tmp; // go direct into buffer if you can
 }
 
-static char * stbsp__count_clamp_callback( char * buf, void * user, int len )
+
+static void *stbsp__clamp_callback_wchar(void *buf, void *user, int len)
 {
-   stbsp__context * c = (stbsp__context*)user;
+   stbsp__context_wchar *c = (stbsp__context_wchar *)user;
+
+   if (len > c->count)
+      len = c->count;
+
+   if (len) {
+      if (buf != c->buf) {
+         wchar_t *s, *d, *se;
+         d = c->buf;
+         s = buf;
+         se = (wchar_t*)buf + len;
+         do {
+            *d++ = *s++;
+         } while (s < se);
+      }
+      c->buf += len;
+      c->count -= len;
+   }
+
+   if (c->count <= 0)
+      return 0;
+   return (c->count >= STB_SPRINTF_MIN) ? c->buf : c->tmp; // go direct into buffer if you can
+}
+
+static void * stbsp__count_clamp_callback_char( void * buf, void * user, int len )
+{
+   stbsp__context_char * c = (stbsp__context_char*)user;
+
+   c->count += len;
+   return c->tmp; // go direct into buffer if you can
+}
+static void * stbsp__count_clamp_callback_wchar( void * buf, void * user, int len )
+{
+   stbsp__context_wchar * c = (stbsp__context_wchar*)user;
 
    c->count += len;
    return c->tmp; // go direct into buffer if you can
@@ -1381,14 +1551,14 @@ static char * stbsp__count_clamp_callback( char * buf, void * user, int len )
 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsnprintf )( char * buf, int count, char const * fmt, va_list va )
 {
-   stbsp__context c;
+   stbsp__context_char c;
    int l;
 
    if ( (count == 0) && !buf )
    {
       c.count = 0;
 
-      STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__count_clamp_callback, &c, c.tmp, fmt, va );
+      STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__count_clamp_callback_char, &c, c.tmp, sizeof(buf[0]), fmt, va );
       l = c.count;
    }
    else
@@ -1399,7 +1569,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsnprintf )( char * buf, int count, c
       c.buf = buf;
       c.count = count;
 
-      STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__clamp_callback, &c, stbsp__clamp_callback(0,&c,0), fmt, va );
+      STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__clamp_callback_char, &c, stbsp__clamp_callback_char(0,&c,0), sizeof(buf[0]), fmt, va );
 
       // zero-terminate
       l = (int)( c.buf - buf );
@@ -1425,8 +1595,68 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(snprintf)(char *buf, int count, char c
 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintf)(char *buf, char const *fmt, va_list va)
 {
-   return STB_SPRINTF_DECORATE(vsprintfcb)(0, 0, buf, fmt, va);
+   return STB_SPRINTF_DECORATE(vsprintfcb)(0, 0, (void*)buf, sizeof(buf[0]), fmt, va);
 }
+
+
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(sprintfW)(wchar_t *buf, char const *fmt, ...)
+{
+   int result;
+   va_list va;
+   va_start(va, fmt);
+   result = STB_SPRINTF_DECORATE(vsprintfcb)(0, 0, buf, sizeof(buf[0]), fmt, va);
+   va_end(va);
+   return result;
+}
+
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfW)(wchar_t *buf, char const *fmt, va_list va)
+{
+   return STB_SPRINTF_DECORATE(vsprintfcb)(0, 0, (void*)buf, sizeof(buf[0]), fmt, va);
+}
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsnprintfW)(wchar_t *buf, int count, char const *fmt, va_list va)
+{
+   stbsp__context_wchar c;
+   int l;
+
+   if ( (count == 0) && !buf )
+   {
+      c.count = 0;
+
+      STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__count_clamp_callback_wchar, &c, c.tmp, sizeof(buf[0]), fmt, va );
+      l = c.count;
+   }
+   else
+   {
+      if ( count == 0 )
+         return 0;
+
+      c.buf = buf;
+      c.count = count;
+
+      STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__clamp_callback_wchar, &c, stbsp__clamp_callback_wchar(0,&c,0), sizeof(buf[0]), fmt, va );
+
+      // zero-terminate
+      l = (int)( c.buf - buf );
+      if ( l >= count ) // should never be greater, only equal (or less) than count
+         l = count - 1;
+      buf[l] = 0;
+   }
+
+   return l;
+}
+
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(snprintfW)(wchar_t *buf, int count, char const *fmt, ...)
+{
+   int result;
+   va_list va;
+   va_start(va, fmt);
+
+   result = STB_SPRINTF_DECORATE(vsnprintfW)(buf, count, fmt, va);
+   va_end(va);
+
+   return result;
+}
+
 
 // =======================================================================
 //   low level float utility functions
