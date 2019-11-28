@@ -390,7 +390,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
             bf = bf_w;                                    \
          } } while(0)
 
-      #define stbsp__add4units(bf) do {                   \
+      #define stbsp__advance4(bf) do {                    \
          if (size_per_char == 1) {                        \
             char * bf_c = (char*)bf;                      \
             bf_c += 4;                                    \
@@ -456,7 +456,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
                bf_w[2] = f[2];
                bf_w[3] = f[3];
             }
-            stbsp__add4units(bf);
+            stbsp__advance4(bf);
             f += 4;
          }
       }
@@ -1230,18 +1230,18 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
                while (fw > 0) {
                   stbsp__cb_buf_clamp(i, fw);
                   fw -= i;
-                  while (i) {
-                     if ((((stbsp__uintptr)bf) & 3) == 0)
-                        break;
-                     stbsp__push_char(bf, ' ');
-                     --i;
-                  }
                   if (size_per_char == 1) {
                      char * bf_c = (char*)bf;
+                     while (i) {
+                        if ((((stbsp__uintptr)bf_c) & 3) == 0)
+                           break;
+                        *bf_c++ = ' ';
+                        --i;
+                     }
                      while (i >= 4) {
                         *(stbsp__uint32 *)bf_c = 0x20202020;
+                        bf_c += 4;
                         i -= 4;
-                        bf_c++;
                      }
                      bf = bf_c;
                   }
@@ -1277,9 +1277,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
                      while (i) {
                         if ((((stbsp__uintptr)bf_c) & 3) == 0)
                            break;
-                        
-                        bf_c[0] = '0';
-                        ++bf_c;
+                        *bf_c++ = '0';
                         --i;
                      }
                      while (i >= 4) {
@@ -1359,8 +1357,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
                while (i) {
                   if ((((stbsp__uintptr)bf_c) & 3) == 0)
                      break;
-                  bf_c[0] = '0';
-                  ++bf_c;
+                  *bf_c++ = '0';
                   --i;
                }
                while (i >= 4) {
@@ -1402,17 +1399,15 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
                      while (i) {
                         if ((((stbsp__uintptr)bf_c) & 3) == 0)
                            break;
-                        bf_c[0] = ' ';
-                        ++bf_c;
+                        *bf_c++ = ' ';
                         --i;
                      }
                      while (i >= 4) {
                         *(stbsp__uint32 *)bf_c = 0x20202020;
-
                         bf_c += 4;
                         i -= 4;
                      }
-					 bf = bf_c;
+                     bf = bf_c;
                   }
                   while (i--) {
                      stbsp__push_char(bf, ' ');
@@ -1432,16 +1427,14 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
             if (us == 0)
                us = us_null;
             
-            do
+            while (us[0])
             {
                stbsp__chk_cb_buf(1);
                /* note, bf can change in chk_cb_buf */
                wchar_t * bf_w = (wchar_t *)bf; 
-               bf_w[0] = us[0];
-               bf_w++;
+               *bf_w++ = *us++;
                bf = bf_w;
-               us++;
-            } while (us[0]);
+            }
             break;
          }
       } // Fall-through
@@ -1488,7 +1481,7 @@ done:
 #undef stbsp__flush_cb
 #undef stbsp__cb_buf_clamp
 #undef stbsp__push_char
-#undef stbsp__add4units
+#undef stbsp__advance4
 
 // ============================================================================
 //   wrapper functions
