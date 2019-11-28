@@ -455,7 +455,6 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
                bf_w[1] = f[1];
                bf_w[2] = f[2];
                bf_w[3] = f[3];
-               bf = &bf_w[3];
             }
             stbsp__add4units(bf);
             f += 4;
@@ -1237,16 +1236,14 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
                      stbsp__push_char(bf, ' ');
                      --i;
                   }
-                  while (i >= 4) {
-                     if (size_per_char == 1)
-                        *(stbsp__uint32 *)bf = 0x20202020;
-                     else {
-                        ((stbsp__uint32 *)bf)[0] = 0x00200020;
-                        ((stbsp__uint32 *)bf)[1] = 0x00200020;
+                  if (size_per_char == 1) {
+                     char * bf_c = (char*)bf;
+                     while (i >= 4) {
+                        *(stbsp__uint32 *)bf_c = 0x20202020;
+                        i -= 4;
+                        bf_c++;
                      }
-
-                     stbsp__add4units(bf);
-                     i -= 4;
+                     bf = bf_c;
                   }
                   while (i) {
                      stbsp__push_char(bf, ' ');
@@ -1275,23 +1272,22 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
                stbsp__cb_buf_clamp(i, pr);
                pr -= i;
                if ((fl & STBSP__TRIPLET_COMMA) == 0) {
-                  while (i) {
-                     if ((((stbsp__uintptr)bf) & 3) == 0)
-                        break;
-                     
-                     stbsp__push_char(bf, '0');
-                     --i;
-                  }
-                  while (i >= 4) {
-                     if (size_per_char == 1)
-                        *(stbsp__uint32 *)bf = 0x30303030;
-                     else {
-                        ((stbsp__uint32 *)bf)[0] = 0x00300030;
-                        ((stbsp__uint32 *)bf)[1] = 0x00300030;
+                  if (size_per_char == 1) {
+                     char * bf_c = (char*)bf;
+                     while (i) {
+                        if ((((stbsp__uintptr)bf_c) & 3) == 0)
+                           break;
+                        
+                        bf_c[0] = '0';
+                        ++bf_c;
+                        --i;
                      }
-
-                     stbsp__add4units(bf);
-                     i -= 4;
+                     while (i >= 4) {
+                        *(stbsp__uint32 *)bf_c = 0x30303030;
+                        i -= 4;
+                        bf_c += 4;
+                     }
+                     bf = bf_c;
                   }
                }
                while (i) {
@@ -1358,22 +1354,20 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
             stbsp__int32 i;
             stbsp__cb_buf_clamp(i, tz);
             tz -= i;
-            while (i) {
-               if ((((stbsp__uintptr)bf) & 3) == 0)
-                  break;
-               stbsp__push_char(bf, '0');
-               --i;
-            }
-            while (i >= 4) {
-               if (size_per_char == 1)
-                  *(stbsp__uint32 *)bf = 0x30303030;
-               else {
-                  ((stbsp__uint32 *)bf)[0] = 0x00300030;
-                  ((stbsp__uint32 *)bf)[1] = 0x00300030;
+            if (size_per_char == 1) {
+               char * bf_c = (char*)bf;
+               while (i) {
+                  if ((((stbsp__uintptr)bf_c) & 3) == 0)
+                     break;
+                  bf_c[0] = '0';
+                  ++bf_c;
+                  --i;
                }
-
-               stbsp__add4units(bf);
-               i -= 4;
+               while (i >= 4) {
+                  *(stbsp__uint32 *)bf_c = 0x30303030;
+                  bf_c += 4;
+                  i -= 4;
+               }
             }
             while (i) {
                stbsp__push_char(bf, '0');
@@ -1402,22 +1396,23 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
                   stbsp__int32 i;
                   stbsp__cb_buf_clamp(i, fw);
                   fw -= i;
-                  while (i) {
-                     if ((((stbsp__uintptr)bf) & 3) == 0)
-                        break;
-                     stbsp__push_char(bf, ' ');
-                     --i;
-                  }
-                  while (i >= 4) {
-                     if (size_per_char == 1)
-                        *(stbsp__uint32 *)bf = 0x20202020;
-                     else {
-                        ((stbsp__uint32 *)bf)[0] = 0x00200020;
-                        ((stbsp__uint32 *)bf)[1] = 0x00200020;
+                  if (size_per_char == 1)
+                  {
+                     char * bf_c = (char*)bf;
+                     while (i) {
+                        if ((((stbsp__uintptr)bf_c) & 3) == 0)
+                           break;
+                        bf_c[0] = ' ';
+                        ++bf_c;
+                        --i;
                      }
+                     while (i >= 4) {
+                        *(stbsp__uint32 *)bf_c = 0x20202020;
 
-                     stbsp__add4units(bf);
-                     i -= 4;
+                        bf_c += 4;
+                        i -= 4;
+                     }
+					 bf = bf_c;
                   }
                   while (i--) {
                      stbsp__push_char(bf, ' ');
