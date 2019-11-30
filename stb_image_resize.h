@@ -1238,7 +1238,7 @@ static float* stbir__get_decode_buffer(stbir__info* stbir_info)
     return &stbir_info->decode_buffer[stbir_info->horizontal_filter_pixel_margin * stbir_info->channels];
 }
 
-#define STBIR__DECODE(type, colorspace) ((type) * (STBIR_MAX_COLORSPACES) + (colorspace))
+#define STBIR__DECODE(type, colorspace) ((int)(type) * (STBIR_MAX_COLORSPACES) + (int)(colorspace))
 
 static void stbir__decode_scanline(stbir__info* stbir_info, int n)
 {
