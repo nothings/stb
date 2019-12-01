@@ -1271,26 +1271,30 @@ static void stbiw__jpg_calcBits(int val, unsigned short bits[2]) {
    bits[0] = val & ((1<<bits[1])-1);
 }
 
-static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt, float *CDU, float *fdtbl, int DC, const unsigned short HTDC[256][2], const unsigned short HTAC[256][2]) {
+static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt, float *CDU, int du_stride, float *fdtbl, int DC, const unsigned short HTDC[256][2], const unsigned short HTAC[256][2]) {
    const unsigned short EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
    const unsigned short M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
-   int dataOff, i, diff, end0pos;
+   int dataOff, i, j, n, diff, end0pos, x, y;
    int DU[64];
 
    // DCT rows
-   for(dataOff=0; dataOff<64; dataOff+=8) {
+   for(dataOff=0, n=du_stride*8; dataOff<n; dataOff+=du_stride) {
       stbiw__jpg_DCT(&CDU[dataOff], &CDU[dataOff+1], &CDU[dataOff+2], &CDU[dataOff+3], &CDU[dataOff+4], &CDU[dataOff+5], &CDU[dataOff+6], &CDU[dataOff+7]);
    }
    // DCT columns
    for(dataOff=0; dataOff<8; ++dataOff) {
-      stbiw__jpg_DCT(&CDU[dataOff], &CDU[dataOff+8], &CDU[dataOff+16], &CDU[dataOff+24], &CDU[dataOff+32], &CDU[dataOff+40], &CDU[dataOff+48], &CDU[dataOff+56]);
+      stbiw__jpg_DCT(&CDU[dataOff], &CDU[dataOff+du_stride], &CDU[dataOff+du_stride*2], &CDU[dataOff+du_stride*3], &CDU[dataOff+du_stride*4],
+                     &CDU[dataOff+du_stride*5], &CDU[dataOff+du_stride*6], &CDU[dataOff+du_stride*7]);
    }
    // Quantize/descale/zigzag the coefficients
-   for(i=0; i<64; ++i) {
-      float v = CDU[i]*fdtbl[i];
-      // DU[stbiw__jpg_ZigZag[i]] = (int)(v < 0 ? ceilf(v - 0.5f) : floorf(v + 0.5f));
-      // ceilf() and floorf() are C99, not C89, but I /think/ they're not needed here anyway?
-      DU[stbiw__jpg_ZigZag[i]] = (int)(v < 0 ? v - 0.5f : v + 0.5f);
+   for(y = 0, j=0; y < 8; ++y) {
+      for(x = 0; x < 8; ++x,++j) {
+         i = y*du_stride+x;
+         float v = CDU[i]*fdtbl[j];
+         // DU[stbiw__jpg_ZigZag[j]] = (int)(v < 0 ? ceilf(v - 0.5f) : floorf(v + 0.5f));
+         // ceilf() and floorf() are C99, not C89, but I /think/ they're not needed here anyway?
+         DU[stbiw__jpg_ZigZag[j]] = (int)(v < 0 ? v - 0.5f : v + 0.5f);
+      }
    }
 
    // Encode DC
@@ -1408,7 +1412,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
    static const float aasf[] = { 1.0f * 2.828427125f, 1.387039845f * 2.828427125f, 1.306562965f * 2.828427125f, 1.175875602f * 2.828427125f, 
                                  1.0f * 2.828427125f, 0.785694958f * 2.828427125f, 0.541196100f * 2.828427125f, 0.275899379f * 2.828427125f };
 
-   int row, col, i, k;
+   int row, col, i, k, subsample;
    float fdtbl_Y[64], fdtbl_UV[64];
    unsigned char YTable[64], UVTable[64];
 
@@ -1417,6 +1421,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
    }
 
    quality = quality ? quality : 90;
+   subsample = quality <= 90 ? 1 : 0;
    quality = quality < 1 ? 1 : quality > 100 ? 100 : quality;
    quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
 
@@ -1439,7 +1444,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
       static const unsigned char head0[] = { 0xFF,0xD8,0xFF,0xE0,0,0x10,'J','F','I','F',0,1,1,0,0,1,0,1,0,0,0xFF,0xDB,0,0x84,0 };
       static const unsigned char head2[] = { 0xFF,0xDA,0,0xC,3,1,0,2,0x11,3,0x11,0,0x3F,0 };
       const unsigned char head1[] = { 0xFF,0xC0,0,0x11,8,(unsigned char)(height>>8),STBIW_UCHAR(height),(unsigned char)(width>>8),STBIW_UCHAR(width),
-                                      3,1,0x11,0,2,0x11,1,3,0x11,1,0xFF,0xC4,0x01,0xA2,0 };
+                                      3,1,(unsigned char)(subsample?0x22:0x11),0,2,0x11,1,3,0x11,1,0xFF,0xC4,0x01,0xA2,0 };
       s->func(s->context, (void*)head0, sizeof(head0));
       s->func(s->context, (void*)YTable, sizeof(YTable));
       stbiw__putc(s, 1);
@@ -1462,36 +1467,74 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
    // Encode 8x8 macroblocks
    {
       static const unsigned short fillBits[] = {0x7F, 7};
-      const unsigned char *imageData = (const unsigned char *)data;
       int DCY=0, DCU=0, DCV=0;
       int bitBuf=0, bitCnt=0;
       // comp == 2 is grey+alpha (alpha is ignored)
       int ofsG = comp > 2 ? 1 : 0, ofsB = comp > 2 ? 2 : 0;
+      const unsigned char *dataR = (const unsigned char *)data;
+      const unsigned char *dataG = dataR + ofsG;
+      const unsigned char *dataB = dataR + ofsB;
       int x, y, pos;
-      for(y = 0; y < height; y += 8) {
-         for(x = 0; x < width; x += 8) {
-            float YDU[64], UDU[64], VDU[64];
-            for(row = y, pos = 0; row < y+8; ++row) {
-               // row >= height => use last input row
-               int clamped_row = (row < height) ? row : height - 1;
-               int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
-               for(col = x; col < x+8; ++col, ++pos) {
-                  float r, g, b;
-                  // if col >= width => use pixel from last input column
-                  int p = base_p + ((col < width) ? col : (width-1))*comp;
+      if(subsample) {
+         for(y = 0; y < height; y += 16) {
+            for(x = 0; x < width; x += 16) {
+               float Y[256], U[256], V[256];
+               for(row = y, pos = 0; row < y+16; ++row) {
+                  // row >= height => use last input row
+                  int clamped_row = (row < height) ? row : height - 1;
+                  int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
+                  for(col = x; col < x+16; ++col, ++pos) {
+                     // if col >= width => use pixel from last input column
+                     int p = base_p + ((col < width) ? col : (width-1))*comp;
+                     float r = dataR[p], g = dataG[p], b = dataB[p];
+                     Y[pos]= +0.29900f*r + 0.58700f*g + 0.11400f*b - 128;
+                     U[pos]= -0.16874f*r - 0.33126f*g + 0.50000f*b;
+                     V[pos]= +0.50000f*r - 0.41869f*g - 0.08131f*b;
+                  }
+               }
+               DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y+0,   16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+               DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y+8,   16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+               DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y+128, 16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
+               DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y+136, 16, fdtbl_Y, DCY, YDC_HT, YAC_HT);
 
-                  r = imageData[p+0];
-                  g = imageData[p+ofsG];
-                  b = imageData[p+ofsB];
-                  YDU[pos]=+0.29900f*r+0.58700f*g+0.11400f*b-128;
-                  UDU[pos]=-0.16874f*r-0.33126f*g+0.50000f*b;
-                  VDU[pos]=+0.50000f*r-0.41869f*g-0.08131f*b;
+               // subsample U,V
+               {
+                  float subU[64], subV[64];
+                  int yy, xx;
+                  for(yy = 0, pos = 0; yy < 8; ++yy) {
+                     for(xx = 0; xx < 8; ++xx, ++pos) {
+                        int j = yy*32+xx*2;
+                        subU[pos] = (U[j+0] + U[j+1] + U[j+16] + U[j+17]) * 0.25f;
+                        subV[pos] = (V[j+0] + V[j+1] + V[j+16] + V[j+17]) * 0.25f;
+                     }
+                  }
+                  DCU = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, subU, 8, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+                  DCV = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, subV, 8, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
                }
             }
+         }
+      } else {
+         for(y = 0; y < height; y += 8) {
+            for(x = 0; x < width; x += 8) {
+               float Y[64], U[64], V[64];
+               for(row = y, pos = 0; row < y+8; ++row) {
+                  // row >= height => use last input row
+                  int clamped_row = (row < height) ? row : height - 1;
+                  int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
+                  for(col = x; col < x+8; ++col, ++pos) {
+                     // if col >= width => use pixel from last input column
+                     int p = base_p + ((col < width) ? col : (width-1))*comp;
+                     float r = dataR[p], g = dataG[p], b = dataB[p];
+                     Y[pos]= +0.29900f*r + 0.58700f*g + 0.11400f*b - 128;
+                     U[pos]= -0.16874f*r - 0.33126f*g + 0.50000f*b;
+                     V[pos]= +0.50000f*r - 0.41869f*g - 0.08131f*b;
+                  }
+               }
 
-            DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, YDU, fdtbl_Y, DCY, YDC_HT, YAC_HT);
-            DCU = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, UDU, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
-            DCV = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, VDU, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+               DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y, 8, fdtbl_Y,  DCY, YDC_HT, YAC_HT);
+               DCU = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, U, 8, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+               DCV = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, V, 8, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+            }
          }
       }
 
