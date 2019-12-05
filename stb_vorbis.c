@@ -2170,7 +2170,7 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
                ++class_set;
                #endif
             }
-         } else {
+         } else if (ch > 2) {
             while (pcount < part_read) {
                int z = r->begin + pcount*r->part_size;
                int c_inter = z % ch, p_inter = z/ch;
