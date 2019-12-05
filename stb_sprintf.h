@@ -215,12 +215,14 @@ typedef char *STBSP_SPRINTFCB(char *buf, void *user, int len);
 typedef void *STBSP_SPRINTFCBANY(void *buf, void *user, int len);
 
 #ifdef STB_SPRINTF_MULTICHAR
-#if defined(__cplusplus) && (__cplusplus > 201103L) && !defined(stbsp__char16)
+#if !defined(stbsp__char16)
+#if defined(__cplusplus) && (__cplusplus > 201103L)
 #define stbsp__char16 char16_t
 #define stbsp__char32 char32_t
 #else
 #define stbsp__char16 unsigned short
 #define stbsp__char32 unsigned long
+#endif
 #endif
 
 typedef stbsp__char16 *STBSP_SPRINTFCBC16(stbsp__char16 *buf, void *user, int len);
