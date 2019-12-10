@@ -84,8 +84,8 @@ void stbsp_set_separators( char comma, char period )
 STB_SPRINTF_MULTICHAR must be defined to include in support for char16_t/char32_t
 
    This changes _only_ your target buffer, and allows the use of 
-      '%S' to represent a char16_t string
-      '%lS' to represent a char32_t string
+      '%S' to represent a char16_t string  (UTF16 LE)
+      '%lS' to represent a char32_t string (UTF32 LE)
 
       IE: int stbsp_sprintfc16( char16_t * buf, char const * fmt, ...)
 int stbsp_sprintfc16( char16_t * buf, char const * fmt, ... )
@@ -1506,18 +1506,53 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
             (stbsp__char32)'\0' };
 
          if (size_per_char == sizeof(stbsp__char16)) {
-            const stbsp__char16 * us;
-            us = va_arg(va, const stbsp__char16 *);
-            if (us == 0)
-               us = s_nullc16;
+            if (fl & STBSP__LONG_STRING) { // '%lS'
+               const stbsp__char32 * us = va_arg(va, const stbsp__char32 *);
+               if (us == 0)
+                  us = s_nullc32;
 
-            while (us[0])
-            {
-               stbsp__chk_cb_buf(1);
-               /* note, bf can change in chk_cb_buf */
-               stbsp__char16 * bf_w = (stbsp__char16 *)bf; 
-               *bf_w++ = *us++;
-               bf = bf_w;
+               while (us[0])
+               {
+                  stbsp__char32 value = us[0];
+                  stbsp__char16 * bf_w; /* note, bf can change in chk_cb_buf */
+                  if (value < 0x10000UL)
+                  {
+                     stbsp__chk_cb_buf(1);
+
+                     bf_w = (stbsp__char16 *)bf; 
+                     *bf_w++ = (stbsp__char16)value;
+                  } else {
+                     stbsp__char32 high, low;
+                     stbsp__chk_cb_buf(2);
+
+                     value -= 0x10000;
+                     high = value / 0x400;
+                     high += 0xD800;
+                     low = value & 0x03FFU;
+                     low += 0xDC00;
+
+                     bf_w = (stbsp__char16 *)bf; 
+                     bf_w[0] = (char16)high;
+                     bf_w[1] = (char16)low;
+                     bf_w += 2;
+                  }
+                  bf = bf_w;
+                  ++us;
+               }
+            } else {
+               const stbsp__char16 * us;
+               us = va_arg(va, const stbsp__char16 *);
+               if (us == 0)
+                  us = s_nullc16;
+
+               while (us[0])
+               {
+                  stbsp__chk_cb_buf(1); /* note, bf can change in chk_cb_buf */
+
+                  stbsp__char16 * bf_w = (stbsp__char16 *)bf; 
+                  *bf_w++ = *us++;
+                  bf = bf_w;
+               }
             }
             break;
          } else if (size_per_char == sizeof(stbsp__char32)) {
@@ -1528,8 +1563,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
 
                while (us[0])
                {
-                  stbsp__chk_cb_buf(1);
-                  /* note, bf can change in chk_cb_buf */
+                  stbsp__chk_cb_buf(1); /* note, bf can change in chk_cb_buf */
                   stbsp__char32 * bf_w = (stbsp__char32 *)bf; 
                   *bf_w++ = *us++;
                   bf = bf_w;
@@ -1545,7 +1579,26 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbAny)(STBSP_SPRINTFCBANY *cal
                   stbsp__chk_cb_buf(1);
                   /* note, bf can change in chk_cb_buf */
                   stbsp__char32 * bf_w = (stbsp__char32 *)bf; 
-                  *bf_w++ = *us++;
+
+                  stbsp__char16 value = us[0];
+                  if ((value < 0xD800) || (value >= 0xE000))
+                  {
+                     *bf_w++ = (stbsp__char32)value;
+                     ++us;
+                  } else {
+                     stbsp__char16 value_next = us[1];
+                     if ( ((value & 0xFC00) == 0xD800) &&
+                          ((value_next & 0xFC00) == 0xDC00) )
+                     {
+                        stbsp__char32 high = value;
+                        stbsp__char32 low = value_next;
+                        high -= 0xD800;
+                        low -= 0xDC00;
+                        stbsp__char32 result = (stbsp__char32)(high & 0x400U) + low + 0x10000;
+                        *bf_w++ = result;
+                        us += 2;
+                     } else us++; /* Unknown error skip bytes */
+                  }
                   bf = bf_w;
                }
             }
