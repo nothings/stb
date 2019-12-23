@@ -614,7 +614,7 @@ void setup_uniforms(GLuint shader, float camera_pos[4], GLuint tex1, GLuint tex2
       stbvox_uniform_info sui;
       if (stbvox_get_uniform_info(&sui, i)) {
          GLint loc = glGetUniformLocation(shader, sui.name);
-         if (loc != 0) {
+         if (loc != -1) {
             switch (i) {
                case STBVOX_UNIFORM_camera_pos: // only needed for fog
                   glUniform4fv(loc, sui.array_length, camera_pos);
