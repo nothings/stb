@@ -200,6 +200,7 @@ CREDITS
   github:infatum
   Dave Butler (Croepha)
   Ethan Lee (flibitijibibo)
+  Brian Collins
 */
 
 #include <stdarg.h>
