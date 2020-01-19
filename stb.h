@@ -2439,7 +2439,7 @@ static char *stb__splitpath_raw(char *buffer, char *path, int flag)
    } else {
       x = f2;
       if (flag & STB_EXT_NO_PERIOD)
-         if (buffer[x] == '.')
+         if (path[x] == '.')
             ++x;
    }
 
@@ -2456,7 +2456,7 @@ static char *stb__splitpath_raw(char *buffer, char *path, int flag)
    }
 
    if (len) { stb_p_strcpy_s(buffer, sizeof(buffer), "./"); return buffer; }
-   stb_p_strncpy_s(buffer, sizeof(buffer),path+x, y-x);
+   stb_p_strncpy_s(buffer, y-x+1, path+x, y-x);
    buffer[y-x] = 0;
    return buffer;
 }
