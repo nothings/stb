@@ -2457,7 +2457,7 @@ static char *stb__splitpath_raw(char *buffer, char *path, int flag)
    }
 
    if (len) { stb_p_strcpy_s(buffer, sizeof(buffer), "./"); return buffer; }
-   stb_strncpy(buffer, path+x, y-x);
+   stb_strncpy(buffer, path+int(x), int(y-x));
    return buffer;
 }
 
