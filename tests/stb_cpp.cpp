@@ -52,6 +52,7 @@ void test_lex(void)
 
 int main(int argc, char **argv)
 {
+#if 0
    char *p;
    p = (char*) "abcdefghijklmnopqrstuvwxyz";
    c(stb_ischar('c', p), "stb_ischar 1");
@@ -73,6 +74,7 @@ int main(int argc, char **argv)
    c(stb_ischar('x', p), "stb_ischar f");
    c(!stb_ischar('#', p), "stb_ischar g");
    c(stb_ischar('X', p), "stb_ischar h");
+#endif
 
    test_lex();
 

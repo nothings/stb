@@ -71,7 +71,7 @@ int main(int argc, char **argv)
                ci.batchfile     = strdup(buffer);
                ci.compiler      = count==3 ? strdup(tokens[2]) : "cl";
                if (0==strnicmp(batch, "vcvars_", 7))
-                  ci.objdir     = strdup(stb_sprintf("%s_%d", batch+7, i));
+                  ci.objdir     = strdup(stb_sprintf("vs_%s_%d", batch+7, i));
                else
                   ci.objdir     = strdup(stb_sprintf("%s_%d", batch, i));
                ci.args = shared_args;
@@ -121,6 +121,11 @@ int main(int argc, char **argv)
                                      stb_arr_len(compilers[j].link), compilers[j].link);
          r = run_command(compilers[j].batchfile, command);
          stbprint("{%c== Compiler %s == Building %s}\n", r ? '$' : '!', compilers[j].compiler_name, projects[i].filelist);
+         stb_copyfile("a.exe", stb_sprintf("obj/%s/a.exe", compilers[j].objdir));
+         //printf("Copy: %s to %s\n", "a.exe", stb_sprintf("obj/%s/a.exe", compilers[j].objdir));
+         stb_copyfile("temp.exe", stb_sprintf("obj/%s/temp.exe", compilers[j].objdir));
+         system("if EXIST a.exe del /q a.exe");
+         system("if EXIST temp.exe del /q temp.exe");
          system("if EXIST *.obj del /q *.obj");
          system("if EXIST *.o del /q *.o");
          if (!r)

@@ -91,11 +91,10 @@ way of namespacing the filenames and source function names.
 
 #### Will you add more image types to stb_image.h?
 
-If people submit them, I generally add them, but the goal of stb_image
-is less for applications like image viewer apps (which need to support
-every type of image under the sun) and more for things like games which
-can choose what images to use, so I may decline to add them if they're
-too rare or if the size of implementation vs. apparent benefit is too low.
+No. As stb_image use has grown, it has become more important
+for us to focus on security of the codebase. Adding new image
+formats increases the amount of code we need to secure, so it
+is no longer worth adding new formats.
 
 #### Do you have any advice on how to create my own single-file library?
 
