@@ -1,4 +1,3 @@
-#include <stdio.h>
 /* stb_ds.h - v0.62b - public domain data structures - Sean Barrett 2019
   
    This is a single-header-file library that provides easy-to-use
