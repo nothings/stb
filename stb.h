@@ -7,7 +7,6 @@
    Documentation: http://nothings.org/stb/stb_h.html
    Unit tests:    http://nothings.org/stb/stb.c
 
-
  ============================================================================
    You MUST                                                                  
                                                                              
@@ -21,7 +20,6 @@
       
    All other files should just #include "stb.h" without the #define.
  ============================================================================
-
 
 Version History
 
@@ -3209,13 +3207,13 @@ typedef struct
 #define stb_arr_addn(a,n)      (stb_arr__addn((a),n),(a)+stb_arr_len(a)-(n))
 
 // add N new uninitialized elements starting at index 'i'
-#define stb_arr_insertn(a,i,n) (stb__arr_insertn((void **) &(a), sizeof(*a), i, n))
+#define stb_arr_insertn(a,i,n) (stb__arr_insertn((void **) &(a), sizeof(*a), (i), (n)))
 
 // insert an element at i
-#define stb_arr_insert(a,i,v)  (stb__arr_insertn((void **) &(a), sizeof(*a), i, 1), ((a)[i] = v))
+#define stb_arr_insert(a,i,v)  (stb__arr_insertn((void **) &(a), sizeof(*a), (i), (1)), ((a)[i] = v))
 
 // delete N elements from the middle starting at index 'i'
-#define stb_arr_deleten(a,i,n) (stb__arr_deleten((void **) &(a), sizeof(*a), i, n))
+#define stb_arr_deleten(a,i,n) (stb__arr_deleten((void **) &(a), sizeof(*a), (i), (n)))
 
 // delete the i'th element
 #define stb_arr_delete(a,i)   stb_arr_deleten(a,i,1)
@@ -3564,6 +3562,7 @@ unsigned int stb_hash_number(unsigned int hash)
 
 #endif
 
+#ifdef STB_PERFECT_HASH
 //////////////////////////////////////////////////////////////////////////////
 //
 //                     Perfect hashing for ints/pointers
@@ -3860,6 +3859,7 @@ int stb_ischar(char c, char *set)
    return tables[z >> 3][(unsigned char) c] & bit[z & 7];
 }
 
+#endif
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -10038,6 +10038,7 @@ int stb_lex(stb_matcher *m, char *str, int *len)
    return stb__matcher_dfa(m, str, len);
 }
 
+#ifdef STB_PERFECT_HASH
 int stb_regex(char *regex, char *str)
 {
    static stb_perfect p;
@@ -10081,7 +10082,7 @@ int stb_regex(char *regex, char *str)
    }
    return stb_matcher_find(matchers[(int) mapping[z]], str);
 }
-
+#endif
 #endif // STB_DEFINE
 
 
