@@ -3,7 +3,7 @@
 // http://github.com/nothings/stb
 //
 // allowed types:  sc uidBboXx p AaGgEef n
-// lengths      :  h ll j z t I64 I32 I
+// lengths      :  hh h ll j z t I64 I32 I
 //
 // Contributors:
 //    Fabian "ryg" Giesen (reformatting)
@@ -472,6 +472,8 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       case 'h':
          fl |= STBSP__HALFWIDTH;
          ++f;
+         if (f[0] == 'h')
+            ++f;  // QUARTERWIDTH
          break;
       // are we 64-bit (unix style)
       case 'l':
