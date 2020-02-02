@@ -1,5 +1,5 @@
 /* stb_ds.h - v0.63 - public domain data structures - Sean Barrett 2019
-  
+
    This is a single-header-file library that provides easy-to-use
    dynamic arrays and hash tables for C (also works in C++).
 
@@ -26,7 +26,7 @@ COMPILE-TIME OPTIONS
   #define STBDS_NO_SHORT_NAMES
 
      This flag needs to be set globally.
-       
+
      By default stb_ds exposes shorter function names that are not qualified
      with the "stbds_" prefix. If these names conflict with the names in your
      code, define this flag.
@@ -71,7 +71,7 @@ DOCUMENTATION
     Non-function interface:
 
       Declare an empty dynamic array of type T
-        T* foo = NULL;    
+        T* foo = NULL;
 
       Access the i'th item of a dynamic array 'foo' of type T, T* foo:
         foo[i]
@@ -227,7 +227,7 @@ DOCUMENTATION
         T* shgetp(T*, char* key)
         T* hmgetp_ts(T*, TK key, ptrdiff_t tempvar)
         T* hmgetp_null(T*, TK key)
-        T* shgetp_null(T*, char *key) 
+        T* shgetp_null(T*, char *key)
           Returns a pointer to the structure corresponding to 'key' in
           the hashmap. Functions ending in "_null" return NULL if the key
           is not present in the hashmap; the others return a pointer to a
@@ -355,7 +355,7 @@ NOTES - HASH MAP
   * If adversarial input is a serious concern and you're on a 64-bit platform,
     enable STBDS_SIPHASH_2_4 (see the 'Compile-time options' section), and pass
     a strong random number to stbds_rand_seed.
-     
+
   * The default value for the hash table is stored in foo[-1], so if you
     use code like 'hmget(T,k)->value = 5' you can accidentally overwrite
     the value stored by hmdefault if 'k' is not present.
@@ -436,7 +436,7 @@ CREDITS
 
 #define stralloc    stbds_stralloc
 #define strreset    stbds_strreset
-#endif      
+#endif
 
 #if defined(STBDS_REALLOC) && !defined(STBDS_FREE) || !defined(STBDS_REALLOC) && defined(STBDS_FREE)
 #error "You must define both STBDS_REALLOC and STBDS_FREE, or neither."
@@ -881,16 +881,16 @@ static stbds_hash_index *stbds_make_hash_index(size_t slot_count, stbds_hash_ind
   // Following statistics were measured on a Core i7-6700 @ 4.00Ghz, compiled with clang 7.0.1 -O2
     // Note that the larger tables have high variance as they were run fewer times
   //     A1            A2          B1           C1
-  //    0.10ms :     0.10ms :     0.10ms :     0.11ms :      2,000 inserts creating 2K table   
-  //    0.96ms :     0.95ms :     0.97ms :     1.04ms :     20,000 inserts creating 20K table  
-  //   14.48ms :    14.46ms :    10.63ms :    11.00ms :    200,000 inserts creating 200K table 
-  //  195.74ms :   196.35ms :   203.69ms :   214.92ms :  2,000,000 inserts creating 2M table   
-  // 2193.88ms :  2209.22ms :  2285.54ms :  2437.17ms : 20,000,000 inserts creating 20M table  
-  //   65.27ms :    53.77ms :    65.33ms :    65.47ms : 500,000 inserts & deletes in 2K table  
-  //   72.78ms :    62.45ms :    71.95ms :    72.85ms : 500,000 inserts & deletes in 20K table 
+  //    0.10ms :     0.10ms :     0.10ms :     0.11ms :      2,000 inserts creating 2K table
+  //    0.96ms :     0.95ms :     0.97ms :     1.04ms :     20,000 inserts creating 20K table
+  //   14.48ms :    14.46ms :    10.63ms :    11.00ms :    200,000 inserts creating 200K table
+  //  195.74ms :   196.35ms :   203.69ms :   214.92ms :  2,000,000 inserts creating 2M table
+  // 2193.88ms :  2209.22ms :  2285.54ms :  2437.17ms : 20,000,000 inserts creating 20M table
+  //   65.27ms :    53.77ms :    65.33ms :    65.47ms : 500,000 inserts & deletes in 2K table
+  //   72.78ms :    62.45ms :    71.95ms :    72.85ms : 500,000 inserts & deletes in 20K table
   //   89.47ms :    77.72ms :    96.49ms :    96.75ms : 500,000 inserts & deletes in 200K table
-  //   97.58ms :    98.14ms :    97.18ms :    97.53ms : 500,000 inserts & deletes in 2M table  
-  //  118.61ms :   119.62ms :   120.16ms :   118.86ms : 500,000 inserts & deletes in 20M table 
+  //   97.58ms :    98.14ms :    97.18ms :    97.53ms : 500,000 inserts & deletes in 2M table
+  //  118.61ms :   119.62ms :   120.16ms :   118.86ms : 500,000 inserts & deletes in 20M table
   //  192.11ms :   194.39ms :   196.38ms :   195.73ms : 500,000 inserts & deletes in 200M table
 
   if (slot_count <= STBDS_BUCKET_LENGTH)
@@ -1023,7 +1023,7 @@ static size_t stbds_siphash_bytes(void *p, size_t len, size_t seed)
   // derived from siphash, but on 32-bit platforms very different as it uses 4 32-bit state not 4 64-bit
   v0 = ((((size_t) 0x736f6d65 << 16) << 16) + 0x70736575) ^  seed;
   v1 = ((((size_t) 0x646f7261 << 16) << 16) + 0x6e646f6d) ^ ~seed;
-  v2 = ((((size_t) 0x6c796765 << 16) << 16) + 0x6e657261) ^  seed; 
+  v2 = ((((size_t) 0x6c796765 << 16) << 16) + 0x6e657261) ^  seed;
   v3 = ((((size_t) 0x74656462 << 16) << 16) + 0x79746573) ^ ~seed;
 
   #ifdef STBDS_TEST_SIPHASH_2_4
@@ -1126,16 +1126,16 @@ size_t stbds_hash_bytes(void *p, size_t len, size_t seed)
     // Following statistics were measured on a Core i7-6700 @ 4.00Ghz, compiled with clang 7.0.1 -O2
     // Note that the larger tables have high variance as they were run fewer times
     //  HASH32-A   //  HASH32-BB  //  HASH32-C
-    //    0.10ms   //    0.10ms   //    0.10ms :      2,000 inserts creating 2K table   
-    //    0.96ms   //    0.95ms   //    0.99ms :     20,000 inserts creating 20K table  
-    //   14.69ms   //   14.43ms   //   14.97ms :    200,000 inserts creating 200K table 
-    //  199.99ms   //  195.36ms   //  202.05ms :  2,000,000 inserts creating 2M table   
-    // 2234.84ms   // 2187.74ms   // 2240.38ms : 20,000,000 inserts creating 20M table  
-    //   55.68ms   //   53.72ms   //   57.31ms : 500,000 inserts & deletes in 2K table  
-    //   63.43ms   //   61.99ms   //   65.73ms : 500,000 inserts & deletes in 20K table 
+    //    0.10ms   //    0.10ms   //    0.10ms :      2,000 inserts creating 2K table
+    //    0.96ms   //    0.95ms   //    0.99ms :     20,000 inserts creating 20K table
+    //   14.69ms   //   14.43ms   //   14.97ms :    200,000 inserts creating 200K table
+    //  199.99ms   //  195.36ms   //  202.05ms :  2,000,000 inserts creating 2M table
+    // 2234.84ms   // 2187.74ms   // 2240.38ms : 20,000,000 inserts creating 20M table
+    //   55.68ms   //   53.72ms   //   57.31ms : 500,000 inserts & deletes in 2K table
+    //   63.43ms   //   61.99ms   //   65.73ms : 500,000 inserts & deletes in 20K table
     //   80.04ms   //   77.96ms   //   81.83ms : 500,000 inserts & deletes in 200K table
-    //  100.42ms   //   97.40ms   //  102.39ms : 500,000 inserts & deletes in 2M table  
-    //  119.71ms   //  120.59ms   //  121.63ms : 500,000 inserts & deletes in 20M table 
+    //  100.42ms   //   97.40ms   //  102.39ms : 500,000 inserts & deletes in 2M table
+    //  119.71ms   //  120.59ms   //  121.63ms : 500,000 inserts & deletes in 20M table
     //  185.28ms   //  195.15ms   //  187.74ms : 500,000 inserts & deletes in 200M table
     //   15.58ms   //   14.79ms   //   15.52ms : 200,000 inserts creating 200K table with varying key spacing
 
@@ -1176,7 +1176,7 @@ static int stbds_is_key_equal(void *a, size_t elemsize, void *key, size_t keysiz
 #define STBDS_ARR_TO_HASH(x,elemsize) ((char*) (x) + (elemsize))
 
 #define stbds_hash_table(a)  ((stbds_hash_index *) stbds_header(a)->hash_table)
- 
+
 void stbds_hmfree_func(void *a, size_t elemsize)
 {
   if (a == NULL) return;
@@ -1466,7 +1466,7 @@ void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size
 
         // if indices are the same, memcpy is a no-op, but back-pointer-fixup will fail, so skip
         if (old_index != final_index) {
-          // swap delete 
+          // swap delete
           memmove((char*) a + elemsize*old_index, (char*) a + elemsize*final_index, elemsize);
 
           // now find the slot for the last element
@@ -1676,7 +1676,7 @@ void stbds_unit_tests(void)
     if (i & 3) STBDS_ASSERT(hmget(intmap, i) == -2 );
     else       STBDS_ASSERT(hmget(intmap, i) == i*3);
   for (i=0; i < testsize; i+=1)
-    hmdel(intmap, i); // delete the rest of the entries    
+    hmdel(intmap, i); // delete the rest of the entries
   for (i=0; i < testsize; i+=1)
     STBDS_ASSERT(hmget(intmap, i) == -2 );
   hmfree(intmap);
@@ -1720,7 +1720,7 @@ void stbds_unit_tests(void)
       if (i & 3) STBDS_ASSERT(shget(strmap, strkey(i)) == -2 );
       else       STBDS_ASSERT(shget(strmap, strkey(i)) == i*3);
     for (i=0; i < testsize; i+=1)
-      shdel(strmap, strkey(i)); // delete the rest of the entries    
+      shdel(strmap, strkey(i)); // delete the rest of the entries
     for (i=0; i < testsize; i+=1)
       STBDS_ASSERT(shget(strmap, strkey(i)) == -2 );
     shfree(strmap);

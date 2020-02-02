@@ -17,13 +17,13 @@ publish, and distribute this file as you see fit.
  "template" of the tiles you'll create. You then edit those tiles, then
  load the created tile image file back into this library and use it at
  runtime to generate "maps".
- 
+
  You cannot load arbitrary tile image files with this library; it is
  only designed to load image files made from the template it created.
  It stores a binary description of the tile sizes & constraints in a
  few pixels, and uses those to recover the rules, rather than trying
  to parse the tiles themselves.
- 
+
  You *can* use this library to generate from arbitrary tile sets, but
  only by loading the tile set and specifying the constraints explicitly
  yourself.
@@ -142,7 +142,7 @@ int main(int argc, char **argv)
 
    0.7   2019-03-04   - fix warnings
 	0.6   2014-08-17   - fix broken map-maker
-	0.5   2014-07-07   - initial release 
+	0.5   2014-07-07   - initial release
 
 */
 
@@ -251,7 +251,7 @@ STBHW_EXTERN int stbhw_make_template(stbhw_config *c, unsigned char *data, int w
 // there are 4 "types" of corners and 6 types of edges.
 // you can configure the tileset to have different numbers
 // of colors for each type of color or edge.
-// 
+//
 // corner types:
 //
 //                     0---*---1---*---2---*---3
@@ -513,7 +513,7 @@ static int stbhw__process_template(stbhw__process *p)
          for (j=0; j < c->num_color[0]; ++j) {
             for (i=0; i < c->num_color[1]; ++i) {
                for (q=0; q < c->num_vary_x; ++q) {
-                  stbhw__process_v_row(p, 0,ypos, 
+                  stbhw__process_v_row(p, 0,ypos,
                      0,c->num_color[0]-1, 0,c->num_color[3]-1, 0,c->num_color[2]-1,
                      i,i, j,j, k,k,
                      c->num_vary_y);
@@ -689,7 +689,7 @@ static int stbhw__change_color(int old_color, int num_options, int *weights)
 
 
 // generate a map that is w * h pixels (3-bytes each)
-// returns 1 on success, 0 on error 
+// returns 1 on success, 0 on error
 STBHW_EXTERN int stbhw_generate_image(stbhw_tileset *ts, int **weighting, unsigned char *output, int stride, int w, int h)
 {
    int sidelen = ts->short_side_len;

@@ -28,9 +28,9 @@
 //      string.h    strcpy, strncmp, memcpy
 //
 // Credits:
-// 
+//
 // Written by Sean Barrett.
-// 
+//
 // Fixes:
 //  Michal Klos
 
@@ -266,7 +266,7 @@ char *stb_include_strings(char **strs, int count, char *inject, char *path_to_in
    }
    result = stb_include_string(text, inject, path_to_includes, filename, error);
    free(text);
-   return result;   
+   return result;
 }
 
 char *stb_include_file(char *filename, char *inject, char *path_to_includes, char error[256])

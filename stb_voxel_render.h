@@ -817,7 +817,7 @@ struct stbvox_input_description
    // Indexed by 3D coordinate. Contains the color for all faces of the block.
    // The core color value is 0..63.
    // Encode with STBVOX_MAKE_COLOR(color_number, tex1_enable, tex2_enable)
-   
+
    unsigned char *block_color;
    // Array indexed by blocktype containing the color value to apply to the faces.
    // The core color value is 0..63.
@@ -936,7 +936,7 @@ struct stbvox_input_description
    // Indexed by 3D coordinates, specifies which faces should use the
    // color defined in color2. No rotation value is applied.
    // Encode with STBVOX_MAKE_FACE_MASK(e,n,w,s,u,d)
-   
+
    unsigned char *color3;
    // Indexed by 3D coordinates, specifies an alternative color to apply
    // to some of the faces of the block.
@@ -944,9 +944,9 @@ struct stbvox_input_description
 
    unsigned char *color3_facemask;
    // Indexed by 3D coordinates, specifies which faces should use the
-   // color defined in color3. No rotation value is applied. 
+   // color defined in color3. No rotation value is applied.
    // Encode with STBVOX_MAKE_FACE_MASK(e,n,w,s,u,d)
-   
+
    unsigned char *texlerp_simple;
    // Indexed by 3D coordinates, this is the smallest texlerp encoding
    // that can do useful work. It consits of three values: baselerp,
@@ -962,7 +962,7 @@ struct stbvox_input_description
    // Encode with STBVOX_MAKE_TEXLERP_SIMPLE(baselerp, vertlerp, face_vertlerp)
 
    // The following texlerp encodings are experimental and maybe not
-   // that useful. 
+   // that useful.
 
    unsigned char *texlerp;
    // Indexed by 3D coordinates, this defines four values:
@@ -1251,7 +1251,7 @@ struct stbvox_mesh_maker
 // shouldn't improve performance, although obviously it allow you
 // to create larger worlds without streaming.
 //
-//        
+//
 //                      -----------  Two textures -----------       -- One texture --     ---- Color only ----
 //            Mode:     0     1     2     3     4     5     6        10    11    12      20    21    22    23    24
 // ============================================================================================================
@@ -1273,15 +1273,15 @@ struct stbvox_mesh_maker
 //            Mode:     0     1     2     3     4     5     6        10    11    12      20    21    22    23    24
 // =============================================================================================================
 //   bytes per quad    32    20    14    12    10     6     6         8     8     4            20    10     6     4
-//                                                                 
+//
 //    vertex x bits     7     7     0     6     0     0     0         0     0     0             7     0     0     0
 //    vertex y bits     7     7     0     0     0     0     0         0     0     0             7     0     0     0
 //    vertex z bits     9     9     7     4     2     0     0         2     2     0             9     2     0     0
 //   vertex ao bits     6     6     6     6     6     0     0         6     6     0             6     6     0     0
 //  vertex txl bits     3     3     3     0     0     0     0         0     0     0            (3)    0     0     0
 //
-//   face tex1 bits    (8)    8     8     8     8     8     8         8     8     8                    
-//   face tex2 bits    (8)    8     8     8     8     8     7         -     -     -         
+//   face tex1 bits    (8)    8     8     8     8     8     8         8     8     8
+//   face tex2 bits    (8)    8     8     8     8     8     7         -     -     -
 //  face color bits    (8)    8     8     8     8     8     8         3     0     0            24    24    24     8
 // face normal bits    (8)    8     8     8     6     4     7         4     4     3             8     3     4     3
 //      face x bits                 7     0     6     7     6         6     7     7             0     7     7     7
@@ -1710,7 +1710,7 @@ static const char *stbvox_fragment_program =
          "   uint color_id  = facedata.z;\n"
 
          #ifndef STBVOX_CONFIG_PREFER_TEXBUFFER
-            // load from uniforms / texture buffers 
+            // load from uniforms / texture buffers
             "   vec3 texgen_s = texgen[texprojid];\n"
             "   vec3 texgen_t = texgen[texprojid+32u];\n"
             "   float tex1_scale = texscale[tex1_id & 63u].x;\n"
@@ -1822,7 +1822,7 @@ static const char *stbvox_fragment_program =
          "   vec3 dist = voxelspace_pos + (transform[1] - camera_pos.xyz);\n"
          "   lit_color = compute_fog(lit_color, dist, fragment_alpha);\n"
       #endif
-      
+
       #ifdef STBVOX_CONFIG_UNPREMULTIPLY
       "   vec4 final_color = vec4(lit_color/fragment_alpha, fragment_alpha);\n"
       #else
@@ -1849,7 +1849,7 @@ static const char *stbvox_fragment_program =
       "{\n"
       "   float f = dot(relative_pos,relative_pos)*ambient[3].w;\n"
       //"   f = rlerp(f, -2,1);\n"
-      "   f = clamp(f, 0.0, 1.0);\n" 
+      "   f = clamp(f, 0.0, 1.0);\n"
       "   f = 3.0*f*f - 2.0*f*f*f;\n" // smoothstep
       //"   f = f*f;\n"  // fade in more smoothly
       #ifdef STBVOX_CONFIG_PREMULTIPLIED_ALPHA
@@ -1903,7 +1903,7 @@ static const char *stbvox_fragment_program_alpha_only =
       "   uint color_id  = facedata.z;\n"
 
       #ifndef STBVOX_CONFIG_PREFER_TEXBUFFER
-         // load from uniforms / texture buffers 
+         // load from uniforms / texture buffers
          "   vec3 texgen_s = texgen[texprojid];\n"
          "   vec3 texgen_t = texgen[texprojid+32u];\n"
          "   float tex1_scale = texscale[tex1_id & 63u].x;\n"
@@ -2034,7 +2034,7 @@ static unsigned char stbvox_rotate_face[6][4] =
    { 2,3,0,1 },
    { 3,0,1,2 },
    { 4,4,4,4 },
-   { 5,5,5,5 },   
+   { 5,5,5,5 },
 };
 
 #define STBVOX_ROTATE(x,r)   stbvox_rotate_face[x][r] // (((x)+(r))&3)
@@ -2190,7 +2190,7 @@ static unsigned char stbvox_vertex_selector[6][4] =
 
 static stbvox_mesh_vertex stbvox_vmesh_delta_normal[6][4] =
 {
-   {  stbvox_vertex_encode(1,0,1,0,0) , 
+   {  stbvox_vertex_encode(1,0,1,0,0) ,
       stbvox_vertex_encode(1,1,1,0,0) ,
       stbvox_vertex_encode(1,1,0,0,0) ,
       stbvox_vertex_encode(1,0,0,0,0)  },
@@ -2218,7 +2218,7 @@ static stbvox_mesh_vertex stbvox_vmesh_delta_normal[6][4] =
 
 static stbvox_mesh_vertex stbvox_vmesh_pre_vheight[6][4] =
 {
-   {  stbvox_vertex_encode(1,0,0,0,0) , 
+   {  stbvox_vertex_encode(1,0,0,0,0) ,
       stbvox_vertex_encode(1,1,0,0,0) ,
       stbvox_vertex_encode(1,1,0,0,0) ,
       stbvox_vertex_encode(1,0,0,0,0)  },
@@ -2246,7 +2246,7 @@ static stbvox_mesh_vertex stbvox_vmesh_pre_vheight[6][4] =
 
 static stbvox_mesh_vertex stbvox_vmesh_delta_half_z[6][4] =
 {
-   { stbvox_vertex_encode(1,0,2,0,0) , 
+   { stbvox_vertex_encode(1,0,2,0,0) ,
      stbvox_vertex_encode(1,1,2,0,0) ,
      stbvox_vertex_encode(1,1,0,0,0) ,
      stbvox_vertex_encode(1,0,0,0,0)  },
@@ -2274,7 +2274,7 @@ static stbvox_mesh_vertex stbvox_vmesh_delta_half_z[6][4] =
 
 static stbvox_mesh_vertex stbvox_vmesh_crossed_pair[6][4] =
 {
-   { stbvox_vertex_encode(1,0,2,0,0) , 
+   { stbvox_vertex_encode(1,0,2,0,0) ,
      stbvox_vertex_encode(0,1,2,0,0) ,
      stbvox_vertex_encode(0,1,0,0,0) ,
      stbvox_vertex_encode(1,0,0,0,0)  },
@@ -2521,7 +2521,7 @@ static unsigned char stbvox_optimized_face_up_normal[4][4][4][4] =
 // @TODO: this table was constructed by hand and may have bugs
 //                                 nw se sw
 static unsigned char stbvox_planar_face_up_normal[4][4][4] =
-{   
+{
    {                                                      // sw,se,nw,ne;  ne = se+nw-sw
       { STBVF_u   , 0         , 0         , 0          }, //  0,0,0,0; 1,0,0,-1; 2,0,0,-2; 3,0,0,-3;
       { STBVF_u   , STBVF_u   , 0         , 0          }, //  0,1,0,1; 1,1,0, 0; 2,1,0,-1; 3,1,0,-2;
@@ -2908,7 +2908,7 @@ static void stbvox_make_mesh_for_block(stbvox_mesh_maker *mm, stbvox_pos pos, in
       mesh = mm->input.selector[v_off];
    else if (mm->input.block_selector)
       mesh = mm->input.block_selector[mm->input.blocktype[v_off]];
-  
+
    // check if we're going off the end
    if (mm->output_cur[mesh][0] + mm->output_size[mesh][0]*6 > mm->output_end[mesh][0]) {
       mm->full = 1;
@@ -3119,7 +3119,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       mesh = mm->input.selector[v_off];
    else if (mm->input.block_selector)
       mesh = mm->input.block_selector[bt];
-  
+
    if (geo <= STBVOX_GEOM_ceil_slope_north_is_bottom) {
       // this is the simple case, we can just use regular block gen with special vmesh calculated with vheight
       stbvox_mesh_vertex basevert;
@@ -3344,7 +3344,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
 
       if ((visible_faces & (1 << STBVOX_FACE_north)) || (extreme && (ht[2] == 3 || ht[3] == 3)))
          stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_north, v_off, pos, basevert, vmesh[STBVOX_FACE_north], mesh, STBVOX_FACE_north);
-      if ((visible_faces & (1 << STBVOX_FACE_south)) || (extreme && (ht[0] == 3 || ht[1] == 3))) 
+      if ((visible_faces & (1 << STBVOX_FACE_south)) || (extreme && (ht[0] == 3 || ht[1] == 3)))
          stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_south, v_off, pos, basevert, vmesh[STBVOX_FACE_south], mesh, STBVOX_FACE_south);
       if ((visible_faces & (1 << STBVOX_FACE_east)) || (extreme && (ht[1] == 3 || ht[3] == 3)))
          stbvox_make_mesh_for_face(mm, rotate, STBVOX_FACE_east , v_off, pos, basevert, vmesh[STBVOX_FACE_east ], mesh, STBVOX_FACE_east);
@@ -3362,7 +3362,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
          mesh = mm->input.selector[v_off];
          simple_rot = mesh >> 4;
          mesh &= 15;
-      } 
+      }
       if (mm->input.block_selector) {
          mesh = mm->input.block_selector[bt];
       }
@@ -3644,7 +3644,7 @@ void stbvox_set_input_stride(stbvox_mesh_maker *mm, int x_stride_in_bytes, int y
                                          +  stbvox_vertex_vector[f][v][2]                           ;
          mm->vertex_gather_offset[f][v] =  (stbvox_vertex_vector[f][v][0]-1) * mm->x_stride_in_bytes
                                          + (stbvox_vertex_vector[f][v][1]-1) * mm->y_stride_in_bytes
-                                         + (stbvox_vertex_vector[f][v][2]-1)                        ; 
+                                         + (stbvox_vertex_vector[f][v][2]-1)                        ;
       }
    }
 }
@@ -3770,38 +3770,38 @@ This software is available under 2 licenses -- choose whichever you prefer.
 ------------------------------------------------------------------------------
 ALTERNATIVE A - MIT License
 Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all 
+The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ------------------------------------------------------------------------------
 ALTERNATIVE B - Public Domain (www.unlicense.org)
 This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
 commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
 this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */
