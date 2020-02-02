@@ -2703,7 +2703,7 @@ STBTT_DEF int stbtt_GetGlyphSVG(const stbtt_fontinfo *info, int gl, const char *
    if(info->svg == 0)
       return 0;
 
-   if(svg_doc = stbtt_FindSVGDoc(info, gl)) {
+   if((svg_doc = stbtt_FindSVGDoc(info, gl))) {
       *svg = (char *)data + info->svg + ttULONG(svg_doc + 4);
       return ttULONG(svg_doc + 8);
    } else {
