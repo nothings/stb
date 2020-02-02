@@ -26,6 +26,13 @@
 //      stdio.h     FILE, fopen, fclose, fseek, ftell
 //      stdlib.h    malloc, realloc, free
 //      string.h    strcpy, strncmp, memcpy
+//
+// Credits:
+// 
+// Written by Sean Barrett.
+// 
+// Fixes:
+//  Michal Klos
 
 #ifndef STB_INCLUDE_STB_INCLUDE_H
 #define STB_INCLUDE_STB_INCLUDE_H
@@ -249,11 +256,11 @@ char *stb_include_strings(char **strs, int count, char *inject, char *path_to_in
    char *result;
    int i;
    size_t length=0;
-   for (i=0; i < count; ++count)
+   for (i=0; i < count; ++i)
       length += strlen(strs[i]);
    text = (char *) malloc(length+1);
    length = 0;
-   for (i=0; i < count; ++count) {
+   for (i=0; i < count; ++i) {
       strcpy(text + length, strs[i]);
       length += strlen(strs[i]);
    }
