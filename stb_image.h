@@ -6657,7 +6657,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
                   return stbi__errpuc("outofmem", "Out of memory");
                }
                else
-                  out = tmp;
+                  out = (stbi_uc*) tmp;
                if (delays) {
                   *delays = (int*) STBI_REALLOC( *delays, sizeof(int) * layers ); 
                }
