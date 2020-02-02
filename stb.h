@@ -198,6 +198,7 @@ CREDITS
   github:infatum
   Dave Butler (Croepha)
   Ethan Lee (flibitijibibo)
+  Brian Collins
 */
 
 #include <stdarg.h>
@@ -2006,7 +2007,7 @@ char *stb_trimwhite(char *s)
 char *stb_strncpy(char *s, char *t, int n)
 {
    stb_p_strncpy_s(s,n+1,t,n);
-   s[n-1] = 0;
+   s[n] = 0;
    return s;
 }
 
@@ -2437,7 +2438,7 @@ static char *stb__splitpath_raw(char *buffer, char *path, int flag)
    } else {
       x = f2;
       if (flag & STB_EXT_NO_PERIOD)
-         if (buffer[x] == '.')
+         if (path[x] == '.')
             ++x;
    }
 
@@ -2454,8 +2455,7 @@ static char *stb__splitpath_raw(char *buffer, char *path, int flag)
    }
 
    if (len) { stb_p_strcpy_s(buffer, sizeof(buffer), "./"); return buffer; }
-   stb_p_strncpy_s(buffer, sizeof(buffer),path+x, y-x);
-   buffer[y-x] = 0;
+   stb_strncpy(buffer, path+int(x), int(y-x));
    return buffer;
 }
 
