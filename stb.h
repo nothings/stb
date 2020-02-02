@@ -23,6 +23,7 @@
 
 Version History
 
+   2.36   various fixes
    2.35   fix clang-cl issues with swprintf
    2.34   fix warnings
    2.33   more fixes to random numbers

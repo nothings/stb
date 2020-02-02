@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.22 - public domain
+// stb_truetype.h - v1.23 - public domain
 // authored from 2009-2019 by Sean Barrett / RAD Game Tools
 //
 //   This library processes TrueType files:
@@ -50,6 +50,7 @@
 //       
 // VERSION HISTORY
 //
+//   1.23 (2020-02-02) query SVG data for glyphs; query whole kerning table
 //   1.22 (2019-08-11) minimize missing-glyph duplication; fix kerning if both 'GPOS' and 'kern' are defined 
 //   1.21 (2019-02-25) fix warning
 //   1.20 (2019-02-07) PackFontRange skips missing codepoints; GetScaleFontVMetrics()

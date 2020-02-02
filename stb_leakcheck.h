@@ -1,4 +1,4 @@
-// stb_leakcheck.h - v0.5 - quick & dirty malloc leak-checking - public domain
+// stb_leakcheck.h - v0.6 - quick & dirty malloc leak-checking - public domain
 // LICENSE
 //
 //   See end of file.
@@ -134,7 +134,7 @@ void stb_leakcheck_dumpmem(void)
 }
 #endif // STB_LEAKCHECK_IMPLEMENTATION
 
-#ifndef INCLUDE_STB_LEAKCHECK_H
+#if !defined(INCLUDE_STB_LEAKCHECK_H) || !defined(malloc)
 #define INCLUDE_STB_LEAKCHECK_H
 
 #include <stdlib.h> // we want to define the macros *after* stdlib to avoid a slew of errors

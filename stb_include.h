@@ -1,4 +1,4 @@
-// stb_include.h - v0.01 - parse and process #include directives - public domain
+// stb_include.h - v0.02 - parse and process #include directives - public domain
 //
 // To build this, in one source file that includes this file do
 //      #define STB_INCLUDE_IMPLEMENTATION

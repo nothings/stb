@@ -1,4 +1,4 @@
-/* stb_image_write - v1.13 - public domain - http://nothings.org/stb
+/* stb_image_write - v1.14 - public domain - http://nothings.org/stb
    writes out PNG/BMP/TGA/JPEG/HDR images to C stdio - Sean Barrett 2010-2015
                                      no warranty implied; use at your own risk
 
@@ -1574,6 +1574,9 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
+      1.14  (2020-02-02) updated JPEG writer to downsample chroma channels
+      1.13
+      1.12
       1.11  (2019-08-11)
              
       1.10  (2019-02-07)

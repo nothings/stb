@@ -48,6 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.24  (2020-02-02) fix warnings; thread-local failure_reason and flip_vertically
       2.23  (2019-08-11) fix clang static analysis warning
       2.22  (2019-03-04) gif fixes, fix warnings
       2.21  (2019-02-25) fix typo in comment
@@ -436,7 +437,7 @@ STBIDEF int      stbi_is_hdr_from_file(FILE *f);
 
 
 // get a VERY brief reason for failure
-// NOT THREADSAFE
+// on most compilers (and ALL modern mainstream compilers) this is threadsafe
 STBIDEF const char *stbi_failure_reason  (void);
 
 // free the loaded image -- this is just free()
@@ -468,9 +469,13 @@ STBIDEF void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert);
 
 // flip the image vertically, so the first pixel in the output array is the bottom left
 STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip);
+
 // as above, but only applies to images loaded on the thread that calls the function
-// this function is only available if your compiler supports thread-local variables
+// this function is only available if your compiler supports thread-local variables;
+// calling it will fail to link if your compiler doesn't
+#if __cplusplus >= 201103L || __STDC_VERSION_ >= 201112L || defined(__GNUC__) || defined(_MSC_VER)
 STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_flip);
+#endif
 
 // ZLIB client - used by PNG, available for other purposes
 
@@ -575,7 +580,7 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
       #define STBI_THREAD_LOCAL       _Thread_local
    #elif defined(__GNUC__)
       #define STBI_THREAD_LOCAL       __thread
-   #elif _MSC_VER
+   #elif defined(_MSC_VER)
       #define STBI_THREAD_LOCAL       __declspec(thread)
 #endif
 #endif
