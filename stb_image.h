@@ -91,7 +91,7 @@ RECENT REVISION HISTORY:
     Carmelo J Fdez-Aguera
 
  Bug & warning fixes
-    Marc LeBlanc            David Woo          Guillaume George   Martins Mozeiko
+    Marc LeBlanc            David Woo          Guillaume George   Martins Mozeiko        Alexander Veselov
     Christpher Lloyd        Jerry Jansson      Joseph Thomson     Phil Jordan
     Dave Moore              Roy Eltham         Hayaki Saito       Nathan Reed
     Won Chun                Luke Graham        Johan Duparc       Nick Verigakis
@@ -4980,6 +4980,8 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                ++s->img_n;
             }
             STBI_FREE(z->expanded); z->expanded = NULL;
+            // end of PNG chunk, read and skip CRC
+            stbi__get32be(s);
             return 1;
          }
 
