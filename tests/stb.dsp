@@ -138,6 +138,10 @@ SOURCE=..\stb_image_write.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\stb_include.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_leakcheck.h
 # End Source File
 # Begin Source File
