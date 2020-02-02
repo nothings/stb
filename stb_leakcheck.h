@@ -13,6 +13,10 @@
 #undef realloc
 #endif
 
+#ifndef STB_LEAKCHECK_OUTPUT_PIPE
+#define STB_LEAKCHECK_OUTPUT_PIPE stdout
+#endif
+
 #include <assert.h>
 #include <string.h>
 #include <stdlib.h>
@@ -97,16 +101,16 @@ static void stblkck_internal_print(const char *reason, stb_leakcheck_malloc_info
    // without "long long" don't support 64-bit targets either, so here's the
    // compromise:
    #if _MSC_VER < 1400 // before VS 2005
-      printf("%s: %s (%4d): %8d bytes at %p\n", reason, mi->file, mi->line, (int)mi->size, (void*)(mi+1));
+      fprintf(STB_LEAKCHECK_OUTPUT_PIPE, "%s: %s (%4d): %8d bytes at %p\n", reason, mi->file, mi->line, (int)mi->size, (void*)(mi+1));
    #else
-      printf("%s: %s (%4d): %16lld bytes at %p\n", reason, mi->file, mi->line, (long long)mi->size, (void*)(mi+1));
+      fprintf(STB_LEAKCHECK_OUTPUT_PIPE, "%s: %s (%4d): %16lld bytes at %p\n", reason, mi->file, mi->line, (long long)mi->size, (void*)(mi+1));
    #endif
 #else
    // Assume we have %zd on other targets.
    #ifdef __MINGW32__
-      __mingw_printf("%s: %s (%4d): %zd bytes at %p\n", reason, mi->file, mi->line, mi->size, (void*)(mi+1));
+      __mingw_fprintf(STB_LEAKCHECK_OUTPUT_PIPE, "%s: %s (%4d): %zd bytes at %p\n", reason, mi->file, mi->line, mi->size, (void*)(mi+1));
    #else
-      printf("%s: %s (%4d): %zd bytes at %p\n", reason, mi->file, mi->line, mi->size, (void*)(mi+1));
+      fprintf(STB_LEAKCHECK_OUTPUT_PIPE, "%s: %s (%4d): %zd bytes at %p\n", reason, mi->file, mi->line, mi->size, (void*)(mi+1));
    #endif
 #endif
 }
