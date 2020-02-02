@@ -5,8 +5,9 @@
 // USAGE:
 //   call stb_compress_dxt_block() for every block (you must pad)
 //     source should be a 4x4 block of RGBA data in row-major order;
-//     A is ignored if you specify alpha=0; you can turn on dithering
-//     and "high quality" using mode.
+//     Alpha channel is not stored if you specify alpha=0 (but you
+//     must supply some constant alpha in the alpha channel).
+//     You can turn on dithering and "high quality" using mode.
 //
 // version history:
 //   v1.08  - (sbt) fix bug in dxt-with-alpha block
