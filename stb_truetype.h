@@ -704,7 +704,7 @@ struct stbtt_fontinfo
 
    int numGlyphs;                     // number of glyphs, needed for range checking
 
-   int loca,head,glyf,hhea,hmtx,kern,gpos; // table locations as offset from start of .ttf
+   int loca,head,glyf,hhea,hmtx,kern,gpos,svg; // table locations as offset from start of .ttf
    int index_map;                     // a cmap mapping for our chosen character encoding
    int indexToLocFormat;              // format needed to map from glyph index to glyph
 
@@ -830,6 +830,11 @@ STBTT_DEF int stbtt_GetGlyphShape(const stbtt_fontinfo *info, int glyph_index, s
 
 STBTT_DEF void stbtt_FreeShape(const stbtt_fontinfo *info, stbtt_vertex *vertices);
 // frees the data allocated above
+
+STBTT_DEF int stbtt_GetCodepointSVG(const stbtt_fontinfo *info, int unicode_codepoint, const char **svg);
+STBTT_DEF int stbtt_GetGlyphSVG(const stbtt_fontinfo *info, int gl, const char **svg);
+// fills svg with the font's SVG data.
+// returns data size or 0 if SVG not found.
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -1411,6 +1416,14 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, in
    else
       info->numGlyphs = 0xffff;
 
+   t = stbtt__find_table(data, fontstart, "SVG ");
+   if (t) {
+      stbtt_uint32 offset = ttULONG(data + t + 2);
+      info->svg = t + offset;
+   } else {
+      info->svg = 0;
+   }
+	
    // find a cmap encoding table we understand *now* to avoid searching
    // later. (todo: could make this installable)
    // the same regardless of glyph.
@@ -2601,6 +2614,44 @@ STBTT_DEF float stbtt_ScaleForMappingEmToPixels(const stbtt_fontinfo *info, floa
 STBTT_DEF void stbtt_FreeShape(const stbtt_fontinfo *info, stbtt_vertex *v)
 {
    STBTT_free(v, info->userdata);
+}
+
+STBTT_DEF stbtt_uint8 *stbtt_FindSVGDoc(const stbtt_fontinfo *info, int gl)
+{
+   stbtt_uint8 *data = info->data;
+   stbtt_uint8 *svg_doc_list = data + info->svg;
+   
+   int numEntries = ttUSHORT(svg_doc_list);
+   stbtt_uint8 *svg_docs = svg_doc_list + 2;
+
+   for(int i=0; i<numEntries; i++) {
+      stbtt_uint8 *svg_doc = svg_docs + (12 * i);
+	  printf("%lx - %lx - %lx %lx\n", ttUSHORT(svg_doc), ttUSHORT(svg_doc + 2), ttULONG(svg_doc + 4), ttULONG(svg_doc + 8));
+	  if((gl >= ttUSHORT(svg_doc)) && (gl <= ttUSHORT(svg_doc + 2)))
+		  return svg_doc;
+   }
+   return 0;	
+}
+
+STBTT_DEF int stbtt_GetGlyphSVG(const stbtt_fontinfo *info, int gl, const char **svg)
+{
+   stbtt_uint8 *data = info->data;
+   stbtt_uint8 *svg_doc;
+   
+   if(info->svg == 0)
+      return 0;
+   
+   if(svg_doc = stbtt_FindSVGDoc(info, gl)) {
+      *svg = (void *)data + info->svg + ttULONG(svg_doc + 4);
+      return ttULONG(svg_doc + 8);
+   } else {
+      return 0;
+   }
+}
+
+STBTT_DEF int stbtt_GetCodepointSVG(const stbtt_fontinfo *info, int unicode_codepoint, const char **svg)
+{
+   return stbtt_GetGlyphSVG(info, stbtt_FindGlyphIndex(info, unicode_codepoint), svg);
 }
 
 //////////////////////////////////////////////////////////////////////////////
