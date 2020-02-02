@@ -1,0 +1,8 @@
+header_png="\x89PNG\x0d\x0a\x1a\x0a"
+
+section_idat="IDAT"
+section_iend="IEND"
+section_ihdr="IHDR"
+section_plte="PLTE"
+section_trns="tRNS"
+section_cgbi="CgBI"
