@@ -466,6 +466,9 @@ STBIDEF void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert);
 
 // flip the image vertically, so the first pixel in the output array is the bottom left
 STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip);
+// as above, but only applies to images loaded on the thread that calls the function
+// this function is only available if your compiler supports thread-local variables
+STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_flip);
 
 // ZLIB client - used by PNG, available for other purposes
 
@@ -563,6 +566,17 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
    #define stbi_inline __forceinline
 #endif
 
+#ifndef STBI_NO_THREAD_LOCALS
+   #if __cplusplus >= 201103L
+      #define STBI_THREAD_LOCAL       thread_local
+   #elif __STDC_VERSION_ >= 201112L
+      #define STBI_THREAD_LOCAL       _Thread_local
+   #elif defined(__GNUC__)
+      #define STBI_THREAD_LOCAL       __thread
+   #elif _MSC_VER
+      #define STBI_THREAD_LOCAL       __declspec(thread)
+#endif
+#endif
 
 #ifdef _MSC_VER
 typedef unsigned short stbi__uint16;
@@ -873,8 +887,11 @@ static void    *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int 
 static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp);
 #endif
 
-// this is not threadsafe
-static const char *stbi__g_failure_reason;
+static 
+#ifdef STBI_THREAD_LOCAL
+STBI_THREAD_LOCAL
+#endif
+const char *stbi__g_failure_reason;
 
 STBIDEF const char *stbi_failure_reason(void)
 {
@@ -995,12 +1012,28 @@ static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp);
 static stbi_uc *stbi__hdr_to_ldr(float   *data, int x, int y, int comp);
 #endif
 
-static int stbi__vertically_flip_on_load = 0;
+static int stbi__vertically_flip_on_load_global = 0;
 
 STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip)
 {
-    stbi__vertically_flip_on_load = flag_true_if_should_flip;
+   stbi__vertically_flip_on_load_global = flag_true_if_should_flip;
 }
+
+#ifndef STBI_THREAD_LOCAL
+#define stbi__vertically_flip_on_load  stbi__vertically_flip_on_load_global
+#else
+static STBI_THREAD_LOCAL int stbi__vertically_flip_on_load_local, stbi__vertically_flip_on_load_set;
+
+STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_flip)
+{
+   stbi__vertically_flip_on_load_local = flag_true_if_should_flip;
+   stbi__vertically_flip_on_load_set = 1;
+}
+
+#define stbi__vertically_flip_on_load  (stbi__vertically_flip_on_load_set       \
+                                         ? stbi__vertically_flip_on_load_local  \
+                                         : stbi__vertically_flip_on_load_global)
+#endif // STBI_THREAD_LOCAL
 
 static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc)
 {
