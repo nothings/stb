@@ -32,15 +32,12 @@ void STBTE_DRAW_RECT(int x0, int y0, int x1, int y1, unsigned int color)
 {
 }
 
-
-
 void STBTE_DRAW_TILE(int x0, int y0, unsigned short id, int highlight, float *data)
 {
 }
 
 #define STB_TILEMAP_EDITOR_IMPLEMENTATION
-#include "stb_tilemap_editor.h"
-
+//#include "stb_tilemap_editor.h"   // @TODO: it's broken
 
 int quicktest(void)
 {
