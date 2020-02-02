@@ -774,8 +774,11 @@ struct stb_vorbis
 
    uint8  push_mode;
 
+   // the page to seek to when seeking to start, may be zero
    uint32 first_audio_page_offset;
 
+   // p_first is the page on which the first audio packet ends
+   // (but not necessarily the page on which it starts)
    ProbedPage p_first, p_last;
 
   // memory management
@@ -1404,6 +1407,9 @@ static int capture_pattern(vorb *f)
 static int start_page_no_capturepattern(vorb *f)
 {
    uint32 loc0,loc1,n;
+   if (f->first_decode && !IS_PUSH_MODE(f)) {
+      f->p_first.page_start = stb_vorbis_get_file_offset(f) - 4;
+   }
    // stream structure version
    if (0 != get8(f)) return error(f, VORBIS_invalid_stream_structure_version);
    // header flag
@@ -1440,15 +1446,12 @@ static int start_page_no_capturepattern(vorb *f)
    }
    if (f->first_decode) {
       int i,len;
-      ProbedPage p;
       len = 0;
       for (i=0; i < f->segment_count; ++i)
          len += f->segments[i];
       len += 27 + f->segment_count;
-      p.page_start = f->first_audio_page_offset;
-      p.page_end = p.page_start + len;
-      p.last_decoded_sample = loc0;
-      f->p_first = p;
+      f->p_first.page_end = f->p_first.page_start + len;
+      f->p_first.last_decoded_sample = loc0;
    }
    f->next_seg = 0;
    return TRUE;
@@ -3504,7 +3507,7 @@ static int vorbis_pump_first_frame(stb_vorbis *f)
 }
 
 #ifndef STB_VORBIS_NO_PUSHDATA_API
-static int is_whole_packet_present(stb_vorbis *f, int end_page)
+static int is_whole_packet_present(stb_vorbis *f)
 {
    // make sure that we have the packet available before continuing...
    // this requires a full ogg parse, but we know we can fetch from f->stream
@@ -3524,8 +3527,6 @@ static int is_whole_packet_present(stb_vorbis *f, int end_page)
             break;
       }
       // either this continues, or it ends it...
-      if (end_page)
-         if (s < f->segment_count-1)             return error(f, VORBIS_invalid_stream);
       if (s == f->segment_count)
          s = -1; // set 'crosses page' flag
       if (p > f->stream_end)                     return error(f, VORBIS_need_more_data);
@@ -3558,8 +3559,6 @@ static int is_whole_packet_present(stb_vorbis *f, int end_page)
          if (q[s] < 255)
             break;
       }
-      if (end_page)
-         if (s < n-1)                            return error(f, VORBIS_invalid_stream);
       if (s == n)
          s = -1; // set 'crosses page' flag
       if (p > f->stream_end)                     return error(f, VORBIS_need_more_data);
@@ -3576,6 +3575,7 @@ static int start_decoder(vorb *f)
    int longest_floorlist=0;
 
    // first page, first packet
+   f->first_decode = TRUE;
 
    if (!start_page(f))                              return FALSE;
    // validate page flag
@@ -3644,7 +3644,7 @@ static int start_decoder(vorb *f)
 
    #ifndef STB_VORBIS_NO_PUSHDATA_API
    if (IS_PUSH_MODE(f)) {
-      if (!is_whole_packet_present(f, TRUE)) {
+      if (!is_whole_packet_present(f)) {
          // convert error in ogg header to write type
          if (f->error == VORBIS_invalid_stream)
             f->error = VORBIS_invalid_setup;
@@ -4132,7 +4132,6 @@ static int start_decoder(vorb *f)
          f->temp_memory_required = imdct_mem;
    }
 
-   f->first_decode = TRUE;
 
    if (f->alloc.alloc_buffer) {
       assert(f->temp_offset == f->alloc.alloc_buffer_length_in_bytes);
@@ -4141,7 +4140,17 @@ static int start_decoder(vorb *f)
          return error(f, VORBIS_outofmem);
    }
 
-   f->first_audio_page_offset = stb_vorbis_get_file_offset(f);
+   // @TODO: stb_vorbis_seek_start expects first_audio_page_offset to point to a page
+   // without PAGEFLAG_continued_packet, so this either points to the first page, or
+   // the page after the end of the headers. It might be cleaner to point to a page
+   // in the middle of the headers, when that's the page where the first audio packet
+   // starts, but we'd have to also correctly skip the end of any continued packet in
+   // stb_vorbis_seek_start.
+   if (f->next_seg == -1) {
+      f->first_audio_page_offset = stb_vorbis_get_file_offset(f);
+   } else {
+      f->first_audio_page_offset = 0;
+   }
 
    return TRUE;
 }
@@ -4389,7 +4398,7 @@ int stb_vorbis_decode_frame_pushdata(
    f->error      = VORBIS__no_error;
 
    // check that we have the entire packet in memory
-   if (!is_whole_packet_present(f, FALSE)) {
+   if (!is_whole_packet_present(f)) {
       *samples = 0;
       return 0;
    }
@@ -4625,7 +4634,7 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
 {
    ProbedPage left, right, mid;
    int i, start_seg_with_known_loc, end_pos, page_start;
-   uint32 delta, stream_length, padding;
+   uint32 delta, stream_length, padding, last_sample_limit;
    double offset, bytes_per_sample;
    int probe = 0;
 
@@ -4639,9 +4648,9 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
    // indicates should be the granule position (give or take one)).
    padding = ((f->blocksize_1 - f->blocksize_0) >> 2);
    if (sample_number < padding)
-      sample_number = 0;
+      last_sample_limit = 0;
    else
-      sample_number -= padding;
+      last_sample_limit = sample_number - padding;
 
    left = f->p_first;
    while (left.last_decoded_sample == ~0U) {
@@ -4654,9 +4663,12 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
    assert(right.last_decoded_sample != ~0U);
 
    // starting from the start is handled differently
-   if (sample_number <= left.last_decoded_sample) {
-      if (stb_vorbis_seek_start(f))
+   if (last_sample_limit <= left.last_decoded_sample) {
+      if (stb_vorbis_seek_start(f)) {
+         if (f->current_loc > sample_number)
+            return error(f, VORBIS_seek_failed);
          return 1;
+      }
       return 0;
    }
 
@@ -4673,10 +4685,10 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
                // first probe (interpolate)
                double data_bytes = right.page_end - left.page_start;
                bytes_per_sample = data_bytes / right.last_decoded_sample;
-               offset = left.page_start + bytes_per_sample * (sample_number - left.last_decoded_sample);
+               offset = left.page_start + bytes_per_sample * (last_sample_limit - left.last_decoded_sample);
             } else {
                // second probe (try to bound the other side)
-               double error = ((double) sample_number - mid.last_decoded_sample) * bytes_per_sample;
+               double error = ((double) last_sample_limit - mid.last_decoded_sample) * bytes_per_sample;
                if (error >= 0 && error <  8000) error =  8000;
                if (error <  0 && error > -8000) error = -8000;
                offset += error * 2;
@@ -4707,14 +4719,16 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
       }
 
       // if we've just found the last page again then we're in a tricky file,
-      // and we're close enough.
-      if (mid.page_start == right.page_start)
-         break;
-
-      if (sample_number < mid.last_decoded_sample)
-         right = mid;
-      else
-         left = mid;
+      // and we're close enough (if it wasn't an interpolation probe).
+      if (mid.page_start == right.page_start) {
+         if (probe >= 2 || delta <= 65536)
+            break;
+      } else {
+         if (last_sample_limit < mid.last_decoded_sample)
+            right = mid;
+         else
+            left = mid;
+      }
 
       ++probe;
    }
@@ -4830,8 +4844,8 @@ int stb_vorbis_seek_frame(stb_vorbis *f, unsigned int sample_number)
          flush_packet(f);
       }
    }
-   // the next frame will start with the sample
-   assert(f->current_loc == sample_number);
+   // the next frame should start with the sample
+   if (f->current_loc != sample_number) return error(f, VORBIS_seek_failed);
    return 1;
 }
 
