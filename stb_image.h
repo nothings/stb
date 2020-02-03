@@ -473,7 +473,7 @@ STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip);
 // as above, but only applies to images loaded on the thread that calls the function
 // this function is only available if your compiler supports thread-local variables;
 // calling it will fail to link if your compiler doesn't
-#if __cplusplus >= 201103L || __STDC_VERSION__ >= 201112L || defined(__GNUC__) || defined(_MSC_VER)
+#if (defined(__cplusplus) && __cplusplus >= 201103L) || __STDC_VERSION__ >= 201112L || defined(__GNUC__) || defined(_MSC_VER)
 STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_flip);
 #endif
 
@@ -574,7 +574,7 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 #endif
 
 #ifndef STBI_NO_THREAD_LOCALS
-   #if __cplusplus >= 201103L
+   #if (defined(__cplusplus) && __cplusplus >= 201103L)
       #define STBI_THREAD_LOCAL       thread_local
    #elif __STDC_VERSION__ >= 201112L
       #define STBI_THREAD_LOCAL       _Thread_local
