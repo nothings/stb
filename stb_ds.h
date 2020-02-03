@@ -671,7 +671,7 @@ template<class T> static T * stbds_hmget_key_wrapper(T *a, size_t elemsize, void
   return (T*)stbds_hmget_key((void*)a, elemsize, key, keysize, mode);
 }
 template<class T> static T * stbds_hmget_key_ts_wrapper(T *a, size_t elemsize, void *key, size_t keysize, ptrdiff_t *temp, int mode) {
-  return (T*)stbds_hmget_key((void*)a, elemsize, key, keysize, temp, mode);
+  return (T*)stbds_hmget_key_ts((void*)a, elemsize, key, keysize, temp, mode);
 }
 template<class T> static T * stbds_hmput_default_wrapper(T *a, size_t elemsize) {
   return (T*)stbds_hmput_default((void *)a, elemsize);
