@@ -3,8 +3,6 @@
 
 #if USE_STB
 # include "stb_sprintf.h"
-//# define STB_SPRINTF_IMPLEMENTATION
-# include "stb_sprintf.h"
 # define SPRINTF stbsp_sprintf
 # define SNPRINTF stbsp_snprintf
 #else
@@ -44,6 +42,12 @@ typedef ptrdiff_t ssize_t;
 #define CHECK1(str, v1                                ) { int ret = SPRINTF(buf, v1                                ); CHECK_END(str); }
 
 #ifdef TEST_SPRINTF
+
+#if USE_STB
+# define STB_SPRINTF_IMPLEMENTATION
+# include "stb_sprintf.h"
+#endif
+
 int main()
 {
    char buf[1024];
