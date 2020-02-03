@@ -1392,6 +1392,7 @@ static char *stbsp__clamp_callback(char *buf, void *user, int len)
 
 static char * stbsp__count_clamp_callback( char * buf, void * user, int len )
 {
+   (void) buf;
    stbsp__context * c = (stbsp__context*)user;
 
    c->length += len;
