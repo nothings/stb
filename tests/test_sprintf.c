@@ -150,9 +150,9 @@ int main()
    assert(strncmp(buf, "37778931862957161709568.000000", 17) == 0);
    n = SNPRINTF(buf, 10, "number %f", 123.456789);
    assert(strcmp(buf, "number 12") == 0);
-   assert(n == (USE_STB ? 9 : 17));  // written vs would-be written bytes
+   assert(n == 17);  // would-be written bytes
    n = SNPRINTF(buf, 0, "7 chars");
-   assert(n == (USE_STB ? 0 : 7));
+   assert(n == 7);
    // stb_sprintf uses internal buffer of 512 chars - test longer string
    assert(SPRINTF(buf, "%d  %600s", 3, "abc") == 603);
    assert(strlen(buf) == 603);
