@@ -111,10 +111,10 @@ int main()
 #if __STDC_VERSION__ >= 199901L
 #if USE_STB
    CHECK4("Inf Inf NaN", "%g %G %f", INFINITY, INFINITY, NAN);
-   CHECK1("N", "%.1g", NAN);
+   CHECK2("N", "%.1g", NAN);
 #else
    CHECK4("inf INF nan", "%g %G %f", INFINITY, INFINITY, NAN);
-   CHECK1("nan", "%.1g", NAN);
+   CHECK2("nan", "%.1g", NAN);
 #endif
 #endif
 
