@@ -1,4 +1,4 @@
-/* stb_image - v2.23 - public domain image loader - http://nothings.org/stb
+/* stb_image - v2.25 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 
    Do this:
@@ -48,6 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.25  (2020-02-02) fix warnings
       2.24  (2020-02-02) fix warnings; thread-local failure_reason and flip_vertically
       2.23  (2019-08-11) fix clang static analysis warning
       2.22  (2019-03-04) gif fixes, fix warnings
@@ -92,7 +93,7 @@ RECENT REVISION HISTORY:
     Carmelo J Fdez-Aguera
 
  Bug & warning fixes
-    Marc LeBlanc            David Woo          Guillaume George   Martins Mozeiko        Alexander Veselov
+    Marc LeBlanc            David Woo          Guillaume George   Martins Mozeiko
     Christpher Lloyd        Jerry Jansson      Joseph Thomson     Phil Jordan
     Dave Moore              Roy Eltham         Hayaki Saito       Nathan Reed
     Won Chun                Luke Graham        Johan Duparc       Nick Verigakis
@@ -107,8 +108,7 @@ RECENT REVISION HISTORY:
     Julian Raschke          Gregory Mullen     Baldur Karlsson    github:poppolopoppo
     Christian Floisand      Kevin Schmidt      JR Smith           github:darealshinji
     Brad Weinberger         Matvey Cherevko                       github:Michaelangel007
-    Blazej Dariusz Roszkowski
-
+    Blazej Dariusz Roszkowski                  Alexander Veselov
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
@@ -473,9 +473,7 @@ STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip);
 // as above, but only applies to images loaded on the thread that calls the function
 // this function is only available if your compiler supports thread-local variables;
 // calling it will fail to link if your compiler doesn't
-#if __cplusplus >= 201103L || __STDC_VERSION_ >= 201112L || defined(__GNUC__) || defined(_MSC_VER)
 STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_flip);
-#endif
 
 // ZLIB client - used by PNG, available for other purposes
 
@@ -574,9 +572,9 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 #endif
 
 #ifndef STBI_NO_THREAD_LOCALS
-   #if __cplusplus >= 201103L
+   #if defined(__cplusplus) &&  __cplusplus >= 201103L
       #define STBI_THREAD_LOCAL       thread_local
-   #elif __STDC_VERSION_ >= 201112L
+   #elif defined (__STDC_VERSION__) && __STDC_VERSION__ >= 201112L
       #define STBI_THREAD_LOCAL       _Thread_local
    #elif defined(__GNUC__)
       #define STBI_THREAD_LOCAL       __thread
