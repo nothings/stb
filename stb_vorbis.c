@@ -908,7 +908,7 @@ static int error(vorb *f, enum STBVorbisError e)
 #define array_size_required(count,size)  (count*(sizeof(void *)+(size)))
 
 #define temp_alloc(f,size)              (f->alloc.alloc_buffer ? setup_temp_malloc(f,size) : alloca(size))
-#define temp_free(f,p)                  0
+#define temp_free(f,p)                  (void)0
 #define temp_alloc_save(f)              ((f)->temp_offset)
 #define temp_alloc_restore(f,p)         ((f)->temp_offset = (p))
 
@@ -3632,7 +3632,7 @@ static int start_decoder(vorb *f)
    for(i=0; i < len; ++i) {
       f->vendor[i] = get8_packet(f);
    }
-   f->vendor[len] = (char)NULL;
+   f->vendor[len] = (char)'\0';
    //user comments
    f->comment_list_length = get32_packet(f);
    f->comment_list = (char**)setup_malloc(f, sizeof(char*) * (f->comment_list_length));
@@ -3644,7 +3644,7 @@ static int start_decoder(vorb *f)
       for(j=0; j < len; ++j) {
          f->comment_list[i][j] = get8_packet(f);
       }
-      f->comment_list[i][len] = (char)NULL;
+      f->comment_list[i][len] = (char)'\0';
    }
 
    // framing_flag
