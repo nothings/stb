@@ -1053,13 +1053,13 @@ static size_t stbds_siphash_bytes(void *p, size_t len, size_t seed)
   }
   data = len << (STBDS_SIZE_T_BITS-8);
   switch (len - i) {
-    case 7: data |= ((size_t) d[6] << 24) << 24;
-    case 6: data |= ((size_t) d[5] << 20) << 20;
-    case 5: data |= ((size_t) d[4] << 16) << 16;
-    case 4: data |= (d[3] << 24);
-    case 3: data |= (d[2] << 16);
-    case 2: data |= (d[1] << 8);
-    case 1: data |= d[0];
+    case 7: data |= ((size_t) d[6] << 24) << 24; // fall through
+    case 6: data |= ((size_t) d[5] << 20) << 20; // fall through
+    case 5: data |= ((size_t) d[4] << 16) << 16; // fall through
+    case 4: data |= (d[3] << 24); // fall through
+    case 3: data |= (d[2] << 16); // fall through
+    case 2: data |= (d[1] << 8); // fall through
+    case 1: data |= d[0]; // fall through
     case 0: break;
   }
   v3 ^= data;
