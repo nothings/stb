@@ -1,4 +1,4 @@
-// stb_sprintf - v1.07 - public domain snprintf() implementation
+// stb_sprintf - v1.08 - public domain snprintf() implementation
 // originally by Jeff Roberts / RAD Game Tools, 2015/10/20
 // http://github.com/nothings/stb
 //
