@@ -1698,7 +1698,7 @@ static stbsp__int32 stbsp__real_to_str(char const **start, stbsp__uint32 *len, c
 
    if (expo == 0) // is zero or denormal
    {
-      if ((bits << 1) == 0) // do zero
+      if (((stbsp__uint64) bits << 1) == 0) // do zero
       {
          *decimal_pos = 1;
          *start = out;
