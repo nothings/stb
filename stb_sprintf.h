@@ -1363,7 +1363,7 @@ typedef struct stbsp__context {
    char tmp[STB_SPRINTF_MIN];
 } stbsp__context;
 
-static char *stbsp__clamp_callback(char *buf, void *user, int len)
+static char *stbsp__clamp_callback(const char *buf, void *user, int len)
 {
    stbsp__context *c = (stbsp__context *)user;
    c->length += len;
@@ -1373,7 +1373,8 @@ static char *stbsp__clamp_callback(char *buf, void *user, int len)
 
    if (len) {
       if (buf != c->buf) {
-         char *s, *d, *se;
+         const char *s, *se;
+         char *d;
          d = c->buf;
          s = buf;
          se = buf + len;
@@ -1390,10 +1391,10 @@ static char *stbsp__clamp_callback(char *buf, void *user, int len)
    return (c->count >= STB_SPRINTF_MIN) ? c->buf : c->tmp; // go direct into buffer if you can
 }
 
-static char * stbsp__count_clamp_callback( char * buf, void * user, int len )
+static char * stbsp__count_clamp_callback( const char * buf, void * user, int len )
 {
-   (void) buf;
    stbsp__context * c = (stbsp__context*)user;
+   (void) sizeof(buf);
 
    c->length += len;
    return c->tmp; // go direct into buffer if you can
