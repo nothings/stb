@@ -22,7 +22,7 @@ library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **[stb_vorbis.c](stb_vorbis.c)** | 1.19 | audio | 5555 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **[stb_image.h](stb_image.h)** | 2.25 | graphics | 7656 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**[stb_truetype.h](stb_truetype.h)** | 1.23 | graphics | 5001 | parse, decode, and rasterize characters from truetype fonts
+**[stb_truetype.h](stb_truetype.h)** | 1.24 | graphics | 5011 | parse, decode, and rasterize characters from truetype fonts
 **[stb_image_write.h](stb_image_write.h)** | 1.14 | graphics | 1666 | image writing to disk: PNG, TGA, BMP
 **[stb_image_resize.h](stb_image_resize.h)** | 0.96 | graphics | 2631 | resize images larger/smaller with good quality
 **[stb_rect_pack.h](stb_rect_pack.h)** | 1.00 | graphics | 628 | simple 2D rectangle packer with decent quality
@@ -44,7 +44,7 @@ library    | lastest version | category | LoC | description
 **[stb_include.h](stb_include.h)** | 0.02 | misc | 295 | implement recursive #include support, particularly for GLSL
 
 Total libraries: 22  
-Total lines of C code: 56552
+Total lines of C code: 56562
 
 
 FAQ
