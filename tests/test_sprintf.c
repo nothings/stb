@@ -3,8 +3,6 @@
 
 #if USE_STB
 # include "stb_sprintf.h"
-//# define STB_SPRINTF_IMPLEMENTATION
-# include "stb_sprintf.h"
 # define SPRINTF stbsp_sprintf
 # define SNPRINTF stbsp_snprintf
 #else
