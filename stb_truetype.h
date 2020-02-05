@@ -1,5 +1,14 @@
-// stb_truetype.h - v1.23 - public domain
-// authored from 2009-2019 by Sean Barrett / RAD Game Tools
+// stb_truetype.h - v1.24 - public domain
+// authored from 2009-2020 by Sean Barrett / RAD Game Tools
+//
+// =======================================================================
+//
+//    NO SECURITY GUARANTEE -- DO NOT USE THIS ON UNTRUSTED FONT FILES
+//
+// This library does no range checking of the offsets found in the file,
+// meaning an attacker can use it to read arbitrary memory.
+//
+// =======================================================================
 //
 //   This library processes TrueType files:
 //        parse files
@@ -32,11 +41,11 @@
 //       Daniel Ribeiro Maciel
 //
 //   Bug/warning reports/fixes:
-//       "Zer" on mollyrocket       Fabian "ryg" Giesen
-//       Cass Everitt               Martins Mozeiko
-//       stoiko (Haemimont Games)   Cap Petschulat
-//       Brian Hook                 Omar Cornut
-//       Walter van Niftrik         github:aloucks
+//       "Zer" on mollyrocket       Fabian "ryg" Giesen   github:NiLuJe
+//       Cass Everitt               Martins Mozeiko       github:aloucks
+//       stoiko (Haemimont Games)   Cap Petschulat        github:oyvindjam
+//       Brian Hook                 Omar Cornut           github:vassvik
+//       Walter van Niftrik         Ryan Griege
 //       David Gow                  Peter LaValle
 //       David Given                Sergey Popov
 //       Ivan-Assen Ivanov          Giumo X. Clanjor
@@ -44,12 +53,12 @@
 //       Johan Duparc               Thomas Fields
 //       Hou Qiming                 Derek Vinyard
 //       Rob Loach                  Cort Stratton
-//       Kenney Phillis Jr.         github:oyvindjam
-//       Brian Costabile            github:vassvik
-//       Ken Voskuil (kaesve)       Ryan Griege
+//       Kenney Phillis Jr.         Brian Costabile            
+//       Ken Voskuil (kaesve)       
 //
 // VERSION HISTORY
 //
+//   1.24 (2020-02-05) fix warning
 //   1.23 (2020-02-02) query SVG data for glyphs; query whole kerning table (but only kern not GPOS)
 //   1.22 (2019-08-11) minimize missing-glyph duplication; fix kerning if both 'GPOS' and 'kern' are defined
 //   1.21 (2019-02-25) fix warning
@@ -2700,11 +2709,12 @@ STBTT_DEF int stbtt_GetGlyphSVG(const stbtt_fontinfo *info, int gl, const char *
    stbtt_uint8 *data = info->data;
    stbtt_uint8 *svg_doc;
 
-   if(info->svg == 0)
+   if (info->svg == 0)
       return 0;
 
-   if(svg_doc = stbtt_FindSVGDoc(info, gl)) {
-      *svg = (char *)data + info->svg + ttULONG(svg_doc + 4);
+   svg_doc = stbtt_FindSVGDoc(info, gl);
+   if (svg_doc != NULL) {
+      *svg = (char *) data + info->svg + ttULONG(svg_doc + 4);
       return ttULONG(svg_doc + 8);
    } else {
       return 0;
