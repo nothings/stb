@@ -1229,7 +1229,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             stbsp__cb_buf_clamp(i, n);
             n -= i;
             STBSP__UNALIGNED(while (i >= 4) {
-               *(stbsp__uint32 *)bf = *(stbsp__uint32 *)s;
+               *(stbsp__uint32 volatile *)bf = *(stbsp__uint32 volatile *)s;
                bf += 4;
                s += 4;
                i -= 4;
