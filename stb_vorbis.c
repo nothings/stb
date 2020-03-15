@@ -5167,6 +5167,7 @@ static void compute_samples(int mask, short *output, int num_c, float **data, in
          output[o+i] = v;
       }
    }
+   #undef BUFFER_SIZE
 }
 
 static void compute_stereo_samples(short *output, int num_c, float **data, int d_offset, int len)
@@ -5206,6 +5207,7 @@ static void compute_stereo_samples(short *output, int num_c, float **data, int d
          output[o2+i] = v;
       }
    }
+   #undef BUFFER_SIZE
 }
 
 static void convert_samples_short(int buf_c, short **buffer, int b_offset, int data_c, float **data, int d_offset, int samples)
