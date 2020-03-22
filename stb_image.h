@@ -107,7 +107,7 @@ RECENT REVISION HISTORY:
     Oriol Ferrer Mesia      Josh Tobin         Matthew Gregan     github:phprus
     Julian Raschke          Gregory Mullen     Baldur Karlsson    github:poppolopoppo
     Christian Floisand      Kevin Schmidt      JR Smith           github:darealshinji
-    Brad Weinberger         Matvey Cherevko                       github:Michaelangel007
+    Brad Weinberger         Matvey Cherevko    Zack Middleton     github:Michaelangel007
     Blazej Dariusz Roszkowski                  Alexander Veselov
 */
 
@@ -751,6 +751,7 @@ typedef struct
    int read_from_callbacks;
    int buflen;
    stbi_uc buffer_start[128];
+   int callback_already_read;
 
    stbi_uc *img_buffer, *img_buffer_end;
    stbi_uc *img_buffer_original, *img_buffer_original_end;
@@ -764,6 +765,7 @@ static void stbi__start_mem(stbi__context *s, stbi_uc const *buffer, int len)
 {
    s->io.read = NULL;
    s->read_from_callbacks = 0;
+   s->callback_already_read = 0;
    s->img_buffer = s->img_buffer_original = (stbi_uc *) buffer;
    s->img_buffer_end = s->img_buffer_original_end = (stbi_uc *) buffer+len;
 }
@@ -775,7 +777,8 @@ static void stbi__start_callbacks(stbi__context *s, stbi_io_callbacks *c, void *
    s->io_user_data = user;
    s->buflen = sizeof(s->buffer_start);
    s->read_from_callbacks = 1;
-   s->img_buffer_original = s->buffer_start;
+   s->callback_already_read = 0;
+   s->img_buffer = s->img_buffer_original = s->buffer_start;
    stbi__refill_buffer(s);
    s->img_buffer_original_end = s->img_buffer_end;
 }
@@ -1499,6 +1502,7 @@ enum
 static void stbi__refill_buffer(stbi__context *s)
 {
    int n = (s->io.read)(s->io_user_data,(char*)s->buffer_start,s->buflen);
+   s->callback_already_read += (int) (s->img_buffer - s->img_buffer_original);
    if (n == 0) {
       // at end of file, treat same as if from memory, but need to handle case
       // where s->img_buffer isn't pointing to safe memory, e.g. 0-byte file
@@ -5324,7 +5328,7 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
          psize = (info.offset - info.extra_read - info.hsz) >> 2;
    }
    if (psize == 0) {
-      STBI_ASSERT(info.offset == (s->img_buffer - s->buffer_start));
+      STBI_ASSERT(info.offset == s->callback_already_read + (int) (s->img_buffer - s->img_buffer_original));
    }
 
    if (info.bpp == 24 && ma == 0xff000000)
