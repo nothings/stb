@@ -397,6 +397,8 @@ CREDITS
 #define arrfree     stbds_arrfree
 #define arraddnptr  stbds_arraddnptr
 #define arraddnoff  stbds_arraddnoff
+// deprecated
+#define arraddn     stbds_arraddn
 #define arrsetlen   stbds_arrsetlen
 #define arrlast     stbds_arrlast
 #define arrins      stbds_arrins
@@ -528,6 +530,8 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrput(a,v)     (stbds_arrmaybegrow(a,1), (a)[stbds_header(a)->length++] = (v))
 #define stbds_arrpush         stbds_arrput  // synonym
 #define stbds_arrpop(a)       (stbds_header(a)->length--, (a)[stbds_header(a)->length])
+// deprecated
+#define stbds_arraddn(a,n)    ((void)(stbds_arraddnoff(a, n)))
 #define stbds_arraddnptr(a,n) (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), &(a)[stbds_header(a)->length-(n)])
 #define stbds_arraddnoff(a,n) (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), stbds_header(a)->length-(n))
 #define stbds_arrlast(a)      ((a)[stbds_header(a)->length-1])
