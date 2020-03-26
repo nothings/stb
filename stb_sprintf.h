@@ -20,6 +20,7 @@
 //    Adam Allison
 //    Arvid Gerstmann
 //    Markus Kolb
+//    Manuel Floruß
 //
 // LICENSE:
 //
@@ -119,6 +120,32 @@ suffix, add "_" specifier: "%_$d" -> "2.53M".
 
 In addition to octal and hexadecimal conversions, you can print
 integers in binary: "%b" for 256 would print 100.
+
+We also support the %S specifier that allows you to directly pass
+strings stored as length+pointer in a struct. The default layout is 
+`struct { int l; char const *p; };`. You can configure this layout
+before including stb_sprintf using #define STB_SPRINTF_STRSTRUCT
+Example:
+  // Somewhere in your code base, you may have this kind of struct that
+  // you use to store strings together with their length in bytes.
+  struct my_string { const uint8_t* Ptr; size_t Length; };
+
+  // Before including the implementation of stb_sprintf, define a struct
+  // that has the same layout as `my_string` with the fields `p` and `l`
+  // instead of `Ptr` and `Length`.
+  struct string_layout_for_stb_sprintf { const uint8_t* p; size_t l; };
+  #define STB_SPRINTF_STRSTRUCT struct string_layout_for_stb_sprintf
+  #define STB_SPRINTF_IMPLEMENTATION
+  #include "stb_sprintf.h"
+
+  // Now you can pass my_string directory to stb_sprintf.
+  int main(int argc, char *argv[])
+  {
+    my_string str = make_my_string("silly");
+    char buf[512];
+    stbsp_snprintf(buf, sizeof(buf), "hello %S world!", str);
+    return 0;
+  }
 
 PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 ===================================================================
@@ -220,6 +247,11 @@ STBSP__PUBLICDEF void STB_SPRINTF_DECORATE(set_separators)(char comma, char peri
 #else
 #define stbsp__uintptr stbsp__uint32
 #endif
+#endif
+
+#ifndef STB_SPRINTF_STRSTRUCT // define this to determine the layout of the struct read by %S.
+struct stbsp__strstruct { int l; char const *p; };
+#define STB_SPRINTF_STRSTRUCT struct stbsp__strstruct
 #endif
 
 #ifndef STB_SPRINTF_MSVC_MODE // used for MSVC2013 and earlier (MSVC2015 matches GCC)
@@ -528,11 +560,21 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
 #endif
          stbsp__int32 dp;
          char const *sn;
+         STB_SPRINTF_STRSTRUCT str;
+
+      case 'S':
+         str = va_arg(va, STB_SPRINTF_STRSTRUCT);
+         s = (char*)str.p;
+         if (s == 0)
+             goto flbk;
+         sn = s + str.l;
+         goto ld;
 
       case 's':
          // get the string
          s = va_arg(va, char *);
          if (s == 0)
+         flbk:
             s = (char *)"null";
          // get the length
          sn = s;
