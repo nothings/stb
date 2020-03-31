@@ -1925,8 +1925,8 @@ size_t stb_strscpy(char *d, const char *s, size_t n)
       if (n) d[0] = 0;
       return 0;
    }
-   stb_p_strcpy_s(d,n+1,s);
-   return len + 1;
+   stb_p_strcpy_s(d,n,s);
+   return len;
 }
 
 const char *stb_plural(int n)
@@ -6150,7 +6150,6 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
    if (!n || n >= sizeof(buffer))
       return NULL;
    stb_fixpath(buffer);
-   n--;
 
    if (n > 0 && (buffer[n-1] != '/')) {
       buffer[n++] = '/';
