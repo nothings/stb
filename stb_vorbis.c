@@ -31,7 +31,7 @@
 //    Phillip Bennefall  Rohit               Thiago Goulart
 //    github:manxorist   saga musix          github:infatum
 //    Timur Gagiev       Maxwell Koo         Peter Waller
-//    github:audinowho   Dougall Johnson
+//    github:audinowho   Dougall Johnson     github:vikaig
 //
 // Partial history:
 //    1.19    - 2020-02-05 - warnings
@@ -3064,6 +3064,7 @@ static int do_floor(vorb *f, Mapping *map, int i, int n, float *target, YTYPE *f
       for (q=1; q < g->values; ++q) {
          j = g->sorted_order[q];
          #ifndef STB_VORBIS_NO_DEFER_FLOOR
+         (void)step2_flag;
          if (finalY[j] >= 0)
          #else
          if (step2_flag[j])
@@ -3163,6 +3164,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
    int i,j,k,n,n2;
    int zero_channel[256];
    int really_zero_channel[256];
+   (void)left_end;
 
 // WINDOWING
 
