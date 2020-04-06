@@ -518,6 +518,8 @@ STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip);
 // as above, but only applies to images loaded on the thread that calls the function
 // this function is only available if your compiler supports thread-local variables;
 // calling it will fail to link if your compiler doesn't
+STBIDEF void stbi_set_unpremultiply_on_load_thread(int flag_true_if_should_unpremultiply);
+STBIDEF void stbi_convert_iphone_png_to_rgb_thread(int flag_true_if_should_convert);
 STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_flip);
 
 // ZLIB client - used by PNG, available for other purposes
@@ -4927,18 +4929,45 @@ static int stbi__expand_png_palette(stbi__png *a, stbi_uc *palette, int len, int
    return 1;
 }
 
-static int stbi__unpremultiply_on_load = 0;
-static int stbi__de_iphone_flag = 0;
+static int stbi__unpremultiply_on_load_global = 0;
+static int stbi__de_iphone_flag_global = 0;
 
 STBIDEF void stbi_set_unpremultiply_on_load(int flag_true_if_should_unpremultiply)
 {
-   stbi__unpremultiply_on_load = flag_true_if_should_unpremultiply;
+   stbi__unpremultiply_on_load_global = flag_true_if_should_unpremultiply;
 }
 
 STBIDEF void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert)
 {
-   stbi__de_iphone_flag = flag_true_if_should_convert;
+   stbi__de_iphone_flag_global = flag_true_if_should_convert;
 }
+
+#ifndef STBI_THREAD_LOCAL
+#define stbi__unpremultiply_on_load  stbi__unpremultiply_on_load_global
+#define stbi__de_iphone_flag  stbi__de_iphone_flag_global
+#else
+static STBI_THREAD_LOCAL int stbi__unpremultiply_on_load_local, stbi__unpremultiply_on_load_set;
+static STBI_THREAD_LOCAL int stbi__de_iphone_flag_local, stbi__de_iphone_flag_set;
+
+STBIDEF void stbi__unpremultiply_on_load_thread(int flag_true_if_should_unpremultiply)
+{
+   stbi__unpremultiply_on_load_local = flag_true_if_should_unpremultiply;
+   stbi__unpremultiply_on_load_set = 1;
+}
+
+STBIDEF void stbi_convert_iphone_png_to_rgb_thread(int flag_true_if_should_convert)
+{
+   stbi__de_iphone_flag_local = flag_true_if_should_convert;
+   stbi__de_iphone_flag_set = 1;
+}
+
+#define stbi__unpremultiply_on_load  (stbi__unpremultiply_on_load_set           \
+                                       ? stbi__unpremultiply_on_load_local      \
+                                       : stbi__unpremultiply_on_load_global)
+#define stbi__de_iphone_flag  (stbi__de_iphone_flag_set                         \
+                                ? stbi__de_iphone_flag_local                    \
+                                : stbi__de_iphone_flag_global)
+#endif // STBI_THREAD_LOCAL
 
 static void stbi__de_iphone(stbi__png *z)
 {
