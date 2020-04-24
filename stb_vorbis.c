@@ -31,7 +31,7 @@
 //    Phillip Bennefall  Rohit               Thiago Goulart
 //    github:manxorist   saga musix          github:infatum
 //    Timur Gagiev       Maxwell Koo         Peter Waller
-//    github:audinowho   Dougall Johnson
+//    github:audinowho   Dougall Johnson     github:Clownacy
 //
 // Partial history:
 //    1.19    - 2020-02-05 - warnings
