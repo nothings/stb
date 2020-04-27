@@ -799,7 +799,7 @@ static void stbi__stdio_skip(void *user, int n)
 
 static int stbi__stdio_eof(void *user)
 {
-   return feof((FILE*) user);
+   return feof((FILE*) user) || ferror((FILE *) user);
 }
 
 static stbi_io_callbacks stbi__stdio_callbacks =
