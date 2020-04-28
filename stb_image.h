@@ -4039,16 +4039,23 @@ typedef struct
    stbi__zhuffman z_length, z_distance;
 } stbi__zbuf;
 
+stbi_inline static int stbi__zeof(stbi__zbuf *z)
+{
+   return (z->zbuffer >= z->zbuffer_end);
+}
+
 stbi_inline static stbi_uc stbi__zget8(stbi__zbuf *z)
 {
-   if (z->zbuffer >= z->zbuffer_end) return 0;
-   return *z->zbuffer++;
+   return stbi__zeof(z) ? 0 : *z->zbuffer++;
 }
 
 static void stbi__fill_bits(stbi__zbuf *z)
 {
    do {
-      STBI_ASSERT(z->code_buffer < (1U << z->num_bits));
+      if (z->code_buffer >= (1U << z->num_bits)) {
+        z->zbuffer = z->zbuffer_end;  /* treat this as EOF so we fail. */
+        return;
+      }
       z->code_buffer |= (unsigned int) stbi__zget8(z) << z->num_bits;
       z->num_bits += 8;
    } while (z->num_bits <= 24);
@@ -4085,7 +4092,12 @@ static int stbi__zhuffman_decode_slowpath(stbi__zbuf *a, stbi__zhuffman *z)
 stbi_inline static int stbi__zhuffman_decode(stbi__zbuf *a, stbi__zhuffman *z)
 {
    int b,s;
-   if (a->num_bits < 16) stbi__fill_bits(a);
+   if (a->num_bits < 16) {
+      if (stbi__zeof(a)) {
+         return -1;   /* report error for unexpected end of data. */
+      }
+      stbi__fill_bits(a);
+   }
    b = z->fast[a->code_buffer & STBI__ZFAST_MASK];
    if (b) {
       s = b >> 9;
@@ -4255,6 +4267,7 @@ static int stbi__parse_zlib_header(stbi__zbuf *a)
    int cm    = cmf & 15;
    /* int cinfo = cmf >> 4; */
    int flg   = stbi__zget8(a);
+   if (stbi__zeof(a)) return stbi__err("bad zlib header","Corrupt PNG"); // zlib spec
    if ((cmf*256+flg) % 31 != 0) return stbi__err("bad zlib header","Corrupt PNG"); // zlib spec
    if (flg & 32) return stbi__err("no preset dict","Corrupt PNG"); // preset dictionary not allowed in png
    if (cm != 8) return stbi__err("bad compression","Corrupt PNG"); // DEFLATE required for png
