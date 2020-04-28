@@ -318,7 +318,14 @@ RECENT REVISION HISTORY:
 //   - If you use STBI_NO_PNG (or _ONLY_ without PNG), and you still
 //     want the zlib decoder to be available, #define STBI_SUPPORT_ZLIB
 //
-
+//  - If you define STBI_MAX_DIMENSIONS, stb_image will reject images greater
+//    than that size (in either width or height) without further processing.
+//    This is to let programs in the wild set an upper bound to prevent
+//    denial-of-service attacks on untrusted data, as one could generate a
+//    valid image of gigantic dimensions and force stb_image to allocate a
+//    huge block of memory and spend disproportionate time decoding it. By
+//    default this is set to (1 << 24), which is 16777216, but that's still
+//    very big.
 
 #ifndef STBI_NO_STDIO
 #include <stdio.h>
@@ -732,6 +739,10 @@ static int stbi__sse2_available(void)
 
 #ifndef STBI_SIMD_ALIGN
 #define STBI_SIMD_ALIGN(type, name) type name
+#endif
+
+#ifndef STBI_MAX_DIMENSIONS
+#define STBI_MAX_DIMENSIONS (1 << 24)
 #endif
 
 ///////////////////////////////////////////////
@@ -3163,6 +3174,8 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
    p  = stbi__get8(s);            if (p != 8) return stbi__err("only 8-bit","JPEG format not supported: 8-bit only"); // JPEG baseline
    s->img_y = stbi__get16be(s);   if (s->img_y == 0) return stbi__err("no header height", "JPEG format not supported: delayed height"); // Legal, but we don't handle it--but neither does IJG
    s->img_x = stbi__get16be(s);   if (s->img_x == 0) return stbi__err("0 width","Corrupt JPEG"); // JPEG requires
+   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
+   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
    c = stbi__get8(s);
    if (c != 3 && c != 1 && c != 4) return stbi__err("bad component count","Corrupt JPEG");
    s->img_n = c;
@@ -4930,8 +4943,10 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             if (!first) return stbi__err("multiple IHDR","Corrupt PNG");
             first = 0;
             if (c.length != 13) return stbi__err("bad IHDR len","Corrupt PNG");
-            s->img_x = stbi__get32be(s); if (s->img_x > (1 << 24)) return stbi__err("too large","Very large image (corrupt?)");
-            s->img_y = stbi__get32be(s); if (s->img_y > (1 << 24)) return stbi__err("too large","Very large image (corrupt?)");
+            s->img_x = stbi__get32be(s);
+            s->img_y = stbi__get32be(s);
+            if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
+            if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
             z->depth = stbi__get8(s);  if (z->depth != 1 && z->depth != 2 && z->depth != 4 && z->depth != 8 && z->depth != 16)  return stbi__err("1/2/4/8/16-bit only","PNG not supported: 1/2/4/8/16-bit only");
             color = stbi__get8(s);  if (color > 6)         return stbi__err("bad ctype","Corrupt PNG");
             if (color == 3 && z->depth == 16)                  return stbi__err("bad ctype","Corrupt PNG");
@@ -5339,6 +5354,9 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
    flip_vertically = ((int) s->img_y) > 0;
    s->img_y = abs((int) s->img_y);
 
+   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+
    mr = info.mr;
    mg = info.mg;
    mb = info.mb;
@@ -5675,6 +5693,9 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    STBI_NOTUSED(tga_x_origin); // @TODO
    STBI_NOTUSED(tga_y_origin); // @TODO
 
+   if (tga_height > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (tga_width > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+
    //   do a tiny bit of precessing
    if ( tga_image_type >= 8 )
    {
@@ -5926,6 +5947,9 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
    // Read the rows and columns of the image.
    h = stbi__get32be(s);
    w = stbi__get32be(s);
+
+   if (h > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (w > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
 
    // Make sure the depth is 8 bits.
    bitdepth = stbi__get16be(s);
@@ -6281,6 +6305,10 @@ static void *stbi__pic_load(stbi__context *s,int *px,int *py,int *comp,int req_c
 
    x = stbi__get16be(s);
    y = stbi__get16be(s);
+
+   if (y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+
    if (stbi__at_eof(s))  return stbi__errpuc("bad file","file too short (pic header)");
    if (!stbi__mad3sizes_valid(x, y, 4, 0)) return stbi__errpuc("too large", "PIC image too large to decode");
 
@@ -6388,6 +6416,9 @@ static int stbi__gif_header(stbi__context *s, stbi__gif *g, int *comp, int is_in
    g->bgindex = stbi__get8(s);
    g->ratio = stbi__get8(s);
    g->transparent = -1;
+
+   if (g->w > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
+   if (g->h > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
 
    if (comp != 0) *comp = 4;  // can't actually tell whether it's 3 or 4 until we parse the comments
 
@@ -6930,6 +6961,9 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    token += 3;
    width = (int) strtol(token, NULL, 10);
 
+   if (height > STBI_MAX_DIMENSIONS) return stbi__errpf("too large","Very large image (corrupt?)");
+   if (width > STBI_MAX_DIMENSIONS) return stbi__errpf("too large","Very large image (corrupt?)");
+
    *x = width;
    *y = height;
 
@@ -7243,6 +7277,9 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
 
    if (!stbi__pnm_info(s, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n))
       return 0;
+
+   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
 
    *x = s->img_x;
    *y = s->img_y;
