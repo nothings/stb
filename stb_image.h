@@ -2168,6 +2168,7 @@ static int stbi__jpeg_decode_block_prog_dc(stbi__jpeg *j, short data[64], stbi__
       // first scan for DC coefficient, must be first
       memset(data,0,64*sizeof(data[0])); // 0 all the ac values now
       t = stbi__jpeg_huff_decode(j, hdc);
+      if (t == -1) return stbi__err("can't merge dc and ac", "Corrupt JPEG");
       diff = t ? stbi__extend_receive(j, t) : 0;
 
       dc = j->img_comp[b].dc_pred + diff;
