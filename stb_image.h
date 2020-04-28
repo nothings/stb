@@ -1564,6 +1564,7 @@ stbi_inline static int stbi__at_eof(stbi__context *s)
 #else
 static void stbi__skip(stbi__context *s, int n)
 {
+   if (n == 0) return;  // already there!
    if (n < 0) {
       s->img_buffer = s->img_buffer_end;
       return;
