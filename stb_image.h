@@ -4130,13 +4130,16 @@ stbi_inline static int stbi__zhuffman_decode(stbi__zbuf *a, stbi__zhuffman *z)
 static int stbi__zexpand(stbi__zbuf *z, char *zout, int n)  // need to make room for n bytes
 {
    char *q;
-   int cur, limit, old_limit;
+   unsigned int cur, limit, old_limit;
    z->zout = zout;
    if (!z->z_expandable) return stbi__err("output buffer limit","Corrupt PNG");
-   cur   = (int) (z->zout     - z->zout_start);
-   limit = old_limit = (int) (z->zout_end - z->zout_start);
-   while (cur + n > limit)
+   cur   = (unsigned int) (z->zout - z->zout_start);
+   limit = old_limit = (unsigned) (z->zout_end - z->zout_start);
+   if(UINT_MAX - cur < n) return stbi__err("outofmem", "Out of memory");
+   while (cur + n > limit) {
+      if(limit > UINT_MAX / 2) return stbi__err("outofmem", "Out of memory");
       limit *= 2;
+   }
    q = (char *) STBI_REALLOC_SIZED(z->zout_start, old_limit, limit);
    STBI_NOTUSED(old_limit);
    if (q == NULL) return stbi__err("outofmem", "Out of memory");
