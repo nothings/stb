@@ -108,7 +108,8 @@ RECENT REVISION HISTORY:
     Julian Raschke          Gregory Mullen     Baldur Karlsson    github:poppolopoppo
     Christian Floisand      Kevin Schmidt      JR Smith           github:darealshinji
     Brad Weinberger         Matvey Cherevko                       github:Michaelangel007
-    Blazej Dariusz Roszkowski                  Alexander Veselov  Ryan C. Gordon
+    Blazej Dariusz Roszkowski                  Alexander Veselov  github:randy408
+    Ryan C. Gordon
 */
 
 #ifndef STBI_INCLUDE_STB_IMAGE_H
