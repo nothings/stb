@@ -1,2 +1,0 @@
-[libfuzzer]
-dict = stb_png.dict
