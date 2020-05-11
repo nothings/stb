@@ -2,7 +2,7 @@
 #define STBI_ONLY_PNG
 #include "../stb_image.h"
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
     int x, y, channels;
 
