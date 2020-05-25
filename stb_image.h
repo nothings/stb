@@ -581,6 +581,12 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
    #elif defined (__STDC_VERSION__) && __STDC_VERSION__ >= 201112L && !defined(__STDC_NO_THREADS__)
       #define STBI_THREAD_LOCAL       _Thread_local
    #endif
+
+   #ifndef STBI_THREAD_LOCAL
+      #if defined(__GNUC__)
+        #define STBI_THREAD_LOCAL       __thread
+      #endif
+   #endif
 #endif
 
 #ifdef _MSC_VER
