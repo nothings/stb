@@ -92,7 +92,7 @@ void churn_stats(int a, int b, int count)
     total_put_probes += stbds_hash_probes;
     stbds_hash_probes = 0;
   }
-    
+
   for (n=0; n < count; ++n) {
     for (j=a; j < b; ++j,++i) {
       hmput(map,i,i+1);
@@ -124,7 +124,7 @@ void churn_stats(int a, int b, int count)
 
 void reset_stats(void)
 {
-  stbds_array_grow=0, 
+  stbds_array_grow=0,
   stbds_hash_grow=0;
   stbds_hash_shrink=0;
   stbds_hash_rebuild=0;

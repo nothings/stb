@@ -43,9 +43,9 @@ clang-cl for x86, vcvars_2015_x86, clang-cl --target=i386-pc-windows-msvc
 c_lexer_test.c
 image_test.c image_write_test.c
 test_cpp_compilation.cpp stb_cpp.cpp ../stb_vorbis.c
-resample_test.cpp 
--DTT_TEST test_c_compilation.c test_truetype.c 
-main.c stb.c 
+resample_test.cpp
+-DTT_TEST test_c_compilation.c test_truetype.c
+main.c stb.c
 main.c stretchy_buffer_test.c
 main.c test_c_compilation.c
 main.c test_c_lexer.c

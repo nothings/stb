@@ -200,14 +200,14 @@ int stbwingraph_ChangeResolution(unsigned int w, unsigned int h, unsigned int bi
 {
    DEVMODE mode;
    int res;
-   
+
    int i, tries=0;
    for (i=0; ; ++i) {
       int success = EnumDisplaySettings(NULL, i, &mode);
       if (!success) break;
       if (mode.dmBitsPerPel == bits && mode.dmPelsWidth == w && mode.dmPelsHeight == h) {
          ++tries;
-         success = ChangeDisplaySettings(&mode, CDS_FULLSCREEN); 
+         success = ChangeDisplaySettings(&mode, CDS_FULLSCREEN);
          if (success == DISP_CHANGE_SUCCESSFUL) {
             stbwingraph_RegisterResetResolution();
             return TRUE;
@@ -225,10 +225,10 @@ int stbwingraph_ChangeResolution(unsigned int w, unsigned int h, unsigned int bi
    // we tried but failed, so try explicitly doing it without specifying refresh rate
 
    // Win95 support logic
-   mode.dmBitsPerPel = bits; 
-   mode.dmPelsWidth = w; 
-   mode.dmPelsHeight = h; 
-   mode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT; 
+   mode.dmBitsPerPel = bits;
+   mode.dmPelsWidth = w;
+   mode.dmPelsHeight = h;
+   mode.dmFields = DM_BITSPERPEL | DM_PELSWIDTH | DM_PELSHEIGHT;
 
    res = ChangeDisplaySettings(&mode, CDS_FULLSCREEN);
 
@@ -424,7 +424,7 @@ static int WINAPI stbwingraph_WinProc(HWND wnd, UINT msg, WPARAM wparam, LPARAM 
          e.handle = wnd;
          if (z && z->func)
             z->func(z->data, &e);
-         wglMakeCurrent(NULL, NULL) ; 
+         wglMakeCurrent(NULL, NULL) ;
          if (z) {
             if (z->rc) wglDeleteContext(z->rc);
             z->dc = 0;
@@ -666,7 +666,7 @@ float stbwingraph_GetTimestep(float minimum_time)
    float elapsedTime;
    double thisTime;
    static double lastTime = -1;
-   
+
    if (lastTime == -1)
       lastTime = timeGetTime() / 1000.0 - minimum_time;
 
@@ -674,7 +674,7 @@ float stbwingraph_GetTimestep(float minimum_time)
       thisTime = timeGetTime() / 1000.0;
       elapsedTime = (float) (thisTime - lastTime);
       if (elapsedTime >= minimum_time) {
-         lastTime = thisTime;         
+         lastTime = thisTime;
          return elapsedTime;
       }
       #if 1
@@ -730,15 +730,15 @@ int stbwingraph_MainLoop(stbwingraph_update func, float mintime)
                case WM_MOUSEMOVE:
                case WM_NCMOUSEMOVE:
                   break;
-               case WM_CHAR:         
-               case WM_KEYDOWN:      
-               case WM_KEYUP:        
-               case WM_LBUTTONDOWN:  
-               case WM_MBUTTONDOWN:  
-               case WM_RBUTTONDOWN:  
-               case WM_LBUTTONUP:    
-               case WM_MBUTTONUP:    
-               case WM_RBUTTONUP:    
+               case WM_CHAR:
+               case WM_KEYDOWN:
+               case WM_KEYUP:
+               case WM_LBUTTONDOWN:
+               case WM_MBUTTONDOWN:
+               case WM_RBUTTONDOWN:
+               case WM_LBUTTONUP:
+               case WM_MBUTTONUP:
+               case WM_RBUTTONUP:
                case WM_TIMER:
                case WM_SIZE:
                case WM_ACTIVATE:
@@ -790,7 +790,7 @@ void stbwingraph_SwapBuffers(void *win)
 }
 #endif
 
-#ifdef STB_WINMAIN    
+#ifdef STB_WINMAIN
 void stbwingraph_main(void);
 
 char *stb_wingraph_commandline;
@@ -804,7 +804,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
       strcpy(buffer+1, lpCmdLine);
       strcat(buffer, " ");
       if (strstr(buffer, " -reset ")) {
-         ChangeDisplaySettings(NULL, 0); 
+         ChangeDisplaySettings(NULL, 0);
          exit(0);
       }
       if (strstr(buffer, " -window ") || strstr(buffer, " -windowed "))

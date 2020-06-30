@@ -28,8 +28,8 @@ typedef struct
    unsigned char *data[NUM_SEGMENTS];
    unsigned char *skylight[NUM_SEGMENTS];
    unsigned char *light[NUM_SEGMENTS];
-   
-   void *pointer_to_free;   
+
+   void *pointer_to_free;
 
    int refcount; // this allows multi-threaded building without wrapping in ANOTHER struct
 } fast_chunk;

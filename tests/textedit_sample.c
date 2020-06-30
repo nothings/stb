@@ -46,7 +46,7 @@ int insert_chars(STB_TEXTEDIT_STRING *str, int pos, STB_TEXTEDIT_CHARTYPE *newte
    return 1; // always succeeds
 }
 
-// define all the #defines needed 
+// define all the #defines needed
 
 #define KEYDOWN_BIT                    0x80000000
 

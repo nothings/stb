@@ -36,7 +36,7 @@ int main(int argc, char  **argv)
       } else {
          char buffer[256];
          strncpy(buffer, s3, 18);
-         buffer[18] = 0;   
+         buffer[18] = 0;
          strcat(buffer, "...");
          fprintf(f, "%s", buffer);
       }

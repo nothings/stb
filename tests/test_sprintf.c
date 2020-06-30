@@ -17,7 +17,7 @@
 #include <stdio.h>   // for printf
 #include <string.h>  // for strcmp, strncmp, strlen
 
-#if _MSC_VER && _MSC_VER <= 1600 
+#if _MSC_VER && _MSC_VER <= 1600
 typedef int intmax_t;
 typedef ptrdiff_t ssize_t;
 #else

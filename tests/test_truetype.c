@@ -41,7 +41,7 @@ int main(int argc, char **argv)
 
    //debug();
 
-   // @TODO: why is minglui.ttc failing? 
+   // @TODO: why is minglui.ttc failing?
    fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/mingliu.ttc", "rb"));
 
    //fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/x/DroidSansMono.ttf", "rb"));

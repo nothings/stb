@@ -41,7 +41,7 @@ static void print_string(float x, float y, char *text, float r, float g, float b
 {
    static char buffer[99999];
    int num_quads;
-   
+
    num_quads = stb_easy_font_print(x, y, text, NULL, buffer, sizeof(buffer));
 
    glColor3f(r,g,b);
@@ -435,7 +435,7 @@ void process_event(SDL_Event *e)
          if (s == SDL_SCANCODE_A)   active_control_set(1);
          if (s == SDL_SCANCODE_W)   active_control_set(2);
          if (s == SDL_SCANCODE_S)   active_control_set(3);
-         if (k == SDLK_SPACE)       active_control_set(4); 
+         if (k == SDLK_SPACE)       active_control_set(4);
          if (s == SDL_SCANCODE_LCTRL)   active_control_set(5);
          if (s == SDL_SCANCODE_S)   active_control_set(6);
          if (s == SDL_SCANCODE_D)   active_control_set(7);
@@ -479,7 +479,7 @@ void process_event(SDL_Event *e)
          if (s == SDL_SCANCODE_A)   active_control_clear(1);
          if (s == SDL_SCANCODE_W)   active_control_clear(2);
          if (s == SDL_SCANCODE_S)   active_control_clear(3);
-         if (k == SDLK_SPACE)       active_control_clear(4); 
+         if (k == SDLK_SPACE)       active_control_clear(4);
          if (s == SDL_SCANCODE_LCTRL)   active_control_clear(5);
          if (s == SDL_SCANCODE_S)   active_control_clear(6);
          if (s == SDL_SCANCODE_D)   active_control_clear(7);
@@ -495,7 +495,7 @@ static float getTimestep(float minimum_time)
    float elapsedTime;
    double thisTime;
    static double lastTime = -1;
-   
+
    if (lastTime == -1)
       lastTime = SDL_GetTicks() / 1000.0 - minimum_time;
 
@@ -503,7 +503,7 @@ static float getTimestep(float minimum_time)
       thisTime = SDL_GetTicks() / 1000.0;
       elapsedTime = (float) (thisTime - lastTime);
       if (elapsedTime >= minimum_time) {
-         lastTime = thisTime;         
+         lastTime = thisTime;
          return elapsedTime;
       }
       // @TODO: compute correct delay

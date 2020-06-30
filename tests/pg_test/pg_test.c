@@ -116,7 +116,7 @@ void stbpg_main(int argc, char **argv)
       for (i=0; i < hf_width; ++i)
          hf[j*hf_width+i] = data[j*w+i] / 32.0f;
 
-   stbpg_gl_compat_version(1,1);   
+   stbpg_gl_compat_version(1,1);
    stbpg_windowed("terrain_edit", 1920, 1080);
    stbpg_run();
 

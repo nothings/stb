@@ -33,7 +33,7 @@ int try_seeking(stb_vorbis *v, unsigned int pos, short *output, unsigned int num
    if (count < SAMPLES_TO_TEST && count < (int) (num_samples - pos)) {
       fprintf(stderr, "Seek to %u only decoded %d samples of %d attempted when at least %d should have been valid.\n",
          pos, count, SAMPLES_TO_TEST, num_samples - pos);
-      return 0;                      
+      return 0;
    }
 
    if (0 != memcmp(samples, output + pos*2, count*2)) {

@@ -53,8 +53,8 @@
 //       Johan Duparc               Thomas Fields
 //       Hou Qiming                 Derek Vinyard
 //       Rob Loach                  Cort Stratton
-//       Kenney Phillis Jr.         Brian Costabile            
-//       Ken Voskuil (kaesve)       
+//       Kenney Phillis Jr.         Brian Costabile
+//       Ken Voskuil (kaesve)
 //
 // VERSION HISTORY
 //

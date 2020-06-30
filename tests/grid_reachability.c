@@ -58,7 +58,7 @@ void reference(uint8 *map, int w, int h)
          leader[j][i].y = j;
       }
    }
-         
+
    for (j=1; j < h-1; ++j) {
       for (i=1; i < w-1; ++i) {
          if (map[j*w+i] == 255) {
@@ -171,7 +171,7 @@ int main(int argc, char **argv)
    for (i=0; i < 100000; ++i)
       map[(stb_rand()%h)*w + stb_rand()%w] ^= 255;
    #endif
-            
+
    _mkdir("tests/output/stbcc");
 
    stbi_write_png("tests/output/stbcc/reference.png", w, h, 1, map, 0);
@@ -257,7 +257,7 @@ int main(int argc, char **argv)
       int x,y,a,b;
       x = stb_rand() % (w-32);
       y = stb_rand() % (h-32);
-      
+
       if (i & 1) {
          for (a=0; a < 32; ++a)
             for (b=0; b < 1; ++b)
