@@ -512,6 +512,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 
 #define stbds_header(t)  ((stbds_array_header *) (t) - 1)
 #define stbds_temp(t)    stbds_header(t)->temp
+#define stbds_temp_key(t) stbds_header(t)->temp_key
 
 #define stbds_arrsetcap(a,n)  (stbds_arrgrow(a,0,n))
 #define stbds_arrsetlen(a,n)  ((stbds_arrcap(a) < (size_t) (n) ? stbds_arrsetcap((a),(size_t)(n)),0 : 0), (a) ? stbds_header(a)->length = (size_t) (n) : 0)
@@ -587,7 +588,8 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 
 #define stbds_shputs(t, s) \
     ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (s).key, sizeof (s).key, STBDS_HM_STRING), \
-     (t)[stbds_temp((t)-1)] = (s))
+     (t)[stbds_temp((t)-1)] = (s), \
+     (t)[stbds_temp((t)-1)].key = stbds_temp_key((t)-1))
 
 #define stbds_pshput(t, p) \
     ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (p)->key, sizeof (p)->key, STBDS_HM_PTR_TO_STRING), \
@@ -634,6 +636,7 @@ typedef struct
   size_t      capacity;
   void      * hash_table;
   ptrdiff_t   temp;
+  char      * temp_key;
 } stbds_array_header;
 
 typedef struct stbds_string_block
@@ -1410,9 +1413,9 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
       stbds_temp(a) = i-1;
 
       switch (table->string.mode) {
-         case STBDS_SH_STRDUP:  *(char **) ((char *) a + elemsize*i) = stbds_strdup((char*) key); break;
-         case STBDS_SH_ARENA:   *(char **) ((char *) a + elemsize*i) = stbds_stralloc(&table->string, (char*)key); break;
-         case STBDS_SH_DEFAULT: *(char **) ((char *) a + elemsize*i) = (char *) key; break;
+         case STBDS_SH_STRDUP:  stbds_temp_key(a) = *(char **) ((char *) a + elemsize*i) = stbds_strdup((char*) key); break;
+         case STBDS_SH_ARENA:   stbds_temp_key(a) = *(char **) ((char *) a + elemsize*i) = stbds_stralloc(&table->string, (char*)key); break;
+         case STBDS_SH_DEFAULT: stbds_temp_key(a) = *(char **) ((char *) a + elemsize*i) = (char *) key; break;
          default:                memcpy((char *) a + elemsize*i, key, keysize); break;
       }
     }
@@ -1617,7 +1620,7 @@ void stbds_unit_tests(void)
   const int testsize2 = testsize/20;
   int *arr=NULL;
   struct { int   key;        int value; }  *intmap  = NULL;
-  struct { char *key;        int value; }  *strmap  = NULL;
+  struct { char *key;        int value; }  *strmap  = NULL, s;
   struct { stbds_struct key; int value; }  *map     = NULL;
   stbds_struct                             *map2    = NULL;
   stbds_struct2                            *map3    = NULL;
@@ -1699,6 +1702,35 @@ void stbds_unit_tests(void)
   for (i=0; i < testsize; ++i)
     stralloc(&sa, strkey(i));
   strreset(&sa);
+
+  {
+    s.key = "a", s.value = 1;
+    shputs(strmap, s);
+    STBDS_ASSERT(*strmap[0].key == 'a');
+    STBDS_ASSERT(strmap[0].key == s.key);
+    STBDS_ASSERT(strmap[0].value == s.value);
+    shfree(strmap);
+  }
+
+  {
+    s.key = "a", s.value = 1;
+    sh_new_strdup(strmap);
+    shputs(strmap, s);
+    STBDS_ASSERT(*strmap[0].key == 'a');
+    STBDS_ASSERT(strmap[0].key != s.key);
+    STBDS_ASSERT(strmap[0].value == s.value);
+    shfree(strmap);
+  }
+
+  {
+    s.key = "a", s.value = 1;
+    sh_new_arena(strmap);
+    shputs(strmap, s);
+    STBDS_ASSERT(*strmap[0].key == 'a');
+    STBDS_ASSERT(strmap[0].key != s.key);
+    STBDS_ASSERT(strmap[0].value == s.value);
+    shfree(strmap);
+  }
 
   for (j=0; j < 2; ++j) {
     STBDS_ASSERT(shgeti(strmap,"foo") == -1);
