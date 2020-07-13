@@ -26,6 +26,7 @@
 // contributors:
 //   Kevin Schmidt (#defines for "freestanding" compilation)
 //   github:ppiastucki (BC4 support)
+//   Ignacio Castano - improve DXT endpoint quantization
 //
 // LICENSE
 //
