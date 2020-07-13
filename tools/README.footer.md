@@ -115,6 +115,3 @@ for other people to use them from other languages.
 
 I still use MSVC 6 (1998) as my IDE because it has better human factors
 for me than later versions of MSVC.
-
-
-

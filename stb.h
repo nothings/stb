@@ -1,4 +1,4 @@
-/* stb.h - v2.35 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
+/* stb.h - v2.37 - Sean's Tool Box -- public domain -- http://nothings.org/stb.h
           no warranty is offered or implied; use this code at your own risk
 
    This is a single header file with a bunch of useful utilities

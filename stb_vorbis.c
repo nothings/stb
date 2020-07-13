@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.19 - public domain
+// Ogg Vorbis audio decoder - v1.20 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
@@ -35,6 +35,7 @@
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
 //
 // Partial history:
+//    1.20    - 2020-07-11 - several small fixes
 //    1.19    - 2020-02-05 - warnings
 //    1.18    - 2020-02-02 - fix seek bugs; parse header comments; misc warnings etc.
 //    1.17    - 2019-07-08 - fix CVE-2019-13217..CVE-2019-13223 (by ForAllSecure)

@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.09 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.10 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -10,6 +10,7 @@
 //     You can turn on dithering and "high quality" using mode.
 //
 // version history:
+//   v1.10  - (i.c) various small quality improvements
 //   v1.09  - (stb) update documentation re: surprising alpha channel requirement
 //   v1.08  - (stb) fix bug in dxt-with-alpha block
 //   v1.07  - (stb) bc4; allow not using libc; add STB_DXT_STATIC
