@@ -6163,7 +6163,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
       if (!stb_strscpy(buffer+n,"*.*",sizeof(buffer)-n))
          return NULL;
       ws = stb__from_utf8(buffer);
-      z = _wfindfirst((const wchar_t *)ws, &data);
+      z = _wfindfirst((wchar_t *)ws, &data);
    #else
       z = opendir(dir);
    #endif
@@ -8429,10 +8429,9 @@ unsigned int stb__mt_buffer[STB__MT_LEN];
 void stb_srand(unsigned int seed)
 {
    int i;
-   unsigned int old = stb_srandLCG(seed);
-   for (i = 0; i < STB__MT_LEN; i++)
-      stb__mt_buffer[i] = stb_randLCG();
-   stb_srandLCG(old);
+   stb__mt_buffer[0]= seed & 0xffffffffUL;
+   for (i=1 ; i < STB__MT_LEN; ++i)
+      stb__mt_buffer[i] = (1812433253UL * (stb__mt_buffer[i-1] ^ (stb__mt_buffer[i-1] >> 30)) + i); 
    stb__mt_index = STB__MT_LEN*sizeof(unsigned int);
 }
 
