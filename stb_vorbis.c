@@ -1602,7 +1602,9 @@ static uint32 get_bits(vorb *f, int n)
          f->valid_bits += 8;
       }
    }
-   if (f->valid_bits < 0) return 0;
+
+   assert(f->valid_bits >= n);
+   
    z = f->acc & ((1 << n)-1);
    f->acc >>= n;
    f->valid_bits -= n;
