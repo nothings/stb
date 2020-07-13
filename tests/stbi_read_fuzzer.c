@@ -1,8 +1,13 @@
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define STB_IMAGE_IMPLEMENTATION
-#define STBI_ONLY_PNG
+
 #include "../stb_image.h"
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+
+int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
     int x, y, channels;
 
@@ -17,3 +22,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 
     return 0;
 }
+
+#ifdef __cplusplus
+}
+#endif
