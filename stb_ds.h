@@ -378,6 +378,7 @@ CREDITS
     Vinh Truong
     Andreas Molzer
     github:hashitaku
+    github:srdjanstipic
 */
 
 #ifdef STBDS_UNIT_TESTS
@@ -528,7 +529,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 
 #define stbds_header(t)  ((stbds_array_header *) (t) - 1)
 #define stbds_temp(t)    stbds_header(t)->temp
-#define stbds_temp_key(t) stbds_header(t)->temp_key
+#define stbds_temp_key(t) (*(char **) stbds_header(t)->hash_table)
 
 #define stbds_arrsetcap(a,n)  (stbds_arrgrow(a,0,n))
 #define stbds_arrsetlen(a,n)  ((stbds_arrcap(a) < (size_t) (n) ? stbds_arrsetcap((a),(size_t)(n)),0 : 0), (a) ? stbds_header(a)->length = (size_t) (n) : 0)
@@ -607,7 +608,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_shputs(t, s) \
     ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (s).key, sizeof (s).key, STBDS_HM_STRING), \
      (t)[stbds_temp((t)-1)] = (s), \
-     (t)[stbds_temp((t)-1)].key = stbds_temp_key((t)-1))
+     (t)[stbds_temp((t)-1)].key = stbds_temp_key((t)-1)) // above line overwrites whole structure, so must rewrite key here if it was allocated internally
 
 #define stbds_pshput(t, p) \
     ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (p)->key, sizeof (p)->key, STBDS_HM_PTR_TO_STRING), \
@@ -654,7 +655,6 @@ typedef struct
   size_t      capacity;
   void      * hash_table;
   ptrdiff_t   temp;
-  char      * temp_key;
 } stbds_array_header;
 
 typedef struct stbds_string_block
@@ -813,6 +813,7 @@ typedef struct
 
 typedef struct
 {
+  char * temp_key; // this MUST be the first field of the hash table
   size_t slot_count;
   size_t used_count;
   size_t used_count_threshold;
