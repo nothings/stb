@@ -8431,7 +8431,7 @@ void stb_srand(unsigned int seed)
    int i;
    stb__mt_buffer[0]= seed & 0xffffffffUL;
    for (i=1 ; i < STB__MT_LEN; ++i)
-      stb__mt_buffer[i] = (1812433253UL * (stb__mt_buffer[i-1] ^ (stb__mt_buffer[i-1] >> 30)) + i); 
+      stb__mt_buffer[i] = (1812433253UL * (stb__mt_buffer[i-1] ^ (stb__mt_buffer[i-1] >> 30)) + i);
    stb__mt_index = STB__MT_LEN*sizeof(unsigned int);
 }
 
