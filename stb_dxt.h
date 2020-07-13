@@ -24,6 +24,7 @@
 //   v1.00  - (stb) first release
 //
 // contributors:
+//   Rich Geldreich (more accurate index selection)
 //   Kevin Schmidt (#defines for "freestanding" compilation)
 //   github:ppiastucki (BC4 support)
 //   Ignacio Castano - improve DXT endpoint quantization
@@ -240,14 +241,14 @@ static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *c
    // but it's very close and a lot faster.
    // http://cbloomrants.blogspot.com/2008/12/12-08-08-dxtc-summary.html
 
-   c0Point   = (stops[1] + stops[3]) >> 1;
-   halfPoint = (stops[3] + stops[2]) >> 1;
-   c3Point   = (stops[2] + stops[0]) >> 1;
+   c0Point   = (stops[1] + stops[3]);
+   halfPoint = (stops[3] + stops[2]);
+   c3Point   = (stops[2] + stops[0]);
 
    if(!dither) {
       // the version without dithering is straightforward
       for (i=15;i>=0;i--) {
-         int dot = dots[i];
+         int dot = dots[i]*2;
          mask <<= 2;
 
          if(dot < halfPoint)
@@ -260,9 +261,9 @@ static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *c
       int err[8],*ep1 = err,*ep2 = err+4;
       int *dp = dots, y;
 
-      c0Point   <<= 4;
-      halfPoint <<= 4;
-      c3Point   <<= 4;
+      c0Point   <<= 3;
+      halfPoint <<= 3;
+      c3Point   <<= 3;
       for(i=0;i<8;i++)
          err[i] = 0;
 
