@@ -32,7 +32,7 @@
 //    github:manxorist   saga musix          github:infatum
 //    Timur Gagiev       Maxwell Koo         Peter Waller
 //    github:audinowho   Dougall Johnson     David Reid
-//    github:Clownacy    Pedro J. Estebanez
+//    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
 //
 // Partial history:
 //    1.19    - 2020-02-05 - warnings
@@ -3634,6 +3634,7 @@ static int start_decoder(vorb *f)
    //file vendor
    len = get32_packet(f);
    f->vendor = (char*)setup_malloc(f, sizeof(char) * (len+1));
+   if (f->vendor == NULL)                           return error(f, VORBIS_outofmem);
    for(i=0; i < len; ++i) {
       f->vendor[i] = get8_packet(f);
    }
@@ -3641,10 +3642,12 @@ static int start_decoder(vorb *f)
    //user comments
    f->comment_list_length = get32_packet(f);
    f->comment_list = (char**)setup_malloc(f, sizeof(char*) * (f->comment_list_length));
+   if (f->comment_list == NULL)                     return error(f, VORBIS_outofmem);
 
    for(i=0; i < f->comment_list_length; ++i) {
       len = get32_packet(f);
       f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * (len+1));
+      if (f->comment_list[i] == NULL)               return error(f, VORBIS_outofmem);
 
       for(j=0; j < len; ++j) {
          f->comment_list[i][j] = get8_packet(f);
