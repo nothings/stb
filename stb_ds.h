@@ -1167,9 +1167,9 @@ size_t stbds_hash_bytes(void *p, size_t len, size_t seed)
 static int stbds_is_key_equal(void *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode, size_t i)
 {
   if (mode >= STBDS_HM_STRING)
-    return 0==strcmp((char *) key, * (char **) ((char *) a + elemsize*i));
+    return 0==strcmp((char *) key, * (char **) ((char *) a + elemsize*i + keyoffset));
   else
-    return 0==memcmp(key, (char *) a + elemsize*i, keysize);
+    return 0==memcmp(key, (char *) a + elemsize*i + keyoffset, keysize);
 }
 
 #define STBDS_HASH_TO_ARR(x,elemsize) ((char*) (x) - (elemsize))
