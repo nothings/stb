@@ -200,6 +200,7 @@ CREDITS
   Dave Butler (Croepha)
   Ethan Lee (flibitijibibo)
   Brian Collins
+  Kyle Langley
 */
 
 #include <stdarg.h>
