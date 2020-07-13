@@ -6620,7 +6620,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
       memset(g->history, 0x00, pcount);        // pixels that were affected previous frame
       first_frame = 1;
    } else {
-      // second frame - how do we dispoase of the previous one?
+      // second frame - how do we dispose of the previous one?
       dispose = (g->eflags & 0x1C) >> 2;
       pcount = g->w * g->h;
 
