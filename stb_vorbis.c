@@ -32,7 +32,7 @@
 //    github:manxorist   saga musix          github:infatum
 //    Timur Gagiev       Maxwell Koo         Peter Waller
 //    github:audinowho   Dougall Johnson     David Reid
-//    github:Clownacy
+//    github:Clownacy    Pedro J. Estebanez
 //
 // Partial history:
 //    1.19    - 2020-02-05 - warnings
@@ -964,7 +964,7 @@ static void *setup_temp_malloc(vorb *f, int sz)
 static void setup_temp_free(vorb *f, void *p, int sz)
 {
    if (f->alloc.alloc_buffer) {
-      f->temp_offset += (sz+3)&~3;
+      f->temp_offset += (sz+7)&~7;
       return;
    }
    free(p);
