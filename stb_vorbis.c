@@ -4257,7 +4257,7 @@ static void vorbis_init(stb_vorbis *p, const stb_vorbis_alloc *z)
    memset(p, 0, sizeof(*p)); // NULL out all malloc'd pointers to start
    if (z) {
       p->alloc = *z;
-      p->alloc.alloc_buffer_length_in_bytes = (p->alloc.alloc_buffer_length_in_bytes+3) & ~3;
+      p->alloc.alloc_buffer_length_in_bytes &= ~7;
       p->temp_offset = p->alloc.alloc_buffer_length_in_bytes;
    }
    p->eof = 0;
