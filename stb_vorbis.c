@@ -32,6 +32,7 @@
 //    github:manxorist   saga musix          github:infatum
 //    Timur Gagiev       Maxwell Koo         Peter Waller
 //    github:audinowho   Dougall Johnson     David Reid
+//    github:Clownacy
 //
 // Partial history:
 //    1.19    - 2020-02-05 - warnings
@@ -577,7 +578,7 @@ enum STBVorbisError
    #if defined(_MSC_VER) || defined(__MINGW32__)
       #include <malloc.h>
    #endif
-   #if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__)
+   #if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__) || defined(__NEWLIB__)
       #include <alloca.h>
    #endif
 #else // STB_VORBIS_NO_CRT
