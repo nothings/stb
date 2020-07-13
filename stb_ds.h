@@ -108,10 +108,15 @@ DOCUMENTATION
           Inserts n uninitialized items into array a starting at a[p],
           moving the rest of the array over.
 
-      arraddn:
-        T* arraddn(T* a, int n)
+      arraddnptr:
+        T* arraddnptr(T* a, int n)
           Appends n uninitialized items onto array at the end.
           Returns a pointer to the first uninitialized item added.
+
+      arraddnoff:
+        size_t arraddnoff(T* a, int n)
+          Appends n uninitialized items onto array at the end.
+          Returns the index of the first uninitialized item added.
 
       arrdel:
         void arrdel(T* a, int p);
@@ -370,6 +375,7 @@ CREDITS
     Andy Durdin
     Shane Liesegang
     Vinh Truong
+    Andreas Molzer
 */
 
 #ifdef STBDS_UNIT_TESTS
@@ -389,6 +395,9 @@ CREDITS
 #define arrpush     stbds_arrput
 #define arrpop      stbds_arrpop
 #define arrfree     stbds_arrfree
+#define arraddnptr  stbds_arraddnptr
+#define arraddnoff  stbds_arraddnoff
+// deprecated
 #define arraddn     stbds_arraddn
 #define arrsetlen   stbds_arrsetlen
 #define arrlast     stbds_arrlast
@@ -527,7 +536,10 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrput(a,v)     (stbds_arrmaybegrow(a,1), (a)[stbds_header(a)->length++] = (v))
 #define stbds_arrpush         stbds_arrput  // synonym
 #define stbds_arrpop(a)       (stbds_header(a)->length--, (a)[stbds_header(a)->length])
-#define stbds_arraddn(a,n)    (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), stbds_header(a)->length-(n))
+// deprecated
+#define stbds_arraddn(a,n)    ((void)(stbds_arraddnoff(a, n)))
+#define stbds_arraddnptr(a,n) (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), &(a)[stbds_header(a)->length-(n)])
+#define stbds_arraddnoff(a,n) (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), stbds_header(a)->length-(n))
 #define stbds_arrlast(a)      ((a)[stbds_header(a)->length-1])
 #define stbds_arrfree(a)      ((void) ((a) ? STBDS_FREE(NULL,stbds_header(a)) : (void)0), (a)=NULL)
 #define stbds_arrdel(a,i)     stbds_arrdeln(a,i,1)
