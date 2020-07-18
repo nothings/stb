@@ -652,7 +652,16 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #endif
 
 #ifndef STBI_REALLOC_SIZED
-#define STBI_REALLOC_SIZED(p,oldsz,newsz) STBI_REALLOC(p,newsz)
+#define STBI_REALLOC_SIZED(p,oldsz,newsz) stbi_realloc_old_used(p,oldsz,newsz)
+#ifdef STB_IMAGE_IMPLEMENTATION
+  /* gcc 7.5.0 with no optimizations but with -Wall -Werror believes variables
+   * set but not used are bad, and this happens for any call to STBI_REALLOC_SIZED()
+   * using the default implementation.
+   */
+static void *stbi_realloc_old_used(void *from, int oldsz, int newsz) {
+    return STBI_REALLOC(from, newsz);
+}
+#endif
 #endif
 
 // x86/x64 detection
@@ -4120,7 +4129,7 @@ static int stbi__zhuffman_decode_slowpath(stbi__zbuf *a, stbi__zhuffman *z)
    if (s >= 16) return -1; // invalid code!
    // code size is s, so:
    b = (k >> (16-s)) - z->firstcode[s] + z->firstsymbol[s];
-   if (b >= sizeof (z->size)) return -1; // some data was corrupt somewhere!
+   if (b >= (int)sizeof (z->size)) return -1; // some data was corrupt somewhere!
    if (z->size[b] != s) return -1;  // was originally an assert, but report failure instead.
    a->code_buffer >>= s;
    a->num_bits -= s;
