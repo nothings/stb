@@ -2,16 +2,16 @@
    no warranty is offered or implied; use this code at your own risk
 
  ============================================================================
-   You MUST                                                                  
-                                                                             
+   You MUST
+
       #define STB_LIB_IMPLEMENTATION
-                                                                             
+
    in EXACTLY _one_ C or C++ file that includes this header, BEFORE the
-   include, like this:                                                                
-                                                                             
+   include, like this:
+
       #define STB_LIB_IMPLEMENTATION
       #include "stblib_files.h"
-      
+
    All other files should just #include "stblib_files.h" without the #define.
  ============================================================================
 
@@ -824,7 +824,7 @@ static char **stb_tokens_raw(char *src_, char *delimit, int *count,
                }
             }
          }
-      } else 
+      } else
          while (nested || !stb_tokentable[*s]) {
             if (stable[*s]) {
                if (!*s) break;
@@ -1225,7 +1225,7 @@ typedef struct
 #define stb_arr_len2(a)        ((stb__arr *) (a) ? stb_arrhead2(a)->len : 0)
 #define stb_arr_lastn(a)       (stb_arr_len(a)-1)
 
-// check whether a given index is valid -- tests 0 <= i < stb_arr_len(a) 
+// check whether a given index is valid -- tests 0 <= i < stb_arr_len(a)
 #define stb_arr_valid(a,i)     (a ? (int) (i) < stb_arrhead(a)->len : 0)
 
 // change the array length so is is exactly N entries long, creating
@@ -1653,7 +1653,7 @@ unsigned int stb_hash_number(unsigned int hash)
 
 #define STB_nocopy(x)        (x)
 #define STB_nodelete(x)      0
-#define STB_nofields         
+#define STB_nofields
 #define STB_nonullvalue(x)
 #define STB_nullvalue(x)     x
 #define STB_safecompare(x)   x
@@ -2012,14 +2012,14 @@ void stb_idict_remove_all(stb_idict *e)
 //
 //           if "use_arena=1", then strings will be copied
 //           into blocks and never freed until the sdict is freed;
-//           otherwise they're malloc()ed and free()d on the fly. 
+//           otherwise they're malloc()ed and free()d on the fly.
 //           (specify use_arena=1 if you never stb_sdict_remove)
 
 #ifndef STB_INCLUDE_STB_LIB_H
 stb_declare_hash(STB_EXTERN, stb_sdict, stb_sdict_, char *, void *)
 
 STB_EXTERN stb_sdict * stb_sdict_new(void);
-STB_EXTERN stb_sdict * stb_sdict_copy(stb_sdict*); 
+STB_EXTERN stb_sdict * stb_sdict_copy(stb_sdict*);
 STB_EXTERN void        stb_sdict_delete(stb_sdict *);
 STB_EXTERN void *      stb_sdict_change(stb_sdict *, char *str, void *p);
 STB_EXTERN int         stb_sdict_count(stb_sdict *d);
@@ -2077,7 +2077,7 @@ stb_sdict * stb_sdict_new(void)
 stb_sdict* stb_sdict_copy(stb_sdict *old)
 {
    return stb_sdictinternal_copy(old);
-} 
+}
 
 void stb_sdict_delete(stb_sdict *d)
 {
@@ -2885,7 +2885,7 @@ int stb_sha1_file(stb_uchar output[20], char *file)
          buffer[n++] = 0x80;
 
          // if there isn't enough room for the length, double the block
-         if (n + 8 > 64) 
+         if (n + 8 > 64)
             block = 128;
 
          // pad to end
@@ -3039,19 +3039,19 @@ unsigned long stb_rand()
          s = STB__TWIST(b, i, i+1);
          b[i] = b[i - STB__MT_IB] ^ (s >> 1) ^ STB__MAGIC(s);
       }
-      
+
       s = STB__TWIST(b, STB__MT_LEN-1, 0);
       b[STB__MT_LEN-1] = b[STB__MT_IA-1] ^ (s >> 1) ^ STB__MAGIC(s);
    }
    stb__mt_index = idx + sizeof(unsigned long);
-   
+
    r = *(unsigned long *)((unsigned char *)b + idx);
-   
+
    r ^= (r >> 11);
    r ^= (r << 7) & 0x9D2C5680;
    r ^= (r << 15) & 0xEFC60000;
    r ^= (r >> 18);
-   
+
    return r;
 }
 
@@ -3126,7 +3126,7 @@ int stb__wildmatch_raw2(char *expr, char *candidate, int search, int insensitive
 {
    int where=0;
    int start = -1;
-   
+
    if (!search) {
       // parse to first '*'
       if (*expr != '*')
@@ -3140,7 +3140,7 @@ int stb__wildmatch_raw2(char *expr, char *candidate, int search, int insensitive
             if (insensitive) {
                if (tolower(*candidate) != tolower(*expr))
                   return -1;
-            } else 
+            } else
                if (*candidate != *expr)
                   return -1;
          }
@@ -3157,7 +3157,7 @@ int stb__wildmatch_raw2(char *expr, char *candidate, int search, int insensitive
       ++expr;
 
    // implicit '*' at this point
-      
+
    while (*expr) {
       int o=0;
       // combine redundant * characters
@@ -3186,7 +3186,7 @@ int stb__wildmatch_raw2(char *expr, char *candidate, int search, int insensitive
          // ok, now check if they match
          if (stb__match_qstring(candidate+z-o, expr, o, insensitive))
             return start >= 0 ? start : 0;
-         return -1; 
+         return -1;
       } else {
          // if yes '*', then do stb__find_qmatch on the intervening chars
          int n = stb__find_qstring(candidate, expr, o, insensitive);
@@ -3268,38 +3268,38 @@ This software is available under 2 licenses -- choose whichever you prefer.
 ------------------------------------------------------------------------------
 ALTERNATIVE A - MIT License
 Copyright (c) 2017 Sean Barrett
-Permission is hereby granted, free of charge, to any person obtaining a copy of 
-this software and associated documentation files (the "Software"), to deal in 
-the Software without restriction, including without limitation the rights to 
-use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
-of the Software, and to permit persons to whom the Software is furnished to do 
+Permission is hereby granted, free of charge, to any person obtaining a copy of
+this software and associated documentation files (the "Software"), to deal in
+the Software without restriction, including without limitation the rights to
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do
 so, subject to the following conditions:
-The above copyright notice and this permission notice shall be included in all 
+The above copyright notice and this permission notice shall be included in all
 copies or substantial portions of the Software.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ------------------------------------------------------------------------------
 ALTERNATIVE B - Public Domain (www.unlicense.org)
 This is free and unencumbered software released into the public domain.
-Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
-software, either in source code form or as a compiled binary, for any purpose, 
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this
+software, either in source code form or as a compiled binary, for any purpose,
 commercial or non-commercial, and by any means.
-In jurisdictions that recognize copyright laws, the author or authors of this 
-software dedicate any and all copyright interest in the software to the public 
-domain. We make this dedication for the benefit of the public at large and to 
-the detriment of our heirs and successors. We intend this dedication to be an 
-overt act of relinquishment in perpetuity of all present and future rights to 
+In jurisdictions that recognize copyright laws, the author or authors of this
+software dedicate any and all copyright interest in the software to the public
+domain. We make this dedication for the benefit of the public at large and to
+the detriment of our heirs and successors. We intend this dedication to be an
+overt act of relinquishment in perpetuity of all present and future rights to
 this software under copyright law.
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
-AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
-ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */

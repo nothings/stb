@@ -313,7 +313,7 @@ void *consume1(void *p)
       *q += z;
       stb_mutex_end(msum);
       stb_sync_reach(synch);
-   }      
+   }
 }
 
 void test_threads2(void)
@@ -653,14 +653,14 @@ int main(int argc, char **argv)
    #if 0
    test_parser_generator();
    stb_wrapper_listall(dumpfunc);
-   if (alloc_num) 
+   if (alloc_num)
       printf("Memory still in use: %d allocations of %d bytes.\n", alloc_num, alloc_size);
    #endif
 
    test_script();
    p = stb_file("sieve.stua", NULL);
    if (p) {
-      stua_run_script(p);      
+      stua_run_script(p);
       free(p);
    }
    stua_uninit();
@@ -1164,7 +1164,7 @@ int main(int argc, char **argv)
    // e.g. that the range remap isn't incorrect
    for (n=0; n < sizeof(buf); ++n)
       c(buf[n] != 0, "stb_frand()");
-         
+
 
    // stb_arr
    {
@@ -2236,7 +2236,7 @@ void test_packed_floats(void)
          p[i] = zero;
 
    q = malloc(4 * 1024);
-      
+
    a = clock();
 
    x = y = 0;
@@ -2273,7 +2273,7 @@ void do_compressor(int argc,char**argv)
             printf("FAILED %d -> %d\n", len, clen);
          } else {
             int z = memcmp(q,p,dlen);
-            if (z != 0) 
+            if (z != 0)
                printf("FAILED %d -> %d\n", len, clen);
             else
                printf("%d -> %d\n", len, clen);
@@ -2553,7 +2553,7 @@ stb_ps *itemset_closure(Grammar g, stb_ps *set)
          nt = encode_nonterm(g.prod[p][c]);
          first_for_prod_plus_sym(g.first, lookahead, g.prod[p]+c+1, t);
          looklist = stb_bitset_getlist(lookahead, 1, first_nonterm);
-               
+
          prod = g.prod_by_nt[nt];
          for (j=0; j < stb_arr_len(prod); ++j) {
             assert(prod[j].prod[0] == g.prod[p][c]);
@@ -2748,7 +2748,7 @@ Parser *parser_create(short **productions, int num_prod, int start_nt, int end_t
    p->end_term = end_term;
 
    num_symbols = n;
-   
+
    // create tables
    g.prod = NULL;
    g.prod_by_nt = malloc(num_symbols * sizeof(g.prod_by_nt[0]));
@@ -3249,7 +3249,7 @@ static float stb__summarize_compute_targets(stb_summary_tree2 *parent, stb_summa
          node->makes_target_weight = 0;
       }
       return node->weight_with_all_children * weight;
-   }      
+   }
 }
 
 static stb_summary_tree2 ** stb__summarize_make_array(STB__ARR(stb_summary_tree2 *) all, stb_summary_tree2 *tree)

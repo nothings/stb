@@ -290,7 +290,7 @@ void make_texture_buffer_for_uniform(int uniform, int slot)
    GLenum type;
    stbvox_uniform_info raw, *ui=&raw;
    GLint uloc;
-   
+
    stbvox_get_uniform_info(ui, uniform);
    uloc = stbgl_find_uniform(main_prog, ui->name);
 
@@ -604,7 +604,7 @@ void prepare_threads(void)
       num_mesh_workers = num_proc/2;
    else if (num_proc > 4)
       num_mesh_workers = 4;
-   else 
+   else
       num_mesh_workers = num_proc-1;
 
 // @TODO
@@ -682,7 +682,7 @@ static void compute_frustum(void)
       (&frustum[3].x)[i] = (float) (mvproj[3][i] - mvproj[1][i]);
       (&frustum[4].x)[i] = (float) (mvproj[3][i] + mvproj[2][i]);
       (&frustum[5].x)[i] = (float) (mvproj[3][i] - mvproj[2][i]);
-   }   
+   }
 }
 
 static int test_plane(plane *p, float x0, float y0, float z0, float x1, float y1, float z1)

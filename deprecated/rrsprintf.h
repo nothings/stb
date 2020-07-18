@@ -4,7 +4,7 @@
 /*
 Single file sprintf replacement.
 
-Originally written by Jeff Roberts at RAD Game Tools - 2015/10/20. 
+Originally written by Jeff Roberts at RAD Game Tools - 2015/10/20.
 Hereby placed in public domain.
 
 This is a full sprintf replacement that supports everything that
@@ -13,19 +13,19 @@ hex floats, field parameters (%*.*d stuff), length reads backs, etc.
 
 Why would you need this if sprintf already exists?  Well, first off,
 it's *much* faster (see below). It's also much smaller than the CRT
-versions code-space-wise. We've also added some simple improvements 
+versions code-space-wise. We've also added some simple improvements
 that are super handy (commas in thousands, callbacks at buffer full,
-for example). Finally, the format strings for MSVC and GCC differ 
-for 64-bit integers (among other small things), so this lets you use 
+for example). Finally, the format strings for MSVC and GCC differ
+for 64-bit integers (among other small things), so this lets you use
 the same format strings in cross platform code.
 
 It uses the standard single file trick of being both the header file
-and the source itself. If you just include it normally, you just get 
+and the source itself. If you just include it normally, you just get
 the header file function definitions. To get the code, you include
 it from a C or C++ file and define RR_SPRINTF_IMPLEMENTATION first.
 
 It only uses va_args macros from the C runtime to do it's work. It
-does cast doubles to S64s and shifts and divides U64s, which does 
+does cast doubles to S64s and shifts and divides U64s, which does
 drag in CRT code on most platforms.
 
 It compiles to roughly 8K with float support, and 4K without.
@@ -62,9 +62,9 @@ doubles with error correction (double-doubles, for ~105 bits of
 precision).  This conversion is round-trip perfect - that is, an atof
 of the values output here will give you the bit-exact double back.
 
-One difference is that our insignificant digits will be different than 
-with MSVC or GCC (but they don't match each other either).  We also 
-don't attempt to find the minimum length matching float (pre-MSVC15 
+One difference is that our insignificant digits will be different than
+with MSVC or GCC (but they don't match each other either).  We also
+don't attempt to find the minimum length matching float (pre-MSVC15
 doesn't either).
 
 If you don't need float or doubles at all, define RR_SPRINTF_NOFLOAT
@@ -79,15 +79,15 @@ for size_t and ptr_diff_t (%jd %zd) as well.
 EXTRAS:
 =======
 Like some GCCs, for integers and floats, you can use a ' (single quote)
-specifier and commas will be inserted on the thousands: "%'d" on 12345 
+specifier and commas will be inserted on the thousands: "%'d" on 12345
 would print 12,345.
 
-For integers and floats, you can use a "$" specifier and the number 
+For integers and floats, you can use a "$" specifier and the number
 will be converted to float and then divided to get kilo, mega, giga or
-tera and then printed, so "%$d" 1024 is "1.0 k", "%$.2d" 2536000 is 
+tera and then printed, so "%$d" 1024 is "1.0 k", "%$.2d" 2536000 is
 "2.42 m", etc.
 
-In addition to octal and hexadecimal conversions, you can print 
+In addition to octal and hexadecimal conversions, you can print
 integers in binary: "%b" for 256 would print 100.
 
 PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
@@ -119,7 +119,7 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 #define RRPUBLIC_DEC extern "C"
 #define RRPUBLIC_DEF extern "C"
 #else
-#define RRPUBLIC_DEC extern 
+#define RRPUBLIC_DEC extern
 #define RRPUBLIC_DEF
 #endif
 #endif
@@ -161,7 +161,7 @@ RRPUBLIC_DEF void RR_SPRINTF_DECORATE( setseparators )( char comma, char period 
 #endif
 #define rU16 unsigned short
 
-#ifndef rUINTa 
+#ifndef rUINTa
 #if defined(__ppc64__) || defined(__aarch64__) || defined(_M_X64) || defined(__x86_64__) || defined(__x86_64)
 #define rUINTa rU64
 #else
@@ -222,7 +222,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
     #define NG 128
     #define KI 256
     #define HW 512
- 
+
     // macros for the callback buffer stuff
     #define chk_cb_bufL(bytes) { int len = (int)(bf-buf); if ((len+(bytes))>=RR_SPRINTF_MIN) { tlen+=len; if (0==(bf=buf=callback(buf,user,len))) goto done; } }
     #define chk_cb_buf(bytes) { if ( callback ) { chk_cb_bufL(bytes); } }
@@ -231,19 +231,19 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
 
     // fast copy everything up to the next % (or end of string)
     for(;;)
-    { 
+    {
       while (((rUINTa)f)&3)
       {
        schk1: if (f[0]=='%') goto scandd;
        schk2: if (f[0]==0) goto endfmt;
         chk_cb_buf(1); *bf++=f[0]; ++f;
-      } 
+      }
       for(;;)
-      { 
+      {
         rU32 v,c;
         v=*(rU32*)f; c=(~v)&0x80808080;
-        if ((v-0x26262626)&c) goto schk1; 
-        if ((v-0x01010101)&c) goto schk2; 
+        if ((v-0x26262626)&c) goto schk1;
+        if ((v-0x01010101)&c) goto schk2;
         if (callback) if ((RR_SPRINTF_MIN-(int)(bf-buf))<4) goto schk1;
         *(rU32*)bf=v; bf+=4; f+=4;
       }
@@ -253,7 +253,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
 
     // ok, we have a percent, read the modifiers first
     fw = 0; pr = -1; fl = 0; tz = 0;
-    
+
     // flags
     for(;;)
     {
@@ -262,27 +262,27 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         // if we have left just
         case '-': fl|=LJ; ++f; continue;
         // if we have leading plus
-        case '+': fl|=LP; ++f; continue; 
+        case '+': fl|=LP; ++f; continue;
         // if we have leading space
-        case ' ': fl|=LS; ++f; continue; 
+        case ' ': fl|=LS; ++f; continue;
         // if we have leading 0x
-        case '#': fl|=LX; ++f; continue; 
+        case '#': fl|=LX; ++f; continue;
         // if we have thousand commas
-        case '\'': fl|=CS; ++f; continue; 
+        case '\'': fl|=CS; ++f; continue;
         // if we have kilo marker
-        case '$': fl|=KI; ++f; continue; 
+        case '$': fl|=KI; ++f; continue;
         // if we have leading zero
-        case '0': fl|=LZ; ++f; goto flags_done; 
+        case '0': fl|=LZ; ++f; goto flags_done;
         default: goto flags_done;
       }
     }
     flags_done:
-   
+
     // get the field width
     if ( f[0] == '*' ) {fw = va_arg(va,rU32); ++f;} else { while (( f[0] >= '0' ) && ( f[0] <= '9' )) { fw = fw * 10 + f[0] - '0'; f++; } }
     // get the precision
-    if ( f[0]=='.' ) { ++f; if ( f[0] == '*' ) {pr = va_arg(va,rU32); ++f;} else { pr = 0; while (( f[0] >= '0' ) && ( f[0] <= '9' )) { pr = pr * 10 + f[0] - '0'; f++; } } } 
-    
+    if ( f[0]=='.' ) { ++f; if ( f[0] == '*' ) {pr = va_arg(va,rU32); ++f;} else { pr = 0; while (( f[0] >= '0' ) && ( f[0] <= '9' )) { pr = pr * 10 + f[0] - '0'; f++; } } }
+
     // handle integer size overrides
     switch(f[0])
     {
@@ -291,9 +291,9 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
       // are we 64-bit (unix style)
       case 'l': ++f; if ( f[0]=='l') { fl|=BI; ++f; } break;
       // are we 64-bit on intmax? (c99)
-      case 'j': fl|=BI; ++f; break; 
+      case 'j': fl|=BI; ++f; break;
       // are we 64-bit on size_t or ptrdiff_t? (c99)
-      case 'z': case 't': fl|=((sizeof(char*)==8)?BI:0); ++f; break; 
+      case 'z': case 't': fl|=((sizeof(char*)==8)?BI:0); ++f; break;
       // are we 64-bit (msft style)
       case 'I': if ( ( f[1]=='6') && ( f[2]=='4') ) { fl|=BI; f+=3; } else if ( ( f[1]=='3') && ( f[2]=='2') ) { f+=3; } else { fl|=((sizeof(void*)==8)?BI:0); ++f; } break;
       default: break;
@@ -302,16 +302,16 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
     // handle each replacement
     switch( f[0] )
     {
-      #define NUMSZ 512 // big enough for e308 (with commas) or e-307 
-      char num[NUMSZ]; 
-      char lead[8]; 
-      char tail[8]; 
+      #define NUMSZ 512 // big enough for e308 (with commas) or e-307
+      char num[NUMSZ];
+      char lead[8];
+      char tail[8];
       char *s;
       char const *h;
       rU32 l,n,cs;
       rU64 n64;
-      #ifndef RR_SPRINTF_NOFLOAT      
-      double fv; 
+      #ifndef RR_SPRINTF_NOFLOAT
+      double fv;
       #endif
       rS32 dp; char const * sn;
 
@@ -321,7 +321,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         // get the length
         sn = s;
         for(;;)
-        { 
+        {
           if ((((rUINTa)sn)&3)==0) break;
          lchk:
           if (sn[0]==0) goto ld;
@@ -329,11 +329,11 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         }
         n = 0xffffffff;
         if (pr>=0) { n=(rU32)(sn-s); if (n>=(rU32)pr) goto ld; n=((rU32)(pr-n))>>2; }
-        while(n) 
-        { 
+        while(n)
+        {
           rU32 v=*(rU32*)sn;
-          if ((v-0x01010101)&(~v)&0x80808080UL) goto lchk; 
-          sn+=4; 
+          if ((v-0x01010101)&(~v)&0x80808080UL) goto lchk;
+          sn+=4;
           --n;
         }
         goto lchk;
@@ -373,18 +373,18 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         goto scopy;
 #else
       case 'A': // float
-        h=hexu;  
+        h=hexu;
         goto hexfloat;
 
       case 'a': // hex float
         h=hex;
-       hexfloat: 
+       hexfloat:
         fv = va_arg(va,double);
         if (pr==-1) pr=6; // default is 6
         // read the double into a string
         if ( rrreal_to_parts( (rS64*)&n64, &dp, fv ) )
           fl |= NG;
-  
+
         s = num+64;
 
         // sign
@@ -394,7 +394,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         n64<<=(64-56);
         if (pr<15) n64+=((((rU64)8)<<56)>>(pr*4));
         // add leading chars
-        
+
         #ifdef RR_SPRINTF_MSVC_MODE
         *s++='0';*s++='x';
         #else
@@ -427,7 +427,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
 
       case 'g': // float
         h=hex;
-       dosmallfloat:   
+       dosmallfloat:
         fv = va_arg(va,double);
         if (pr==-1) pr=6; else if (pr==0) pr = 1; // default is 6
         // read the double into a string
@@ -449,22 +449,22 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         goto dofloatfromg;
 
       case 'E': // float
-        h=hexu;  
+        h=hexu;
         goto doexp;
 
       case 'e': // float
         h=hex;
-       doexp:   
+       doexp:
         fv = va_arg(va,double);
         if (pr==-1) pr=6; // default is 6
         // read the double into a string
         if ( rrreal_to_str( &sn, &l, num, &dp, fv, pr|0x80000000 ) )
           fl |= NG;
-       doexpfromg: 
-        tail[0]=0; 
+       doexpfromg:
+        tail[0]=0;
         lead[0]=0; if (fl&NG) { lead[0]=1; lead[1]='-'; } else if (fl&LS) { lead[0]=1; lead[1]=' '; } else if (fl&LP) { lead[0]=1; lead[1]='+'; };
         if ( dp == RRSPECIAL ) { s=(char*)sn; cs=0; pr=0; goto scopy; }
-        s=num+64; 
+        s=num+64;
         // handle leading chars
         *s++=sn[0];
 
@@ -487,13 +487,13 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         tail[0]=(char)n;
         for(;;) { tail[n]='0'+dp%10; if (n<=3) break; --n; dp/=10; }
         cs = 1 + (3<<24); // how many tens
-        goto flt_lead;   
+        goto flt_lead;
 
       case 'f': // float
         fv = va_arg(va,double);
-       doafloat: 
+       doafloat:
         // do kilos
-        if (fl&KI) {while(fl<0x4000000) { if ((fv<1024.0) && (fv>-1024.0)) break; fv/=1024.0; fl+=0x1000000; }} 
+        if (fl&KI) {while(fl<0x4000000) { if ((fv<1024.0) && (fv>-1024.0)) break; fv/=1024.0; fl+=0x1000000; }}
         if (pr==-1) pr=6; // default is 6
         // read the double into a string
         if ( rrreal_to_str( &sn, &l, num, &dp, fv, pr ) )
@@ -503,14 +503,14 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         // sign
         lead[0]=0; if (fl&NG) { lead[0]=1; lead[1]='-'; } else if (fl&LS) { lead[0]=1; lead[1]=' '; } else if (fl&LP) { lead[0]=1; lead[1]='+'; };
         if ( dp == RRSPECIAL ) { s=(char*)sn; cs=0; pr=0; goto scopy; }
-        s=num+64; 
+        s=num+64;
 
         // handle the three decimal varieties
-        if (dp<=0) 
-        { 
+        if (dp<=0)
+        {
           rS32 i;
           // handle 0.000*000xxxx
-          *s++='0'; if (pr) *s++=RRperiod; 
+          *s++='0'; if (pr) *s++=RRperiod;
           n=-dp; if((rS32)n>pr) n=pr; i=n; while(i) { if ((((rUINTa)s)&3)==0) break; *s++='0'; --i; } while(i>=4) { *(rU32*)s=0x30303030; s+=4; i-=4; } while(i) { *s++='0'; --i; }
           if ((rS32)(l+n)>pr) l=pr-n; i=l; while(i) { *s++=*sn++; --i; }
           tz = pr-(n+l);
@@ -544,14 +544,14 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
           }
         }
         pr = 0;
-        
+
         // handle k,m,g,t
         if (fl&KI) { tail[0]=1; tail[1]=' '; { if (fl>>24) { tail[2]="_kmgt"[fl>>24]; tail[0]=2; } } };
 
         flt_lead:
         // get the length that we copied
         l = (rU32) ( s-(num+64) );
-        s=num+64; 
+        s=num+64;
         goto scopy;
 #endif
 
@@ -579,7 +579,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         pr = sizeof(void*)*2;
         fl &= ~LZ; // 'p' only prints the pointer with zeros
         // drop through to X
-      
+
       case 'X': // upper binary
         h = hexu;
         goto dohexb;
@@ -589,7 +589,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         l=(4<<4)|(4<<8);
         lead[0]=0;
         if (fl&LX) { lead[0]=2;lead[1]='0';lead[2]=h[16]; }
-       radixnum: 
+       radixnum:
         // get the number
         if ( fl&BI )
           n64 = va_arg(va,rU64);
@@ -622,12 +622,12 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         }
 
         #ifndef RR_SPRINTF_NOFLOAT
-        if (fl&KI) { if (n64<1024) pr=0; else if (pr==-1) pr=1; fv=(double)(rS64)n64; goto doafloat; } 
+        if (fl&KI) { if (n64<1024) pr=0; else if (pr==-1) pr=1; fv=(double)(rS64)n64; goto doafloat; }
         #endif
 
         // convert to string
-        s = num+NUMSZ; l=0; 
-        
+        s = num+NUMSZ; l=0;
+
         for(;;)
         {
           // do in 32-bit chunks (avoid lots of 64-bit divides even with constant denominators)
@@ -648,7 +648,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         cs = l + (3<<24);
         if (pr<0) pr = 0;
 
-       scopy: 
+       scopy:
         // get fw=leading/trailing space, pr=leading zeros
         if (pr<(rS32)l) pr = l;
         n = pr + lead[0] + tail[0] + tz;
@@ -660,7 +660,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         if ( (fl&LJ)==0 )
         {
           if (fl&LZ) // if leading zeros, everything is in pr
-          { 
+          {
             pr = (fw>pr)?fw:pr;
             fw = 0;
           }
@@ -673,14 +673,14 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
         // copy the spaces and/or zeros
         if (fw+pr)
         {
-          rS32 i; rU32 c; 
+          rS32 i; rU32 c;
 
           // copy leading spaces (or when doing %8.4d stuff)
           if ( (fl&LJ)==0 ) while(fw>0) { cb_buf_clamp(i,fw); fw -= i; while(i) { if ((((rUINTa)bf)&3)==0) break; *bf++=' '; --i; } while(i>=4) { *(rU32*)bf=0x20202020; bf+=4; i-=4; } while (i) {*bf++=' '; --i;} chk_cb_buf(1); }
-        
+
           // copy leader
           sn=lead+1; while(lead[0]) { cb_buf_clamp(i,lead[0]); lead[0] -= (char)i; while (i) {*bf++=*sn++; --i;} chk_cb_buf(1); }
-          
+
           // copy leading zeros
           c = cs >> 24; cs &= 0xffffff;
           cs = (fl&CS)?((rU32)(c-((pr+cs)%(c+1)))):0;
@@ -714,11 +714,11 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
   }
  endfmt:
 
-  if (!callback) 
+  if (!callback)
     *bf = 0;
   else
     flush_cb();
- 
+
  done:
   return tlen + (int)(bf-buf);
 }
@@ -773,7 +773,7 @@ static char * rrclampcallback( char * buf, void * user, int len )
     c->buf += len;
     c->count -= len;
   }
-  
+
   if ( c->count <= 0 ) return 0;
   return ( c->count >= RR_SPRINTF_MIN ) ? c->buf : c->tmp; // go direct into buffer if you can
 }
@@ -790,7 +790,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsnprintf )( char * buf, int count, char c
   c.count = count;
 
   RR_SPRINTF_DECORATE( vsprintfcb )( rrclampcallback, &c, rrclampcallback(0,&c,0), fmt, va );
-  
+
   // zero-terminate
   l = (int)( c.buf - buf );
   if ( l >= count ) // should never be greater, only equal (or less) than count
@@ -820,7 +820,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintf )( char * buf, char const * fmt, 
 
  // copies d to bits w/ strict aliasing (this compiles to nothing on /Ox)
  #define RRCOPYFP(dest,src) { int cn; for(cn=0;cn<8;cn++) ((char*)&dest)[cn]=((char*)&src)[cn]; }
- 
+
 // get float info
 static rS32 rrreal_to_parts( rS64 * bits, rS32 * expo, double value )
 {
@@ -834,7 +834,7 @@ static rS32 rrreal_to_parts( rS64 * bits, rS32 * expo, double value )
 
   *bits = b & ((((rU64)1)<<52)-1);
   *expo = ((b >> 52) & 2047)-1023;
-    
+
   return (rS32)(b >> 63);
 }
 
@@ -846,7 +846,7 @@ static double const rrnegtop[13]={1e-023,1e-046,1e-069,1e-092,1e-115,1e-138,1e-1
 static double const rrtoperr[13]={8388608,6.8601809640529717e+028,-7.253143638152921e+052,-4.3377296974619174e+075,-1.5559416129466825e+098,-3.2841562489204913e+121,-3.7745893248228135e+144,-1.7356668416969134e+167,-3.8893577551088374e+190,-9.9566444326005119e+213,6.3641293062232429e+236,-5.2069140800249813e+259,-5.2504760255204387e+282};
 static double const rrnegtoperr[13]={3.9565301985100693e-040,-2.299904345391321e-063,3.6506201437945798e-086,1.1875228833981544e-109,-5.0644902316928607e-132,-6.7156837247865426e-155,-2.812077463003139e-178,-5.7778912386589953e-201,7.4997100559334532e-224,-4.6439668915134491e-247,-6.3691100762962136e-270,-9.436808465446358e-293,8.0970921678014997e-317};
 
-#if defined(_MSC_VER) && (_MSC_VER<=1200)                                                                                                                                                                                       
+#if defined(_MSC_VER) && (_MSC_VER<=1200)
 static rU64 const rrpot[20]={1,10,100,1000, 10000,100000,1000000,10000000, 100000000,1000000000,10000000000,100000000000,  1000000000000,10000000000000,100000000000000,1000000000000000,  10000000000000000,100000000000000000,1000000000000000000,10000000000000000000U };
 #define rrtento19th ((rU64)1000000000000000000)
 #else
@@ -896,7 +896,7 @@ static void rrraise_to_power10( double *ohi, double *olo, double d, rS32 power )
     rS32 e,et,eb;
     double p2h,p2l;
 
-    e=power; if (power<0) e=-e; 
+    e=power; if (power<0) e=-e;
     et = (e*0x2c9)>>14;/* %23 */ if (et>13) et=13; eb = e-(et*23);
 
     ph = d; pl = 0.0;
@@ -904,17 +904,17 @@ static void rrraise_to_power10( double *ohi, double *olo, double d, rS32 power )
     {
       if (eb) { --eb; rrddmulthi(ph,pl,d,rrnegbot[eb]); rrddmultlos(ph,pl,d,rrnegboterr[eb]); }
       if (et)
-      { 
+      {
         rrddrenorm(ph,pl);
         --et; rrddmulthi(p2h,p2l,ph,rrnegtop[et]); rrddmultlo(p2h,p2l,ph,pl,rrnegtop[et],rrnegtoperr[et]); ph=p2h;pl=p2l;
       }
     }
     else
     {
-      if (eb) 
-      { 
+      if (eb)
+      {
         e = eb; if (eb>22) eb=22; e -= eb;
-        rrddmulthi(ph,pl,d,rrbot[eb]); 
+        rrddmulthi(ph,pl,d,rrbot[eb]);
         if ( e ) { rrddrenorm(ph,pl); rrddmulthi(p2h,p2l,ph,rrbot[e]); rrddmultlos(p2h,p2l,rrbot[e],pl); ph=p2h;pl=p2l; }
       }
       if (et)
@@ -950,13 +950,13 @@ static rS32 rrreal_to_str( char const * * start, rU32 * len, char *out, rS32 * d
     *decimal_pos =  RRSPECIAL;
     *len = 3;
     return ng;
-  } 
+  }
 
   if ( expo == 0 ) // is zero or denormal
   {
     if ((bits<<1)==0) // do zero
     {
-      *decimal_pos = 1; 
+      *decimal_pos = 1;
       *start = out;
       out[0] = '0'; *len = 1;
       return ng;
@@ -975,14 +975,14 @@ static rS32 rrreal_to_str( char const * * start, rU32 * len, char *out, rS32 * d
     // log10 estimate - very specifically tweaked to hit or undershoot by no more than 1 of log10 of all expos 1..2046
     tens=expo-1023; tens = (tens<0)?((tens*617)/2048):(((tens*1233)/4096)+1);
 
-    // move the significant bits into position and stick them into an int 
+    // move the significant bits into position and stick them into an int
     rrraise_to_power10( &ph, &pl, d, 18-tens );
 
     // get full as much precision from double-double as possible
     rrddtoS64( bits, ph,pl );
 
     // check if we undershot
-    if ( ((rU64)bits) >= rrtento19th ) ++tens; 
+    if ( ((rU64)bits) >= rrtento19th ) ++tens;
   }
 
   // now do the rounding in integer land
@@ -1000,7 +1000,7 @@ static rS32 rrreal_to_str( char const * * start, rU32 * len, char *out, rS32 * d
       bits = bits + (r/2);
       if ( (rU64)bits >= rrpot[dg] ) ++tens;
       bits /= r;
-    } 
+    }
     noround:;
   }
 
@@ -1012,7 +1012,7 @@ static rS32 rrreal_to_str( char const * * start, rU32 * len, char *out, rS32 * d
 
   // convert to string
   out += 64;
-  e = 0; 
+  e = 0;
   for(;;)
   {
     rU32 n;
@@ -1023,7 +1023,7 @@ static rS32 rrreal_to_str( char const * * start, rU32 * len, char *out, rS32 * d
     if (bits==0) { if ((e) && (out[0]=='0')) { ++out; --e; } break; }
     while( out!=o ) { *--out ='0'; ++e; }
   }
-  
+
   *decimal_pos = tens;
   *start = out;
   *len = e;
@@ -1034,15 +1034,15 @@ static rS32 rrreal_to_str( char const * * start, rU32 * len, char *out, rS32 * d
 #undef rrddrenorm
 #undef rrddmultlo
 #undef rrddmultlos
-#undef RRSPECIAL 
+#undef RRSPECIAL
 #undef RRCOPYFP
- 
+
 #endif
 
 // clean up
 #undef rU16
-#undef rU32 
-#undef rS32 
+#undef rU32
+#undef rS32
 #undef rU64
 #undef rS64
 #undef RRPUBLIC_DEC

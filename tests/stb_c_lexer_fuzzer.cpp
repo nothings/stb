@@ -1,4 +1,4 @@
-#define STB_C_LEX_C_DECIMAL_INTS    Y  
+#define STB_C_LEX_C_DECIMAL_INTS    Y
 #define STB_C_LEX_C_HEX_INTS        Y
 #define STB_C_LEX_C_OCTAL_INTS      Y
 #define STB_C_LEX_C_DECIMAL_FLOATS  Y
@@ -11,7 +11,7 @@
 #define STB_C_LEX_CPP_COMMENTS      Y
 #define STB_C_LEX_C_COMPARISONS     Y
 #define STB_C_LEX_C_LOGICAL         Y
-#define STB_C_LEX_C_SHIFTS          Y 
+#define STB_C_LEX_C_SHIFTS          Y
 #define STB_C_LEX_C_INCREMENTS      Y
 #define STB_C_LEX_C_ARROW           Y
 #define STB_C_LEX_EQUAL_ARROW       Y
@@ -30,11 +30,11 @@
 #define STB_C_LEX_MULTILINE_SSTRINGS   Y
 #define STB_C_LEX_USE_STDLIB           N
 #define STB_C_LEX_DOLLAR_IDENTIFIER    Y
-#define STB_C_LEX_FLOAT_NO_DECIMAL     Y  
+#define STB_C_LEX_FLOAT_NO_DECIMAL     Y
 
-#define STB_C_LEX_DEFINE_ALL_TOKEN_NAMES  Y  
-#define STB_C_LEX_DISCARD_PREPROCESSOR    Y  
-#define STB_C_LEXER_DEFINITIONS         
+#define STB_C_LEX_DEFINE_ALL_TOKEN_NAMES  Y
+#define STB_C_LEX_DISCARD_PREPROCESSOR    Y
+#define STB_C_LEXER_DEFINITIONS
 
 #define STB_C_LEXER_IMPLEMENTATION
 #define STB_C_LEXER_SELF_TEST

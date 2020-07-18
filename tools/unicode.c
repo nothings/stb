@@ -204,7 +204,7 @@ void output_table(char *name1, char *name2, uval *data, int length, int sign, ch
    numlen=strlen(temp);
    if (sign)
       ++numlen;
-   
+
    if (bytes == 0)
       return;
 
@@ -291,7 +291,7 @@ void output_table_with_trims(char *name1, char *name2, uval *data, int length)
          len = strlen(temp);
          numlen = stb_max(len, numlen);
       }
-   
+
       at_newline = 1;
       for (i=0; i < length; ++i) {
          if (pos + numlen + 2 > linelen) {
@@ -473,7 +473,7 @@ table pack_for_mode(table *t, int mode, char *table_name)
    extra_size += 150; // per indirection
    if (table_name)
       extra_size = 0;
-   
+
    if (t->has_sign) {
       // 'packed' contains two values, which should be packed positive & negative for size
       uval maxv2;

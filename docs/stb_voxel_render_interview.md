@@ -166,7 +166,7 @@ one clip, and when I went back to add it I also gussied up
 a couple other moments in the video. But there was something
 basically identical to it that was done in around six.
 
-**Q:** 
+**Q:**
 Ok, that's it. Thanks, me.
 
 **A:**

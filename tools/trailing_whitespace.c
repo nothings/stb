@@ -11,7 +11,7 @@ int main(int argc, char **argv)
       char *end, *src, *dest;
       if (s == NULL) {
          printf("Couldn't read file '%s'.\n", argv[i]);
-         continue; 
+         continue;
       }
       end = s + len;
       src = dest = s;

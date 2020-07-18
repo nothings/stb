@@ -63,7 +63,7 @@ int main(int argc, char **argv)
                char **tokens = stb_tokens_stripwhite(p, ",", &count), *batch;
                if (count > 3) stb_fatal("Expecting name and batch file name at line %d.", i+1);
                batch = (count==1 ? tokens[0] : tokens[1]);
-               if (strlen(batch)) 
+               if (strlen(batch))
                   sprintf(buffer, "c:\\%s.bat", batch);
                else
                   strcpy(buffer, "");

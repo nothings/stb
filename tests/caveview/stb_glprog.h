@@ -412,7 +412,7 @@ STB_GLPROG_DECLARE GLuint stbgl_link_program(GLuint vertex_shader, GLuint fragme
       stbglGetProgramInfoLog(prog, error_buflen-len, NULL, error+len);
 
    stbglDeleteProgram(prog);
-   return 0;   
+   return 0;
 }
 
 STB_GLPROG_DECLARE GLuint stbgl_create_program(char const **vertex_source, char const **frag_source, char const **binds, char *error, int error_buflen)

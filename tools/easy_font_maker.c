@@ -140,7 +140,7 @@ int parse_char(int x, chardata *c, int offset)
          break;
    }
    c->voff = top_y > 2;
-   if (top_y > 2) 
+   if (top_y > 2)
       top_y = 3;
 
    for (x=start_x; x < end_x; ++x) {

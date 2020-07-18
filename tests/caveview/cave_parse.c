@@ -341,7 +341,7 @@ static void nbt_end_compound(nbt *n) // end a compound
    assert(*n->cur == TAG_End);
    assert(n->nesting != 0);
    ++n->cur;
-   --n->nesting;   
+   --n->nesting;
 }
 
 // @TODO no interface to get lists from lists
