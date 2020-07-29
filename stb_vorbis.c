@@ -33,6 +33,7 @@
 //    Timur Gagiev       Maxwell Koo         Peter Waller
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
+//    Gabriel Ravier
 //
 // Partial history:
 //    1.20    - 2020-07-11 - several small fixes
@@ -579,7 +580,7 @@ enum STBVorbisError
    #if defined(_MSC_VER) || defined(__MINGW32__)
       #include <malloc.h>
    #endif
-   #if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__) || defined(__NEWLIB__)
+   #if defined(__linux__) || defined(__linux) || defined(__EMSCRIPTEN__) || defined(__NEWLIB__) || defined(__sun__)
       #include <alloca.h>
    #endif
 #else // STB_VORBIS_NO_CRT
@@ -611,6 +612,11 @@ enum STBVorbisError
       #define __forceinline
    #endif
 #endif
+
+// Check if the previous checks somehow failed to define alloca and we're on GCC.
+#if !defined(alloca) && defined(__GNUC__)
+#define alloca __builtin_alloca // Might as well do it outselves at this point, since we're on GCC and thus know how to define it (and if alloca was defined as a function in some previous header, __builtin_alloca would undoubtebly be at least just as fast, if not faster)
+#endif // I thought about adding an #else block that just errors out if alloca is not defined and we don't know how to define it ourselves, but there are actual platforms that have alloca be a function, so this could cause build failures on platforms that would otherwise work
 
 #if STB_VORBIS_MAX_CHANNELS > 256
 #error "Value of STB_VORBIS_MAX_CHANNELS outside of allowed range"
