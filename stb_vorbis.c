@@ -3634,26 +3634,30 @@ static int start_decoder(vorb *f)
    if (!vorbis_validate(header))                    return error(f, VORBIS_invalid_setup);
    //file vendor
    len = get32_packet(f);
-   f->vendor = (char*)setup_malloc(f, sizeof(char) * (len+1));
-   if (f->vendor == NULL)                           return error(f, VORBIS_outofmem);
-   for(i=0; i < len; ++i) {
-      f->vendor[i] = get8_packet(f);
+   if (len) {
+      f->vendor = (char*)setup_malloc(f, sizeof(char) * (len+1));
+      if (f->vendor == NULL)                           return error(f, VORBIS_outofmem);
+      for(i=0; i < len; ++i) {
+         f->vendor[i] = get8_packet(f);
+      }
+      f->vendor[len] = (char)'\0';
    }
-   f->vendor[len] = (char)'\0';
    //user comments
    f->comment_list_length = get32_packet(f);
-   f->comment_list = (char**)setup_malloc(f, sizeof(char*) * (f->comment_list_length));
-   if (f->comment_list == NULL)                     return error(f, VORBIS_outofmem);
+   if (f->comment_list_length) {
+      f->comment_list = (char**)setup_malloc(f, sizeof(char*) * (f->comment_list_length));
+      if (f->comment_list == NULL)                     return error(f, VORBIS_outofmem);
 
-   for(i=0; i < f->comment_list_length; ++i) {
-      len = get32_packet(f);
-      f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * (len+1));
-      if (f->comment_list[i] == NULL)               return error(f, VORBIS_outofmem);
+      for(i=0; i < f->comment_list_length; ++i) {
+         len = get32_packet(f);
+         f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * (len+1));
+         if (f->comment_list[i] == NULL)               return error(f, VORBIS_outofmem);
 
-      for(j=0; j < len; ++j) {
-         f->comment_list[i][j] = get8_packet(f);
+         for(j=0; j < len; ++j) {
+            f->comment_list[i][j] = get8_packet(f);
+         }
+         f->comment_list[i][len] = (char)'\0';
       }
-      f->comment_list[i][len] = (char)'\0';
    }
 
    // framing_flag
