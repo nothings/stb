@@ -932,6 +932,10 @@ static void *make_block_array(void *mem, int count, int size)
    return p;
 }
 
+// sentinel buffer returned for empty setup_malloc()
+// declared const to catch illegal writes
+static const char setup_malloc_null_buffer[1];
+
 static void *setup_malloc(vorb *f, int sz)
 {
    sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
@@ -942,13 +946,15 @@ static void *setup_malloc(vorb *f, int sz)
       f->setup_offset += sz;
       return p;
    }
-   return malloc(sz);
+   return sz ? malloc(sz) : (void*)setup_malloc_null_buffer;
 }
 
 static void setup_free(vorb *f, void *p)
 {
    if (f->alloc.alloc_buffer) return; // do nothing; setup mem is a stack
-   free(p);
+   if (p != setup_malloc_null_buffer) {
+      free(p);
+   }
 }
 
 static void *setup_temp_malloc(vorb *f, int sz)
