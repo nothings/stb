@@ -115,6 +115,8 @@ RECENT REVISION HISTORY:
     Ryan C. Gordon          [reserved]                              [reserved]
                      DO NOT ADD YOUR NAME HERE
 
+                     Jacko Dirks
+
   To add your name to the credits, pick a random blank space in the middle and fill it.
   80% of merge conflicts on stb PRs are due to people adding their name at the end
   of the credits.
@@ -6777,6 +6779,10 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
       int stride;
       int out_size = 0;
       int delays_size = 0;
+
+      STBI_NOTUSED(out_size);
+      STBI_NOTUSED(delays_size);
+
       memset(&g, 0, sizeof(g));
       if (delays) {
          *delays = 0;
