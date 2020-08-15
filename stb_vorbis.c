@@ -934,7 +934,7 @@ static void *make_block_array(void *mem, int count, int size)
 
 // sentinel buffer returned for empty setup_malloc()
 // declared const to catch illegal writes
-static const char setup_malloc_null_buffer[1];
+static const char setup_malloc_null_buffer[1] = { 0 };
 
 static void *setup_malloc(vorb *f, int sz)
 {
