@@ -138,6 +138,9 @@ RECENT REVISION HISTORY:
 //    // ... replace '0' with '1'..'4' to force that many components per pixel
 //    // ... but 'n' will always be the number that it would have been if you said 0
 //    stbi_image_free(data)
+//    stbi_info() can be used to get width,height and number of components without
+//    //pixel Data
+//    // call int val = stbi_info("filename",&width,&height,&num_components)
 //
 // Standard parameters:
 //    int *x                 -- outputs image width in pixels
