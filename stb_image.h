@@ -139,7 +139,7 @@ RECENT REVISION HISTORY:
 //    // ... but 'n' will always be the number that it would have been if you said 0
 //    stbi_image_free(data)
 //    stbi_info() can be used to get width,height and number of components without
-//    //pixel Data
+//    //extracting pixel Data
 //    // call int val = stbi_info("filename",&width,&height,&num_components)
 //
 // Standard parameters:
