@@ -19,7 +19,7 @@
 //   - sample positions are 32-bit, limiting seekable 192Khz
 //       files to around 6 hours (Ogg supports 64-bit)
 //
-// Feature contributors:
+// Feature Contributors:
 //    Dougall Johnson (sample-exact seeking)
 //
 // Bugfix/warning contributors:
@@ -60,10 +60,10 @@
 //    1.0     - 2014-05-26 - fix memory leaks; fix warnings; fix bugs in >2-channel;
 //                           (API change) report sample rate for decode-full-file funcs
 //
-// See end of file for full version history.
+// See end of file for full version History.
 
 
-//////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
 //
 //  HEADER BEGINS HERE
 //
@@ -76,7 +76,7 @@
 #endif
 
 #ifndef STB_VORBIS_NO_STDIO
-#include <stdio.h>
+#include <stdio.h>  //header
 #endif
 
 #ifdef __cplusplus
