@@ -2486,7 +2486,7 @@ static stbtt_int32  stbtt__GetGlyphClass(stbtt_uint8 *classDefTable, int glyph)
         } break;
     }
 
-    return -1;
+    return 0;
 }
 
 // Define to STBTT_assert(x) if you want to break on unimplemented formats.
@@ -2593,12 +2593,10 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
                             STBTT_GPOS_TODO_assert(valueFormat2 == 0);
                             if (valueFormat2 != 0) return 0;
 
-                            if (glyph1class >= 0 && glyph1class < class1Count && glyph2class >= 0 && glyph2class < class2Count) {
-                                stbtt_uint8 *class1Records = table + 16;
-                                stbtt_uint8 *class2Records = class1Records + 2 * (glyph1class * class2Count);
-                                stbtt_int16 xAdvance = ttSHORT(class2Records + 2 * glyph2class);
-                                return xAdvance;
-                            }
+                            stbtt_uint8 *class1Records = table + 16;
+                            stbtt_uint8 *class2Records = class1Records + 2 * (glyph1class * class2Count);
+                            stbtt_int16 xAdvance = ttSHORT(class2Records + 2 * glyph2class);
+                            return xAdvance;
                         } break;
 
                         default: {
