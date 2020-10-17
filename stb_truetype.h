@@ -4788,17 +4788,17 @@ STBTT_DEF const char *stbtt_GetFontNameString(const stbtt_fontinfo *font, int *l
 
 STBTT_DEF const char* stbtt__ConvertUTF16BEtoUTF8(const char* wideSrc, stbtt_int32 srcLen, stbtt_int32* newLen)
 {
-   *newLen = srcLen / 2;
-   char* s1 = (char*) STBTT_malloc(*newLen, NULL);
+   char* convStr = (char*) STBTT_malloc(srcLen / 2, NULL);
    stbtt_int32 i=0;
 
    while (srcLen) {
       stbtt_uint16 ch = wideSrc[0]*256 + wideSrc[1];
-      if (ch < 0x80) s1[i++] = ch;
+      if (ch < 0x80) convStr[i++] = ch;
       wideSrc += 2;
       srcLen -= 2;
    }
-   return s1;
+   *newLen = i;
+   return convStr;
 }
 
 // Returns the english full name of the font as UTF-8
