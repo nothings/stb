@@ -14,4 +14,6 @@ stb_dep = declare_dependency(
     version: meson.project_version()
 )
 
-meson.override_dependency('stb', stb_dep)
+if meson.version().version_compare('>=0.54.0')
+    meson.override_dependency('stb', stb_dep)
+endif
