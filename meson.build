@@ -2,7 +2,6 @@ project(
   'stb',
   'c',
   'cpp',
-  default_options : ['c_std=c11', 'cpp_std=c++17', 'b_lto=True'],
   version : '0.0.1',
   license : 'Mit'
 )
