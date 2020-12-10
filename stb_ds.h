@@ -379,6 +379,7 @@ CREDITS
     Andreas Molzer
     github:hashitaku
     github:srdjanstipic
+    github:samhattangady
 */
 
 #ifdef STBDS_UNIT_TESTS
@@ -1419,24 +1420,24 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
     ++table->used_count;
 
     {
-      ptrdiff_t i = (ptrdiff_t) stbds_arrlen(a);
+      ptrdiff_t j = (ptrdiff_t) stbds_arrlen(a);
       // we want to do stbds_arraddn(1), but we can't use the macros since we don't have something of the right type
-      if ((size_t) i+1 > stbds_arrcap(a))
+      if ((size_t) j+1 > stbds_arrcap(a))
         *(void **) &a = stbds_arrgrowf(a, elemsize, 1, 0);
       raw_a = STBDS_ARR_TO_HASH(a,elemsize);
 
-      STBDS_ASSERT((size_t) i+1 <= stbds_arrcap(a));
-      stbds_header(a)->length = i+1;
+      STBDS_ASSERT((size_t) j+1 <= stbds_arrcap(a));
+      stbds_header(a)->length = j+1;
       bucket = &table->storage[pos >> STBDS_BUCKET_SHIFT];
       bucket->hash[pos & STBDS_BUCKET_MASK] = hash;
-      bucket->index[pos & STBDS_BUCKET_MASK] = i-1;
-      stbds_temp(a) = i-1;
+      bucket->index[pos & STBDS_BUCKET_MASK] = j-1;
+      stbds_temp(a) = j-1;
 
       switch (table->string.mode) {
-         case STBDS_SH_STRDUP:  stbds_temp_key(a) = *(char **) ((char *) a + elemsize*i) = stbds_strdup((char*) key); break;
-         case STBDS_SH_ARENA:   stbds_temp_key(a) = *(char **) ((char *) a + elemsize*i) = stbds_stralloc(&table->string, (char*)key); break;
-         case STBDS_SH_DEFAULT: stbds_temp_key(a) = *(char **) ((char *) a + elemsize*i) = (char *) key; break;
-         default:                memcpy((char *) a + elemsize*i, key, keysize); break;
+         case STBDS_SH_STRDUP:  stbds_temp_key(a) = *(char **) ((char *) a + elemsize*j) = stbds_strdup((char*) key); break;
+         case STBDS_SH_ARENA:   stbds_temp_key(a) = *(char **) ((char *) a + elemsize*j) = stbds_stralloc(&table->string, (char*)key); break;
+         case STBDS_SH_DEFAULT: stbds_temp_key(a) = *(char **) ((char *) a + elemsize*j) = (char *) key; break;
+         default:                memcpy((char *) a + elemsize*j, key, keysize); break;
       }
     }
     return STBDS_ARR_TO_HASH(a,elemsize);
