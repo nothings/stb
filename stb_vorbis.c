@@ -33,6 +33,7 @@
 //    Timur Gagiev       Maxwell Koo         Peter Waller
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
+//    AnthoFoxo
 //
 // Partial history:
 //    1.20    - 2020-07-11 - several small fixes
