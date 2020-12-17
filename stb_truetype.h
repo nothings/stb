@@ -1542,7 +1542,7 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
          stbtt_uint16 offset, start;
          stbtt_uint16 item = (stbtt_uint16) ((search - endCount) >> 1);
 
-	 if(unicode_codepoint <= ttUSHORT(data + endCount + 2*item)) return 0;
+	  if(unicode_codepoint > ttUSHORT(data + endCount + 2*item)) return 0;
          start = ttUSHORT(data + index_map + 14 + segcount*2 + 2 + 2*item);
          if (unicode_codepoint < start)
             return 0;
