@@ -33,7 +33,6 @@
 //    Timur Gagiev       Maxwell Koo         Peter Waller
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
-//    Phil Dougherty
 //
 // Partial history:
 //    1.20    - 2020-07-11 - several small fixes
@@ -3643,21 +3642,21 @@ static int start_decoder(vorb *f)
    f->vendor[len] = (char)'\0';
    //user comments
    f->comment_list_length = get32_packet(f);
-   if (f->comment_list_length != 0) {
+   if(f->comment_list_length)
+   {
       f->comment_list = (char**)setup_malloc(f, sizeof(char*) * (f->comment_list_length));
       if (f->comment_list == NULL)                     return error(f, VORBIS_outofmem);
-   }
-   else f->comment_list = NULL;
 
-   for(i=0; i < f->comment_list_length; ++i) {
-      len = get32_packet(f);
-      f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * (len+1));
-      if (f->comment_list[i] == NULL)               return error(f, VORBIS_outofmem);
+      for(i=0; i < f->comment_list_length; ++i) {
+         len = get32_packet(f);
+         f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * (len+1));
+         if (f->comment_list[i] == NULL)               return error(f, VORBIS_outofmem);
 
-      for(j=0; j < len; ++j) {
-         f->comment_list[i][j] = get8_packet(f);
+         for(j=0; j < len; ++j) {
+            f->comment_list[i][j] = get8_packet(f);
+         }
+         f->comment_list[i][len] = (char)'\0';
       }
-      f->comment_list[i][len] = (char)'\0';
    }
 
    // framing_flag
@@ -4195,10 +4194,14 @@ static void vorbis_deinit(stb_vorbis *p)
    int i,j;
 
    setup_free(p, p->vendor);
-   for (i=0; i < p->comment_list_length; ++i) {
-      setup_free(p, p->comment_list[i]);
+
+   if(p->comment_list_length != 0)
+   {
+      for (i=0; i < p->comment_list_length; ++i) {
+         setup_free(p, p->comment_list[i]);
+      }
+      setup_free(p, p->comment_list);
    }
-   setup_free(p, p->comment_list);
 
    if (p->residue_config) {
       for (i=0; i < p->residue_count; ++i) {
