@@ -1759,9 +1759,11 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
          y     = (stbtt_int16) vertices[off+i].y;
 
          if (next_move == i) {
-            if (i != 0)
+            if (i != 0) {
+               if (i == n-1) break;
                num_vertices = stbtt__close_shape(vertices, num_vertices, was_off, start_off, sx,sy,scx,scy,cx,cy);
-
+            }
+            
             // now start the new one
             start_off = !(flags & 1);
             if (start_off) {
