@@ -13,7 +13,7 @@ Noteworthy:
 * font text rasterizer: [stb_truetype.h](stb_truetype.h)
 * typesafe containers: [stb_ds.h](stb_ds.h)
 * dll: for those who would like to create a wrapper, implementation in other Languages (Windows, 64/32 bit) [stbDLL_x64](stbDLL_x64) [stbDLL_x86](stbDLL_x86) 
-  (use "dumpbin /EXPORTS dll_name.dll" with msvc terminal in order to see the functions built in).
+  (use ''dumpbin /EXPORTS dll_name.dll'' with msvc terminal in order to see the functions built in).
 
 Most libraries by stb, except: stb_dxt by Fabian "ryg" Giesen, stb_image_resize
 by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
