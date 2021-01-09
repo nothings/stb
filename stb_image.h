@@ -558,7 +558,7 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 #include <limits.h>
 
 #if !defined(STBI_NO_LINEAR) || !defined(STBI_NO_HDR)
-#include <math.h>  // ldexp, pow
+#include <math.h>  // pow
 #endif
 
 #ifndef STBI_NO_STDIO
@@ -6930,9 +6930,12 @@ static char *stbi__hdr_gettoken(stbi__context *z, char *buffer)
 static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp)
 {
    if ( input[3] != 0 ) {
+      int x; 
       float f1;
       // Exponent
-      f1 = (float) ldexp(1.0f, input[3] - (int)(128 + 8));
+      x = (input[3] > 9 ? (input[3] - 9) << 23 : 0);
+      f1 = *(float *) &x;
+
       if (req_comp <= 2)
          output[0] = (input[0] + input[1] + input[2]) * f1 / 3;
       else {
