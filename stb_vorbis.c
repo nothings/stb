@@ -29,7 +29,7 @@
 //    Bernhard Wodo      Evan Balster        github:alxprd
 //    Tom Beaumont       Ingo Leitgeb        Nicolas Guillemot
 //    Phillip Bennefall  Rohit               Thiago Goulart
-//    github:manxorist   saga musix          github:infatum
+//    github:manxorist   Saga Musix          github:infatum
 //    Timur Gagiev       Maxwell Koo         Peter Waller
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
@@ -5160,11 +5160,11 @@ static void copy_samples(short *dest, float *src, int len)
 
 static void compute_samples(int mask, short *output, int num_c, float **data, int d_offset, int len)
 {
-   #define BUFFER_SIZE  32
-   float buffer[BUFFER_SIZE];
-   int i,j,o,n = BUFFER_SIZE;
+   #define STB_BUFFER_SIZE  32
+   float buffer[STB_BUFFER_SIZE];
+   int i,j,o,n = STB_BUFFER_SIZE;
    check_endianness();
-   for (o = 0; o < len; o += BUFFER_SIZE) {
+   for (o = 0; o < len; o += STB_BUFFER_SIZE) {
       memset(buffer, 0, sizeof(buffer));
       if (o + n > len) n = len - o;
       for (j=0; j < num_c; ++j) {
@@ -5181,16 +5181,17 @@ static void compute_samples(int mask, short *output, int num_c, float **data, in
          output[o+i] = v;
       }
    }
+   #undef STB_BUFFER_SIZE
 }
 
 static void compute_stereo_samples(short *output, int num_c, float **data, int d_offset, int len)
 {
-   #define BUFFER_SIZE  32
-   float buffer[BUFFER_SIZE];
-   int i,j,o,n = BUFFER_SIZE >> 1;
+   #define STB_BUFFER_SIZE  32
+   float buffer[STB_BUFFER_SIZE];
+   int i,j,o,n = STB_BUFFER_SIZE >> 1;
    // o is the offset in the source data
    check_endianness();
-   for (o = 0; o < len; o += BUFFER_SIZE >> 1) {
+   for (o = 0; o < len; o += STB_BUFFER_SIZE >> 1) {
       // o2 is the offset in the output data
       int o2 = o << 1;
       memset(buffer, 0, sizeof(buffer));
@@ -5220,6 +5221,7 @@ static void compute_stereo_samples(short *output, int num_c, float **data, int d
          output[o2+i] = v;
       }
    }
+   #undef STB_BUFFER_SIZE
 }
 
 static void convert_samples_short(int buf_c, short **buffer, int b_offset, int data_c, float **data, int d_offset, int samples)
