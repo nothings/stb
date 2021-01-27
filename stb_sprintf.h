@@ -1597,7 +1597,7 @@ static stbsp__uint64 const stbsp__powten[20] = {
 #define stbsp__ddtoS64(ob, xh, xl)          \
    {                                        \
       double ahi = 0, alo, vh, t;           \
-      ob = (stbsp__int64)ph;                \
+      ob = (stbsp__int64)xh;                \
       vh = (double)ob;                      \
       ahi = (xh - vh);                      \
       t = (ahi - xh);                       \
