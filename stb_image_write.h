@@ -538,7 +538,7 @@ STBIWDEF int stbi_write_bmp(char const *filename, int x, int y, int comp, const 
 
 static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, void *data, const stbiw_tga_prefs *prefs)
 {
-   ASSERT(prefs);
+   STBIW_ASSERT(prefs);
 
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
@@ -1271,12 +1271,12 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
 
 STBIWDEF int stbi_write_png_to_func_prefs(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int stride_bytes, const stbiw_png_prefs *prefs)
 {
-    int len;
-    unsigned char *png = stbi_write_png_to_mem_prefs((const unsigned char *)data, stride_bytes, x, y, comp, &len, prefs);
-    if (png == NULL) return 0;
-    func(context, png, len);
-    STBIW_FREE(png);
-    return 1;
+   int len;
+   unsigned char *png = stbi_write_png_to_mem_prefs((const unsigned char *)data, stride_bytes, x, y, comp, &len, prefs);
+   if (png == NULL) return 0;
+   func(context, png, len);
+   STBIW_FREE(png);
+   return 1;
 }
 
 STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int stride_bytes)
