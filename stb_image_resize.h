@@ -959,7 +959,7 @@ static int stbir__edge_wrap_slow(stbir_edge edge, int n, int max)
     {
         if (n < 0)
         {
-            if (n < max)
+            if (-n < max)
                 return -n;
             else
                 return max - 1;
