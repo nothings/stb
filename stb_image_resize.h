@@ -157,6 +157,7 @@
       Sean Barrett: API design, optimizations
       Aras Pranckevicius: bugfix
       Nathan Reed: warning fixes
+      Johannes Spohr: bugfix
 
    REVISIONS
       0.97 (2020-02-02) fixed warning
