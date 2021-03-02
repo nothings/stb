@@ -531,24 +531,24 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_temp(t)    stbds_header(t)->temp
 #define stbds_temp_key(t) (*(char **) stbds_header(t)->hash_table)
 
-#define stbds_arrsetcap(a,n)  (stbds_arrgrow(a,0,n))
-#define stbds_arrsetlen(a,n)  ((stbds_arrcap(a) < (size_t) (n) ? stbds_arrsetcap((a),(size_t)(n)),0 : 0), (a) ? stbds_header(a)->length = (size_t) (n) : 0)
-#define stbds_arrcap(a)       ((a) ? stbds_header(a)->capacity : 0)
-#define stbds_arrlen(a)       ((a) ? (ptrdiff_t) stbds_header(a)->length : 0)
-#define stbds_arrlenu(a)      ((a) ?             stbds_header(a)->length : 0)
-#define stbds_arrput(a,v)     (stbds_arrmaybegrow(a,1), (a)[stbds_header(a)->length++] = (v))
-#define stbds_arrpush         stbds_arrput  // synonym
-#define stbds_arrpop(a)       (stbds_header(a)->length--, (a)[stbds_header(a)->length])
-#define stbds_arraddn(a,n)    ((void)(stbds_arraddnoff(a, n)))    // deprecated, use one of the following instead:
-#define stbds_arraddnptr(a,n) (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), &(a)[stbds_header(a)->length-(n)])
-#define stbds_arraddnoff(a,n) (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), stbds_header(a)->length-(n))
-#define stbds_arrlast(a)      ((a)[stbds_header(a)->length-1])
-#define stbds_arrfree(a)      ((void) ((a) ? STBDS_FREE(NULL,stbds_header(a)) : (void)0), (a)=NULL)
-#define stbds_arrdel(a,i)     stbds_arrdeln(a,i,1)
-#define stbds_arrdeln(a,i,n)  (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
-#define stbds_arrdelswap(a,i) ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
-#define stbds_arrinsn(a,i,n)  (stbds_arraddn((a),(n)), memmove(&(a)[(i)+(n)], &(a)[i], sizeof *(a) * (stbds_header(a)->length-(n)-(i))))
-#define stbds_arrins(a,i,v)   (stbds_arrinsn((a),(i),1), (a)[i]=(v))
+#define stbds_arrsetcap(a,n)   (stbds_arrgrow(a,0,n))
+#define stbds_arrsetlen(a,n)   ((stbds_arrcap(a) < (size_t) (n) ? stbds_arrsetcap((a),(size_t)(n)),0 : 0), (a) ? stbds_header(a)->length = (size_t) (n) : 0)
+#define stbds_arrcap(a)        ((a) ? stbds_header(a)->capacity : 0)
+#define stbds_arrlen(a)        ((a) ? (ptrdiff_t) stbds_header(a)->length : 0)
+#define stbds_arrlenu(a)       ((a) ?             stbds_header(a)->length : 0)
+#define stbds_arrput(a,v)      (stbds_arrmaybegrow(a,1), (a)[stbds_header(a)->length++] = (v))
+#define stbds_arrpush          stbds_arrput  // synonym
+#define stbds_arrpop(a)        (stbds_header(a)->length--, (a)[stbds_header(a)->length])
+#define stbds_arraddn(a,n)     ((void)(stbds_arraddnindex(a, n)))    // deprecated, use one of the following instead:
+#define stbds_arraddnptr(a,n)  (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), &(a)[stbds_header(a)->length-(n)])
+#define stbds_arraddnindex(a,n)(stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), stbds_header(a)->length-(n))
+#define stbds_arrlast(a)       ((a)[stbds_header(a)->length-1])
+#define stbds_arrfree(a)       ((void) ((a) ? STBDS_FREE(NULL,stbds_header(a)) : (void)0), (a)=NULL)
+#define stbds_arrdel(a,i)      stbds_arrdeln(a,i,1)
+#define stbds_arrdeln(a,i,n)   (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
+#define stbds_arrdelswap(a,i)  ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
+#define stbds_arrinsn(a,i,n)   (stbds_arraddn((a),(n)), memmove(&(a)[(i)+(n)], &(a)[i], sizeof *(a) * (stbds_header(a)->length-(n)-(i))))
+#define stbds_arrins(a,i,v)    (stbds_arrinsn((a),(i),1), (a)[i]=(v))
 
 #define stbds_arrmaybegrow(a,n)  ((!(a) || stbds_header(a)->length + (n) > stbds_header(a)->capacity) \
                                   ? (stbds_arrgrow(a,n,0),0) : 0)
