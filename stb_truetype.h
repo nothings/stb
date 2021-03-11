@@ -297,6 +297,8 @@ void my_stbtt_initfont(void)
 void my_stbtt_print(float x, float y, char *text)
 {
    // assume orthographic projection with units = screen pixels, origin at top left
+   glEnable(GL_BLEND);
+   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
    glEnable(GL_TEXTURE_2D);
    glBindTexture(GL_TEXTURE_2D, ftex);
    glBegin(GL_QUADS);
