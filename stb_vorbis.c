@@ -33,7 +33,7 @@
 //    Timur Gagiev       Maxwell Koo         Peter Waller
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
-//    AnthoFoxo
+//    AnthoFoxo          github:morlat
 //
 // Partial history:
 //    1.21    - 2021-07-02 - fix bug for files with no comments
@@ -4513,6 +4513,7 @@ stb_vorbis *stb_vorbis_open_pushdata(
          *error = VORBIS_need_more_data;
       else
          *error = p.error;
+      vorbis_deinit(&p);
       return NULL;
    }
    f = vorbis_alloc(&p);
