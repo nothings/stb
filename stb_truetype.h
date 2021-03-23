@@ -4547,10 +4547,9 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
    // invert for y-downwards bitmaps
    scale_y = -scale_y;
 
-   // distance from singular values (in the same units as the pixel grid)
-   const float eps = 1./128, eps2 = eps*eps;
-
    {
+      // distance from singular values (in the same units as the pixel grid)
+      const float eps = 1./1024, eps2 = eps*eps;
       int x,y,i,j;
       float *precompute;
       stbtt_vertex *verts;
