@@ -54,7 +54,7 @@
 //       Hou Qiming                 Derek Vinyard
 //       Rob Loach                  Cort Stratton
 //       Kenney Phillis Jr.         Brian Costabile
-//       Ken Voskuil (kaesve)
+//       Ken Voskuil (kaesve)       Yakov Galka
 //
 // VERSION HISTORY
 //
