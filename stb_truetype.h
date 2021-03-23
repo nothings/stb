@@ -4636,8 +4636,8 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
                         float a = 3*(ax*bx + ay*by);
                         float b = 2*(ax*ax + ay*ay) + (mx*bx+my*by);
                         float c = mx*ax+my*ay;
-                        if (fabs(a) < eps2) { // if a is 0, it's linear
-                           if (fabs(b) >= eps2) {
+                        if (STBTT_fabs(a) < eps2) { // if a is 0, it's linear
+                           if (STBTT_fabs(b) >= eps2) {
                               res[num++] = -c/b;
                            }
                         } else {
