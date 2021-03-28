@@ -56,6 +56,8 @@ STBDDEF void stb_compress_dxt_block(unsigned char *dest, const unsigned char *sr
 STBDDEF void stb_compress_bc4_block(unsigned char *dest, const unsigned char *src_r_one_byte_per_pixel);
 STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src_rg_two_byte_per_pixel);
 
+STBDDEF void stb_warmup_dxt(); // optional, call on the main thread to ensure that stb_compress_dxt_block is thread safe
+
 #define STB_COMPRESS_DXT_BLOCK
 
 #ifdef __cplusplus
@@ -707,6 +709,13 @@ void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)
 {
    stb__CompressAlphaBlock(dest,(unsigned char*) src,2);
    stb__CompressAlphaBlock(dest + 8,(unsigned char*) src+1,2);
+}
+
+void stb_warmup_dxt()
+{
+   unsigned char block[64];
+   unsigned char dst[16];
+   stb_compress_dxt_block(dst, block, 1, 0);
 }
 #endif // STB_DXT_IMPLEMENTATION
 
