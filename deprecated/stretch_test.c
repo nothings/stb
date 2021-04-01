@@ -2,7 +2,8 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
-#include "stretchy_buffer.h"
+#define STB_DS_IMPLEMENTATION
+#include "stb_ds.h"
 #include <assert.h>
 
 int main(int arg, char **argv)
@@ -11,18 +12,18 @@ int main(int arg, char **argv)
    int *arr = NULL;
 
    for (i=0; i < 1000000; ++i)
-      sb_push(arr, i);
+      arrput(arr, i);
 
-   assert(sb_count(arr) == 1000000);
+   assert(arrlen(arr) == 1000000);
    for (i=0; i < 1000000; ++i)
       assert(arr[i] == i);
 
-   sb_free(arr);
+   arrfree(arr);
    arr = NULL;
 
    for (i=0; i < 1000; ++i)
-      sb_add(arr, 1000);
-   assert(sb_count(arr) == 1000000);
+      arrput(arr, 1000);
+   assert(arrlen(arr) == 1000000);
 
    return 0;
 }
