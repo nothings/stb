@@ -10,7 +10,7 @@
 //
 // Compiling:
 //
-//   In one C/CPP file that #includes this file, do
+//   In one C/C++ file that #includes this file, do
 //
 //      #define STB_HEXWAVE_IMPLEMENTATION
 //      #include "stb_hexwave.h"
