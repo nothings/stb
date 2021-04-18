@@ -39,6 +39,7 @@
 //       github:IntellectualKitty
 //       Imanol Celaya
 //       Daniel Ribeiro Maciel
+//       Pablo Garcia "Pabloko"
 //
 //   Bug/warning reports/fixes:
 //       "Zer" on mollyrocket       Fabian "ryg" Giesen   github:NiLuJe
@@ -58,6 +59,7 @@
 //
 // VERSION HISTORY
 //
+//   1.25 (2021-04-17) support for glyph layered color fonts (CPAL/COLR)
 //   1.24 (2020-02-05) fix warning
 //   1.23 (2020-02-02) query SVG data for glyphs; query whole kerning table (but only kern not GPOS)
 //   1.22 (2019-08-11) minimize missing-glyph duplication; fix kerning if both 'GPOS' and 'kern' are defined
@@ -714,7 +716,7 @@ struct stbtt_fontinfo
 
    int numGlyphs;                     // number of glyphs, needed for range checking
 
-   int loca,head,glyf,hhea,hmtx,kern,gpos,svg; // table locations as offset from start of .ttf
+   int loca,head,glyf,hhea,hmtx,kern,gpos,svg,colr,cpal; // table locations as offset from start of .ttf
    int index_map;                     // a cmap mapping for our chosen character encoding
    int indexToLocFormat;              // format needed to map from glyph index to glyph
 
@@ -1084,6 +1086,48 @@ enum { // languageID for STBTT_PLATFORM_ID_MAC
    STBTT_MAC_LANG_HEBREW       =10,   STBTT_MAC_LANG_CHINESE_SIMPLIFIED =33,
    STBTT_MAC_LANG_ITALIAN      =3 ,   STBTT_MAC_LANG_CHINESE_TRAD =19
 };
+
+//////////////////////////////////////////////////////////////////////////////
+//
+// Glyph layered color font support (CPAL/COLR)
+//
+// Fonts that have the OpenType's extension tables CPAL and COLR can create
+// colored glyphs by layering a group of glyphs, each one with a corresponding
+// color from a palette. Glyphs on layer groups are not associated to a codepoint,
+// so all the lookups should be done on the glyphid (mind it when exporting baked bitmaps).
+// NB: CPAL supports version 0. I could not find a version 1 font specimen.
+// First steps:
+//   Call stbtt_FontHasPalette() and stbtt_FontHasLayers() to know if font contains
+//   CPAL and COLR tables and > 0 palettes / glyph layers respectively.
+// Getting palettes:
+//   Call stbtt_FontPaletteCount() to know the number of palettes in the font.
+//   Call stbtt_FontPaletteGetColors() to retrive the number of colors in the palette
+//   or zero if failed. Use the returned array of <stbtt_color> to access specific colors.
+// Getting glyphs:
+//   COLR tables must be searched to find the desired glyph layer group on a lookup table,
+//   its recommended to cache this values, a binary search is done on the lookup table.
+//   A call to stbtt_GetGlyphLayers() will return the number of glyph layers associated
+//   to a glyphid or zero if none. Alternatively use stbtt_GetCodepointLayers if searching
+//   a codepoint. Use the returned array of <stbtt_glyphlayer> to access glyphid and
+//   palette entry index. Palette entry 0xFFFF is reserved, use foreground color.
+//   
+//// Color palettes (CPAL) ///////////////////////////////////////////////////
+typedef union {
+    unsigned int color;
+    struct {
+        unsigned char b, g, r, a;
+    } argb;
+} stbtt_color;
+STBTT_DEF bool stbtt_FontHasPalette(const stbtt_fontinfo *info);
+STBTT_DEF unsigned short stbtt_FontPaletteCount(const stbtt_fontinfo *info);
+STBTT_DEF unsigned short stbtt_FontPaletteGetColors(const stbtt_fontinfo *info, unsigned short paletteIndex, stbtt_color **colorPalette);
+//// Glyph layers (COLR) /////////////////////////////////////////////////////
+typedef struct {
+    unsigned short glyphid, colorid;
+} stbtt_glyphlayer;
+STBTT_DEF bool stbtt_FontHasLayers(const stbtt_fontinfo *info);
+STBTT_DEF unsigned short stbtt_GetGlyphLayers(const stbtt_fontinfo *info, unsigned short glypId, stbtt_glyphlayer **glyphLayer);
+STBTT_DEF unsigned short stbtt_GetCodepointLayers(const stbtt_fontinfo *info, unsigned short codePoint, stbtt_glyphlayer **glyphLayer);
 
 #ifdef __cplusplus
 }
@@ -4902,6 +4946,126 @@ STBTT_DEF int stbtt_FindMatchingFont(const unsigned char *fontdata, const char *
 STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char *s1, int len1, const char *s2, int len2)
 {
    return stbtt_CompareUTF8toUTF16_bigendian_internal((char *) s1, len1, (char *) s2, len2);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+// Glyph layered color font support using COLR/CPAL tables
+//
+
+static int stbtt__get_cpal(stbtt_fontinfo *info)
+{
+    if ( info->cpal < 0 && info != NULL ) //Load table if not exists
+        info->cpal = stbtt__find_table(info->data, info->fontstart, "CPAL");
+    return info->cpal;
+}
+
+static int stbtt__get_colr(stbtt_fontinfo *info)
+{
+    if ( info->colr < 0 && info != NULL ) //Load table if not exists
+    {
+        info->colr = stbtt__find_table (info->data, info->fontstart, "COLR");
+        if ( info->colr > 0 ) //swap bytes on table, so it can be returned
+        {
+            const stbtt_uint32 layerRecordsOffset = ttULONG(info->data + info->colr + 8);
+            const stbtt_uint16 numLayerRecords = ttUSHORT(info->data + info->colr + 12);
+            unsigned char *colOffset = info->data + info->colr + layerRecordsOffset;
+            for ( int i = 0; i < numLayerRecords; i++ ) //Swap bytes
+            {
+                unsigned short *col = (unsigned short*)colOffset + ( 2 * i );
+                col[0] = ( col[0] >> 8 ) | ( col[0] << 8 ); 
+                col[1] = ( col[1] >> 8 ) | ( col[1] << 8 );
+            }
+        }
+    }
+    return info->colr;
+}
+
+STBTT_DEF bool stbtt_FontHasLayers(const stbtt_fontinfo *info)
+{
+    const int table_colr = stbtt__get_colr((stbtt_fontinfo*)info);
+    if ( table_colr > 0 && info != NULL ) //Check table and if theres glyphs
+        if ( ttUSHORT(info->data + table_colr + 2 /*numBaseGlyphRecords*/) > 0 )
+            return 1;
+    return 0;
+}
+
+STBTT_DEF bool stbtt_FontHasPalette(const stbtt_fontinfo *info)
+{
+    const int table_cpal = stbtt__get_cpal ((stbtt_fontinfo*)info);
+    if ( table_cpal > 0 && info != NULL ) //Check table and if theres palettes
+        if ( ttUSHORT(info->data + table_cpal + 4 /*numPalettes*/) > 0 )
+            return 1;
+    return 0;
+}
+
+STBTT_DEF unsigned short stbtt_FontPaletteCount(const stbtt_fontinfo *info)
+{
+    const int table_cpal = stbtt__get_cpal((stbtt_fontinfo*)info);
+    if ( table_cpal > 0 && info != NULL ) //Check palettes and input
+    {
+        const stbtt_uint16 numPalettes = ttUSHORT(info->data + table_cpal + 4);
+        return numPalettes; //Success
+    }
+    return 0; //Failed
+}
+
+STBTT_DEF unsigned short stbtt_FontPaletteGetColors(const stbtt_fontinfo *info, unsigned short paletteIndex, stbtt_color** colorPalette)
+{
+    const int table_cpal = stbtt__get_cpal((stbtt_fontinfo*)info);
+    if ( table_cpal > 0 && info != NULL ) //Check palettes
+    {
+        const stbtt_uint16 numPaletteEntries = ttUSHORT(info->data + table_cpal + 2);
+        if ( colorPalette )
+        {
+            const stbtt_uint16 numPalettes = ttUSHORT(info->data + table_cpal + 4);
+            if ( paletteIndex > numPalettes - 1 ) return 0; //Invalid palette index
+            const stbtt_uint32 colorRecordsArrayOffset = ttULONG(info->data + table_cpal + 8);
+            const stbtt_uint16 colorRecordIndices = ttUSHORT(info->data + table_cpal + 12 + ( 2 * paletteIndex ));
+            const stbtt_uint8 *colorptr = info->data + table_cpal + colorRecordsArrayOffset + ( colorRecordIndices * 4 );
+            *colorPalette = (stbtt_color*)colorptr;
+        }
+        return numPaletteEntries;
+    }
+    return 0; //Failed
+}
+
+STBTT_DEF unsigned short stbtt_GetGlyphLayers(const stbtt_fontinfo *info, unsigned short glypId, stbtt_glyphlayer **glyphLayer)
+{
+    const int table_colr = stbtt__get_colr((stbtt_fontinfo*)info);
+    if ( table_colr > 0 && info != NULL ) //Check glyph table
+    {
+        const stbtt_uint16 numBaseGlyphRecords    = ttUSHORT(info->data + table_colr + 2);
+        const stbtt_uint32 baseGlyphRecordsOffset = ttULONG(info->data + table_colr + 4);
+        const stbtt_uint32 layerRecordsOffset     = ttULONG(info->data + table_colr + 8);
+        stbtt_int32 low = 0;
+        stbtt_int32 high = (stbtt_int32)numBaseGlyphRecords;
+        while ( low < high ) // Binary search, lookup glyph table.
+        {
+            stbtt_int32 mid = low + ( ( high - low ) >> 1 );
+            stbtt_uint16 foundGlyphID = ttUSHORT(info->data + table_colr + baseGlyphRecordsOffset + ( 6 * mid ));
+            if ( (stbtt_uint32)glypId < foundGlyphID ) //Trim high
+                high = mid;
+            else if ( (stbtt_uint32)glypId > foundGlyphID ) //Trim low
+                low = mid + 1;
+            else //Result found
+            {
+                const stbtt_uint16 numLayers = ttUSHORT(info->data + table_colr + baseGlyphRecordsOffset + ( 6 * mid ) + 4);
+                if ( glyphLayer )
+                {
+                    const stbtt_uint16 firstLayerIndex = ttUSHORT(info->data + table_colr + baseGlyphRecordsOffset + ( 6 * mid ) + 2);
+                    const stbtt_uint8 *layerptr = info->data + table_colr + layerRecordsOffset + ( firstLayerIndex * 4 );
+                    *glyphLayer = (stbtt_glyphlayer*)layerptr;
+                }
+                return numLayers; //Sucess
+            }
+        }
+    }
+    return 0; //Not found, failed
+}
+
+STBTT_DEF unsigned short stbtt_GetCodepointLayers(const stbtt_fontinfo *info, unsigned short codePoint, stbtt_glyphlayer **glyphLayer)
+{
+    return stbtt_GetGlyphLayers(info, stbtt_FindGlyphIndex(info, codePoint), glyphLayer); //Lookup by glyph id
 }
 
 #if defined(__GNUC__) || defined(__clang__)
