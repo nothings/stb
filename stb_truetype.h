@@ -1499,6 +1499,8 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, in
       info->numGlyphs = 0xffff;
 
    info->svg = -1;
+   info->colr = -1;
+   info->cpal = -1;
 
    // find a cmap encoding table we understand *now* to avoid searching
    // later. (todo: could make this installable)
