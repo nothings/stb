@@ -29,6 +29,7 @@
 //   Kevin Schmidt (#defines for "freestanding" compilation)
 //   github:ppiastucki (BC4 support)
 //   Ignacio Castano - improve DXT endpoint quantization
+//   Alan Hickman - static table initialization
 //
 // LICENSE
 //
@@ -81,12 +82,8 @@ STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *sr
 
 #include <stdlib.h>
 
-#if !defined(STBD_ABS) || !defined(STBI_FABS)
+#if !defined(STBI_FABS)
 #include <math.h>
-#endif
-
-#ifndef STBD_ABS
-#define STBD_ABS(i)           abs(i)
 #endif
 
 #ifndef STBD_FABS
@@ -98,12 +95,112 @@ STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *sr
 #define STBD_MEMSET           memset
 #endif
 
-static unsigned char stb__Expand5[32];
-static unsigned char stb__Expand6[64];
-static unsigned char stb__OMatch5[256][2];
-static unsigned char stb__OMatch6[256][2];
-static unsigned char stb__QuantRBTab[256+16];
-static unsigned char stb__QuantGTab[256+16];
+static const unsigned char stb__QuantRBTab[256 + 16] = {
+     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   8,   8,   8,
+     8,   8,   8,   8,   8,  16,  16,  16,  16,  16,  16,  16,  16,  24,  24,  24,
+    24,  24,  24,  24,  24,  33,  33,  33,  33,  33,  33,  33,  33,  33,  41,  41,
+    41,  41,  41,  41,  41,  41,  49,  49,  49,  49,  49,  49,  49,  49,  57,  57,
+    57,  57,  57,  57,  57,  57,  66,  66,  66,  66,  66,  66,  66,  66,  74,  74,
+    74,  74,  74,  74,  74,  74,  74,  82,  82,  82,  82,  82,  82,  82,  82,  90,
+    90,  90,  90,  90,  90,  90,  90,  99,  99,  99,  99,  99,  99,  99,  99, 107,
+   107, 107, 107, 107, 107, 107, 107, 107, 115, 115, 115, 115, 115, 115, 115, 115,
+   123, 123, 123, 123, 123, 123, 123, 123, 132, 132, 132, 132, 132, 132, 132, 132,
+   140, 140, 140, 140, 140, 140, 140, 140, 148, 148, 148, 148, 148, 148, 148, 148,
+   148, 156, 156, 156, 156, 156, 156, 156, 156, 165, 165, 165, 165, 165, 165, 165,
+   165, 173, 173, 173, 173, 173, 173, 173, 173, 181, 181, 181, 181, 181, 181, 181,
+   181, 181, 189, 189, 189, 189, 189, 189, 189, 189, 198, 198, 198, 198, 198, 198,
+   198, 198, 206, 206, 206, 206, 206, 206, 206, 206, 214, 214, 214, 214, 214, 214,
+   214, 214, 222, 222, 222, 222, 222, 222, 222, 222, 222, 231, 231, 231, 231, 231,
+   231, 231, 231, 239, 239, 239, 239, 239, 239, 239, 239, 247, 247, 247, 247, 247,
+   247, 247, 247, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+};
+static const unsigned char stb__QuantGTab[256 + 16] = {
+     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   4,   4,   4,   4,   8,
+     8,   8,   8,  12,  12,  12,  12,  16,  16,  16,  16,  20,  20,  20,  20,  24,
+    24,  24,  24,  28,  28,  28,  28,  32,  32,  32,  32,  36,  36,  36,  36,  40,
+    40,  40,  40,  44,  44,  44,  44,  48,  48,  48,  48,  52,  52,  52,  52,  56,
+    56,  56,  56,  60,  60,  60,  60,  65,  65,  65,  65,  69,  69,  69,  69,  73,
+    73,  73,  73,  77,  77,  77,  77,  81,  81,  81,  81,  85,  85,  85,  85,  85,
+    89,  89,  89,  89,  93,  93,  93,  93,  97,  97,  97,  97, 101, 101, 101, 101,
+   105, 105, 105, 105, 109, 109, 109, 109, 113, 113, 113, 113, 117, 117, 117, 117,
+   121, 121, 121, 121, 125, 125, 125, 125, 130, 130, 130, 130, 134, 134, 134, 134,
+   138, 138, 138, 138, 142, 142, 142, 142, 146, 146, 146, 146, 150, 150, 150, 150,
+   154, 154, 154, 154, 158, 158, 158, 158, 162, 162, 162, 162, 166, 166, 166, 166,
+   170, 170, 170, 170, 170, 174, 174, 174, 174, 178, 178, 178, 178, 182, 182, 182,
+   182, 186, 186, 186, 186, 190, 190, 190, 190, 195, 195, 195, 195, 199, 199, 199,
+   199, 203, 203, 203, 203, 207, 207, 207, 207, 211, 211, 211, 211, 215, 215, 215,
+   215, 219, 219, 219, 219, 223, 223, 223, 223, 227, 227, 227, 227, 231, 231, 231,
+   231, 235, 235, 235, 235, 239, 239, 239, 239, 243, 243, 243, 243, 247, 247, 247,
+   247, 251, 251, 251, 251, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
+};
+static const unsigned char stb__OMatch5[256][2] = {
+   {  0,  0 }, {  0,  0 }, {  0,  1 }, {  0,  1 }, {  1,  0 }, {  1,  0 }, {  1,  0 }, {  1,  1 },
+   {  1,  1 }, {  2,  0 }, {  2,  0 }, {  0,  4 }, {  2,  1 }, {  2,  1 }, {  2,  1 }, {  3,  0 },
+   {  3,  0 }, {  3,  0 }, {  3,  1 }, {  1,  5 }, {  3,  2 }, {  3,  2 }, {  4,  0 }, {  4,  0 },
+   {  4,  1 }, {  4,  1 }, {  4,  2 }, {  4,  2 }, {  4,  2 }, {  3,  5 }, {  5,  1 }, {  5,  1 },
+   {  5,  2 }, {  4,  4 }, {  5,  3 }, {  5,  3 }, {  5,  3 }, {  6,  2 }, {  6,  2 }, {  6,  2 },
+   {  6,  3 }, {  5,  5 }, {  6,  4 }, {  6,  4 }, {  4,  8 }, {  7,  3 }, {  7,  3 }, {  7,  3 },
+   {  7,  4 }, {  7,  4 }, {  7,  4 }, {  7,  5 }, {  5,  9 }, {  7,  6 }, {  7,  6 }, {  8,  4 },
+   {  8,  4 }, {  8,  5 }, {  8,  5 }, {  8,  6 }, {  8,  6 }, {  8,  6 }, {  7,  9 }, {  9,  5 },
+   {  9,  5 }, {  9,  6 }, {  8,  8 }, {  9,  7 }, {  9,  7 }, {  9,  7 }, { 10,  6 }, { 10,  6 },
+   { 10,  6 }, { 10,  7 }, {  9,  9 }, { 10,  8 }, { 10,  8 }, {  8, 12 }, { 11,  7 }, { 11,  7 },
+   { 11,  7 }, { 11,  8 }, { 11,  8 }, { 11,  8 }, { 11,  9 }, {  9, 13 }, { 11, 10 }, { 11, 10 },
+   { 12,  8 }, { 12,  8 }, { 12,  9 }, { 12,  9 }, { 12, 10 }, { 12, 10 }, { 12, 10 }, { 11, 13 },
+   { 13,  9 }, { 13,  9 }, { 13, 10 }, { 12, 12 }, { 13, 11 }, { 13, 11 }, { 13, 11 }, { 14, 10 },
+   { 14, 10 }, { 14, 10 }, { 14, 11 }, { 13, 13 }, { 14, 12 }, { 14, 12 }, { 12, 16 }, { 15, 11 },
+   { 15, 11 }, { 15, 11 }, { 15, 12 }, { 15, 12 }, { 15, 12 }, { 15, 13 }, { 13, 17 }, { 15, 14 },
+   { 15, 14 }, { 16, 12 }, { 16, 12 }, { 16, 13 }, { 16, 13 }, { 16, 14 }, { 16, 14 }, { 16, 14 },
+   { 15, 17 }, { 17, 13 }, { 17, 13 }, { 17, 14 }, { 16, 16 }, { 17, 15 }, { 17, 15 }, { 17, 15 },
+   { 18, 14 }, { 18, 14 }, { 18, 14 }, { 18, 15 }, { 17, 17 }, { 18, 16 }, { 18, 16 }, { 16, 20 },
+   { 19, 15 }, { 19, 15 }, { 19, 15 }, { 19, 16 }, { 19, 16 }, { 19, 16 }, { 19, 17 }, { 17, 21 },
+   { 19, 18 }, { 19, 18 }, { 20, 16 }, { 20, 16 }, { 20, 17 }, { 20, 17 }, { 20, 18 }, { 20, 18 },
+   { 20, 18 }, { 19, 21 }, { 21, 17 }, { 21, 17 }, { 21, 18 }, { 20, 20 }, { 21, 19 }, { 21, 19 },
+   { 21, 19 }, { 22, 18 }, { 22, 18 }, { 22, 18 }, { 22, 19 }, { 21, 21 }, { 22, 20 }, { 22, 20 },
+   { 20, 24 }, { 23, 19 }, { 23, 19 }, { 23, 19 }, { 23, 20 }, { 23, 20 }, { 23, 20 }, { 23, 21 },
+   { 21, 25 }, { 23, 22 }, { 23, 22 }, { 24, 20 }, { 24, 20 }, { 24, 21 }, { 24, 21 }, { 24, 22 },
+   { 24, 22 }, { 24, 22 }, { 23, 25 }, { 25, 21 }, { 25, 21 }, { 25, 22 }, { 24, 24 }, { 25, 23 },
+   { 25, 23 }, { 25, 23 }, { 26, 22 }, { 26, 22 }, { 26, 22 }, { 26, 23 }, { 25, 25 }, { 26, 24 },
+   { 26, 24 }, { 24, 28 }, { 27, 23 }, { 27, 23 }, { 27, 23 }, { 27, 24 }, { 27, 24 }, { 27, 24 },
+   { 27, 25 }, { 25, 29 }, { 27, 26 }, { 27, 26 }, { 28, 24 }, { 28, 24 }, { 28, 25 }, { 28, 25 },
+   { 28, 26 }, { 28, 26 }, { 28, 26 }, { 27, 29 }, { 29, 25 }, { 29, 25 }, { 29, 26 }, { 28, 28 },
+   { 29, 27 }, { 29, 27 }, { 29, 27 }, { 30, 26 }, { 30, 26 }, { 30, 26 }, { 30, 27 }, { 29, 29 },
+   { 30, 28 }, { 30, 28 }, { 30, 28 }, { 31, 27 }, { 31, 27 }, { 31, 27 }, { 31, 28 }, { 31, 28 },
+   { 31, 28 }, { 31, 29 }, { 31, 29 }, { 31, 30 }, { 31, 30 }, { 31, 30 }, { 31, 31 }, { 31, 31 },
+};
+static const unsigned char stb__OMatch6[256][2] = {
+   {  0,  0 }, {  0,  1 }, {  1,  0 }, {  1,  0 }, {  1,  1 }, {  2,  0 }, {  2,  1 }, {  3,  0 },
+   {  3,  0 }, {  3,  1 }, {  4,  0 }, {  4,  0 }, {  4,  1 }, {  5,  0 }, {  5,  1 }, {  6,  0 },
+   {  6,  0 }, {  6,  1 }, {  7,  0 }, {  7,  0 }, {  7,  1 }, {  8,  0 }, {  8,  1 }, {  8,  1 },
+   {  8,  2 }, {  9,  1 }, {  9,  2 }, {  9,  2 }, {  9,  3 }, { 10,  2 }, { 10,  3 }, { 10,  3 },
+   { 10,  4 }, { 11,  3 }, { 11,  4 }, { 11,  4 }, { 11,  5 }, { 12,  4 }, { 12,  5 }, { 12,  5 },
+   { 12,  6 }, { 13,  5 }, { 13,  6 }, {  8, 16 }, { 13,  7 }, { 14,  6 }, { 14,  7 }, {  9, 17 },
+   { 14,  8 }, { 15,  7 }, { 15,  8 }, { 11, 16 }, { 15,  9 }, { 15, 10 }, { 16,  8 }, { 16,  9 },
+   { 16, 10 }, { 15, 13 }, { 17,  9 }, { 17, 10 }, { 17, 11 }, { 15, 16 }, { 18, 10 }, { 18, 11 },
+   { 18, 12 }, { 16, 16 }, { 19, 11 }, { 19, 12 }, { 19, 13 }, { 17, 17 }, { 20, 12 }, { 20, 13 },
+   { 20, 14 }, { 19, 16 }, { 21, 13 }, { 21, 14 }, { 21, 15 }, { 20, 17 }, { 22, 14 }, { 22, 15 },
+   { 25, 10 }, { 22, 16 }, { 23, 15 }, { 23, 16 }, { 26, 11 }, { 23, 17 }, { 24, 16 }, { 24, 17 },
+   { 27, 12 }, { 24, 18 }, { 25, 17 }, { 25, 18 }, { 28, 13 }, { 25, 19 }, { 26, 18 }, { 26, 19 },
+   { 29, 14 }, { 26, 20 }, { 27, 19 }, { 27, 20 }, { 30, 15 }, { 27, 21 }, { 28, 20 }, { 28, 21 },
+   { 28, 21 }, { 28, 22 }, { 29, 21 }, { 29, 22 }, { 24, 32 }, { 29, 23 }, { 30, 22 }, { 30, 23 },
+   { 25, 33 }, { 30, 24 }, { 31, 23 }, { 31, 24 }, { 27, 32 }, { 31, 25 }, { 31, 26 }, { 32, 24 },
+   { 32, 25 }, { 32, 26 }, { 31, 29 }, { 33, 25 }, { 33, 26 }, { 33, 27 }, { 31, 32 }, { 34, 26 },
+   { 34, 27 }, { 34, 28 }, { 32, 32 }, { 35, 27 }, { 35, 28 }, { 35, 29 }, { 33, 33 }, { 36, 28 },
+   { 36, 29 }, { 36, 30 }, { 35, 32 }, { 37, 29 }, { 37, 30 }, { 37, 31 }, { 36, 33 }, { 38, 30 },
+   { 38, 31 }, { 41, 26 }, { 38, 32 }, { 39, 31 }, { 39, 32 }, { 42, 27 }, { 39, 33 }, { 40, 32 },
+   { 40, 33 }, { 43, 28 }, { 40, 34 }, { 41, 33 }, { 41, 34 }, { 44, 29 }, { 41, 35 }, { 42, 34 },
+   { 42, 35 }, { 45, 30 }, { 42, 36 }, { 43, 35 }, { 43, 36 }, { 46, 31 }, { 43, 37 }, { 44, 36 },
+   { 44, 37 }, { 44, 37 }, { 44, 38 }, { 45, 37 }, { 45, 38 }, { 40, 48 }, { 45, 39 }, { 46, 38 },
+   { 46, 39 }, { 41, 49 }, { 46, 40 }, { 47, 39 }, { 47, 40 }, { 43, 48 }, { 47, 41 }, { 47, 42 },
+   { 48, 40 }, { 48, 41 }, { 48, 42 }, { 47, 45 }, { 49, 41 }, { 49, 42 }, { 49, 43 }, { 47, 48 },
+   { 50, 42 }, { 50, 43 }, { 50, 44 }, { 48, 48 }, { 51, 43 }, { 51, 44 }, { 51, 45 }, { 49, 49 },
+   { 52, 44 }, { 52, 45 }, { 52, 46 }, { 51, 48 }, { 53, 45 }, { 53, 46 }, { 53, 47 }, { 52, 49 },
+   { 54, 46 }, { 54, 47 }, { 57, 42 }, { 54, 48 }, { 55, 47 }, { 55, 48 }, { 58, 43 }, { 55, 49 },
+   { 56, 48 }, { 56, 49 }, { 59, 44 }, { 56, 50 }, { 57, 49 }, { 57, 50 }, { 60, 45 }, { 57, 51 },
+   { 58, 50 }, { 58, 51 }, { 61, 46 }, { 58, 52 }, { 59, 51 }, { 59, 52 }, { 62, 47 }, { 59, 53 },
+   { 60, 52 }, { 60, 53 }, { 60, 53 }, { 60, 54 }, { 61, 53 }, { 61, 54 }, { 61, 54 }, { 61, 55 },
+   { 62, 54 }, { 62, 55 }, { 62, 55 }, { 62, 56 }, { 63, 55 }, { 63, 56 }, { 63, 56 }, { 63, 57 },
+   { 63, 58 }, { 63, 59 }, { 63, 59 }, { 63, 60 }, { 63, 61 }, { 63, 62 }, { 63, 62 }, { 63, 63 },
+};
 
 static int stb__Mul8Bit(int a, int b)
 {
@@ -117,9 +214,10 @@ static void stb__From16Bit(unsigned char *out, unsigned short v)
    int gv = (v & 0x07e0) >>  5;
    int bv = (v & 0x001f) >>  0;
 
-   out[0] = stb__Expand5[rv];
-   out[1] = stb__Expand6[gv];
-   out[2] = stb__Expand5[bv];
+   // expand to 8 bits via bit replication
+   out[0] = (rv * 33) >> 2;
+   out[1] = (gv * 65) >> 4;
+   out[2] = (bv * 33) >> 2;
    out[3] = 0;
 }
 
@@ -151,35 +249,6 @@ static void stb__Lerp13RGB(unsigned char *out, unsigned char *p1, unsigned char 
 
 /****************************************************************************/
 
-// compute table to reproduce constant colors as accurately as possible
-static void stb__PrepareOptTable(unsigned char *Table,const unsigned char *expand,int size)
-{
-   int i,mn,mx;
-   for (i=0;i<256;i++) {
-      int bestErr = 256;
-      for (mn=0;mn<size;mn++) {
-         for (mx=0;mx<size;mx++) {
-            int mine = expand[mn];
-            int maxe = expand[mx];
-            int err = STBD_ABS(stb__Lerp13(maxe, mine) - i);
-
-            // DX10 spec says that interpolation must be within 3% of "correct" result,
-            // add this as error term. (normally we'd expect a random distribution of
-            // +-1.5% error, but nowhere in the spec does it say that the error has to be
-            // unbiased - better safe than sorry).
-            err += STBD_ABS(maxe - mine) * 3 / 100;
-
-            if(err < bestErr)
-            {
-               Table[i*2+0] = (unsigned char)mx;
-               Table[i*2+1] = (unsigned char)mn;
-               bestErr = err;
-            }
-         }
-      }
-   }
-}
-
 static void stb__EvalColors(unsigned char *color,unsigned short c0,unsigned short c1)
 {
    stb__From16Bit(color+ 0, c0);
@@ -198,7 +267,7 @@ static void stb__DitherBlock(unsigned char *dest, unsigned char *block)
   // process channels separately
   for (ch=0; ch<3; ++ch) {
       unsigned char *bp = block+ch, *dp = dest+ch;
-      unsigned char *quant = (ch == 1) ? stb__QuantGTab+8 : stb__QuantRBTab+8;
+      const unsigned char *quant = (ch == 1) ? stb__QuantGTab+8 : stb__QuantRBTab+8;
       STBD_MEMSET(err, 0, sizeof(err));
       for(y=0; y<4; ++y) {
          dp[ 0] = quant[bp[ 0] + ((3*ep2[1] + 5*ep2[0]) >> 4)];
@@ -316,7 +385,7 @@ static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *c
 // The color optimization function. (Clever code, part 1)
 static void stb__OptimizeColorsBlock(unsigned char *block, unsigned short *pmax16, unsigned short *pmin16)
 {
-  int mind = 0x7fffffff,maxd = -0x7fffffff;
+  int mind,maxd;
   unsigned char *minp, *maxp;
   double magn;
   int v_r,v_g,v_b;
@@ -398,8 +467,10 @@ static void stb__OptimizeColorsBlock(unsigned char *block, unsigned short *pmax1
       v_b = (int) (vfb * magn);
    }
 
+   minp = maxp = block;
+   mind = maxd = block[0]*v_r + block[1]*v_g + block[2]*v_b;
    // Pick colors at extreme points
-   for(i=0;i<16;i++)
+   for(i=1;i<16;i++)
    {
       int dot = block[i*4+0]*v_r + block[i*4+1]*v_g + block[i*4+2]*v_b;
 
@@ -418,12 +489,12 @@ static void stb__OptimizeColorsBlock(unsigned char *block, unsigned short *pmax1
    *pmin16 = stb__As16Bit(minp[0],minp[1],minp[2]);
 }
 
-static const float midpoints5[32] = {
+static const float stb__midpoints5[32] = {
    0.015686f, 0.047059f, 0.078431f, 0.111765f, 0.145098f, 0.176471f, 0.207843f, 0.241176f, 0.274510f, 0.305882f, 0.337255f, 0.370588f, 0.403922f, 0.435294f, 0.466667f, 0.5f,
    0.533333f, 0.564706f, 0.596078f, 0.629412f, 0.662745f, 0.694118f, 0.725490f, 0.758824f, 0.792157f, 0.823529f, 0.854902f, 0.888235f, 0.921569f, 0.952941f, 0.984314f, 1.0f
 };
 
-static const float midpoints6[64] = {
+static const float stb__midpoints6[64] = {
    0.007843f, 0.023529f, 0.039216f, 0.054902f, 0.070588f, 0.086275f, 0.101961f, 0.117647f, 0.133333f, 0.149020f, 0.164706f, 0.180392f, 0.196078f, 0.211765f, 0.227451f, 0.245098f,
    0.262745f, 0.278431f, 0.294118f, 0.309804f, 0.325490f, 0.341176f, 0.356863f, 0.372549f, 0.388235f, 0.403922f, 0.419608f, 0.435294f, 0.450980f, 0.466667f, 0.482353f, 0.500000f,
    0.517647f, 0.533333f, 0.549020f, 0.564706f, 0.580392f, 0.596078f, 0.611765f, 0.627451f, 0.643137f, 0.658824f, 0.674510f, 0.690196f, 0.705882f, 0.721569f, 0.737255f, 0.754902f,
@@ -435,7 +506,7 @@ static unsigned short stb__Quantize5(float x)
    unsigned short q;
    x = x < 0 ? 0 : x > 1 ? 1 : x;  // saturate
    q = (unsigned short)(x * 31);
-   q += (x > midpoints5[q]);
+   q += (x > stb__midpoints5[q]);
    return q;
 }
 
@@ -444,7 +515,7 @@ static unsigned short stb__Quantize6(float x)
    unsigned short q;
    x = x < 0 ? 0 : x > 1 ? 1 : x;  // saturate
    q = (unsigned short)(x * 63);
-   q += (x > midpoints6[q]);
+   q += (x > stb__midpoints6[q]);
    return q;
 }
 
@@ -654,35 +725,9 @@ static void stb__CompressAlphaBlock(unsigned char *dest,unsigned char *src, int 
    }
 }
 
-static void stb__InitDXT()
-{
-   int i;
-   for(i=0;i<32;i++)
-      stb__Expand5[i] = (unsigned char)((i<<3)|(i>>2));
-
-   for(i=0;i<64;i++)
-      stb__Expand6[i] = (unsigned char)((i<<2)|(i>>4));
-
-   for(i=0;i<256+16;i++)
-   {
-      int v = i-8 < 0 ? 0 : i-8 > 255 ? 255 : i-8;
-      stb__QuantRBTab[i] = stb__Expand5[stb__Mul8Bit(v,31)];
-      stb__QuantGTab[i] = stb__Expand6[stb__Mul8Bit(v,63)];
-   }
-
-   stb__PrepareOptTable(&stb__OMatch5[0][0],stb__Expand5,32);
-   stb__PrepareOptTable(&stb__OMatch6[0][0],stb__Expand6,64);
-}
-
 void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src, int alpha, int mode)
 {
    unsigned char data[16][4];
-   static int init=1;
-   if (init) {
-      stb__InitDXT();
-      init=0;
-   }
-
    if (alpha) {
       int i;
       stb__CompressAlphaBlock(dest,(unsigned char*) src+3, 4);
@@ -709,6 +754,76 @@ void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)
    stb__CompressAlphaBlock(dest + 8,(unsigned char*) src+1,2);
 }
 #endif // STB_DXT_IMPLEMENTATION
+
+// Compile with STB_DXT_IMPLEMENTATION and STB_DXT_GENERATE_TABLES
+// defined to generate the tables above.
+#ifdef STB_DXT_GENERATE_TABLES
+#include <stdio.h>
+
+int main()
+{
+   int i, j;
+   const char *quant_names[] = { "stb__QuantRBTab", "stb__QuantGTab" };
+   const char *omatch_names[] = { "stb__OMatch5", "stb__OMatch6" };
+   int dequant_mults[2] = { 33*4, 65 }; // .4 fixed-point dequant multipliers
+
+   // quant tables (for dither)
+   for (i=0; i < 2; ++i) {
+      int quant_mult = i ? 63 : 31;
+      printf("static const unsigned char %s[256 + 16] = {\n", quant_names[i]);
+      for (int j = 0; j < 256 + 16; ++j) {
+         int v = j - 8;
+         int q, dq;
+
+         v = (v < 0) ? 0 : (v > 255) ? 255 : v; // clamp
+         q = stb__Mul8Bit(v, quant_mult); // quantize
+         dq = (q * dequant_mults[i]) >> 4; // dequantize
+
+         if ((j % 16) == 0) printf("  "); // 2 spaces, third is done below
+         printf(" %3d,", dq);
+         if ((j % 16) == 15) printf("\n");
+      }
+      printf("};\n");
+   }
+
+   // optimal endpoint tables
+   for (i = 0; i < 2; ++i) {
+      int dequant = dequant_mults[i];
+      int size = i ? 64 : 32;
+      printf("static const unsigned char %s[256][2] = {\n", omatch_names[i]);
+      for (int j = 0; j < 256; ++j) {
+         int mn, mx;
+         int best_mn = 0, best_mx = 0;
+         int best_err = 256;
+         for (mn=0;mn<size;mn++) {
+            for (mx=0;mx<size;mx++) {
+               int mine = (mn * dequant) >> 4;
+               int maxe = (mx * dequant) >> 4;
+               int err = abs(stb__Lerp13(maxe, mine) - j);
+
+               // DX10 spec says that interpolation must be within 3% of "correct" result,
+               // add this as error term. Normally we'd expect a random distribution of
+               // +-1.5% error, but nowhere in the spec does it say that the error has to be
+               // unbiased - better safe than sorry.
+               err += abs(maxe - mine) * 3 / 100;
+
+               if(err < best_err) {
+                  best_mn = mn;
+                  best_mx = mx;
+                  best_err = err;
+               }
+            }
+         }
+         if ((j % 8) == 0) printf("  "); // 2 spaces, third is done below
+         printf(" { %2d, %2d },", best_mx, best_mn);
+         if ((j % 8) == 7) printf("\n");
+      }
+      printf("};\n");
+   }
+
+   return 0;
+}
+#endif
 
 /*
 ------------------------------------------------------------------------------
