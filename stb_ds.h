@@ -793,7 +793,7 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
 
 void stbds_arrfreef(void *a)
 {
-    STBDS_FREE(NULL, stbds_header(a));
+  STBDS_FREE(NULL, stbds_header(a));
 }
 
 //
