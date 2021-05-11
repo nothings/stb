@@ -489,6 +489,7 @@ extern void stbds_unit_tests(void);
 //
 
 extern void * stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap);
+extern void   stbds_arrfreef(void *a);
 extern void   stbds_hmfree_func(void *p, size_t elemsize);
 extern void * stbds_hmget_key(void *a, size_t elemsize, void *key, size_t keysize, int mode);
 extern void * stbds_hmget_key_ts(void *a, size_t elemsize, void *key, size_t keysize, ptrdiff_t *temp, int mode);
@@ -543,7 +544,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arraddnptr(a,n) (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), &(a)[stbds_header(a)->length-(n)])
 #define stbds_arraddnoff(a,n) (stbds_arrmaybegrow(a,n), stbds_header(a)->length += (n), stbds_header(a)->length-(n))
 #define stbds_arrlast(a)      ((a)[stbds_header(a)->length-1])
-#define stbds_arrfree(a)      ((void) ((a) ? STBDS_FREE(NULL,stbds_header(a)) : (void)0), (a)=NULL)
+#define stbds_arrfree(a)      ((void) ((a) ? stbds_arrfreef(a) : (void)0), (a)=NULL)
 #define stbds_arrdel(a,i)     stbds_arrdeln(a,i,1)
 #define stbds_arrdeln(a,i,n)  (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
 #define stbds_arrdelswap(a,i) ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
@@ -787,6 +788,11 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
   stbds_header(b)->capacity = min_cap;
 
   return b;
+}
+
+void stbds_arrfreef(void *a)
+{
+    STBDS_FREE(NULL, stbds_header(a));
 }
 
 //
