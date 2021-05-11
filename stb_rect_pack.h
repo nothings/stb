@@ -67,6 +67,12 @@
 #define STBRP_DEF extern
 #endif
 
+#ifdef STBRP_LARGE_RECTS
+#define STBRP__MAXVAL  0xffffffff
+#else
+#define STBRP__MAXVAL  0xffff
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -537,12 +543,6 @@ static int rect_original_order(const void *a, const void *b)
    const stbrp_rect *q = (const stbrp_rect *) b;
    return (p->was_packed < q->was_packed) ? -1 : (p->was_packed > q->was_packed);
 }
-
-#ifdef STBRP_LARGE_RECTS
-#define STBRP__MAXVAL  0xffffffff
-#else
-#define STBRP__MAXVAL  0xffff
-#endif
 
 STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)
 {
