@@ -379,6 +379,7 @@ CREDITS
     Andreas Molzer
     github:hashitaku
     github:srdjanstipic
+    Macoy Madson
 */
 
 #ifdef STBDS_UNIT_TESTS
