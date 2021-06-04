@@ -6934,7 +6934,7 @@ static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp)
       float f1;
       // Exponent
       x = (input[3] > 9 ? (input[3] - 9) << 23 : 0);
-      f1 = *(float *) &x;
+      memcpy(&f1, &x, sizeof(x));
 
       if (req_comp <= 2)
          output[0] = (input[0] + input[1] + input[2]) * f1 / 3;
