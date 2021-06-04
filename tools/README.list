@@ -6,7 +6,6 @@ stb_image_resize.h          | graphics         | resize images larger/smaller wi
 stb_rect_pack.h             | graphics         | simple 2D rectangle packer with decent quality
 stb_ds.h                    | utility          | typesafe dynamic array and hash tables for C, will compile in C++
 stb_sprintf.h               | utility          | fast sprintf, snprintf for C/C++
-stretchy_buffer.h           | utility          | typesafe dynamic array for C (i.e. approximation to vector<>), doesn't compile as C++
 stb_textedit.h              | user interface   | guts of a text editor for games etc implementing them from scratch
 stb_voxel_render.h          | 3D graphics      | Minecraft-esque voxel rendering "engine" with many more features
 stb_dxt.h                   | 3D graphics      | Fabian "ryg" Giesen's real-time DXT compressor
