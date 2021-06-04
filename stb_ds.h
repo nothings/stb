@@ -547,7 +547,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrdel(a,i)     stbds_arrdeln(a,i,1)
 #define stbds_arrdeln(a,i,n)  (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
 #define stbds_arrdelswap(a,i) ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
-#define stbds_arrinsn(a,i,n)  (stbds_arraddn((a),(n)), memmove(&(a)[(i)+(n)], &(a)[i], sizeof *(a) * (stbds_header(a)->length-(n)-(i))))
+#define stbds_arrinsn(a,i,n)  ((a)?stbds_temp(a)=(i):0,stbds_arraddn((a),(n)), memmove(&(a)[stbds_temp(a)+(n)], &(a)[stbds_temp(a)], sizeof *(a) * (stbds_header(a)->length-(n)-stbds_temp(a))))
 #define stbds_arrins(a,i,v)   (stbds_arrinsn((a),(i),1), (a)[i]=(v))
 
 #define stbds_arrmaybegrow(a,n)  ((!(a) || stbds_header(a)->length + (n) > stbds_header(a)->capacity) \
@@ -595,7 +595,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_hmget_ts(t, k, temp)  (stbds_hmgetp_ts(t,k,temp)->value)
 #define stbds_hmlen(t)        ((t) ? (ptrdiff_t) stbds_header((t)-1)->length-1 : 0)
 #define stbds_hmlenu(t)       ((t) ?             stbds_header((t)-1)->length-1 : 0)
-#define stbds_hmgetp_null(t,k)  (stbds_hmgeti(t,k) == -1 ? NULL : &(t)[stbds_temp(t)-1])
+#define stbds_hmgetp_null(t,k)  (stbds_hmgeti(t,k) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
 
 #define stbds_shput(t, k, v) \
     ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING),   \
@@ -646,7 +646,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 
 #define stbds_shgets(t, k) (*stbds_shgetp(t,k))
 #define stbds_shget(t, k)  (stbds_shgetp(t,k)->value)
-#define stbds_shgetp_null(t,k)  (stbds_shgeti(t,k) == -1 ? NULL : &(t)[stbds_temp(t)-1])
+#define stbds_shgetp_null(t,k)  (stbds_shgeti(t,k) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
 #define stbds_shlen        stbds_hmlen
 
 typedef struct
@@ -756,8 +756,10 @@ size_t stbds_rehash_items;
 
 void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
 {
+  stbds_array_header temp={0}; // force debugging
   void *b;
   size_t min_len = stbds_arrlen(a) + addlen;
+  (void) sizeof(temp);
 
   // compute the minimum capacity needed
   if (min_len > min_cap)
@@ -781,6 +783,7 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
   if (a == NULL) {
     stbds_header(b)->length = 0;
     stbds_header(b)->hash_table = 0;
+    stbds_header(b)->temp = 0;
   } else {
     STBDS_STATS(++stbds_array_grow);
   }
@@ -1359,7 +1362,6 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
   {
     size_t hash = mode >= STBDS_HM_STRING ? stbds_hash_string((char*)key,table->seed) : stbds_hash_bytes(key, keysize,table->seed);
     size_t step = STBDS_BUCKET_LENGTH;
-    size_t limit,i;
     size_t pos;
     ptrdiff_t tombstone = -1;
     stbds_hash_bucket *bucket;
@@ -1370,6 +1372,7 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
     pos = stbds_probe_position(hash, table->slot_count, table->slot_count_log2);
 
     for (;;) {
+      size_t limit, i;
       STBDS_STATS(++stbds_hash_probes);
       bucket = &table->storage[pos >> STBDS_BUCKET_SHIFT];
 
