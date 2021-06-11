@@ -146,6 +146,16 @@ DOCUMENTATION
           Returns the number of total elements the array can contain without
           needing to be reallocated.
 
+      arrappn:
+        void arrappn(T* a, T* v, int n);
+          Appends n elements of v at the end of a, capacity might increase due to 
+          arrsetcap being called
+
+      arrappda:
+        void arrappda(T* a, T* v);
+          Appends dynamic array v at the end of a, capacity might increase due to 
+          arrsetcap being called
+
   Hash maps & String hash maps
 
     Given T is a structure type: struct { TK key; TV value; }. Note that some
@@ -412,6 +422,11 @@ CREDITS
 #define arrdelswap  stbds_arrdelswap
 #define arrcap      stbds_arrcap
 #define arrsetcap   stbds_arrsetcap
+#define arrappn     stbds_arrappn
+#define arrappda    stbds_arrappda
+
+
+
 
 #define hmput       stbds_hmput
 #define hmputs      stbds_hmputs
@@ -552,6 +567,8 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrdelswap(a,i) ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
 #define stbds_arrinsn(a,i,n)  ((a)?stbds_temp(a)=(i):0,stbds_arraddn((a),(n)), memmove(&(a)[stbds_temp(a)+(n)], &(a)[stbds_temp(a)], sizeof *(a) * (stbds_header(a)->length-(n)-stbds_temp(a))))
 #define stbds_arrins(a,i,v)   (stbds_arrinsn((a),(i),1), (a)[i]=(v))
+#define stbds_arrappn(a,v,n)   memcpy(stbds_arraddnptr(a, n), (v), sizeof *(v) * (n))
+#define stbds_arrappda(a,v)   stbds_arrappn((a), (v), stbds_arrlen((v)))
 
 #define stbds_arrmaybegrow(a,n)  ((!(a) || stbds_header(a)->length + (n) > stbds_header(a)->capacity) \
                                   ? (stbds_arrgrow(a,n,0),0) : 0)
