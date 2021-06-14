@@ -7,6 +7,7 @@
 //
 // Contributors:
 //    Fabian "ryg" Giesen (reformatting)
+//    github:aganm (attribute format)
 //
 // Contributors (bugfixes):
 //    github:d26435
