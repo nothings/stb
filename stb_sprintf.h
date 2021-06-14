@@ -7,6 +7,7 @@
 //
 // Contributors:
 //    Fabian "ryg" Giesen (reformatting)
+//    github:aganm (attribute format)
 //
 // Contributors (bugfixes):
 //    github:d26435
@@ -176,6 +177,16 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 #endif
 #endif
 
+#if defined(__has_attribute)
+ #if __has_attribute(format)
+   #define STBSP__ATTRIBUTE_FORMAT(fmt,va) __attribute__((format(printf,fmt,va)))
+ #endif
+#endif
+
+#ifndef STBSP__ATTRIBUTE_FORMAT
+#define STBSP__ATTRIBUTE_FORMAT(fmt,va)
+#endif
+
 #include <stdarg.h> // for va_list()
 #include <stddef.h> // size_t, ptrdiff_t
 
@@ -190,8 +201,8 @@ typedef char *STBSP_SPRINTFCB(const char *buf, void *user, int len);
 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintf)(char *buf, char const *fmt, va_list va);
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsnprintf)(char *buf, int count, char const *fmt, va_list va);
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(sprintf)(char *buf, char const *fmt, ...);
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(snprintf)(char *buf, int count, char const *fmt, ...);
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(sprintf)(char *buf, char const *fmt, ...) STBSP__ATTRIBUTE_FORMAT(2,3);
+STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(snprintf)(char *buf, int count, char const *fmt, ...) STBSP__ATTRIBUTE_FORMAT(3,4);
 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, char *buf, char const *fmt, va_list va);
 STBSP__PUBLICDEF void STB_SPRINTF_DECORATE(set_separators)(char comma, char period);
