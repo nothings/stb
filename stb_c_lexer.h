@@ -37,6 +37,7 @@
 // Contributors:
 //   Arpad Goretity (bugfix)
 //   Alan Hickman (hex floats)
+//   github:mundusnine (bugfix)
 //
 // LICENSE
 //
