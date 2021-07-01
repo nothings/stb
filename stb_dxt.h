@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.10 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.11 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -10,6 +10,7 @@
 //     You can turn on dithering and "high quality" using mode.
 //
 // version history:
+//   v1.11  - (ryg) avoid racy global init, better single-color tables, remove dither
 //   v1.10  - (i.c) various small quality improvements
 //   v1.09  - (stb) update documentation re: surprising alpha channel requirement
 //   v1.08  - (stb) fix bug in dxt-with-alpha block
@@ -50,7 +51,7 @@ extern "C" {
 
 // compression mode (bitflags)
 #define STB_DXT_NORMAL    0
-#define STB_DXT_DITHER    1   // use dithering. dubious win. never use for normal maps and the like!
+#define STB_DXT_DITHER    1   // use dithering. was always dubious, now deprecated. does nothing!
 #define STB_DXT_HIGHQUAL  2   // high quality mode, does two refinement steps instead of 1. ~30-40% slower.
 
 STBDDEF void stb_compress_dxt_block(unsigned char *dest, const unsigned char *src_rgba_four_bytes_per_pixel, int alpha, int mode);
@@ -82,7 +83,7 @@ STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *sr
 
 #include <stdlib.h>
 
-#if !defined(STBI_FABS)
+#if !defined(STBD_FABS)
 #include <math.h>
 #endif
 
@@ -90,49 +91,6 @@ STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *sr
 #define STBD_FABS(x)          fabs(x)
 #endif
 
-#ifndef STBD_MEMSET
-#include <string.h>
-#define STBD_MEMSET           memset
-#endif
-
-static const unsigned char stb__QuantRBTab[256 + 16] = {
-     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   8,   8,   8,
-     8,   8,   8,   8,   8,  16,  16,  16,  16,  16,  16,  16,  16,  24,  24,  24,
-    24,  24,  24,  24,  24,  33,  33,  33,  33,  33,  33,  33,  33,  33,  41,  41,
-    41,  41,  41,  41,  41,  41,  49,  49,  49,  49,  49,  49,  49,  49,  57,  57,
-    57,  57,  57,  57,  57,  57,  66,  66,  66,  66,  66,  66,  66,  66,  74,  74,
-    74,  74,  74,  74,  74,  74,  74,  82,  82,  82,  82,  82,  82,  82,  82,  90,
-    90,  90,  90,  90,  90,  90,  90,  99,  99,  99,  99,  99,  99,  99,  99, 107,
-   107, 107, 107, 107, 107, 107, 107, 107, 115, 115, 115, 115, 115, 115, 115, 115,
-   123, 123, 123, 123, 123, 123, 123, 123, 132, 132, 132, 132, 132, 132, 132, 132,
-   140, 140, 140, 140, 140, 140, 140, 140, 148, 148, 148, 148, 148, 148, 148, 148,
-   148, 156, 156, 156, 156, 156, 156, 156, 156, 165, 165, 165, 165, 165, 165, 165,
-   165, 173, 173, 173, 173, 173, 173, 173, 173, 181, 181, 181, 181, 181, 181, 181,
-   181, 181, 189, 189, 189, 189, 189, 189, 189, 189, 198, 198, 198, 198, 198, 198,
-   198, 198, 206, 206, 206, 206, 206, 206, 206, 206, 214, 214, 214, 214, 214, 214,
-   214, 214, 222, 222, 222, 222, 222, 222, 222, 222, 222, 231, 231, 231, 231, 231,
-   231, 231, 231, 239, 239, 239, 239, 239, 239, 239, 239, 247, 247, 247, 247, 247,
-   247, 247, 247, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-};
-static const unsigned char stb__QuantGTab[256 + 16] = {
-     0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   4,   4,   4,   4,   8,
-     8,   8,   8,  12,  12,  12,  12,  16,  16,  16,  16,  20,  20,  20,  20,  24,
-    24,  24,  24,  28,  28,  28,  28,  32,  32,  32,  32,  36,  36,  36,  36,  40,
-    40,  40,  40,  44,  44,  44,  44,  48,  48,  48,  48,  52,  52,  52,  52,  56,
-    56,  56,  56,  60,  60,  60,  60,  65,  65,  65,  65,  69,  69,  69,  69,  73,
-    73,  73,  73,  77,  77,  77,  77,  81,  81,  81,  81,  85,  85,  85,  85,  85,
-    89,  89,  89,  89,  93,  93,  93,  93,  97,  97,  97,  97, 101, 101, 101, 101,
-   105, 105, 105, 105, 109, 109, 109, 109, 113, 113, 113, 113, 117, 117, 117, 117,
-   121, 121, 121, 121, 125, 125, 125, 125, 130, 130, 130, 130, 134, 134, 134, 134,
-   138, 138, 138, 138, 142, 142, 142, 142, 146, 146, 146, 146, 150, 150, 150, 150,
-   154, 154, 154, 154, 158, 158, 158, 158, 162, 162, 162, 162, 166, 166, 166, 166,
-   170, 170, 170, 170, 170, 174, 174, 174, 174, 178, 178, 178, 178, 182, 182, 182,
-   182, 186, 186, 186, 186, 190, 190, 190, 190, 195, 195, 195, 195, 199, 199, 199,
-   199, 203, 203, 203, 203, 207, 207, 207, 207, 211, 211, 211, 211, 215, 215, 215,
-   215, 219, 219, 219, 219, 223, 223, 223, 223, 227, 227, 227, 227, 231, 231, 231,
-   231, 235, 235, 235, 235, 239, 239, 239, 239, 243, 243, 243, 243, 247, 247, 247,
-   247, 251, 251, 251, 251, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255,
-};
 static const unsigned char stb__OMatch5[256][2] = {
    {  0,  0 }, {  0,  0 }, {  0,  0 }, {  0,  0 }, {  0,  0 }, {  1,  1 }, {  1,  1 }, {  1,  1 },
    {  1,  1 }, {  1,  1 }, {  1,  1 }, {  1,  1 }, {  1,  1 }, {  2,  2 }, {  2,  2 }, {  2,  2 },
@@ -257,36 +215,8 @@ static void stb__EvalColors(unsigned char *color,unsigned short c0,unsigned shor
    stb__Lerp13RGB(color+12, color+4, color+0);
 }
 
-// Block dithering function. Simply dithers a block to 565 RGB.
-// (Floyd-Steinberg)
-static void stb__DitherBlock(unsigned char *dest, unsigned char *block)
-{
-  int err[8],*ep1 = err,*ep2 = err+4, *et;
-  int ch,y;
-
-  // process channels separately
-  for (ch=0; ch<3; ++ch) {
-      unsigned char *bp = block+ch, *dp = dest+ch;
-      const unsigned char *quant = (ch == 1) ? stb__QuantGTab+8 : stb__QuantRBTab+8;
-      STBD_MEMSET(err, 0, sizeof(err));
-      for(y=0; y<4; ++y) {
-         dp[ 0] = quant[bp[ 0] + ((3*ep2[1] + 5*ep2[0]) >> 4)];
-         ep1[0] = bp[ 0] - dp[ 0];
-         dp[ 4] = quant[bp[ 4] + ((7*ep1[0] + 3*ep2[2] + 5*ep2[1] + ep2[0]) >> 4)];
-         ep1[1] = bp[ 4] - dp[ 4];
-         dp[ 8] = quant[bp[ 8] + ((7*ep1[1] + 3*ep2[3] + 5*ep2[2] + ep2[1]) >> 4)];
-         ep1[2] = bp[ 8] - dp[ 8];
-         dp[12] = quant[bp[12] + ((7*ep1[2] + 5*ep2[3] + ep2[2]) >> 4)];
-         ep1[3] = bp[12] - dp[12];
-         bp += 16;
-         dp += 16;
-         et = ep1, ep1 = ep2, ep2 = et; // swap
-      }
-   }
-}
-
 // The color matching function
-static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *color,int dither)
+static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *color)
 {
    unsigned int mask = 0;
    int dirr = color[0*4+0] - color[1*4+0];
@@ -315,68 +245,14 @@ static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *c
    halfPoint = (stops[3] + stops[2]);
    c3Point   = (stops[2] + stops[0]);
 
-   if(!dither) {
-      // the version without dithering is straightforward
-      for (i=15;i>=0;i--) {
-         int dot = dots[i]*2;
-         mask <<= 2;
+   for (i=15;i>=0;i--) {
+      int dot = dots[i]*2;
+      mask <<= 2;
 
-         if(dot < halfPoint)
-           mask |= (dot < c0Point) ? 1 : 3;
-         else
-           mask |= (dot < c3Point) ? 2 : 0;
-      }
-  } else {
-      // with floyd-steinberg dithering
-      int err[8],*ep1 = err,*ep2 = err+4;
-      int *dp = dots, y;
-
-      c0Point   <<= 3;
-      halfPoint <<= 3;
-      c3Point   <<= 3;
-      for(i=0;i<8;i++)
-         err[i] = 0;
-
-      for(y=0;y<4;y++)
-      {
-         int dot,lmask,step;
-
-         dot = (dp[0] << 4) + (3*ep2[1] + 5*ep2[0]);
-         if(dot < halfPoint)
-           step = (dot < c0Point) ? 1 : 3;
-         else
-           step = (dot < c3Point) ? 2 : 0;
-         ep1[0] = dp[0] - stops[step];
-         lmask = step;
-
-         dot = (dp[1] << 4) + (7*ep1[0] + 3*ep2[2] + 5*ep2[1] + ep2[0]);
-         if(dot < halfPoint)
-           step = (dot < c0Point) ? 1 : 3;
-         else
-           step = (dot < c3Point) ? 2 : 0;
-         ep1[1] = dp[1] - stops[step];
-         lmask |= step<<2;
-
-         dot = (dp[2] << 4) + (7*ep1[1] + 3*ep2[3] + 5*ep2[2] + ep2[1]);
-         if(dot < halfPoint)
-           step = (dot < c0Point) ? 1 : 3;
-         else
-           step = (dot < c3Point) ? 2 : 0;
-         ep1[2] = dp[2] - stops[step];
-         lmask |= step<<4;
-
-         dot = (dp[3] << 4) + (7*ep1[2] + 5*ep2[3] + ep2[2]);
-         if(dot < halfPoint)
-           step = (dot < c0Point) ? 1 : 3;
-         else
-           step = (dot < c3Point) ? 2 : 0;
-         ep1[3] = dp[3] - stops[step];
-         lmask |= step<<6;
-
-         dp += 4;
-         mask |= lmask << (y*8);
-         { int *et = ep1; ep1 = ep2; ep2 = et; } // swap
-      }
+      if(dot < halfPoint)
+         mask |= (dot < c0Point) ? 1 : 3;
+      else
+         mask |= (dot < c3Point) ? 2 : 0;
    }
 
    return mask;
@@ -603,12 +479,10 @@ static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, i
 {
    unsigned int mask;
    int i;
-   int dither;
    int refinecount;
    unsigned short max16, min16;
-   unsigned char dblock[16*4],color[4*4];
+   unsigned char color[4*4];
 
-   dither = mode & STB_DXT_DITHER;
    refinecount = (mode & STB_DXT_HIGHQUAL) ? 2 : 1;
 
    // check if block is constant
@@ -622,15 +496,11 @@ static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, i
       max16 = (stb__OMatch5[r][0]<<11) | (stb__OMatch6[g][0]<<5) | stb__OMatch5[b][0];
       min16 = (stb__OMatch5[r][1]<<11) | (stb__OMatch6[g][1]<<5) | stb__OMatch5[b][1];
    } else {
-      // first step: compute dithered version for PCA if desired
-      if(dither)
-         stb__DitherBlock(dblock,block);
-
-      // second step: pca+map along principal axis
-      stb__OptimizeColorsBlock(dither ? dblock : block,&max16,&min16);
+      // first step: PCA+map along principal axis
+      stb__OptimizeColorsBlock(block,&max16,&min16);
       if (max16 != min16) {
          stb__EvalColors(color,max16,min16);
-         mask = stb__MatchColorsBlock(block,color,dither);
+         mask = stb__MatchColorsBlock(block,color);
       } else
          mask = 0;
 
@@ -638,10 +508,10 @@ static void stb__CompressColorBlock(unsigned char *dest, unsigned char *block, i
       for (i=0;i<refinecount;i++) {
          unsigned int lastmask = mask;
 
-         if (stb__RefineBlock(dither ? dblock : block,&max16,&min16,mask)) {
+         if (stb__RefineBlock(block,&max16,&min16,mask)) {
             if (max16 != min16) {
                stb__EvalColors(color,max16,min16);
-               mask = stb__MatchColorsBlock(block,color,dither);
+               mask = stb__MatchColorsBlock(block,color);
             } else {
                mask = 0;
                break;
@@ -763,28 +633,8 @@ void stb_compress_bc5_block(unsigned char *dest, const unsigned char *src)
 int main()
 {
    int i, j;
-   const char *quant_names[] = { "stb__QuantRBTab", "stb__QuantGTab" };
    const char *omatch_names[] = { "stb__OMatch5", "stb__OMatch6" };
    int dequant_mults[2] = { 33*4, 65 }; // .4 fixed-point dequant multipliers
-
-   // quant tables (for dither)
-   for (i=0; i < 2; ++i) {
-      int quant_mult = i ? 63 : 31;
-      printf("static const unsigned char %s[256 + 16] = {\n", quant_names[i]);
-      for (int j = 0; j < 256 + 16; ++j) {
-         int v = j - 8;
-         int q, dq;
-
-         v = (v < 0) ? 0 : (v > 255) ? 255 : v; // clamp
-         q = stb__Mul8Bit(v, quant_mult); // quantize
-         dq = (q * dequant_mults[i]) >> 4; // dequantize
-
-         if ((j % 16) == 0) printf("  "); // 2 spaces, third is done below
-         printf(" %3d,", dq);
-         if ((j % 16) == 15) printf("\n");
-      }
-      printf("};\n");
-   }
 
    // optimal endpoint tables
    for (i = 0; i < 2; ++i) {
