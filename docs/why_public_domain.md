@@ -72,11 +72,12 @@ causes worries for lawyers, even if their programmers
 aren't modifying it.
 
 Any license which requires crediting in documentation
-adds friction which can add up. Valve used to have
-a page with a list of all of these on their web site,
-and it was insane, and obviously nobody ever looked
-at it so why would you care whether your credit appeared
-there?
+adds friction which can add up. Valve has a huge list
+(http://nothings.org/remote/ThirdPartyLegalNotices_steam_2019.html)
+of all of these included in each game they ship,
+and it's insane, and obviously nobody ever looks
+at it so why would you care whether your credit
+appeared there?
 
 Permissive licenses like zlib and BSD license are
 perfectly reasonable, but they are very wordy and
