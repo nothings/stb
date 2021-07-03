@@ -285,7 +285,7 @@ static void stbi__stdio_write(void *context, void *data, int size)
    fwrite(data,1,size,(FILE*) context);
 }
 
-#if defined(_MSC_VER) && defined(STBI_WINDOWS_UTF8)
+#if defined(_WIN32) && defined(STBI_WINDOWS_UTF8)
 #ifdef __cplusplus
 #define STBIW_EXTERN extern "C"
 #else
@@ -303,16 +303,16 @@ STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const w
 static FILE *stbiw__fopen(char const *filename, char const *mode)
 {
    FILE *f;
-#if defined(_MSC_VER) && defined(STBI_WINDOWS_UTF8)
+#if defined(_WIN32) && defined(STBI_WINDOWS_UTF8)
    wchar_t wMode[64];
    wchar_t wFilename[1024];
-	if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, filename, -1, wFilename, sizeof(wFilename)))
+	if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, filename, -1, wFilename, sizeof(wFilename)/sizeof(*wFilename)))
       return 0;
 
-	if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, mode, -1, wMode, sizeof(wMode)))
+	if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, mode, -1, wMode, sizeof(wMode)/sizeof(*wMode)))
       return 0;
 
-#if _MSC_VER >= 1400
+#if defined(_MSC_VER) && _MSC_VER >= 1400
 	if (0 != _wfopen_s(&f, wFilename, wMode))
 		f = 0;
 #else
@@ -397,7 +397,7 @@ static void stbiw__putc(stbi__write_context *s, unsigned char c)
 
 static void stbiw__write1(stbi__write_context *s, unsigned char a)
 {
-   if (s->buf_used + 1 > sizeof(s->buffer))
+   if ((size_t)s->buf_used + 1 > sizeof(s->buffer))
       stbiw__write_flush(s);
    s->buffer[s->buf_used++] = a;
 }
@@ -405,7 +405,7 @@ static void stbiw__write1(stbi__write_context *s, unsigned char a)
 static void stbiw__write3(stbi__write_context *s, unsigned char a, unsigned char b, unsigned char c)
 {
    int n;
-   if (s->buf_used + 3 > sizeof(s->buffer))
+   if ((size_t)s->buf_used + 3 > sizeof(s->buffer))
       stbiw__write_flush(s);
    n = s->buf_used;
    s->buf_used = n+3;

@@ -20,10 +20,10 @@ by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
 
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
-**[stb_vorbis.c](stb_vorbis.c)** | 1.21 | audio | 5569 | decode ogg vorbis files from file/memory to float/16-bit signed output
-**[stb_image.h](stb_image.h)** | 2.26 | graphics | 7762 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
+**[stb_vorbis.c](stb_vorbis.c)** | 1.20 | audio | 5563 | decode ogg vorbis files from file/memory to float/16-bit signed output
+**[stb_image.h](stb_image.h)** | 2.26 | graphics | 7762 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC, PNM
 **[stb_truetype.h](stb_truetype.h)** | 1.24 | graphics | 5011 | parse, decode, and rasterize characters from truetype fonts
-**[stb_image_write.h](stb_image_write.h)** | 1.15 | graphics | 1690 | image writing to disk: PNG, TGA, BMP
+**[stb_image_write.h](stb_image_write.h)** | 1.15 | graphics | 1690 | image writing to disk: PNG, TGA, BMP, JPG, HDR
 **[stb_image_resize.h](stb_image_resize.h)** | 0.96 | graphics | 2631 | resize images larger/smaller with good quality
 **[stb_rect_pack.h](stb_rect_pack.h)** | 1.00 | graphics | 628 | simple 2D rectangle packer with decent quality
 **[stb_ds.h](stb_ds.h)** | 0.66 | utility | 1893 | typesafe dynamic array and hash tables for C, will compile in C++
@@ -48,6 +48,24 @@ Total lines of C code: 56530
 
 FAQ
 ---
+
+#### How do I use these libraries?
+
+The idea behind single-header file libraries is that they're easy to distribute and deploy
+because all the code is contained in a single file. By default, the .h files in here act as
+their own header files, i.e. they declare the functions contained in the file but don't
+actually result in any code getting compiled.
+
+So in addition, you should select _exactly one_ C/C++ source file that actually instantiates
+the code, preferably a file you're not editing frequently. This file should define a
+specific macro (this is documented per-library) to actually enable the function definitions.
+For example, to use stb_image, you should have exactly one C/C++ file that doesn't
+include stb_image.h regularly, but instead does
+
+    #define STB_IMAGE_IMPLEMENTATION
+    #include "stb_image.h"
+
+The right macro to define is pointed out right at the top of each of these libraries.
 
 #### What's the license?
 
