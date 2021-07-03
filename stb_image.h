@@ -103,7 +103,7 @@ RECENT REVISION HISTORY:
     Thomas Ruf              Ronny Chevalier                         github:rlyeh
     Janez Zemva             John Bartholomew   Michal Cichon        github:romigrou
     Jonathan Blow           Ken Hamada         Tero Hanninen        github:svdijk
-                            Laurent Gomila     Cort Stratton        github:snagar
+    Eugene Golushkov        Laurent Gomila     Cort Stratton        github:snagar
     Aruelien Pocheville     Sergio Gonzalez    Thibault Reuille     github:Zelex
     Cass Everitt            Ryamond Barbiero                        github:grim210
     Paul Du Bois            Engin Manap        Aldo Culquicondor    github:sammyhw
