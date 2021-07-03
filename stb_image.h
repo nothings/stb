@@ -645,7 +645,7 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #ifdef STBI_HAS_LROTL
    #define stbi_lrot(x,y)  _lrotl(x,y)
 #else
-   #define stbi_lrot(x,y)  (((x) << (y)) | ((x) >> (32 - (y))))
+   #define stbi_lrot(x,y)  (((x) << (y)) | ((x) >> (-(y) & 31)))
 #endif
 
 #if defined(STBI_MALLOC) && defined(STBI_FREE) && (defined(STBI_REALLOC) || defined(STBI_REALLOC_SIZED))
@@ -2104,7 +2104,6 @@ stbi_inline static int stbi__extend_receive(stbi__jpeg *j, int n)
 
    sgn = (stbi__int32)j->code_buffer >> 31; // sign bit is always in MSB
    k = stbi_lrot(j->code_buffer, n);
-   if (n < 0 || n >= (int) (sizeof(stbi__bmask)/sizeof(*stbi__bmask))) return 0;
    j->code_buffer = k & ~stbi__bmask[n];
    k &= stbi__bmask[n];
    j->code_bits -= n;
