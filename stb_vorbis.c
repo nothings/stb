@@ -1079,6 +1079,7 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
    // find the first entry
    for (k=0; k < n; ++k) if (len[k] < NO_CODE) break;
    if (k == n) { assert(c->sorted_entries == 0); return TRUE; }
+   assert(len[k] < 32); // no error return required, code reading lens checks this
    // add to the list
    add_entry(c, 0, k, m++, len[k], values);
    // add all available leaves
@@ -1092,6 +1093,7 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
       uint32 res;
       int z = len[i], y;
       if (z == NO_CODE) continue;
+      assert(z < 32); // no error return required, code reading lens checks this
       // find lowest available leaf (should always be earliest,
       // which is what the specification calls for)
       // note that this property, and the fact we can never have
@@ -1101,12 +1103,10 @@ static int compute_codewords(Codebook *c, uint8 *len, int n, uint32 *values)
       while (z > 0 && !available[z]) --z;
       if (z == 0) { return FALSE; }
       res = available[z];
-      assert(z >= 0 && z < 32);
       available[z] = 0;
       add_entry(c, bit_reverse(res), i, m++, len[i], values);
       // propagate availability up the tree
       if (z != len[i]) {
-         assert(len[i] >= 0 && len[i] < 32);
          for (y=len[i]; y > z; --y) {
             assert(available[y] == 0);
             available[y] = res + (1 << (32-y));
