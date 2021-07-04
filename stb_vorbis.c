@@ -649,6 +649,12 @@ typedef   signed int    int32;
 
 typedef float codetype;
 
+#ifdef _MSC_VER
+#define STBV_NOTUSED(v)  (void)(v)
+#else
+#define STBV_NOTUSED(v)  (void)sizeof(v)
+#endif
+
 // @NOTE
 //
 // Some arrays below are tagged "//varies", which means it's actually
@@ -3072,6 +3078,7 @@ static int do_floor(vorb *f, Mapping *map, int i, int n, float *target, YTYPE *f
       for (q=1; q < g->values; ++q) {
          j = g->sorted_order[q];
          #ifndef STB_VORBIS_NO_DEFER_FLOOR
+         STBV_NOTUSED(step2_flag);
          if (finalY[j] >= 0)
          #else
          if (step2_flag[j])
@@ -3174,6 +3181,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
 
 // WINDOWING
 
+   STBV_NOTUSED(left_end);
    n = f->blocksize[m->blockflag];
    map = &f->mapping[m->mapping];
 
