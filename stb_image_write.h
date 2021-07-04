@@ -1,5 +1,5 @@
 /* stb_image_write - v1.15 - public domain - http://nothings.org/stb
-   writes out PNG/BMP/TGA/JPEG/HDR images to C stdio - Sean Barrett 2010-2015
+   writes out PNG/BMP/TGA/JPEG/HDR/EXR images to C stdio - Sean Barrett 2010-2015
                                      no warranty implied; use at your own risk
 
    Before #including,
@@ -14,7 +14,7 @@ ABOUT:
 
    This header file is a library for writing images to C stdio or a callback.
 
-   The PNG output is not optimal; it is 20-50% larger than the file
+   The PNG and EXR output is not optimal; it is 20-50% larger than the file
    written by a decent optimizing implementation; though providing a custom
    zlib compress function (see STBIW_ZLIB_COMPRESS) can mitigate that.
    This library is designed for source code compactness and simplicity,
@@ -27,7 +27,7 @@ BUILDING:
    malloc,realloc,free.
    You can #define STBIW_MEMMOVE() to replace memmove()
    You can #define STBIW_ZLIB_COMPRESS to use a custom zlib-style compress function
-   for PNG compression (instead of the builtin one), it must have the following signature:
+   for PNG and EXR compression (instead of the builtin one), it must have the following signature:
    unsigned char * my_compress(unsigned char *data, int data_len, int *out_len, int quality);
    The returned data will be freed with STBIW_FREE() (free() by default),
    so it must be heap allocated with STBIW_MALLOC() (malloc() by default),
@@ -42,24 +42,26 @@ UNICODE:
 
 USAGE:
 
-   There are five functions, one for each image file format:
+   There are six functions, one for each image file format:
 
      int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
      int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_jpg(char const *filename, int w, int h, int comp, const void *data, int quality);
      int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
+     int stbi_write_exr(char const *filename, int w, int h, int comp, const float *data);
 
      void stbi_flip_vertically_on_write(int flag); // flag is non-zero to flip data vertically
 
-   There are also five equivalent functions that use an arbitrary write function. You are
+   There are also six equivalent functions that use an arbitrary write function. You are
    expected to open/close your file-equivalent before and after calling these:
 
      int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
      int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
      int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
+     int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void *data, int quality);
      int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
-     int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int quality);
+     int stbi_write_exr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
 
    where the callback is:
       void stbi_write_func(void *context, void *data, int size);
@@ -68,6 +70,7 @@ USAGE:
       int stbi_write_tga_with_rle;             // defaults to true; set to 0 to disable RLE
       int stbi_write_png_compression_level;    // defaults to 8; set to higher for more compression
       int stbi_write_force_png_filter;         // defaults to -1; set to 0..5 to force a filter mode
+      int stbi_write_exr_compression_level;    // defaults to 8; set to higher for more compression
 
 
    You can define STBI_WRITE_NO_STDIO to disable the file variant of these
@@ -110,8 +113,12 @@ USAGE:
    Higher quality looks better but results in a bigger image.
    JPEG baseline (no JPEG progressive).
 
-CREDITS:
+   EXR expects linear float data and losslessly outputs files with the same
+   number of components as the input.  It writes 32-bit full floats with "ZIP"
+   (deflate) compression of scan line blocks.  Set the deflate level through
+   the global variable 'stbi_write_exr_compression_level' (it defaults to 8).
 
+CREDITS:
 
    Sean Barrett           -    PNG/BMP/TGA
    Baldur Karlsson        -    HDR
@@ -122,6 +129,7 @@ CREDITS:
    Jon Olick              -    original jo_jpeg.cpp code
    Daniel Gibson          -    integrate JPEG, allow external zlib
    Aarni Koskela          -    allow choosing PNG filter
+   Andrew Kensler         -    EXR
 
    bugfixes:
       github:Chribba
@@ -141,7 +149,7 @@ CREDITS:
       github:ignotion
       Adam Schackart
 
-LICENSE
+LICENSE:
 
   See end of file for license information.
 
@@ -169,14 +177,16 @@ LICENSE
 extern int stbi_write_tga_with_rle;
 extern int stbi_write_png_compression_level;
 extern int stbi_write_force_png_filter;
+extern int stbi_write_exr_compression_level;
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
 STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
 STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
+STBIWDEF int stbi_write_jpg(char const *filename, int w, int h, int comp, const void  *data, int quality);
 STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
-STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const void  *data, int quality);
+STBIWDEF int stbi_write_exr(char const *filename, int w, int h, int comp, const float *data);
 
 #ifdef STBI_WINDOWS_UTF8
 STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input);
@@ -188,8 +198,9 @@ typedef void stbi_write_func(void *context, void *data, int size);
 STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
 STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
+STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int quality);
 STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
-STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, int quality);
+STBIWDEF int stbi_write_exr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
 
 STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 
@@ -250,10 +261,12 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 static int stbi_write_png_compression_level = 8;
 static int stbi_write_tga_with_rle = 1;
 static int stbi_write_force_png_filter = -1;
+static int stbi_write_exr_compression_level = 8;
 #else
 int stbi_write_png_compression_level = 8;
 int stbi_write_tga_with_rle = 1;
 int stbi_write_force_png_filter = -1;
+int stbi_write_exr_compression_level = 8;
 #endif
 
 static int stbi__flip_vertically_on_write = 0;
@@ -1594,6 +1607,111 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
       return 0;
 }
 #endif
+
+// *************************************************************************************************
+// OpenEXR writer
+// by Andrew Kensler
+
+static int stbi_write_exr_core(stbi__write_context *s, int x, int y, int comp, float *data)
+{
+   static const char *names[] = {"Y", "AY", "BGR", "ABGR"};
+   int offset, b, j, i, c;
+   unsigned char **block_data; int *block_len; unsigned char *filt;
+
+   // Filter and compress scanline blocks (ZIP compression).
+   block_data = (unsigned char **) STBIW_MALLOC((y+15)/16*sizeof(unsigned char *)); if (!block_data) return 0;
+   block_len = (int *) STBIW_MALLOC((y+15)/16*sizeof(int)); if (!block_len) { STBIW_FREE(block_data); return 0; }
+   filt = (unsigned char *) STBIW_MALLOC(16*x*comp*sizeof(float)); if (!filt) { STBIW_FREE(block_data); STBIW_FREE(block_len); return 0; }
+   for (b = 0; b*16 < y; ++b) {
+      int lines = y-b*16; if (lines > 16) lines = 16;
+      for (j = 0; j < lines; ++j)
+         for (c = 0; c < comp; ++c)
+            for (i = 0; i < x; ++i) {
+               // De-interleave channels within scan lines and reorder alphabetically (i.e., reversed).
+               unsigned v = *(unsigned *)(&data[((b*16+j)*x+i)*comp + comp-1-c]);
+               // Unshuffle block by bytes.
+               filt[((j*comp+c)*x+i)*2+0] = v;
+               filt[((j*comp+c)*x+i)*2+1] = v >> 16;
+               filt[(((lines+j)*comp+c)*x+i)*2+0] = v >> 8;
+               filt[(((lines+j)*comp+c)*x+i)*2+1] = v >> 24;
+            }
+      // Predict bytes by differencing (biased by 128).
+      for (i = lines*x*comp*sizeof(float); --i;)
+         filt[i] -= filt[i-1] - 128;
+      block_data[b] = stbi_zlib_compress(filt, lines*x*comp*sizeof(float), &block_len[b], stbi_write_exr_compression_level);
+      if (!block_data[b]) {
+         while (--b >= 0) STBIW_FREE(block_data[b]);
+         STBIW_FREE(filt);
+         STBIW_FREE(block_len);
+         STBIW_FREE(block_data);
+         return 0;
+      }
+   }
+   STBIW_FREE(filt);
+
+   // Write magic number, version, and header.
+   stbiw__writef(s, "44", 20000630, 2);
+   s->func(s->context, (void*)"channels\0chlist", sizeof("channels\0chlist"));
+   stbiw__writef(s, "4", 18*comp + 1);
+   for (c = 0; c < comp; ++c) {
+      s->func(s->context, (void*)&names[comp-1][c], 1);
+      stbiw__writef(s, "14444", 0, 2 /*FLOAT*/, 0, 1, 1);
+   }
+   s->func(s->context, (void*)"", sizeof("")); // end of chlist
+   s->func(s->context, (void*)"compression\0compression", sizeof("compression\0compression"));
+   stbiw__writef(s, "41", 1, 3 /*ZIP*/);
+   s->func(s->context, (void*)"dataWindow\0box2i", sizeof("dataWindow\0box2i"));
+   stbiw__writef(s, "44444", 16, 0, 0, x-1, y-1);
+   s->func(s->context, (void*)"displayWindow\0box2i", sizeof("displayWindow\0box2i"));
+   stbiw__writef(s, "44444", 16, 0, 0, x-1, y-1);
+   s->func(s->context, (void*)"lineOrder\0lineOrder", sizeof("lineOrder\0lineOrder"));
+   stbiw__writef(s, "41", 1, 0 /*INCY*/);
+   s->func(s->context, (void*)"pixelAspectRatio\0float", sizeof("pixelAspectRatio\0float"));
+   stbiw__writef(s, "44", 4, 1065353216 /*1.0f*/);
+   s->func(s->context, (void*)"screenWindowCenter\0v2f", sizeof("screenWindowCenter\0v2f"));
+   stbiw__writef(s, "444", 8, 0 /*0.0f*/, 0 /*0.0f*/);
+   s->func(s->context, (void*)"screenWindowWidth\0float", sizeof("screenWindowWidth\0float"));
+   stbiw__writef(s, "44", 4, 1065353216 /*1.0f*/);
+   s->func(s->context, (void*)"", sizeof("")); // end of header
+
+   // Write line offset table.
+   offset = 259 + 18*comp + 8*((y+15)/16);
+   for (b = 0; b*16 < y; ++b) {
+      stbiw__writef(s, "44", offset, 0);
+      offset += 8 + block_len[b];
+   }
+
+   // Write scan line blocks.
+   for (b = 0; b*16 < y; ++b) {
+      stbiw__writef(s, "44", b*16, block_len[b]);
+      s->func(s->context, block_data[b], block_len[b]);
+   }
+
+   for (b = 0; b*16 < y; ++b) STBIW_FREE(block_data[b]);
+   STBIW_FREE(block_len);
+   STBIW_FREE(block_data);
+   return 1;
+}
+
+STBIWDEF int stbi_write_exr_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const float *data)
+{
+   stbi__write_context s = { 0 };
+   stbi__start_write_callbacks(&s, func, context);
+   return stbi_write_exr_core(&s, x, y, comp, (float *) data);
+}
+
+#ifndef STBI_WRITE_NO_STDIO
+STBIWDEF int stbi_write_exr(char const *filename, int x, int y, int comp, const float *data)
+{
+   stbi__write_context s = { 0 };
+   if (stbi__start_write_file(&s,filename)) {
+      int r = stbi_write_exr_core(&s, x, y, comp, (float *) data);
+      stbi__end_write_file(&s);
+      return r;
+   } else
+      return 0;
+}
+#endif // STBI_WRITE_NO_STDIO
 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
