@@ -3821,6 +3821,10 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
    else
       decode_n = z->s->img_n;
 
+   // nothing to do if no components requested; check this now to avoid
+   // accessing uninitialized coutput[0] later
+   if (decode_n <= 0) { stbi__cleanup_jpeg(z); return NULL; }
+
    // resample and color-convert
    {
       int k;
@@ -6862,9 +6866,10 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
                }
 
                if (delays) {
-                  *delays = (int*) STBI_REALLOC_SIZED( *delays, delays_size, sizeof(int) * layers );
-                  if (!*delays)
+                  int *new_delays = (int*) STBI_REALLOC_SIZED( *delays, delays_size, sizeof(int) * layers );
+                  if (!new_delays)
                      return stbi__load_gif_main_outofmem(&g, out, delays);
+                  *delays = new_delays;
                   delays_size = layers * sizeof(int);
                }
             } else {
