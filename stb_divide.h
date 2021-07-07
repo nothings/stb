@@ -166,15 +166,15 @@ int stb_div_floor(int v1, int v2)
    return v1/v2;
    #else
    if (v1 >= 0 && v2 < 0) {
-      if ((-v1)+v2+1 < 0) // check if increasing v1's magnitude overflows
-         return -stb__div(-v1+v2+1,v2); // nope, so just compute it
+      if (v2 + 1 >= INT_MIN + v1) // check if increasing v1's magnitude overflows
+         return -stb__div((v2+1)-v1,v2); // nope, so just compute it
       else
          return -stb__div(-v1,v2) + ((-v1)%v2 ? -1 : 0);
    }
    if (v1 < 0 && v2 >= 0) {
       if (v1 != INT_MIN) {
-         if (v1-v2+1 < 0) // check if increasing v1's magnitude overflows
-            return -stb__div(v1-v2+1,-v2); // nope, so just compute it
+         if (v1 + 1 >= INT_MIN + v2) // check if increasing v1's magnitude overflows
+            return -stb__div((v1+1)-v2,-v2); // nope, so just compute it
          else
             return -stb__div(-v1,v2) + (stb__mod(v1,-v2) ? -1 : 0);
       } else // it must be possible to compute -(v1+v2) without overflowing
@@ -209,8 +209,10 @@ int stb_div_eucl(int v1, int v2)
    else // if v1 is INT_MIN, we have to move away from overflow place
       if (v2 >= 0)
          q = -stb__div(-(v1+v2),v2)-1, r = -stb__mod(-(v1+v2),v2);
-      else
+      else if (v2 != INT_MIN)
          q = stb__div(-(v1-v2),-v2)+1, r = -stb__mod(-(v1-v2),-v2);
+      else // for INT_MIN / INT_MIN, we need to be extra-careful to avoid overflow
+         q = 1, r = 0;
    #endif
    if (r >= 0)
       return q;
@@ -228,13 +230,13 @@ int stb_mod_trunc(int v1, int v2)
       if (r >= 0)
          return r;
       else
-         return r + (v2 > 0 ? v2 : -v2);
+         return r - (v2 < 0 ? v2 : -v2);
    } else {    // modulus result should always be negative
       int r = stb__mod(v1,v2);
       if (r <= 0)
          return r;
       else
-         return r - (v2 > 0 ? v2 : -v2);
+         return r + (v2 < 0 ? v2 : -v2);
    }
    #endif
 }
@@ -267,7 +269,7 @@ int stb_mod_eucl(int v1, int v2)
    if (r >= 0)
       return r;
    else
-      return r + (v2 > 0 ? v2 : -v2); // abs()
+      return r - (v2 < 0 ? v2 : -v2); // negative abs() [to avoid overflow]
 }
 
 #ifdef STB_DIVIDE_TEST
