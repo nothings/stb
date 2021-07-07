@@ -2479,12 +2479,13 @@ static stbtt_int32  stbtt__GetGlyphClass(stbtt_uint8 *classDefTable, int glyph)
         } break;
 
         default: {
-            // There are no other cases.
-            STBTT_assert(0);
+            // Unsupported defition type; return an error.
+            return -1;
         } break;
     }
 
-    return -1;
+    // "All glyphs not assigned to a class fall into class 0". (OpenType spec)
+    return 0;
 }
 
 // Define to STBTT_assert(x) if you want to break on unimplemented formats.
@@ -2533,75 +2534,67 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
                             int straw, needle;
                             stbtt_uint16 valueFormat1 = ttUSHORT(table + 4);
                             stbtt_uint16 valueFormat2 = ttUSHORT(table + 6);
-                            stbtt_int32 valueRecordPairSizeInBytes = 2;
-                            stbtt_uint16 pairSetCount = ttUSHORT(table + 8);
-                            stbtt_uint16 pairPosOffset = ttUSHORT(table + 10 + 2 * coverageIndex);
-                            stbtt_uint8 *pairValueTable = table + pairPosOffset;
-                            stbtt_uint16 pairValueCount = ttUSHORT(pairValueTable);
-                            stbtt_uint8 *pairValueArray = pairValueTable + 2;
-                            // TODO: Support more formats.
-                            STBTT_GPOS_TODO_assert(valueFormat1 == 4);
-                            if (valueFormat1 != 4) return 0;
-                            STBTT_GPOS_TODO_assert(valueFormat2 == 0);
-                            if (valueFormat2 != 0) return 0;
+                            if (valueFormat1 == 4 && valueFormat2 == 0) { // Support more formats?
+                                stbtt_int32 valueRecordPairSizeInBytes = 2;
+                                stbtt_uint16 pairSetCount = ttUSHORT(table + 8);
+                                stbtt_uint16 pairPosOffset = ttUSHORT(table + 10 + 2 * coverageIndex);
+                                stbtt_uint8 *pairValueTable = table + pairPosOffset;
+                                stbtt_uint16 pairValueCount = ttUSHORT(pairValueTable);
+                                stbtt_uint8 *pairValueArray = pairValueTable + 2;
 
-                            STBTT_assert(coverageIndex < pairSetCount);
-                            STBTT__NOTUSED(pairSetCount);
+                                if (coverageIndex >= pairSetCount) return 0;
 
-                            needle=glyph2;
-                            r=pairValueCount-1;
-                            l=0;
+                                needle=glyph2;
+                                r=pairValueCount-1;
+                                l=0;
 
-                            // Binary search.
-                            while (l <= r) {
-                                stbtt_uint16 secondGlyph;
-                                stbtt_uint8 *pairValue;
-                                m = (l + r) >> 1;
-                                pairValue = pairValueArray + (2 + valueRecordPairSizeInBytes) * m;
-                                secondGlyph = ttUSHORT(pairValue);
-                                straw = secondGlyph;
-                                if (needle < straw)
-                                    r = m - 1;
-                                else if (needle > straw)
-                                    l = m + 1;
-                                else {
-                                    stbtt_int16 xAdvance = ttSHORT(pairValue + 2);
-                                    return xAdvance;
+                                // Binary search.
+                                while (l <= r) {
+                                    stbtt_uint16 secondGlyph;
+                                    stbtt_uint8 *pairValue;
+                                    m = (l + r) >> 1;
+                                    pairValue = pairValueArray + (2 + valueRecordPairSizeInBytes) * m;
+                                    secondGlyph = ttUSHORT(pairValue);
+                                    straw = secondGlyph;
+                                    if (needle < straw)
+                                        r = m - 1;
+                                    else if (needle > straw)
+                                        l = m + 1;
+                                    else {
+                                        stbtt_int16 xAdvance = ttSHORT(pairValue + 2);
+                                        return xAdvance;
+                                    }
                                 }
-                            }
+                            } else
+                                return 0;
                         } break;
 
                         case 2: {
                             stbtt_uint16 valueFormat1 = ttUSHORT(table + 4);
                             stbtt_uint16 valueFormat2 = ttUSHORT(table + 6);
+                            if (valueFormat1 == 4 && valueFormat2 == 0) { // Support more formats?
+                                stbtt_uint16 classDef1Offset = ttUSHORT(table + 8);
+                                stbtt_uint16 classDef2Offset = ttUSHORT(table + 10);
+                                int glyph1class = stbtt__GetGlyphClass(table + classDef1Offset, glyph1);
+                                int glyph2class = stbtt__GetGlyphClass(table + classDef2Offset, glyph2);
 
-                            stbtt_uint16 classDef1Offset = ttUSHORT(table + 8);
-                            stbtt_uint16 classDef2Offset = ttUSHORT(table + 10);
-                            int glyph1class = stbtt__GetGlyphClass(table + classDef1Offset, glyph1);
-                            int glyph2class = stbtt__GetGlyphClass(table + classDef2Offset, glyph2);
+                                stbtt_uint16 class1Count = ttUSHORT(table + 12);
+                                stbtt_uint16 class2Count = ttUSHORT(table + 14);
 
-                            stbtt_uint16 class1Count = ttUSHORT(table + 12);
-                            stbtt_uint16 class2Count = ttUSHORT(table + 14);
-                            STBTT_assert(glyph1class < class1Count);
-                            STBTT_assert(glyph2class < class2Count);
+                                if (glyph1class < 0 || glyph1class >= class1Count) return 0; // malformed
+                                if (glyph2class < 0 || glyph2class >= class2Count) return 0; // malformed
 
-                            // TODO: Support more formats.
-                            STBTT_GPOS_TODO_assert(valueFormat1 == 4);
-                            if (valueFormat1 != 4) return 0;
-                            STBTT_GPOS_TODO_assert(valueFormat2 == 0);
-                            if (valueFormat2 != 0) return 0;
-
-                            if (glyph1class >= 0 && glyph1class < class1Count && glyph2class >= 0 && glyph2class < class2Count) {
                                 stbtt_uint8 *class1Records = table + 16;
                                 stbtt_uint8 *class2Records = class1Records + 2 * (glyph1class * class2Count);
                                 stbtt_int16 xAdvance = ttSHORT(class2Records + 2 * glyph2class);
                                 return xAdvance;
-                            }
+                            } else
+                                return 0;
                         } break;
 
                         default: {
-                            // There are no other cases.
-                            STBTT_assert(0);
+                            // Unsupported definition type
+                            return 0;
                             break;
                         };
                     }
