@@ -2454,8 +2454,6 @@ static stbtt_int32  stbtt__GetGlyphClass(stbtt_uint8 *classDefTable, int glyph)
 
             if (glyph >= startGlyphID && glyph < startGlyphID + glyphCount)
                 return (stbtt_int32)ttUSHORT(classDef1ValueArray + 2 * (glyph - startGlyphID));
-
-            classDefTable = classDef1ValueArray + 2 * glyphCount;
         } break;
 
         case 2: {
@@ -2478,8 +2476,6 @@ static stbtt_int32  stbtt__GetGlyphClass(stbtt_uint8 *classDefTable, int glyph)
                 else
                     return (stbtt_int32)ttUSHORT(classRangeRecord + 4);
             }
-
-            classDefTable = classRangeRecords + 6 * classRangeCount;
         } break;
 
         default: {
