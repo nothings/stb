@@ -608,7 +608,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
          // check for EOF
          STB_C_LEX_0_IS_EOF(
             if (*p == 0)
-               return stb__clex_eof(tok);
+               return stb__clex_eof(lexer);
          )
 
       single_char:
