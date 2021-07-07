@@ -310,11 +310,10 @@ RECENT REVISION HISTORY:
 //
 // iPhone PNG support:
 //
-// By default we convert iphone-formatted PNGs back to RGB, even though
-// they are internally encoded differently. You can disable this conversion
-// by calling stbi_convert_iphone_png_to_rgb(0), in which case
-// you will always just get the native iphone "format" through (which
-// is BGR stored in RGB).
+// We optionally support converting iPhone-formatted PNGs (which store
+// premultiplied BGRA) back to RGB, even though they're internally encoded
+// differently. To enable this conversion, call
+// stbi_convert_iphone_png_to_rgb(1).
 //
 // Call stbi_set_unpremultiply_on_load(1) as well to force a divide per
 // pixel to remove any premultiplied alpha *only* if the image file explicitly
