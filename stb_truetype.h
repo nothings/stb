@@ -4587,18 +4587,17 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
             for (i=0; i < num_verts; ++i) {
                float x0 = verts[i].x*scale_x, y0 = verts[i].y*scale_y;
 
-               // check against every point here rather than inside line/curve primitives -- @TODO: wrong if multiple 'moves' in a row produce a garbage point, and given culling, probably more efficient to do within line/curve
-               float dist2 = (x0-sx)*(x0-sx) + (y0-sy)*(y0-sy);
-               if (dist2 < min_dist*min_dist)
-                  min_dist = (float) STBTT_sqrt(dist2);
-
-               if (verts[i].type == STBTT_vline) {
+               if (verts[i].type == STBTT_vline && precompute[i] != 0.0f) {
                   float x1 = verts[i-1].x*scale_x, y1 = verts[i-1].y*scale_y;
+
+                  float dist,dist2 = (x0-sx)*(x0-sx) + (y0-sy)*(y0-sy);
+                  if (dist2 < min_dist*min_dist)
+                     min_dist = (float) STBTT_sqrt(dist2);
 
                   // coarse culling against bbox
                   //if (sx > STBTT_min(x0,x1)-min_dist && sx < STBTT_max(x0,x1)+min_dist &&
                   //    sy > STBTT_min(y0,y1)-min_dist && sy < STBTT_max(y0,y1)+min_dist)
-                  float dist = (float) STBTT_fabs((x1-x0)*(y0-sy) - (y1-y0)*(x0-sx)) * precompute[i];
+                  dist = (float) STBTT_fabs((x1-x0)*(y0-sy) - (y1-y0)*(x0-sx)) * precompute[i];
                   STBTT_assert(i != 0);
                   if (dist < min_dist) {
                      // check position along line
@@ -4625,7 +4624,7 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
                      float ax = x1-x0, ay = y1-y0;
                      float bx = x0 - 2*x1 + x2, by = y0 - 2*y1 + y2;
                      float mx = x0 - sx, my = y0 - sy;
-                     float res[3],px,py,t,it;
+                     float res[3],px,py,t,it,dist2;
                      float a_inv = precompute[i];
                      if (a_inv == 0.0) { // if a_inv is 0, it's 2nd degree so use quadratic formula
                         float a = 3*(ax*bx + ay*by);
@@ -4652,6 +4651,10 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
                         float d = (mx*ax+my*ay) * a_inv;
                         num = stbtt__solve_cubic(b, c, d, res);
                      }
+                     dist2 = (x0-sx)*(x0-sx) + (y0-sy)*(y0-sy);
+                     if (dist2 < min_dist*min_dist)
+                        min_dist = (float) STBTT_sqrt(dist2);
+
                      if (num >= 1 && res[0] >= 0.0f && res[0] <= 1.0f) {
                         t = res[0], it = 1.0f - t;
                         px = it*it*x0 + 2*t*it*x1 + t*t*x2;
