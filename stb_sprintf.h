@@ -1022,7 +1022,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             lead[0] = 0;
             if (pr == 0) {
                l = 0;
-               cs = (((l >> 4) & 15)) << 24;
+               cs = 0;
                goto scopy;
             }
          }
