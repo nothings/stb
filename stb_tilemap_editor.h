@@ -319,6 +319,7 @@
 //      Ryan Whitworth
 //      Eugene Opalev
 //      Rob Loach
+//      github:wernsey
 //
 // LICENSE
 //
