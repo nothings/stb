@@ -111,7 +111,7 @@ RECENT REVISION HISTORY:
     Josh Tobin                                 Matthew Gregan       github:poppolopoppo
     Julian Raschke          Gregory Mullen     Christian Floisand   github:darealshinji
     Baldur Karlsson         Kevin Schmidt      JR Smith             github:Michaelangel007
-                            Brad Weinberger    Matvey Cherevko      [reserved]
+                            Brad Weinberger    Matvey Cherevko      github:mosra
     Luca Sas                Alexander Veselov  Zack Middleton       [reserved]
     Ryan C. Gordon          [reserved]                              [reserved]
                      DO NOT ADD YOUR NAME HERE
@@ -310,11 +310,10 @@ RECENT REVISION HISTORY:
 //
 // iPhone PNG support:
 //
-// By default we convert iphone-formatted PNGs back to RGB, even though
-// they are internally encoded differently. You can disable this conversion
-// by calling stbi_convert_iphone_png_to_rgb(0), in which case
-// you will always just get the native iphone "format" through (which
-// is BGR stored in RGB).
+// We optionally support converting iPhone-formatted PNGs (which store
+// premultiplied BGRA) back to RGB, even though they're internally encoded
+// differently. To enable this conversion, call
+// stbi_convert_iphone_png_to_rgb(1).
 //
 // Call stbi_set_unpremultiply_on_load(1) as well to force a divide per
 // pixel to remove any premultiplied alpha *only* if the image file explicitly
@@ -518,6 +517,8 @@ STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip);
 // as above, but only applies to images loaded on the thread that calls the function
 // this function is only available if your compiler supports thread-local variables;
 // calling it will fail to link if your compiler doesn't
+STBIDEF void stbi_set_unpremultiply_on_load_thread(int flag_true_if_should_unpremultiply);
+STBIDEF void stbi_convert_iphone_png_to_rgb_thread(int flag_true_if_should_convert);
 STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_flip);
 
 // ZLIB client - used by PNG, available for other purposes
@@ -3821,6 +3822,10 @@ static stbi_uc *load_jpeg_image(stbi__jpeg *z, int *out_x, int *out_y, int *comp
    else
       decode_n = z->s->img_n;
 
+   // nothing to do if no components requested; check this now to avoid
+   // accessing uninitialized coutput[0] later
+   if (decode_n <= 0) { stbi__cleanup_jpeg(z); return NULL; }
+
    // resample and color-convert
    {
       int k;
@@ -4923,18 +4928,45 @@ static int stbi__expand_png_palette(stbi__png *a, stbi_uc *palette, int len, int
    return 1;
 }
 
-static int stbi__unpremultiply_on_load = 0;
-static int stbi__de_iphone_flag = 0;
+static int stbi__unpremultiply_on_load_global = 0;
+static int stbi__de_iphone_flag_global = 0;
 
 STBIDEF void stbi_set_unpremultiply_on_load(int flag_true_if_should_unpremultiply)
 {
-   stbi__unpremultiply_on_load = flag_true_if_should_unpremultiply;
+   stbi__unpremultiply_on_load_global = flag_true_if_should_unpremultiply;
 }
 
 STBIDEF void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert)
 {
-   stbi__de_iphone_flag = flag_true_if_should_convert;
+   stbi__de_iphone_flag_global = flag_true_if_should_convert;
 }
+
+#ifndef STBI_THREAD_LOCAL
+#define stbi__unpremultiply_on_load  stbi__unpremultiply_on_load_global
+#define stbi__de_iphone_flag  stbi__de_iphone_flag_global
+#else
+static STBI_THREAD_LOCAL int stbi__unpremultiply_on_load_local, stbi__unpremultiply_on_load_set;
+static STBI_THREAD_LOCAL int stbi__de_iphone_flag_local, stbi__de_iphone_flag_set;
+
+STBIDEF void stbi__unpremultiply_on_load_thread(int flag_true_if_should_unpremultiply)
+{
+   stbi__unpremultiply_on_load_local = flag_true_if_should_unpremultiply;
+   stbi__unpremultiply_on_load_set = 1;
+}
+
+STBIDEF void stbi_convert_iphone_png_to_rgb_thread(int flag_true_if_should_convert)
+{
+   stbi__de_iphone_flag_local = flag_true_if_should_convert;
+   stbi__de_iphone_flag_set = 1;
+}
+
+#define stbi__unpremultiply_on_load  (stbi__unpremultiply_on_load_set           \
+                                       ? stbi__unpremultiply_on_load_local      \
+                                       : stbi__unpremultiply_on_load_global)
+#define stbi__de_iphone_flag  (stbi__de_iphone_flag_set                         \
+                                ? stbi__de_iphone_flag_local                    \
+                                : stbi__de_iphone_flag_global)
+#endif // STBI_THREAD_LOCAL
 
 static void stbi__de_iphone(stbi__png *z)
 {
@@ -5316,6 +5348,32 @@ typedef struct
    int extra_read;
 } stbi__bmp_data;
 
+static int stbi__bmp_set_mask_defaults(stbi__bmp_data *info, int compress)
+{
+   // BI_BITFIELDS specifies masks explicitly, don't override
+   if (compress == 3)
+      return 1;
+
+   if (compress == 0) {
+      if (info->bpp == 16) {
+         info->mr = 31u << 10;
+         info->mg = 31u <<  5;
+         info->mb = 31u <<  0;
+      } else if (info->bpp == 32) {
+         info->mr = 0xffu << 16;
+         info->mg = 0xffu <<  8;
+         info->mb = 0xffu <<  0;
+         info->ma = 0xffu << 24;
+         info->all_a = 0; // if all_a is 0 at end, then we loaded alpha channel but it was all 0
+      } else {
+         // otherwise, use defaults, which is all-0
+         info->mr = info->mg = info->mb = info->ma = 0;
+      }
+      return 1;
+   }
+   return 0; // error
+}
+
 static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
 {
    int hsz;
@@ -5343,6 +5401,8 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
    if (hsz != 12) {
       int compress = stbi__get32le(s);
       if (compress == 1 || compress == 2) return stbi__errpuc("BMP RLE", "BMP type not supported: RLE");
+      if (compress >= 4) return stbi__errpuc("BMP JPEG/PNG", "BMP type not supported: unsupported compression"); // this includes PNG/JPEG modes
+      if (compress == 3 && info->bpp != 16 && info->bpp != 32) return stbi__errpuc("bad BMP", "bad BMP"); // bitfields requires 16 or 32 bits/pixel
       stbi__get32le(s); // discard sizeof
       stbi__get32le(s); // discard hres
       stbi__get32le(s); // discard vres
@@ -5357,17 +5417,7 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
          }
          if (info->bpp == 16 || info->bpp == 32) {
             if (compress == 0) {
-               if (info->bpp == 32) {
-                  info->mr = 0xffu << 16;
-                  info->mg = 0xffu <<  8;
-                  info->mb = 0xffu <<  0;
-                  info->ma = 0xffu << 24;
-                  info->all_a = 0; // if all_a is 0 at end, then we loaded alpha channel but it was all 0
-               } else {
-                  info->mr = 31u << 10;
-                  info->mg = 31u <<  5;
-                  info->mb = 31u <<  0;
-               }
+               stbi__bmp_set_mask_defaults(info, compress);
             } else if (compress == 3) {
                info->mr = stbi__get32le(s);
                info->mg = stbi__get32le(s);
@@ -5382,6 +5432,7 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
                return stbi__errpuc("bad BMP", "bad BMP");
          }
       } else {
+         // V4/V5 header
          int i;
          if (hsz != 108 && hsz != 124)
             return stbi__errpuc("bad BMP", "bad BMP");
@@ -5389,6 +5440,8 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
          info->mg = stbi__get32le(s);
          info->mb = stbi__get32le(s);
          info->ma = stbi__get32le(s);
+         if (compress != 3) // override mr/mg/mb unless in BI_BITFIELDS mode, as per docs
+            stbi__bmp_set_mask_defaults(info, compress);
          stbi__get32le(s); // discard color space
          for (i=0; i < 12; ++i)
             stbi__get32le(s); // discard color space parameters
@@ -6862,9 +6915,10 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
                }
 
                if (delays) {
-                  *delays = (int*) STBI_REALLOC_SIZED( *delays, delays_size, sizeof(int) * layers );
-                  if (!*delays)
+                  int *new_delays = (int*) STBI_REALLOC_SIZED( *delays, delays_size, sizeof(int) * layers );
+                  if (!new_delays)
                      return stbi__load_gif_main_outofmem(&g, out, delays);
+                  *delays = new_delays;
                   delays_size = layers * sizeof(int);
                }
             } else {
@@ -7200,9 +7254,10 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
 
    info.all_a = 255;
    p = stbi__bmp_parse_header(s, &info);
-   stbi__rewind( s );
-   if (p == NULL)
+   if (p == NULL) {
+      stbi__rewind( s );
       return 0;
+   }
    if (x) *x = s->img_x;
    if (y) *y = s->img_y;
    if (comp) {
@@ -7474,7 +7529,6 @@ static int stbi__pnm_is16(stbi__context *s)
 	   return 1;
    return 0;
 }
-
 #endif
 
 static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)

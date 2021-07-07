@@ -178,7 +178,7 @@ STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const 
 STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
 STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const void  *data, int quality);
 
-#ifdef STBI_WINDOWS_UTF8
+#ifdef STBIW_WINDOWS_UTF8
 STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input);
 #endif
 #endif
@@ -285,7 +285,7 @@ static void stbi__stdio_write(void *context, void *data, int size)
    fwrite(data,1,size,(FILE*) context);
 }
 
-#if defined(_WIN32) && defined(STBI_WINDOWS_UTF8)
+#if defined(_WIN32) && defined(STBIW_WINDOWS_UTF8)
 #ifdef __cplusplus
 #define STBIW_EXTERN extern "C"
 #else
@@ -296,25 +296,25 @@ STBIW_EXTERN __declspec(dllimport) int __stdcall WideCharToMultiByte(unsigned in
 
 STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input)
 {
-	return WideCharToMultiByte(65001 /* UTF8 */, 0, input, -1, buffer, (int) bufferlen, NULL, NULL);
+   return WideCharToMultiByte(65001 /* UTF8 */, 0, input, -1, buffer, (int) bufferlen, NULL, NULL);
 }
 #endif
 
 static FILE *stbiw__fopen(char const *filename, char const *mode)
 {
    FILE *f;
-#if defined(_WIN32) && defined(STBI_WINDOWS_UTF8)
+#if defined(_WIN32) && defined(STBIW_WINDOWS_UTF8)
    wchar_t wMode[64];
    wchar_t wFilename[1024];
-	if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, filename, -1, wFilename, sizeof(wFilename)/sizeof(*wFilename)))
+   if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, filename, -1, wFilename, sizeof(wFilename)/sizeof(*wFilename)))
       return 0;
 
-	if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, mode, -1, wMode, sizeof(wMode)/sizeof(*wMode)))
+   if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, mode, -1, wMode, sizeof(wMode)/sizeof(*wMode)))
       return 0;
 
 #if defined(_MSC_VER) && _MSC_VER >= 1400
-	if (0 != _wfopen_s(&f, wFilename, wMode))
-		f = 0;
+   if (0 != _wfopen_s(&f, wFilename, wMode))
+      f = 0;
 #else
    f = _wfopen(wFilename, wMode);
 #endif
@@ -622,6 +622,8 @@ STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const 
 
 #define stbiw__max(a, b)  ((a) > (b) ? (a) : (b))
 
+#ifndef STBI_WRITE_NO_STDIO
+
 static void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
 {
    int exponent;
@@ -756,7 +758,7 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
       char header[] = "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n";
       s->func(s->context, header, sizeof(header)-1);
 
-#ifdef __STDC_WANT_SECURE_LIB__
+#ifdef __STDC_LIB_EXT1__
       len = sprintf_s(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
 #else
       len = sprintf(buffer, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
@@ -777,7 +779,6 @@ STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int x,
    return stbi_write_hdr_core(&s, x, y, comp, (float *) data);
 }
 
-#ifndef STBI_WRITE_NO_STDIO
 STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *data)
 {
    stbi__write_context s = { 0 };
@@ -1635,7 +1636,7 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
              add HDR output
              fix monochrome BMP
       0.95 (2014-08-17)
-		       add monochrome TGA output
+             add monochrome TGA output
       0.94 (2014-05-31)
              rename private functions to avoid conflicts with stb_image.h
       0.93 (2014-05-27)

@@ -1,4 +1,7 @@
 language: C
+arch:
+  - AMD64
+  - ppc64le
 install: true
 script:
   - cd tests
