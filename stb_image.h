@@ -7529,7 +7529,6 @@ static int stbi__pnm_is16(stbi__context *s)
 	   return 1;
    return 0;
 }
-
 #endif
 
 static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)

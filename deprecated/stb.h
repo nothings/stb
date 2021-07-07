@@ -9230,6 +9230,7 @@ int stb__wildmatch_raw(char *expr, char *candidate, int search, int insensitive)
       // need to allow for non-writeable strings... assume they're small
       if (s - last < 256) {
          stb_strncpy(buffer, last, (int) (s-last+1));
+         buffer[s-last] = 0;
          z = stb__wildmatch_raw2(buffer, candidate, search, insensitive);
       } else {
          *s = 0;

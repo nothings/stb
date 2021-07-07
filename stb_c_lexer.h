@@ -42,6 +42,7 @@
 //
 //   See end of file for license information.
 
+#ifdef STB_C_LEXER_IMPLEMENTATION
 #ifndef STB_C_LEXER_DEFINITIONS
 // to change the default parsing rules, copy the following lines
 // into your C/C++ file *before* including this, and then replace
@@ -96,6 +97,7 @@
 #define STB_C_LEXER_DEFINITIONS         // This line prevents the header file from replacing your definitions
 // --END--
 
+#endif
 #endif
 
 #ifndef INCLUDE_STB_C_LEXER_H
@@ -608,7 +610,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
          // check for EOF
          STB_C_LEX_0_IS_EOF(
             if (*p == 0)
-               return stb__clex_eof(tok);
+               return stb__clex_eof(lexer);
          )
 
       single_char:

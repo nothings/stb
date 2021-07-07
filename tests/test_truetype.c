@@ -42,9 +42,13 @@ int main(int argc, char **argv)
    //debug();
 
    // @TODO: why is minglui.ttc failing? 
-   fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/mingliu.ttc", "rb"));
+   //fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/mingliu.ttc", "rb"));
 
-   //fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/x/DroidSansMono.ttf", "rb"));
+   fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/DejaVuSans.ttf", "rb"));
+
+   stbtt_InitFont(&font, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0));
+
+#if 0
    {
       static stbtt_pack_context pc;
       static stbtt_packedchar cd[256];
@@ -53,6 +57,27 @@ int main(int argc, char **argv)
       stbtt_PackBegin(&pc, atlas, 1024,1024,1024,1,NULL);
       stbtt_PackFontRange(&pc, ttf_buffer, 0, 32.0, 0, 256, cd);
       stbtt_PackEnd(&pc);
+   }
+#endif
+
+   {
+      static stbtt_pack_context pc;
+      static stbtt_packedchar cd[256];
+      static unsigned char atlas[1024*1024];
+      unsigned char *data;
+
+      stbtt_PackBegin(&pc, atlas, 1024,1024,1024,1,NULL);
+      stbtt_PackFontRange(&pc, ttf_buffer, 0, 32.0, 'u', 1, cd);
+      stbtt_PackEnd(&pc);
+
+      data = stbtt_GetCodepointSDF(&font, stbtt_ScaleForPixelHeight(&font,32.0), 'u', 4, 128, 128/4, &w,&h,&i,&j);
+      for (j=0; j < h; ++j) {
+         for (i=0; i < w; ++i) {
+            putchar(" .:ioVM@"[data[j*w+i]>>5]);
+         }
+         putchar('\n');
+      }
+      return 0;
    }
 
 #if 0
@@ -92,7 +117,6 @@ int main(int argc, char **argv)
    return 0;
 #endif
 
-   stbtt_InitFont(&font, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0));
    bitmap = stbtt_GetCodepointBitmap(&font, 0,stbtt_ScaleForPixelHeight(&font, (float)s), c, &w, &h, 0,0);
 
    for (j=0; j < h; ++j) {

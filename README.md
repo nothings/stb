@@ -20,6 +20,7 @@ by Jorge L. "VinoBS" Rodriguez, and stb_sprintf by Jeff Roberts.
 
 library    | lastest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
+<<<<<<< HEAD
 **[stb_vorbis.c](stb_vorbis.c)** | 1.21 | audio | 5569 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **[stb_image.h](stb_image.h)** | 2.26 | graphics | 7762 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC, PNM
 **[stb_truetype.h](stb_truetype.h)** | 1.24 | graphics | 5011 | parse, decode, and rasterize characters from truetype fonts
