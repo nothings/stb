@@ -187,6 +187,12 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 #define STBSP__ATTRIBUTE_FORMAT(fmt,va)
 #endif
 
+#ifdef _MSC_VER
+#define STBSP__NOTUSED(v)  (void)(v)
+#else
+#define STBSP__NOTUSED(v)  (void)sizeof(v)
+#endif
+
 #include <stdarg.h> // for va_arg(), va_list()
 #include <stddef.h> // size_t, ptrdiff_t
 
@@ -626,8 +632,8 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          lead[0] = 0;
          tail[0] = 0;
          pr = 0;
-         dp = 0;
          cs = 0;
+         STBSP__NOTUSED(dp);
          goto scopy;
 #else
       case 'A': // hex float
