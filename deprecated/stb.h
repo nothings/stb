@@ -6132,7 +6132,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
    char buffer[4096], with_slash[4096];
    size_t n;
 
-   #ifdef _MSC_VER
+   #ifdef WIN32
       stb__wchar *ws;
       struct _wfinddata_t data;
    #ifdef _WIN64
@@ -6142,7 +6142,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
       const long none = -1;
       long z;
    #endif
-   #else // !_MSC_VER
+   #else // !WIN32
       const DIR *none = NULL;
       DIR *z;
    #endif
@@ -6159,7 +6159,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
    if (!stb_strscpy(with_slash,buffer,sizeof(with_slash)))
       return NULL;
 
-   #ifdef _MSC_VER
+   #ifdef WIN32
       if (!stb_strscpy(buffer+n,"*.*",sizeof(buffer)-n))
          return NULL;
       ws = stb__from_utf8(buffer);
@@ -6170,7 +6170,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
 
    if (z != none) {
       int nonempty = STB_TRUE;
-      #ifndef _MSC_VER
+      #ifndef WIN32
       struct dirent *data = readdir(z);
       nonempty = (data != NULL);
       #endif
@@ -6179,7 +6179,7 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
 
          do {
             int is_subdir;
-            #ifdef _MSC_VER
+            #ifdef WIN32
             char *name = stb__to_utf8((stb__wchar *)data.name);
             if (name == NULL) {
                fprintf(stderr, "%s to convert '%S' to %s!\n", "Unable", data.name, "utf8");
@@ -6207,13 +6207,13 @@ static char **readdir_raw(char *dir, int return_subdirs, char *mask)
                }
             }
          }
-         #ifdef _MSC_VER
+         #ifdef WIN32
          while (0 == _wfindnext(z, &data));
          #else
          while ((data = readdir(z)) != NULL);
          #endif
       }
-      #ifdef _MSC_VER
+      #ifdef WIN32
          _findclose(z);
       #else
          closedir(z);
