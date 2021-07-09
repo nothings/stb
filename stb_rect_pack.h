@@ -1,8 +1,14 @@
-// stb_rect_pack.h - v1.00 - public domain - rectangle packing
+// stb_rect_pack.h - v1.01 - public domain - rectangle packing
 // Sean Barrett 2014
 //
 // Useful for e.g. packing rectangular textures into an atlas.
 // Does not do rotation.
+//
+// Before #including,
+//
+//    #define STB_RECT_PACK_IMPLEMENTATION
+//
+// in the file that you want to have the implementation.
 //
 // Not necessarily the awesomest packing method, but better than
 // the totally naive one in stb_truetype (which is primarily what
@@ -35,6 +41,7 @@
 //
 // Version history:
 //
+//     1.01  (          )  always use large rect mode, expose STBRP__MAXVAL in public section
 //     1.00  (2019-02-25)  avoid small space waste; gracefully fail too-wide rectangles
 //     0.99  (2019-02-07)  warning fixes
 //     0.11  (2017-03-03)  return packing success/fail result
@@ -75,11 +82,10 @@ typedef struct stbrp_context stbrp_context;
 typedef struct stbrp_node    stbrp_node;
 typedef struct stbrp_rect    stbrp_rect;
 
-#ifdef STBRP_LARGE_RECTS
 typedef int            stbrp_coord;
-#else
-typedef unsigned short stbrp_coord;
-#endif
+
+#define STBRP__MAXVAL  0x7fffffff
+// Mostly for internal use, but this is the maximum supported coordinate value.
 
 STBRP_DEF int stbrp_pack_rects (stbrp_context *context, stbrp_rect *rects, int num_rects);
 // Assign packed locations to rectangles. The rectangles are of type
@@ -253,9 +259,6 @@ STBRP_DEF void stbrp_setup_allow_out_of_mem(stbrp_context *context, int allow_ou
 STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, stbrp_node *nodes, int num_nodes)
 {
    int i;
-#ifndef STBRP_LARGE_RECTS
-   STBRP_ASSERT(width <= 0xffff && height <= 0xffff);
-#endif
 
    for (i=0; i < num_nodes-1; ++i)
       nodes[i].next = &nodes[i+1];
@@ -274,11 +277,7 @@ STBRP_DEF void stbrp_init_target(stbrp_context *context, int width, int height, 
    context->extra[0].y = 0;
    context->extra[0].next = &context->extra[1];
    context->extra[1].x = (stbrp_coord) width;
-#ifdef STBRP_LARGE_RECTS
    context->extra[1].y = (1<<30);
-#else
-   context->extra[1].y = 65535;
-#endif
    context->extra[1].next = NULL;
 }
 
@@ -537,12 +536,6 @@ static int rect_original_order(const void *a, const void *b)
    const stbrp_rect *q = (const stbrp_rect *) b;
    return (p->was_packed < q->was_packed) ? -1 : (p->was_packed > q->was_packed);
 }
-
-#ifdef STBRP_LARGE_RECTS
-#define STBRP__MAXVAL  0xffffffff
-#else
-#define STBRP__MAXVAL  0xffff
-#endif
 
 STBRP_DEF int stbrp_pack_rects(stbrp_context *context, stbrp_rect *rects, int num_rects)
 {

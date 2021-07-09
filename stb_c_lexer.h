@@ -42,12 +42,18 @@
 //
 //   See end of file for license information.
 
-#ifdef STB_C_LEXER_IMPLEMENTATION
 #ifndef STB_C_LEXER_DEFINITIONS
 // to change the default parsing rules, copy the following lines
 // into your C/C++ file *before* including this, and then replace
-// the Y's with N's for the ones you don't want.
+// the Y's with N's for the ones you don't want. This needs to be
+// set to the same values for every place in your program where
+// stb_c_lexer.h is included.
 // --BEGIN--
+
+#if defined(Y) || defined(N)
+#error "Can only use stb_c_lexer in contexts where the preprocessor symbols 'Y' and 'N' are not defined"
+#endif
+
 
 #define STB_C_LEX_C_DECIMAL_INTS    Y   //  "0|[1-9][0-9]*"                        CLEX_intlit
 #define STB_C_LEX_C_HEX_INTS        Y   //  "0x[0-9a-fA-F]+"                       CLEX_intlit
@@ -97,7 +103,6 @@
 #define STB_C_LEXER_DEFINITIONS         // This line prevents the header file from replacing your definitions
 // --END--
 
-#endif
 #endif
 
 #ifndef INCLUDE_STB_C_LEXER_H
@@ -167,70 +172,17 @@ extern void stb_c_lexer_get_location(const stb_lexer *lexer, const char *where, 
 }
 #endif
 
-#endif // INCLUDE_STB_C_LEXER_H
-
-#ifdef STB_C_LEXER_IMPLEMENTATION
-
-   #if defined(Y) || defined(N)
-   #error "Can only use stb_c_lexer in contexts where the preprocessor symbols 'Y' and 'N' are not defined"
-   #endif
-
-
 // Hacky definitions so we can easily #if on them
 #define Y(x) 1
 #define N(x) 0
 
-#if STB_C_LEX_INTEGERS_AS_DOUBLES(x)
-typedef double     stb__clex_int;
-#define intfield   real_number
-#define STB__clex_int_as_double
-#else
-typedef long       stb__clex_int;
-#define intfield   int_number
-#endif
-
-// Convert these config options to simple conditional #defines so we can more
-// easily test them once we've change the meaning of Y/N
-
-#if STB_C_LEX_PARSE_SUFFIXES(x)
-#define STB__clex_parse_suffixes
-#endif
-
+// Config variable that influence which lexer tokens get declared need to go here
 #if STB_C_LEX_C_DECIMAL_INTS(x) || STB_C_LEX_C_HEX_INTS(x) || STB_C_LEX_DEFINE_ALL_TOKEN_NAMES(x)
 #define STB__clex_define_int
 #endif
 
 #if (STB_C_LEX_C_ARITHEQ(x) && STB_C_LEX_C_SHIFTS(x)) || STB_C_LEX_DEFINE_ALL_TOKEN_NAMES(x)
 #define STB__clex_define_shifts
-#endif
-
-#if STB_C_LEX_C99_HEX_FLOATS(x)
-#define STB__clex_hex_floats
-#endif
-
-#if STB_C_LEX_C_HEX_INTS(x)
-#define STB__clex_hex_ints
-#endif
-
-#if STB_C_LEX_C_DECIMAL_INTS(x)
-#define STB__clex_decimal_ints
-#endif
-
-#if STB_C_LEX_C_OCTAL_INTS(x)
-#define STB__clex_octal_ints
-#endif
-
-#if STB_C_LEX_C_DECIMAL_FLOATS(x)
-#define STB__clex_decimal_floats
-#endif
-
-#if STB_C_LEX_DISCARD_PREPROCESSOR(x)
-#define STB__clex_discard_preprocessor
-#endif
-
-#if STB_C_LEX_USE_STDLIB(x) && (!defined(STB__clex_hex_floats) || __STDC_VERSION__ >= 199901L)
-#define STB__CLEX_use_stdlib
-#include <stdlib.h>
 #endif
 
 // Now pick a definition of Y/N that's conducive to
@@ -287,12 +239,68 @@ enum
 
    CLEX_first_unused_token
 
-#undef Y
-#define Y(a) a
 };
+
+#undef Y
+#undef N
+
+#endif // INCLUDE_STB_C_LEXER_H
+
+#ifdef STB_C_LEXER_IMPLEMENTATION
+
+// Hacky definitions so we can easily #if on them
+#define Y(x) 1
+#define N(x) 0
+
+#if STB_C_LEX_INTEGERS_AS_DOUBLES(x)
+typedef double     stb__clex_int;
+#define intfield   real_number
+#define STB__clex_int_as_double
+#else
+typedef long       stb__clex_int;
+#define intfield   int_number
+#endif
+
+// Convert these config options to simple conditional #defines so we can more
+// easily test them once we've change the meaning of Y/N
+
+#if STB_C_LEX_PARSE_SUFFIXES(x)
+#define STB__clex_parse_suffixes
+#endif
+
+#if STB_C_LEX_C99_HEX_FLOATS(x)
+#define STB__clex_hex_floats
+#endif
+
+#if STB_C_LEX_C_HEX_INTS(x)
+#define STB__clex_hex_ints
+#endif
+
+#if STB_C_LEX_C_DECIMAL_INTS(x)
+#define STB__clex_decimal_ints
+#endif
+
+#if STB_C_LEX_C_OCTAL_INTS(x)
+#define STB__clex_octal_ints
+#endif
+
+#if STB_C_LEX_C_DECIMAL_FLOATS(x)
+#define STB__clex_decimal_floats
+#endif
+
+#if STB_C_LEX_DISCARD_PREPROCESSOR(x)
+#define STB__clex_discard_preprocessor
+#endif
+
+#if STB_C_LEX_USE_STDLIB(x) && (!defined(STB__clex_hex_floats) || __STDC_VERSION__ >= 199901L)
+#define STB__CLEX_use_stdlib
+#include <stdlib.h>
+#endif
 
 // Now for the rest of the file we'll use the basic definition where
 // where Y expands to its contents and N expands to nothing
+#undef  Y
+#define Y(a) a
 #undef N
 #define N(a)
 

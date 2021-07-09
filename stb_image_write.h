@@ -140,6 +140,7 @@ CREDITS:
       Ivan Tikhonov
       github:ignotion
       Adam Schackart
+      Andrew Kensler
 
 LICENSE
 
@@ -166,9 +167,9 @@ LICENSE
 #endif
 
 #ifndef STB_IMAGE_WRITE_STATIC  // C++ forbids static forward declarations
-extern int stbi_write_tga_with_rle;
-extern int stbi_write_png_compression_level;
-extern int stbi_write_force_png_filter;
+STBIWDEF int stbi_write_tga_with_rle;
+STBIWDEF int stbi_write_png_compression_level;
+STBIWDEF int stbi_write_force_png_filter;
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
@@ -490,11 +491,22 @@ static int stbiw__outfile(stbi__write_context *s, int rgb_dir, int vdir, int x, 
 
 static int stbi_write_bmp_core(stbi__write_context *s, int x, int y, int comp, const void *data)
 {
-   int pad = (-x*3) & 3;
-   return stbiw__outfile(s,-1,-1,x,y,comp,1,(void *) data,0,pad,
-           "11 4 22 4" "4 44 22 444444",
-           'B', 'M', 14+40+(x*3+pad)*y, 0,0, 14+40,  // file header
-            40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
+   if (comp != 4) {
+      // write RGB bitmap
+      int pad = (-x*3) & 3;
+      return stbiw__outfile(s,-1,-1,x,y,comp,1,(void *) data,0,pad,
+              "11 4 22 4" "4 44 22 444444",
+              'B', 'M', 14+40+(x*3+pad)*y, 0,0, 14+40,  // file header
+               40, x,y, 1,24, 0,0,0,0,0,0);             // bitmap header
+   } else {
+      // RGBA bitmaps need a v4 header
+      // use BI_BITFIELDS mode with 32bpp and alpha mask
+      // (straight BI_RGB with alpha mask doesn't work in most readers)
+      return stbiw__outfile(s,-1,-1,x,y,comp,1,(void *)data,1,0,
+         "11 4 22 4" "4 44 22 444444 4444 4 444 444 444 444",
+         'B', 'M', 14+108+x*y*4, 0, 0, 14+108, // file header
+         108, x,y, 1,32, 3,0,0,0,0,0, 0xff0000,0xff00,0xff,0xff000000u, 0, 0,0,0, 0,0,0, 0,0,0, 0,0,0); // bitmap V4 header
+   }
 }
 
 STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data)
@@ -968,6 +980,23 @@ STBIWDEF unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, i
    for (i=0; i < stbiw__ZHASH; ++i)
       (void) stbiw__sbfree(hash_table[i]);
    STBIW_FREE(hash_table);
+
+   // store uncompressed instead if compression was worse
+   if (stbiw__sbn(out) > data_len + 2 + ((data_len+32766)/32767)*5) {
+      stbiw__sbn(out) = 2;  // truncate to DEFLATE 32K window and FLEVEL = 1
+      for (j = 0; j < data_len;) {
+         int blocklen = data_len - j;
+         if (blocklen > 32767) blocklen = 32767;
+         stbiw__sbpush(out, data_len - j == blocklen); // BFINAL = ?, BTYPE = 0 -- no compression
+         stbiw__sbpush(out, STBIW_UCHAR(blocklen)); // LEN
+         stbiw__sbpush(out, STBIW_UCHAR(blocklen >> 8));
+         stbiw__sbpush(out, STBIW_UCHAR(~blocklen)); // NLEN
+         stbiw__sbpush(out, STBIW_UCHAR(~blocklen >> 8));
+         memcpy(out+stbiw__sbn(out), data+j, blocklen);
+         stbiw__sbn(out) += blocklen;
+         j += blocklen;
+      }
+   }
 
    {
       // compute adler32 on input
@@ -1599,6 +1628,9 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
 
 /* Revision history
+      1.15  (          )
+             make Deflate code emit uncompressed blocks when it would otherwise expand
+             support writing BMPs with alpha channel
       1.14  (2020-02-02) updated JPEG writer to downsample chroma channels
       1.13
       1.12
