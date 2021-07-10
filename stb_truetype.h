@@ -1874,7 +1874,7 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
                if (comp_verts) STBTT_free(comp_verts, info->userdata);
                return 0;
             }
-            if (num_vertices > 0) STBTT_memcpy(tmp, vertices, num_vertices*sizeof(stbtt_vertex));
+            if (num_vertices > 0 && vertices) STBTT_memcpy(tmp, vertices, num_vertices*sizeof(stbtt_vertex));
             STBTT_memcpy(tmp+num_vertices, comp_verts, comp_num_verts*sizeof(stbtt_vertex));
             if (vertices) STBTT_free(vertices, info->userdata);
             vertices = tmp;
@@ -2242,7 +2242,7 @@ static int stbtt__run_charstring(const stbtt_fontinfo *info, int glyph_index, st
       } break;
 
       default:
-         if (b0 != 255 && b0 != 28 && (b0 < 32 || b0 > 254))
+         if (b0 != 255 && b0 != 28 && b0 < 32)
             return STBTT__CSERR("reserved operator");
 
          // push immediate
@@ -4397,15 +4397,14 @@ static int stbtt__compute_crossings_x(float x, float y, int nverts, stbtt_vertex
    float y_frac;
    int winding = 0;
 
-   orig[0] = x;
-   orig[1] = y;
-
    // make sure y never passes through a vertex of the shape
    y_frac = (float) STBTT_fmod(y, 1.0f);
    if (y_frac < 0.01f)
       y += 0.01f;
    else if (y_frac > 0.99f)
       y -= 0.01f;
+
+   orig[0] = x;
    orig[1] = y;
 
    // test a ray from (-infinity,y) to (x,y)
