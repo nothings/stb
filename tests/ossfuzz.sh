@@ -15,10 +15,6 @@ find $SRC/stb/tests/pngsuite -name "*.png" | \
 
 cp $SRC/stb/tests/stb_png.dict $OUT/stb_png_read_fuzzer.dict
 
-tar xvzf $SRC/stb/jpg.tar.gz --directory $SRC/stb/tests
-tar xvzf $SRC/stb/gif.tar.gz --directory $SRC/stb/tests
-unzip    $SRC/stb/bmp.zip    -d $SRC/stb/tests
-unzip    $SRC/stb/tga.zip    -d $SRC/stb/tests
 
 find $SRC/stb/tests -name "*.png" -o -name "*.jpg" -o -name "*.gif" \
                  -o -name "*.bmp" -o -name "*.tga" -o -name "*.TGA" \
