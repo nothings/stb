@@ -2581,13 +2581,15 @@ static stbtt_int32 stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, in
 
                   stbtt_uint16 class1Count = ttUSHORT(table + 12);
                   stbtt_uint16 class2Count = ttUSHORT(table + 14);
+                  stbtt_uint8 *class1Records, *class2Records;
+                  stbtt_int16 xAdvance;
 
                   if (glyph1class < 0 || glyph1class >= class1Count) return 0; // malformed
                   if (glyph2class < 0 || glyph2class >= class2Count) return 0; // malformed
 
-                  stbtt_uint8 *class1Records = table + 16;
-                  stbtt_uint8 *class2Records = class1Records + 2 * (glyph1class * class2Count);
-                  stbtt_int16 xAdvance = ttSHORT(class2Records + 2 * glyph2class);
+                  class1Records = table + 16;
+                  class2Records = class1Records + 2 * (glyph1class * class2Count);
+                  xAdvance = ttSHORT(class2Records + 2 * glyph2class);
                   return xAdvance;
                } else
                   return 0;
