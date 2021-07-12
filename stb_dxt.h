@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.11 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.12 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //

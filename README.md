@@ -30,7 +30,7 @@ library    | lastest version | category | LoC | description
 **[stb_sprintf.h](stb_sprintf.h)** | 1.10 | utility | 1906 | fast sprintf, snprintf for C/C++
 **[stb_textedit.h](stb_textedit.h)** | 1.14 | user&nbsp;interface | 1429 | guts of a text editor for games etc implementing them from scratch
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.89 | 3D&nbsp;graphics | 3807 | Minecraft-esque voxel rendering "engine" with many more features
-**[stb_dxt.h](stb_dxt.h)** | 1.12 | 3D&nbsp;graphics | 718 | Fabian "ryg" Giesen's real-time DXT compressor
+**[stb_dxt.h](stb_dxt.h)** | 1.12 | 3D&nbsp;graphics | 719 | Fabian "ryg" Giesen's real-time DXT compressor
 **[stb_perlin.h](stb_perlin.h)** | 0.5 | 3D&nbsp;graphics | 428 | revised Perlin noise (3D input, 1D output)
 **[stb_easy_font.h](stb_easy_font.h)** | 1.1 | 3D&nbsp;graphics | 305 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
 **[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.42 | game&nbsp;dev | 4187 | embeddable tilemap editor
@@ -38,12 +38,12 @@ library    | lastest version | category | LoC | description
 **[stb_c_lexer.h](stb_c_lexer.h)** | 0.12 | parsing | 940 | simplify writing parsers for C-like languages
 **[stb_divide.h](stb_divide.h)** | 0.94 | math | 433 | more useful 32-bit modulus e.g. "euclidean divide"
 **[stb_connected_comp...](stb_connected_components.h)** | 0.96 | misc | 1049 | incrementally compute reachability on grids
-**[stb.h](stb.h)** | 2.38 | misc | 14457 | _deprecated_ helper functions for C, mostly redundant in C++; basically author's personal stuff
+**[stb.h](stb.h)** | 2.37 | misc | 13105 | _deprecated_ helper functions for C, mostly redundant in C++; basically author's personal stuff
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.6 | misc | 194 | quick-and-dirty malloc/free leak-checking
 **[stb_include.h](stb_include.h)** | 0.02 | misc | 295 | implement recursive #include support, particularly for GLSL
 
 Total libraries: 21
-Total lines of C code: 56730
+Total lines of C code: 55379
 
 
 FAQ
