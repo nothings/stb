@@ -30,7 +30,7 @@ library    | lastest version | category | LoC | description
 **[stb_sprintf.h](stb_sprintf.h)** | 1.10 | utility | 1906 | fast sprintf, snprintf for C/C++
 **[stb_textedit.h](stb_textedit.h)** | 1.14 | user&nbsp;interface | 1429 | guts of a text editor for games etc implementing them from scratch
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.89 | 3D&nbsp;graphics | 3807 | Minecraft-esque voxel rendering "engine" with many more features
-**[stb_dxt.h](stb_dxt.h)** | 1.11 | 3D&nbsp;graphics | 718 | Fabian "ryg" Giesen's real-time DXT compressor
+**[stb_dxt.h](stb_dxt.h)** | 1.12 | 3D&nbsp;graphics | 718 | Fabian "ryg" Giesen's real-time DXT compressor
 **[stb_perlin.h](stb_perlin.h)** | 0.5 | 3D&nbsp;graphics | 428 | revised Perlin noise (3D input, 1D output)
 **[stb_easy_font.h](stb_easy_font.h)** | 1.1 | 3D&nbsp;graphics | 305 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
 **[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.42 | game&nbsp;dev | 4187 | embeddable tilemap editor
