@@ -1,4 +1,5 @@
 stb_vorbis.c                | audio            | decode ogg vorbis files from file/memory to float/16-bit signed output
+stb_hexwave.h               | audio            | audio waveform synthesizer
 stb_image.h                 | graphics         | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 stb_truetype.h              | graphics         | parse, decode, and rasterize characters from truetype fonts
 stb_image_write.h           | graphics         | image writing to disk: PNG, TGA, BMP
