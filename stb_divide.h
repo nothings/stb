@@ -3,7 +3,7 @@
 //
 // HISTORY
 //
-//   v0.94              Fix integer overflow issues 
+//   v0.94              Fix integer overflow issues
 //   v0.93  2020-02-02  Write useful exit() value from main()
 //   v0.92  2019-02-25  Fix warning
 //   v0.91  2010-02-27  Fix euclidean division by INT_MIN for non-truncating C

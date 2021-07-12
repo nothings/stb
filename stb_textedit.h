@@ -29,7 +29,7 @@
 //
 // VERSION HISTORY
 //
-//   1.14 (          ) page up/down, various fixes
+//   1.14 (2021-07-11) page up/down, various fixes
 //   1.13 (2019-02-07) fix bug in undo size management
 //   1.12 (2018-01-29) user can change STB_TEXTEDIT_KEYTYPE, fix redo to avoid crash
 //   1.11 (2017-03-03) fix HOME on last line, dragging off single-line textfield

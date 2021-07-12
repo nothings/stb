@@ -36,7 +36,7 @@
 //    AnthoFoxo          github:morlat       Gabriel Ravier
 //
 // Partial history:
-//    1.22    -            - various small fixes
+//    1.22    - 2021-07-11 - various small fixes
 //    1.21    - 2021-07-02 - fix bug for files with no comments
 //    1.20    - 2020-07-11 - several small fixes
 //    1.19    - 2020-02-05 - warnings

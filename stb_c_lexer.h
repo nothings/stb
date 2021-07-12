@@ -1,4 +1,4 @@
-// stb_c_lexer.h - v0.11 - public domain Sean Barrett 2013
+// stb_c_lexer.h - v0.12 - public domain Sean Barrett 2013
 // lexer for making little C-like languages with recursive-descent parsers
 //
 // This file provides both the interface and the implementation.
@@ -10,6 +10,7 @@
 // suffixes on integer constants are not handled (you can override this).
 //
 // History:
+//     0.12 fix compilation bug for NUL support; better support separate inclusion
 //     0.11 fix clang static analysis warning
 //     0.10 fix warnings
 //     0.09 hex floats, no-stdlib fixes

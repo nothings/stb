@@ -1,4 +1,4 @@
-#include "stb_c_lexer.h" 
+#include "stb_c_lexer.h"
 
 #define STB_C_LEX_C_DECIMAL_INTS    Y   //  "0|[1-9][0-9]*"                        CLEX_intlit
 #define STB_C_LEX_C_HEX_INTS        Y   //  "0x[0-9a-fA-F]+"                       CLEX_intlit
@@ -47,4 +47,4 @@
 
 #define STB_C_LEXER_DEFINITIONS         // This line prevents the header file from replacing your definitions
 
-#include "stb_c_lexer.h" 
+#include "stb_c_lexer.h"
