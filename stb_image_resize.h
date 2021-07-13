@@ -157,6 +157,7 @@
       Sean Barrett: API design, optimizations
       Aras Pranckevicius: bugfix
       Nathan Reed: warning fixes
+      Johannes Spohr: bugfix
 
    REVISIONS
       0.97 (2020-02-02) fixed warning
@@ -959,7 +960,7 @@ static int stbir__edge_wrap_slow(stbir_edge edge, int n, int max)
     {
         if (n < 0)
         {
-            if (n < max)
+            if (-n < max)
                 return -n;
             else
                 return max - 1;
