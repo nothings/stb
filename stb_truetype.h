@@ -271,8 +271,8 @@
 ////  SAMPLE PROGRAMS
 ////
 //
-//  Incomplete text-in-3d-api example, which draws quads properly aligned to be lossless
-//
+//  Incomplete text-in-3d-api example, which draws quads properly aligned to be lossless.
+//  See "tests/truetype_demo_win32.c" for a complete version.
 #if 0
 #define STB_TRUETYPE_IMPLEMENTATION  // force following include to generate implementation
 #include "stb_truetype.h"
@@ -307,10 +307,10 @@ void my_stbtt_print(float x, float y, char *text)
       if (*text >= 32 && *text < 128) {
          stbtt_aligned_quad q;
          stbtt_GetBakedQuad(cdata, 512,512, *text-32, &x,&y,&q,1);//1=opengl & d3d10+,0=d3d9
-         glTexCoord2f(q.s0,q.t1); glVertex2f(q.x0,q.y0);
-         glTexCoord2f(q.s1,q.t1); glVertex2f(q.x1,q.y0);
-         glTexCoord2f(q.s1,q.t0); glVertex2f(q.x1,q.y1);
-         glTexCoord2f(q.s0,q.t0); glVertex2f(q.x0,q.y1);
+         glTexCoord2f(q.s0,q.t0); glVertex2f(q.x0,q.y0);
+         glTexCoord2f(q.s1,q.t0); glVertex2f(q.x1,q.y0);
+         glTexCoord2f(q.s1,q.t1); glVertex2f(q.x1,q.y1);
+         glTexCoord2f(q.s0,q.t1); glVertex2f(q.x0,q.y1);
       }
       ++text;
    }
