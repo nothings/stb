@@ -898,6 +898,12 @@ struct stb_vorbis
   // sample-access
    int channel_buffer_start;
    int channel_buffer_end;
+
+  // temporary buffers
+   void *temp_lengths;
+   void *temp_codewords;
+   void *temp_values;
+   void *temp_mults;
 };
 
 #if defined(STB_VORBIS_NO_PUSHDATA_API)
@@ -977,8 +983,10 @@ static void *setup_temp_malloc(vorb *f, int sz)
    return malloc(sz);
 }
 
-static void setup_temp_free(vorb *f, void *p, int sz)
+static void setup_temp_free(vorb *f, void **_p, int sz)
 {
+   void *p = *_p;
+   *_p = NULL;
    if (f->alloc.alloc_buffer) {
       f->temp_offset += (sz+7)&~7;
       return;
@@ -3721,7 +3729,6 @@ static int start_decoder(vorb *f)
       uint32 *values;
       int ordered, sorted_count;
       int total=0;
-      int res=TRUE;
       uint8 *lengths;
       Codebook *c = f->codebooks+i;
       CHECK(f);
@@ -3739,9 +3746,10 @@ static int start_decoder(vorb *f)
       if (c->dimensions == 0 && c->entries != 0)    return error(f, VORBIS_invalid_setup);
       if (f->valid_bits < 0)                        return error(f, VORBIS_unexpected_eof);
 
-      if (c->sparse)
+      if (c->sparse) {
          lengths = (uint8 *) setup_temp_malloc(f, c->entries);
-      else
+         f->temp_lengths = lengths;
+      } else
          lengths = c->codeword_lengths = (uint8 *) setup_malloc(f, c->entries);
 
       if (!lengths) return error(f, VORBIS_outofmem);
@@ -3752,9 +3760,9 @@ static int start_decoder(vorb *f)
          while (current_entry < c->entries) {
             int limit = c->entries - current_entry;
             int n = get_bits(f, ilog(limit));
-            if (f->valid_bits < 0) { res = error(f, VORBIS_unexpected_eof); break; }
-            if (current_length >= 32) { res = error(f, VORBIS_invalid_setup); break; }
-            if (current_entry + n > (int) c->entries) { res = error(f, VORBIS_invalid_setup); break; }
+            if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
+            if (current_length >= 32) return error(f, VORBIS_invalid_setup);
+            if (current_entry + n > (int) c->entries) return error(f, VORBIS_invalid_setup);
             memset(lengths + current_entry, current_length, n);
             current_entry += n;
             ++current_length;
@@ -3762,21 +3770,15 @@ static int start_decoder(vorb *f)
       } else {
          for (j=0; j < c->entries; ++j) {
             int present = c->sparse ? get_bits(f,1) : 1;
-            if (f->valid_bits < 0) { res = error(f, VORBIS_unexpected_eof); break; }
+            if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
             if (present) {
                lengths[j] = get_bits(f, 5) + 1;
                ++total;
-               if (lengths[j] == 32) { res = error(f, VORBIS_invalid_setup); break; }
+               if (lengths[j] == 32) return error(f, VORBIS_invalid_setup);
             } else {
                lengths[j] = NO_CODE;
             }
          }
-      }
-      if (res != TRUE) {
-         if (c->sparse) {
-            setup_temp_free(f, lengths, c->entries);
-         }
-         return res;
       }
 
       if (c->sparse && total >= c->entries >> 2) {
@@ -3787,7 +3789,7 @@ static int start_decoder(vorb *f)
          c->codeword_lengths = (uint8 *) setup_malloc(f, c->entries);
          if (c->codeword_lengths == NULL) return error(f, VORBIS_outofmem);
          memcpy(c->codeword_lengths, lengths, c->entries);
-         setup_temp_free(f, lengths, c->entries); // note this is only safe if there have been no intervening temp mallocs!
+         setup_temp_free(f, &f->temp_lengths, c->entries); // note this is only safe if there have been no intervening temp mallocs!
          lengths = c->codeword_lengths;
          c->sparse = 0;
       }
@@ -3817,8 +3819,10 @@ static int start_decoder(vorb *f)
             c->codeword_lengths = (uint8 *) setup_malloc(f, c->sorted_entries);
             if (!c->codeword_lengths)           return error(f, VORBIS_outofmem);
             c->codewords = (uint32 *) setup_temp_malloc(f, sizeof(*c->codewords) * c->sorted_entries);
+            f->temp_codewords = c->codewords;
             if (!c->codewords)                  return error(f, VORBIS_outofmem);
             values = (uint32 *) setup_temp_malloc(f, sizeof(*values) * c->sorted_entries);
+            f->temp_values = values;
             if (!values)                        return error(f, VORBIS_outofmem);
          }
          size = c->entries + (sizeof(*c->codewords) + sizeof(*values)) * c->sorted_entries;
@@ -3827,7 +3831,6 @@ static int start_decoder(vorb *f)
       }
 
       if (!compute_codewords(c, lengths, c->entries, values)) {
-         if (c->sparse) setup_temp_free(f, values, 0);
          return error(f, VORBIS_invalid_setup);
       }
 
@@ -3845,9 +3848,9 @@ static int start_decoder(vorb *f)
       }
 
       if (c->sparse) {
-         setup_temp_free(f, values, sizeof(*values)*c->sorted_entries);
-         setup_temp_free(f, c->codewords, sizeof(*c->codewords)*c->sorted_entries);
-         setup_temp_free(f, lengths, c->entries);
+         setup_temp_free(f, &f->temp_values, sizeof(*values)*c->sorted_entries);
+         setup_temp_free(f, &f->temp_codewords, sizeof(*c->codewords)*c->sorted_entries);
+         setup_temp_free(f, &f->temp_lengths, c->entries);
          c->codewords = NULL;
       }
 
@@ -3871,10 +3874,11 @@ static int start_decoder(vorb *f)
          }
          if (c->lookup_values == 0) return error(f, VORBIS_invalid_setup);
          mults = (uint16 *) setup_temp_malloc(f, sizeof(mults[0]) * c->lookup_values);
+         f->temp_mults = mults;
          if (mults == NULL) return error(f, VORBIS_outofmem);
          for (j=0; j < (int) c->lookup_values; ++j) {
             int q = get_bits(f, c->value_bits);
-            if (f->valid_bits < 0) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_invalid_setup); }
+            if (f->valid_bits < 0) return error(f, VORBIS_invalid_setup);
             mults[j] = q;
          }
 
@@ -3888,7 +3892,7 @@ static int start_decoder(vorb *f)
                c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->sorted_entries * c->dimensions);
             } else
                c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->entries        * c->dimensions);
-            if (c->multiplicands == NULL) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
+            if (c->multiplicands == NULL) return error(f, VORBIS_outofmem);
             len = sparse ? c->sorted_entries : c->entries;
             for (j=0; j < len; ++j) {
                unsigned int z = sparse ? c->sorted_values[j] : j;
@@ -3901,7 +3905,6 @@ static int start_decoder(vorb *f)
                      last = val;
                   if (k+1 < c->dimensions) {
                      if (div > UINT_MAX / (unsigned int) c->lookup_values) {
-                        setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values);
                         return error(f, VORBIS_invalid_setup);
                      }
                      div *= c->lookup_values;
@@ -3916,7 +3919,7 @@ static int start_decoder(vorb *f)
             float last=0;
             CHECK(f);
             c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->lookup_values);
-            if (c->multiplicands == NULL) { setup_temp_free(f, mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
+            if (c->multiplicands == NULL) return error(f, VORBIS_outofmem);
             for (j=0; j < (int) c->lookup_values; ++j) {
                float val = mults[j] * c->delta_value + c->minimum_value + last;
                c->multiplicands[j] = val;
@@ -3927,7 +3930,7 @@ static int start_decoder(vorb *f)
 #ifndef STB_VORBIS_DIVIDES_IN_CODEBOOK
         skip:;
 #endif
-         setup_temp_free(f, mults, sizeof(mults[0])*c->lookup_values);
+         setup_temp_free(f, &f->temp_mults, sizeof(mults[0])*c->lookup_values);
 
          CHECK(f);
       }
@@ -4252,7 +4255,8 @@ static void vorbis_deinit(stb_vorbis *p)
          Codebook *c = p->codebooks + i;
          setup_free(p, c->codeword_lengths);
          setup_free(p, c->multiplicands);
-         setup_free(p, c->codewords);
+         if (c->codewords != p->temp_codewords) // Might be the temporary buffer-allocated array.
+            setup_free(p, c->codewords);
          setup_free(p, c->sorted_codewords);
          // c->sorted_values[-1] is the first entry in the array
          setup_free(p, c->sorted_values ? c->sorted_values-1 : NULL);
@@ -4281,6 +4285,12 @@ static void vorbis_deinit(stb_vorbis *p)
       setup_free(p, p->C[i]);
       setup_free(p, p->window[i]);
       setup_free(p, p->bit_reverse[i]);
+   }
+   if (!p->alloc.alloc_buffer) {
+      setup_temp_free(p, &p->temp_lengths, 0);
+      setup_temp_free(p, &p->temp_codewords, 0);
+      setup_temp_free(p, &p->temp_values, 0);
+      setup_temp_free(p, &p->temp_mults, 0);
    }
    #ifndef STB_VORBIS_NO_STDIO
    if (p->close_on_free) fclose(p->f);
