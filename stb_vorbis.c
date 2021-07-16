@@ -3734,6 +3734,7 @@ static int start_decoder(vorb *f)
    // codebooks
 
    f->codebook_count = get_bits(f,8) + 1;
+   if (f->valid_bits < 0)                           return error(f, VORBIS_unexpected_eof);
    f->codebooks = (Codebook *) setup_malloc(f, sizeof(*f->codebooks) * f->codebook_count);
    if (f->codebooks == NULL)                        return error(f, VORBIS_outofmem);
    memset(f->codebooks, 0, sizeof(*f->codebooks) * f->codebook_count);
@@ -3741,6 +3742,7 @@ static int start_decoder(vorb *f)
       uint32 *values;
       int ordered, sorted_count;
       int total=0;
+      int res=TRUE;
       uint8 *lengths;
       Codebook *c = f->codebooks+i;
       CHECK(f);
@@ -3757,6 +3759,7 @@ static int start_decoder(vorb *f)
 
       if (c->dimensions == 0 && c->entries != 0)    return error(f, VORBIS_invalid_setup);
       if (c->entries && CODEBOOK_LIMIT / c->entries < c->dimensions) return error(f, VORBIS_invalid_setup);
+      if (f->valid_bits < 0)                        return error(f, VORBIS_unexpected_eof);
 
       if (c->sparse)
          lengths = (uint8 *) setup_temp_malloc(f, c->entries);
@@ -3771,8 +3774,9 @@ static int start_decoder(vorb *f)
          while (current_entry < c->entries) {
             int limit = c->entries - current_entry;
             int n = get_bits(f, ilog(limit));
-            if (current_length >= 32) return error(f, VORBIS_invalid_setup);
-            if (current_entry + n > (int) c->entries) { return error(f, VORBIS_invalid_setup); }
+            if (f->valid_bits < 0) { res = error(f, VORBIS_unexpected_eof); break; }
+            if (current_length >= 32) { res = error(f, VORBIS_invalid_setup); break; }
+            if (current_entry + n > (int) c->entries) { res = error(f, VORBIS_invalid_setup); break; }
             memset(lengths + current_entry, current_length, n);
             current_entry += n;
             ++current_length;
@@ -3780,15 +3784,21 @@ static int start_decoder(vorb *f)
       } else {
          for (j=0; j < c->entries; ++j) {
             int present = c->sparse ? get_bits(f,1) : 1;
+            if (f->valid_bits < 0) { res = error(f, VORBIS_unexpected_eof); break; }
             if (present) {
                lengths[j] = (uint8) (get_bits(f, 5) + 1);
                ++total;
-               if (lengths[j] == 32)
-                  return error(f, VORBIS_invalid_setup);
+               if (lengths[j] == 32) { res = error(f, VORBIS_invalid_setup); break; }
             } else {
                lengths[j] = NO_CODE;
             }
          }
+      }
+      if (res != TRUE) {
+         if (c->sparse) {
+            setup_temp_free(f, lengths, c->entries);
+         }
+         return res;
       }
 
       if (c->sparse && total >= c->entries >> 2) {
@@ -3886,7 +3896,7 @@ static int start_decoder(vorb *f)
          if (mults == NULL) return error(f, VORBIS_outofmem);
          for (j=0; j < (int) c->lookup_values; ++j) {
             int q = get_bits(f, c->value_bits);
-            if (q == EOP) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_invalid_setup); }
+            if (f->valid_bits < 0) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_invalid_setup); }
             mults[j] = (uint16) q;
          }
 
@@ -3956,6 +3966,7 @@ static int start_decoder(vorb *f)
 
    // Floors
    f->floor_count = get_bits(f, 6)+1;
+   if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
    f->floor_config = (Floor *)  setup_malloc(f, f->floor_count * sizeof(*f->floor_config));
    if (f->floor_config == NULL) return error(f, VORBIS_outofmem);
    for (i=0; i < f->floor_count; ++i) {
@@ -3985,6 +3996,7 @@ static int start_decoder(vorb *f)
          for (j=0; j <= max_class; ++j) {
             g->class_dimensions[j] = (uint8) (get_bits(f, 3)+1);
             g->class_subclasses[j] = (uint8) get_bits(f, 2);
+            if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
             if (g->class_subclasses[j]) {
                g->class_masterbooks[j] = (uint8) get_bits(f, 8);
                if (g->class_masterbooks[j] >= f->codebook_count) return error(f, VORBIS_invalid_setup);
@@ -4032,6 +4044,7 @@ static int start_decoder(vorb *f)
 
    // Residue
    f->residue_count = get_bits(f, 6)+1;
+   if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
    f->residue_config = (Residue *) setup_malloc(f, f->residue_count * sizeof(f->residue_config[0]));
    if (f->residue_config == NULL) return error(f, VORBIS_outofmem);
    memset(f->residue_config, 0, f->residue_count * sizeof(f->residue_config[0]));
@@ -4046,6 +4059,7 @@ static int start_decoder(vorb *f)
       r->part_size = get_bits(f,24)+1;
       r->classifications = (uint8) (get_bits(f,6)+1);
       r->classbook = (uint8) get_bits(f,8);
+      if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
       if (r->classbook >= f->codebook_count) return error(f, VORBIS_invalid_setup);
       for (j=0; j < r->classifications; ++j) {
          uint8 high_bits=0;
@@ -4054,12 +4068,14 @@ static int start_decoder(vorb *f)
             high_bits = (uint8) get_bits(f,5);
          residue_cascade[j] = (uint8) (high_bits*8 + low_bits);
       }
+      if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
       r->residue_books = (short (*)[8]) setup_malloc(f, sizeof(r->residue_books[0]) * r->classifications);
       if (r->residue_books == NULL) return error(f, VORBIS_outofmem);
       for (j=0; j < r->classifications; ++j) {
          for (k=0; k < 8; ++k) {
             if (residue_cascade[j] & (1 << k)) {
                r->residue_books[j][k] = (int16) get_bits(f, 8);
+               if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
                if (r->residue_books[j][k] >= f->codebook_count) return error(f, VORBIS_invalid_setup);
             } else {
                r->residue_books[j][k] = -1;
@@ -4084,6 +4100,7 @@ static int start_decoder(vorb *f)
    }
 
    f->mapping_count = get_bits(f,6)+1;
+   if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
    f->mapping = (Mapping *) setup_malloc(f, f->mapping_count * sizeof(*f->mapping));
    if (f->mapping == NULL) return error(f, VORBIS_outofmem);
    memset(f->mapping, 0, f->mapping_count * sizeof(*f->mapping));
@@ -4105,6 +4122,7 @@ static int start_decoder(vorb *f)
          for (k=0; k < m->coupling_steps; ++k) {
             m->chan[k].magnitude = (uint8) get_bits(f, ilog(f->channels-1));
             m->chan[k].angle = (uint8) get_bits(f, ilog(f->channels-1));
+            if (f->valid_bits < 0)                          return error(f, VORBIS_unexpected_eof);
             if (m->chan[k].magnitude >= f->channels)        return error(f, VORBIS_invalid_setup);
             if (m->chan[k].angle     >= f->channels)        return error(f, VORBIS_invalid_setup);
             if (m->chan[k].magnitude == m->chan[k].angle)   return error(f, VORBIS_invalid_setup);
@@ -4141,6 +4159,7 @@ static int start_decoder(vorb *f)
       m->windowtype = (uint16) get_bits(f,16);
       m->transformtype = (uint16) get_bits(f,16);
       m->mapping = (uint8) get_bits(f,8);
+      if (f->valid_bits < 0)                  return error(f, VORBIS_unexpected_eof);
       if (m->windowtype != 0)                 return error(f, VORBIS_invalid_setup);
       if (m->transformtype != 0)              return error(f, VORBIS_invalid_setup);
       if (m->mapping >= f->mapping_count)     return error(f, VORBIS_invalid_setup);
