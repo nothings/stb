@@ -5233,7 +5233,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                stbi_uc *text = (stbi_uc*) STBI_MALLOC(text_len);
                if (!stbi__getn(s, text, text_len)) return stbi__err("outofdata","Corrupt PNG");
                int expanded_text_len = 0;
-               char *expanded_text = stbi_zlib_decode_malloc_guesssize(text, text_len, 1024, &expanded_text_len);
+               char *expanded_text = stbi_zlib_decode_malloc_guesssize((const char*) text, text_len, 1024, &expanded_text_len);
 			   STBI_FREE(text);
 			   text = (stbi_uc*) STBI_MALLOC(expanded_text_len + 1);
 			   memcpy(text, expanded_text, expanded_text_len);
