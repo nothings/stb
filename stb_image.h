@@ -5205,13 +5205,13 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                   key[key_len++] = chr;
                } while (chr);
                stbi__uint32 text_len = c.length - key_len;
-               stbi_uc *text = STBI_MALLOC(text_len + 1);
+               stbi_uc *text = (stbi_uc*) STBI_MALLOC(text_len + 1);
                if (!stbi__getn(s, text, text_len)) return stbi__err("outofdata","Corrupt PNG");
                text[text_len] = '\0';
-               stbi__png_text_chunk_handler(key, text, stbi__png_text_chunk_handler_user_data);
+               stbi__png_text_chunk_handler((const char*) key, (char*) text, stbi__png_text_chunk_handler_user_data);
             } else {
                stbi__skip(s, c.length);
-			}
+            }
             break;
          }
 	
@@ -5230,19 +5230,19 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                } while (chr);
                if (stbi__get8(s) != 0) return stbi__err("zTXt invalid compress", "Corrupt PNG");
                stbi__uint32 text_len = c.length - key_len - 1;
-               stbi_uc *text = STBI_MALLOC(text_len);
+               stbi_uc *text = (stbi_uc*) STBI_MALLOC(text_len);
                if (!stbi__getn(s, text, text_len)) return stbi__err("outofdata","Corrupt PNG");
-               stbi__uint32 expanded_text_len = 0;
+               int expanded_text_len = 0;
                char *expanded_text = stbi_zlib_decode_malloc_guesssize(text, text_len, 1024, &expanded_text_len);
 			   STBI_FREE(text);
-			   text = STBI_MALLOC(expanded_text_len + 1);
+			   text = (stbi_uc*) STBI_MALLOC(expanded_text_len + 1);
 			   memcpy(text, expanded_text, expanded_text_len);
                text[expanded_text_len] = '\0';
                STBI_FREE(expanded_text);
-               stbi__png_text_chunk_handler(key, text, stbi__png_text_chunk_handler_user_data);
+               stbi__png_text_chunk_handler((const char*) key, (char*) text, stbi__png_text_chunk_handler_user_data);
             } else {
                stbi__skip(s, c.length);
-			}
+            }
             break;
 		 }
          
