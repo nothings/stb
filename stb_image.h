@@ -91,7 +91,7 @@ RECENT REVISION HISTORY:
  Optimizations & bugfixes                  Mikhail Morozov (1-bit BMP)
     Fabian "ryg" Giesen                    Anael Seghezzi (is-16-bit query)
     Arseny Kapoulkine                      Simon Breuss (16-bit PNM)
-    John-Mark Allen
+    John-Mark Allen                        Ivan Kolesnikov (PNG text chunks)
     Carmelo J Fdez-Aguera
 
  Bug & warning fixes
@@ -322,6 +322,36 @@ RECENT REVISION HISTORY:
 //
 // ===========================================================================
 //
+// PNG text chunks handling:
+//
+// We optionally support handling of PNG tEXt and zTXt chunks (you
+// can put there arbitrary metadata which you need with your image).
+// To enable this feature call stbi_png_set_text_chunk_handler or
+// stbi_png_set_text_chunk_handler_thread (thread-local version).
+// The function must have following prototype:
+//
+// void my_png_text_chunk_handler(const char *key, char *text, void *user_data);
+//
+// key:       a key of the text chunk (see PNG specification for standard key values),
+//            guarantied not to be longer than 79 chars + zero terminator. If you want
+//            to use this string outside the handler, you need to somehow copy it
+//            (e. g. using strdup function).
+// text:      an arbitrary length dynamically allocated zero-terminated string.
+//            You have to free it after use (inside the handler function or later) using
+//            the same allocator as stb_image library has been configured.
+// user_data: an arbitrary value passed to stbi_png_set_text_chunk_handler function as
+//            a second argument. You can use it to customize handler behavior or
+//            just pass NULL and ignore in the handler. stb_image does nothing with
+//            this value and especially doesn't free it automatically.
+//
+// key and text arguments are guarantied to be non-NULL (but any string can be zero-length).
+//
+// If you want to disable this functionality, just set the handler to NULL
+// (when enabled it may produce some overhead when parsing PNG with large text chunks,
+// because of allocations and copying which are skipped when there is not handler set).
+//
+// ===========================================================================
+//
 // ADDITIONAL CONFIGURATION
 //
 //  - You can suppress implementation of any of the decoders to reduce
@@ -514,12 +544,16 @@ STBIDEF void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert);
 // flip the image vertically, so the first pixel in the output array is the bottom left
 STBIDEF void stbi_set_flip_vertically_on_load(int flag_true_if_should_flip);
 
+// set handler for PNG text chunks (can be NULL, if set should free passed value after use)
+STBIDEF void stbi_png_set_text_chunk_handler(void (*handler)(const char *key, char *value, void *user_data), void *user_data);
+
 // as above, but only applies to images loaded on the thread that calls the function
 // this function is only available if your compiler supports thread-local variables;
 // calling it will fail to link if your compiler doesn't
 STBIDEF void stbi_set_unpremultiply_on_load_thread(int flag_true_if_should_unpremultiply);
 STBIDEF void stbi_convert_iphone_png_to_rgb_thread(int flag_true_if_should_convert);
 STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_flip);
+STBIDEF void stbi_png_set_text_chunk_handler_thread(void (*handler)(const char *key, char *value, void *user_data), void *user_data);
 
 // ZLIB client - used by PNG, available for other purposes
 
@@ -1113,6 +1147,38 @@ STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_fli
                                          ? stbi__vertically_flip_on_load_local  \
                                          : stbi__vertically_flip_on_load_global)
 #endif // STBI_THREAD_LOCAL
+
+static void (*stbi__png_text_chunk_handler_global)(const char *key, char *value, void *user_data) = NULL;
+static void *stbi__png_text_chunk_handler_user_data_global = NULL;
+
+STBIDEF void stbi_png_set_text_chunk_handler(void (*handler)(const char *key, char *value, void *user_data), void *user_data)
+{
+   stbi__png_text_chunk_handler_global = handler;
+   stbi__png_text_chunk_handler_user_data_global = user_data;
+}
+
+#ifndef STBI_THREAD_LOCAL
+#define stbi__png_text_chunk_handler stbi__png_text_chunk_handler_global
+#define stbi__png_text_chunk_handler_user_data stbi__png_text_chunk_handler_user_data_global
+#else
+static STBI_THREAD_LOCAL void (*stbi__png_text_chunk_handler_local)(const char *key, char *value, void *user_data);
+static STBI_THREAD_LOCAL void *stbi__png_text_chunk_handler_user_data_local = NULL;
+static STBI_THREAD_LOCAL int stbi__png_text_chunk_handler_set;
+
+STBIDEF void stbi_png_set_text_chunk_handler_thread(void (*handler)(const char *key, char *value, void *user_data), void *user_data)
+{
+   stbi__png_text_chunk_handler_local = handler;
+   stbi__png_text_chunk_handler_user_data_local = user_data;
+   stbi__png_text_chunk_handler_set = 1;
+}
+
+#define stbi__png_text_chunk_handler  (stbi__png_text_chunk_handler_set       \
+                                         ? stbi__png_text_chunk_handler_local  \
+                                         : stbi__png_text_chunk_handler_global)
+#define stbi__png_text_chunk_handler_user_data  (stbi__png_text_chunk_handler_set       \
+                                         ? stbi__png_text_chunk_handler_user_data_local  \
+                                         : stbi__png_text_chunk_handler_user_data_global)
+#endif
 
 static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc)
 {
@@ -5125,6 +5191,61 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             break;
          }
 
+         case STBI__PNG_TYPE('t', 'E', 'X', 't'): {
+            if (first) return stbi__err("first not IHDR", "Corrupt PNG");
+            if (stbi__png_text_chunk_handler) {
+               stbi_uc chr;
+               stbi_uc key[80];
+               stbi__uint32 key_len = 0;
+               do {
+                  if (key_len >= 80) {
+                     return stbi__err("tEXt key too long", "Corrupt PNG");
+                  }
+                  chr = stbi__get8(s);
+                  key[key_len++] = chr;
+               } while (chr);
+               stbi__uint32 text_len = c.length - key_len;
+               stbi_uc *text = STBI_MALLOC(text_len + 1);
+               if (!stbi__getn(s, text, text_len)) return stbi__err("outofdata","Corrupt PNG");
+               text[text_len] = '\0';
+               stbi__png_text_chunk_handler(key, text, stbi__png_text_chunk_handler_user_data);
+            } else {
+               stbi__skip(s, c.length);
+			}
+            break;
+         }
+	
+         case STBI__PNG_TYPE('z', 'T', 'X', 't'): {
+            if (first) return stbi__err("first not IHDR", "Corrupt PNG");
+            if (stbi__png_text_chunk_handler) {
+               stbi_uc chr;
+               stbi_uc key[80];
+               stbi__uint32 key_len = 0;
+               do {
+                  if (key_len >= 80) {
+                     return stbi__err("zTXt key too long", "Corrupt PNG");
+                  }
+                  chr = stbi__get8(s);
+                  key[key_len++] = chr;
+               } while (chr);
+               if (stbi__get8(s) != 0) return stbi__err("zTXt invalid compress", "Corrupt PNG");
+               stbi__uint32 text_len = c.length - key_len - 1;
+               stbi_uc *text = STBI_MALLOC(text_len);
+               if (!stbi__getn(s, text, text_len)) return stbi__err("outofdata","Corrupt PNG");
+               stbi__uint32 expanded_text_len = 0;
+               char *expanded_text = stbi_zlib_decode_malloc_guesssize(text, text_len, 1024, &expanded_text_len);
+			   STBI_FREE(text);
+			   text = STBI_MALLOC(expanded_text_len + 1);
+			   memcpy(text, expanded_text, expanded_text_len);
+               text[expanded_text_len] = '\0';
+               STBI_FREE(expanded_text);
+               stbi__png_text_chunk_handler(key, text, stbi__png_text_chunk_handler_user_data);
+            } else {
+               stbi__skip(s, c.length);
+			}
+            break;
+		 }
+         
          case STBI__PNG_TYPE('I','E','N','D'): {
             stbi__uint32 raw_len, bpl;
             if (first) return stbi__err("first not IHDR", "Corrupt PNG");
