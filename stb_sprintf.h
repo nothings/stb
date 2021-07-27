@@ -306,6 +306,43 @@ static void stbsp__lead_sign(stbsp__uint32 fl, char *sign)
    }
 }
 
+static STBSP__ASAN stbsp__uint32 stbsp__strlen(char const* s)
+{
+    char const* sn = s;
+
+    // get up to 4-byte alignment
+    for (;;) {
+        if (((stbsp__uintptr)sn & 3) == 0)
+            break;
+
+        if (*sn == 0)
+            return (stbsp__uint32)(sn - s);
+
+        ++sn;
+    }
+
+    // scan over 4 bytes at a time to find terminating 0
+    // this will intentionally scan up to 3 bytes past the end of buffers,
+    // but becase it works 4B aligned, it will never cross page boundaries
+    // (hence the STBSP__ASAN markup; the over-read here is intentional
+    // and harmless)
+    for (;;) {
+        stbsp__uint32 v = *(stbsp__uint32*)sn;
+        // bit hack to find if there's a 0 byte in there
+        if ((v - 0x01010101) & (~v) & 0x80808080UL)
+            break;
+
+        sn += 4;
+    }
+
+    // handle the last few characters to find actual size
+    while (*sn) {
+        ++sn;
+    }
+
+    return (stbsp__uint32)(sn - s);
+}
+
 static STBSP__ASAN stbsp__uint32 stbsp__strlen_limited(char const *s, stbsp__uint32 limit)
 {
    char const * sn = s;
@@ -352,10 +389,24 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
    static char hexu[] = "0123456789ABCDEFXP";
    char *bf;
    char const *f;
+   char const* f_end;
    int tlen = 0;
 
    bf = buf;
    f = fmt;
+
+   // Omar (2021/07/27): Solely for the experiment: calculating end pointer here,
+   // the aim of this draft patch is to measure performance difference of the main loop with that change.
+   // NOTE: This hasn't been tested much
+   // TODO: for the final patch:
+   // - the main function would change from _vsprintfcb() to _vsprintfcbn() (with const char* fmt, const char* fmt_end parameter)
+   // - all other functions would call _vsprintfcbn() with a strlen()
+   // Performance consideration:
+   // - adding many (f < f_end) tests in this main function may add up overhead
+   //   might be beneficial to tweak that (e.g. use a decrementing counter?). people like jeff/ryg may have better instinct what to do.
+   // - the strlen() is going to touch all of the memory early on, may not be so much of an issue as cache would be primed for the main work?
+   //   edge case if format string is very large?
+   f_end = f + stbsp__strlen(fmt);
    for (;;) {
       stbsp__int32 fw, pr, tz;
       stbsp__uint32 fl;
@@ -392,16 +443,18 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       for (;;) {
          while (((stbsp__uintptr)f) & 3) {
          schk1:
+            if (f == f_end)
+               goto endfmt;
+         schk2:
             if (f[0] == '%')
                goto scandd;
-         schk2:
-            if (f[0] == 0)
-               goto endfmt;
             stbsp__chk_cb_buf(1);
             *bf++ = f[0];
             ++f;
          }
          for (;;) {
+            if (f_end - f < 4)
+               goto schk1;
             // Check if the next 4 bytes contain %(0x25) or end of string.
             // Using the 'hasless' trick:
             // https://graphics.stanford.edu/~seander/bithacks.html#HasLessInWord
@@ -410,11 +463,9 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             c = (~v) & 0x80808080;
             if (((v ^ 0x25252525) - 0x01010101) & c)
                goto schk1;
-            if ((v - 0x01010101) & c)
-               goto schk2;
             if (callback)
                if ((STB_SPRINTF_MIN - (int)(bf - buf)) < 4)
-                  goto schk1;
+                  goto schk1; // Omar: unsure why it was "goto schk1" before since it's just aiming to get to callback callsite?
             #ifdef STB_SPRINTF_NOUNALIGNED
                 if(((stbsp__uintptr)bf) & 3) {
                     bf[0] = f[0];
@@ -441,7 +492,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       tz = 0;
 
       // flags
-      for (;;) {
+      while (f < f_end) {
          switch (f[0]) {
          // if we have left justify
          case '-':
@@ -497,24 +548,24 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
    flags_done:
 
       // get the field width
-      if (f[0] == '*') {
+      if (f < f_end && f[0] == '*') {
          fw = va_arg(va, stbsp__uint32);
          ++f;
       } else {
-         while ((f[0] >= '0') && (f[0] <= '9')) {
+         while (f < f_end && (f[0] >= '0') && (f[0] <= '9')) {
             fw = fw * 10 + f[0] - '0';
             f++;
          }
       }
       // get the precision
-      if (f[0] == '.') {
+      if (f < f_end && f[0] == '.') {
          ++f;
-         if (f[0] == '*') {
+         if (f < f_end && f[0] == '*') {
             pr = va_arg(va, stbsp__uint32);
             ++f;
          } else {
             pr = 0;
-            while ((f[0] >= '0') && (f[0] <= '9')) {
+            while (f < f_end && (f[0] >= '0') && (f[0] <= '9')) {
                pr = pr * 10 + f[0] - '0';
                f++;
             }
@@ -522,19 +573,20 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       }
 
       // handle integer size overrides
+      if (f < f_end)
       switch (f[0]) {
       // are we halfwidth?
       case 'h':
          fl |= STBSP__HALFWIDTH;
          ++f;
-         if (f[0] == 'h')
+         if (f < f_end && f[0] == 'h')
             ++f;  // QUARTERWIDTH
          break;
       // are we 64-bit (unix style)
       case 'l':
          fl |= ((sizeof(long) == 8) ? STBSP__INTMAX : 0);
          ++f;
-         if (f[0] == 'l') {
+         if (f < f_end && f[0] == 'l') {
             fl |= STBSP__INTMAX;
             ++f;
          }
@@ -555,10 +607,10 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          break;
       // are we 64-bit (msft style)
       case 'I':
-         if ((f[1] == '6') && (f[2] == '4')) {
+         if (f + 2 < f_end && (f[1] == '6') && (f[2] == '4')) {
             fl |= STBSP__INTMAX;
             f += 3;
-         } else if ((f[1] == '3') && (f[2] == '2')) {
+         } else if (f + 2 < f_end && (f[1] == '3') && (f[2] == '2')) {
             f += 3;
          } else {
             fl |= ((sizeof(void *) == 8) ? STBSP__INTMAX : 0);
@@ -569,6 +621,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
       }
 
       // handle each replacement
+      if (f < f_end)
       switch (f[0]) {
          #define STBSP__NUMSZ 512 // big enough for e308 (with commas) or e-307
          char num[STBSP__NUMSZ];
