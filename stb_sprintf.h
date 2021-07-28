@@ -29,6 +29,8 @@
 #ifndef STB_SPRINTF_H_INCLUDE
 #define STB_SPRINTF_H_INCLUDE
 
+//#define STB_SPRINTF_NON_ZERO_TERMINATED
+
 /*
 Single file sprintf replacement.
 
@@ -354,12 +356,17 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbnz)(STBSP_SPRINTFCB *callbac
    static char hexu[] = "0123456789ABCDEFXP";
    char *bf;
    char const *f;
-   char const* f_end;
+ #ifdef STB_SPRINTF_NON_ZERO_TERMINATED
+   char const* f_end = (fmt_len == -1) ? (char const*)(void const*)~0 : fmt + fmt_len;
+   #define STBSP__ENDCHECK(_F)  (_F < f_end)
+#else
+   #define STBSP__ENDCHECK(_F)  (1)
+   (void)fmt_len;
+#endif
    int tlen = 0;
 
    bf = buf;
    f = fmt;
-   f_end = (fmt_len == -1) ? (char const*)(void const*)~0 : f + fmt_len;
    for (;;) {
       stbsp__int32 fw, pr, tz;
       stbsp__uint32 fl;
@@ -393,7 +400,9 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbnz)(STBSP_SPRINTFCB *callbac
          }
 
       // fast copy everything up to the next % (or end of string)
+#ifdef STB_SPRINTF_NON_ZERO_TERMINATED
       if (f_end == (void*)~0) {
+#endif
          // zero-terminated
          for (;;) {
             while (((stbsp__uintptr)f) & 3) {
@@ -436,6 +445,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbnz)(STBSP_SPRINTFCB *callbac
                f += 4;
             }
          }
+#ifdef STB_SPRINTF_NON_ZERO_TERMINATED
       }
       else {
          // non-zero terminated
@@ -481,6 +491,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbnz)(STBSP_SPRINTFCB *callbac
             }
          }
       }
+#endif
    scandd:
 
       ++f;
@@ -492,7 +503,11 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbnz)(STBSP_SPRINTFCB *callbac
       tz = 0;
 
       // flags
-      while (f < f_end) {
+#ifdef STB_SPRINTF_NON_ZERO_TERMINATED
+      while (STBSP__ENDCHECK(f)) {
+#else
+      for (;;) {
+#endif
          switch (f[0]) {
          // if we have left justify
          case '-':
@@ -548,24 +563,24 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbnz)(STBSP_SPRINTFCB *callbac
    flags_done:
 
       // get the field width
-      if (f < f_end && f[0] == '*') {
+      if (STBSP__ENDCHECK(f) && f[0] == '*') {
          fw = va_arg(va, stbsp__uint32);
          ++f;
       } else {
-         while (f < f_end && (f[0] >= '0') && (f[0] <= '9')) {
+         while (STBSP__ENDCHECK(f) && (f[0] >= '0') && (f[0] <= '9')) {
             fw = fw * 10 + f[0] - '0';
             f++;
          }
       }
       // get the precision
-      if (f < f_end && f[0] == '.') {
+      if (STBSP__ENDCHECK(f) && f[0] == '.') {
          ++f;
-         if (f < f_end && f[0] == '*') {
+         if (STBSP__ENDCHECK(f) && f[0] == '*') {
             pr = va_arg(va, stbsp__uint32);
             ++f;
          } else {
             pr = 0;
-            while (f < f_end && (f[0] >= '0') && (f[0] <= '9')) {
+            while (STBSP__ENDCHECK(f) && (f[0] >= '0') && (f[0] <= '9')) {
                pr = pr * 10 + f[0] - '0';
                f++;
             }
@@ -573,20 +588,20 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbnz)(STBSP_SPRINTFCB *callbac
       }
 
       // handle integer size overrides
-      if (f < f_end)
+      if (STBSP__ENDCHECK(f))
       switch (f[0]) {
       // are we halfwidth?
       case 'h':
          fl |= STBSP__HALFWIDTH;
          ++f;
-         if (f < f_end && f[0] == 'h')
+         if (STBSP__ENDCHECK(f) && f[0] == 'h')
             ++f;  // QUARTERWIDTH
          break;
       // are we 64-bit (unix style)
       case 'l':
          fl |= ((sizeof(long) == 8) ? STBSP__INTMAX : 0);
          ++f;
-         if (f < f_end && f[0] == 'l') {
+         if (STBSP__ENDCHECK(f) && f[0] == 'l') {
             fl |= STBSP__INTMAX;
             ++f;
          }
@@ -607,10 +622,10 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbnz)(STBSP_SPRINTFCB *callbac
          break;
       // are we 64-bit (msft style)
       case 'I':
-         if (f + 2 < f_end && (f[1] == '6') && (f[2] == '4')) {
+         if (STBSP__ENDCHECK(f + 2) && (f[1] == '6') && (f[2] == '4')) {
             fl |= STBSP__INTMAX;
             f += 3;
-         } else if (f + 2 < f_end && (f[1] == '3') && (f[2] == '2')) {
+         } else if (STBSP__ENDCHECK(f + 2) && (f[1] == '3') && (f[2] == '2')) {
             f += 3;
          } else {
             fl |= ((sizeof(void *) == 8) ? STBSP__INTMAX : 0);
@@ -621,7 +636,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbnz)(STBSP_SPRINTFCB *callbac
       }
 
       // handle each replacement
-      if (f < f_end)
+      if (STBSP__ENDCHECK(f))
       switch (f[0]) {
          #define STBSP__NUMSZ 512 // big enough for e308 (with commas) or e-307
          char num[STBSP__NUMSZ];
@@ -1422,6 +1437,7 @@ done:
 #undef stbsp__chk_cb_buf
 #undef stbsp__flush_cb
 #undef stbsp__cb_buf_clamp
+#undef STBSP__ENDCHECK
 
 // ============================================================================
 //   wrapper functions
