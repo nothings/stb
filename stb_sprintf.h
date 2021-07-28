@@ -308,45 +308,6 @@ static void stbsp__lead_sign(stbsp__uint32 fl, char *sign)
    }
 }
 
-#if 0
-static STBSP__ASAN stbsp__uint32 stbsp__strlen(char const* s)
-{
-    char const* sn = s;
-
-    // get up to 4-byte alignment
-    for (;;) {
-        if (((stbsp__uintptr)sn & 3) == 0)
-            break;
-
-        if (*sn == 0)
-            return (stbsp__uint32)(sn - s);
-
-        ++sn;
-    }
-
-    // scan over 4 bytes at a time to find terminating 0
-    // this will intentionally scan up to 3 bytes past the end of buffers,
-    // but becase it works 4B aligned, it will never cross page boundaries
-    // (hence the STBSP__ASAN markup; the over-read here is intentional
-    // and harmless)
-    for (;;) {
-        stbsp__uint32 v = *(stbsp__uint32*)sn;
-        // bit hack to find if there's a 0 byte in there
-        if ((v - 0x01010101) & (~v) & 0x80808080UL)
-            break;
-
-        sn += 4;
-    }
-
-    // handle the last few characters to find actual size
-    while (*sn) {
-        ++sn;
-    }
-
-    return (stbsp__uint32)(sn - s);
-}
-#endif
-
 static STBSP__ASAN stbsp__uint32 stbsp__strlen_limited(char const *s, stbsp__uint32 limit)
 {
    char const * sn = s;
@@ -398,18 +359,6 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcbnz)(STBSP_SPRINTFCB *callbac
 
    bf = buf;
    f = fmt;
-
-   // Omar (2021/07/27): Solely for the experiment: calculating end pointer here,
-   // the aim of this draft patch is to measure performance difference of the main loop with that change.
-   // NOTE: This hasn't been tested much
-   // TODO: for the final patch:
-   // - the main function would change from _vsprintfcb() to _vsprintfcbn() (with const char* fmt, const char* fmt_end parameter)
-   // - all other functions would call _vsprintfcbn() with a strlen()
-   // Performance consideration:
-   // - adding many (f < f_end) tests in this main function may add up overhead
-   //   might be beneficial to tweak that (e.g. use a decrementing counter?). people like jeff/ryg may have better instinct what to do.
-   // - the strlen() is going to touch all of the memory early on, may not be so much of an issue as cache would be primed for the main work?
-   //   edge case if format string is very large?
    f_end = (fmt_len == -1) ? (char const*)(void const*)~0 : f + fmt_len;
    for (;;) {
       stbsp__int32 fw, pr, tz;
@@ -1540,7 +1489,6 @@ static char *stbsp__clamp_callback(const char *buf, void *user, int len)
 static char * stbsp__count_clamp_callback( const char *, void * user, int len )
 {
    stbsp__context * c = (stbsp__context*)user;
-   //(void) sizeof(buf);
 
    c->length += len;
    return c->tmp; // go direct into buffer if you can
