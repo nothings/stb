@@ -521,6 +521,10 @@ STBIDEF void stbi_set_unpremultiply_on_load_thread(int flag_true_if_should_unpre
 STBIDEF void stbi_convert_iphone_png_to_rgb_thread(int flag_true_if_should_convert);
 STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_flip);
 
+// returns a non-zero value if images will be flipped vertically on load,
+// this can be changed with the stbi_set_flip_vertically_on_load function
+STBIDEF int stbi_get_flip_vertically_on_load(void);
+
 // ZLIB client - used by PNG, available for other purposes
 
 STBIDEF char *stbi_zlib_decode_malloc_guesssize(const char *buffer, int len, int initial_size, int *outlen);
@@ -1113,6 +1117,11 @@ STBIDEF void stbi_set_flip_vertically_on_load_thread(int flag_true_if_should_fli
                                          ? stbi__vertically_flip_on_load_local  \
                                          : stbi__vertically_flip_on_load_global)
 #endif // STBI_THREAD_LOCAL
+
+STBIDEF int stbi_get_flip_vertically_on_load(void)
+{
+   return stbi__vertically_flip_on_load;
+}
 
 static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc)
 {
