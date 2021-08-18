@@ -646,8 +646,9 @@ void verify_box(void)
 
 	resample_88(STBIR_FILTER_BOX);
 
-	for (i=0; i < sizeof(image88); ++i)
-		STBIR_ASSERT(image88[0][i] == output88[0][i]);
+	for (i=0; i < sizeof(image88) / sizeof(image88[0]); ++i)
+		for (j=0; j < sizeof(image88[0]); ++j)
+			STBIR_ASSERT(image88[i][j] == output88[i][j]);
 
 	t = 0;
 	for (j=0; j < 4; ++j)
@@ -685,12 +686,14 @@ void test_filters(void)
 
 	mtsrand(0);
 
-	for (i=0; i < sizeof(image88); ++i)
-		image88[0][i] = mtrand() & 255;
+	for (i=0; i < sizeof(image88) / sizeof(image88[0]); ++i)
+		for (j=0; j < sizeof(image88[0]); ++j)
+			image88[i][j] = mtrand() & 255;
 	verify_box();
 
-	for (i=0; i < sizeof(image88); ++i)
-		image88[0][i] = 0;
+	for (i=0; i < sizeof(image88) / sizeof(image88[0]); ++i)
+		for (j=0; j < sizeof(image88[0]); ++j)
+			image88[i][j] = 0;
 	image88[4][4] = 255;
 	verify_box();
 
