@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.25 - public domain
+// stb_truetype.h - v1.26 - public domain
 // authored from 2009-2021 by Sean Barrett / RAD Game Tools
 //
 // =======================================================================
@@ -58,6 +58,7 @@
 //
 // VERSION HISTORY
 //
+//   1.26 (2021-08-28) fix broken rasterizer
 //   1.25 (2021-07-11) many fixes
 //   1.24 (2020-02-05) fix warning
 //   1.23 (2020-02-02) query SVG data for glyphs; query whole kerning table (but only kern not GPOS)
@@ -3061,6 +3062,23 @@ static void stbtt__handle_clipped_edge(float *scanline, int x, stbtt__active_edg
    }
 }
 
+static float stbtt__sized_trapezoid_area(float height, float top_width, float bottom_width)
+{
+   STBTT_assert(top_width >= 0);
+   STBTT_assert(bottom_width >= 0);
+   return (top_width + bottom_width) / 2.0f * height;
+}
+
+static float stbtt__position_trapezoid_area(float height, float tx0, float tx1, float bx0, float bx1)
+{
+   return stbtt__sized_trapezoid_area(height, tx1 - tx0, bx1 - bx0);
+}
+
+static float stbtt__sized_triangle_area(float height, float width)
+{
+   return height * width / 2;
+}
+
 static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, int len, stbtt__active_edge *e, float y_top)
 {
    float y_bottom = y_top+1;
@@ -3115,10 +3133,10 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                float height;
                // simple case, only spans one pixel
                int x = (int) x_top;
-               height = sy1 - sy0;
+               height = (sy1 - sy0) * e->direction;
                STBTT_assert(x >= 0 && x < len);
-               scanline[x] += e->direction * (1-((x_top - x) + (x_bottom-x))/2)  * height;
-               scanline_fill[x] += e->direction * height; // everything right of this pixel is filled
+               scanline[x]      += stbtt__position_trapezoid_area(height, x_top, x+1.0f, x_bottom, x+1.0f);
+               scanline_fill[x] += height; // everything right of this pixel is filled
             } else {
                int x,x1,x2;
                float y_crossing, y_final, step, sign, area;
@@ -3134,40 +3152,79 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
                   dy = -dy;
                   t = x0, x0 = xb, xb = t;
                }
-               assert(dy >= 0);
-               assert(dx >= 0);
+               STBTT_assert(dy >= 0);
+               STBTT_assert(dx >= 0);
 
                x1 = (int) x_top;
                x2 = (int) x_bottom;
                // compute intersection with y axis at x1+1
-               y_crossing = (x1+1 - x0) * dy + y_top;
+               y_crossing = y_top + dy * (x1+1 - x0);
+
+               // compute intersection with y axis at x2
+               y_final = y_top + dy * (x2 - x0);
+
+               //           x1    x_top                            x2    x_bottom
+               //     y_top  +------|-----+------------+------------+--------|---+------------+
+               //            |            |            |            |            |            |
+               //            |            |            |            |            |            |
+               //       sy0  |      Txxxxx|............|............|............|............|
+               // y_crossing |            *xxxxx.......|............|............|............|
+               //            |            |     xxxxx..|............|............|............|
+               //            |            |     /-   xx*xxxx........|............|............|
+               //            |            | dy <       |    xxxxxx..|............|............|
+               //   y_final  |            |     \-     |          xx*xxx.........|............|
+               //       sy1  |            |            |            |   xxxxxB...|............|
+               //            |            |            |            |            |            |
+               //            |            |            |            |            |            |
+               //  y_bottom  +------------+------------+------------+------------+------------+
+               //
+               // goal is to measure the area covered by '.' in each pixel
+
                // if x2 is right at the right edge of x1, y_crossing can blow up, github #1057
+               // @TODO: maybe test against sy1 rather than y_bottom?
                if (y_crossing > y_bottom)
                   y_crossing = y_bottom;
 
                sign = e->direction;
-               // area of the rectangle covered from y0..y_crossing
+
+               // area of the rectangle covered from sy0..y_crossing
                area = sign * (y_crossing-sy0);
-               // area of the triangle (x_top,y0), (x+1,y0), (x+1,y_crossing)
-               scanline[x1] += area * (x1+1 - x_top)/2;
+
+               // area of the triangle (x_top,sy0), (x1+1,sy0), (x1+1,y_crossing)
+               scanline[x1] += stbtt__sized_triangle_area(area, x1+1 - x_top);
 
                // check if final y_crossing is blown up; no test case for this
-               y_final = y_crossing + dy * (x2 - (x1+1)); // advance y by number of steps taken below
                if (y_final > y_bottom) {
                   y_final = y_bottom;
                   dy = (y_final - y_crossing ) / (x2 - (x1+1)); // if denom=0, y_final = y_crossing, so y_final <= y_bottom
                }
 
-               step = sign * dy * 1; // dy is dy/dx, change in y for every 1 change in x, which is also how much pixel area changes for each step in x
+               // in second pixel, area covered by line segment found in first pixel
+               // is always a rectangle 1 wide * the height of that line segment; this
+               // is exactly what the variable 'area' stores. it also gets a contribution
+               // from the line segment within it. the THIRD pixel will get the first
+               // pixel's rectangle contribution, the second pixel's rectangle contribution,
+               // and its own contribution. the 'own contribution' is the same in every pixel except
+               // the leftmost and rightmost, a trapezoid that slides down in each pixel.
+               // the second pixel's contribution to the third pixel will be the
+               // rectangle 1 wide times the height change in the second pixel, which is dy.
+
+               step = sign * dy * 1; // dy is dy/dx, change in y for every 1 change in x,
+               // which multiplied by 1-pixel-width is how much pixel area changes for each step in x
+               // so the area advances by 'step' every time
+
                for (x = x1+1; x < x2; ++x) {
-                  scanline[x] += area + step/2; // area of parallelogram is step/2
+                  scanline[x] += area + step/2; // area of trapezoid is 1*step/2
                   area += step;
                }
                STBTT_assert(STBTT_fabs(area) <= 1.01f); // accumulated error from area += step unless we round step down
+               STBTT_assert(sy1 > y_final-0.01f);
 
-               // area of the triangle (x2,y_crossing), (x_bottom,y1), (x2,y1)
-               scanline[x2] += area + sign * (x_bottom - x2)/2 * (sy1-y_crossing);
+               // area covered in the last pixel is the rectangle from all the pixels to the left,
+               // plus the trapezoid filled by the line segment in this pixel all the way to the right edge
+               scanline[x2] += area + sign * stbtt__position_trapezoid_area(sy1-y_final, (float) x2, x2+1.0f, x_bottom, x2+1.0f);
 
+               // the rest of the line is filled based on the total height of the line segment in this pixel
                scanline_fill[x2] += sign * (sy1-sy0);
             }
          } else {
@@ -3175,6 +3232,9 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
             // clipping logic. since this does not match the intended use
             // of this library, we use a different, very slow brute
             // force implementation
+            // note though that this does happen some of the time because
+            // x_top and x_bottom can be extrapolated at the top & bottom of
+            // the shape and actually lie outside the bounding box
             int x;
             for (x=0; x < len; ++x) {
                // cases:

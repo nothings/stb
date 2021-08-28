@@ -20,6 +20,7 @@ int main(int argc, char  **argv)
       int num_lines;
       char **lines = stb_stringfile(stb_sprintf("../%s", tokens[0]), &num_lines);
       char *s1, *s2,*s3;
+      if (lines == NULL) stb_fatal("Couldn't open '%s'", tokens[0]);
       s1 = strchr(lines[0], '-');
       if (!s1) stb_fatal("Couldn't find '-' before version number in %s", tokens[0]); // stb_fatal -- print error message & exit
       s2 = strchr(s1+2, '-');
