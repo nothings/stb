@@ -2423,6 +2423,12 @@ static char *stb__splitpath_raw(char *buffer, char *path, int flag)
    char *s = stb_strrchr2(path, '/', '\\');
    char *t = strrchr(path, '.');
    if (s && t && t < s) t = NULL;
+
+   if (!s) {
+      // check for drive
+      if (isalpha(path[0]) && path[1] == ':')
+         s = &path[1];
+   }
    if (s) ++s;
 
    if (flag == STB_EXT_NO_PERIOD)
