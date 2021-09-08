@@ -53,7 +53,6 @@ main.c test_dxt.c
 main.c test_easyfont.c
 main.c test_image.c
 main.c test_image_write.c
-main.c test_perlin.c
 main.c test_sprintf.c
 main.c test_vorbis.c ../stb_vorbis.c
 main.c test_voxel.c

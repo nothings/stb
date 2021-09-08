@@ -150,10 +150,6 @@ SOURCE=..\stb_malloc.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\stb_perlin.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\stb_rect_pack.h
 # End Source File
 # Begin Source File
@@ -215,10 +211,6 @@ SOURCE=.\test_image_write.c
 # Begin Source File
 
 SOURCE=.\test_packer.c
-# End Source File
-# Begin Source File
-
-SOURCE=.\test_perlin.c
 # End Source File
 # Begin Source File
 
