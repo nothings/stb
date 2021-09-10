@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: if you're having trouble using a library, look at the bottom of this list
+about: if you're having trouble using a library, try the support forum instead
 title: ''
 labels: ''
 assignees: ''
