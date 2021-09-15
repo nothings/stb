@@ -1,0 +1,4 @@
+contact_links:
+  - name: support forum
+    url: https://github.com/nothings/stb/discussions/categories/q-a
+    about: having trouble using an stb library? don't create an issue, post in the forum

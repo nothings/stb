@@ -64,7 +64,10 @@ void churn(int a, int b, int count)
 #include <stdio.h>
 int main(int argc, char **argv)
 {
+  char *temp=NULL;
   stbds_unit_tests();
+  arrins(temp, 0, 'a');
+  arrins(temp, arrlen(temp), 'b');
   churn(0,100,1);
   churn(3,7,50000);
   churn(3,15,50000);

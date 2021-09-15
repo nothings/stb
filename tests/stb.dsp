@@ -154,14 +154,6 @@ SOURCE=..\stb_perlin.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\stb_pg.h
-# End Source File
-# Begin Source File
-
-SOURCE=.\stb_query.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\stb_rect_pack.h
 # End Source File
 # Begin Source File
