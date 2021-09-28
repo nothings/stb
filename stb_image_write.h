@@ -405,7 +405,7 @@ static void stbiw__write1(stbi__write_context *s, unsigned char a)
 
 static void stbiw__write3(stbi__write_context *s, unsigned char a, unsigned char b, unsigned char c)
 {
-   int n;
+   long long int n;
    if ((size_t)s->buf_used + 3 > sizeof(s->buffer))
       stbiw__write_flush(s);
    n = s->buf_used;
@@ -418,7 +418,7 @@ static void stbiw__write3(stbi__write_context *s, unsigned char a, unsigned char
 static void stbiw__write_pixel(stbi__write_context *s, int rgb_dir, int comp, int write_alpha, int expand_mono, unsigned char *d)
 {
    unsigned char bg[3] = { 255, 0, 255}, px[3];
-   int k;
+   long long int k;
 
    if (write_alpha < 0)
       stbiw__write1(s, d[comp - 1]);
@@ -451,7 +451,7 @@ static void stbiw__write_pixel(stbi__write_context *s, int rgb_dir, int comp, in
 static void stbiw__write_pixels(stbi__write_context *s, int rgb_dir, int vdir, int x, int y, int comp, void *data, int write_alpha, int scanline_pad, int expand_mono)
 {
    stbiw_uint32 zero = 0;
-   int i,j, j_end;
+   long long int i,j, j_end;
 
    if (y <= 0)
       return;
@@ -542,8 +542,8 @@ static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, v
       return stbiw__outfile(s, -1, -1, x, y, comp, 0, (void *) data, has_alpha, 0,
          "111 221 2222 11", 0, 0, format, 0, 0, 0, 0, 0, x, y, (colorbytes + has_alpha) * 8, has_alpha * 8);
    } else {
-      int i,j,k;
-      int jend, jdir;
+      long long int i,j,k;
+      long long int jend, jdir;
 
       stbiw__writef(s, "111 221 2222 11", 0,0,format+8, 0,0,0, 0,0,x,y, (colorbytes + has_alpha) * 8, has_alpha * 8);
 
@@ -558,11 +558,11 @@ static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, v
       }
       for (; j != jend; j += jdir) {
          unsigned char *row = (unsigned char *) data + j * x * comp;
-         int len;
+         long long int len;
 
          for (i = 0; i < x; i += len) {
             unsigned char *begin = row + i * comp;
-            int diff = 1;
+            long long int diff = 1;
             len = 1;
 
             if (i < x - 1) {
@@ -1574,11 +1574,11 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
                float Y[64], U[64], V[64];
                for(row = y, pos = 0; row < y+8; ++row) {
                   // row >= height => use last input row
-                  int clamped_row = (row < height) ? row : height - 1;
-                  int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
+                  long long int clamped_row = (row < height) ? row : height - 1;
+                  long long int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*width*comp;
                   for(col = x; col < x+8; ++col, ++pos) {
                      // if col >= width => use pixel from last input column
-                     int p = base_p + ((col < width) ? col : (width-1))*comp;
+                     long long int p = base_p + ((col < width) ? col : (width-1))*comp;
                      float r = dataR[p], g = dataG[p], b = dataB[p];
                      Y[pos]= +0.29900f*r + 0.58700f*g + 0.11400f*b - 128;
                      U[pos]= -0.16874f*r - 0.33126f*g + 0.50000f*b;
