@@ -61,7 +61,7 @@ dual-license for you to choose from.
 #### How do I use these libraries?
 
 The idea behind single-header file libraries is that they're easy to distribute and deploy
-because all the code is contained in a single file. By default, the .h files in here act as
+because all the code is stored in a single file. By default, the .h files in here act as
 their own header files, i.e. they declare the functions contained in the file but don't
 actually result in any code getting compiled.
 
