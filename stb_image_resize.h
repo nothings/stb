@@ -157,6 +157,7 @@
       Sean Barrett: API design, optimizations
       Aras Pranckevicius: bugfix
       Nathan Reed: warning fixes
+      Ryhor Spivak: Lanczos 3 filter
 
    REVISIONS
       0.97 (2020-02-02) fixed warning
