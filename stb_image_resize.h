@@ -292,6 +292,7 @@ typedef enum
     STBIR_FILTER_CUBICBSPLINE = 3,  // The cubic b-spline (aka Mitchell-Netrevalli with B=1,C=0), gaussian-esque
     STBIR_FILTER_CATMULLROM   = 4,  // An interpolating cubic spline
     STBIR_FILTER_MITCHELL     = 5,  // Mitchell-Netrevalli filter with B=1/3, C=1/3
+    STBIR_FILTER_LANCZOS3     = 6,  // Lanczos 3
 } stbir_filter;
 
 typedef enum
@@ -395,6 +396,7 @@ STBIRDEF int stbir_resize_region(  const void *input_pixels , int input_w , int 
 #include <string.h>
 
 #include <math.h>
+#include <float.h>
 
 #ifndef STBIR_MALLOC
 #include <stdlib.h>
@@ -836,6 +838,24 @@ static float stbir__filter_mitchell(float x, float s)
     return (0.0f);
 }
 
+static float stbir__filter_lanczos3(float x, float s)
+{
+    STBIR__UNUSED_PARAM(s);
+
+    x = (float)fabs(x);
+
+    if (x <= FLT_MIN)
+        return 1.0f;
+
+    if (x < 3)
+    {
+        float pix = 3.14159265358979323846f*x;
+        return 3*sin(pix)*sin(pix/3)/(pix*pix);
+    }
+
+    return 0.0f;
+}
+
 static float stbir__support_zero(float s)
 {
     STBIR__UNUSED_PARAM(s);
@@ -854,6 +874,12 @@ static float stbir__support_two(float s)
     return 2;
 }
 
+static float stbir__support_three(float s)
+{
+    STBIR__UNUSED_PARAM(s);
+    return 3;
+}
+
 static stbir__filter_info stbir__filter_info_table[] = {
         { NULL,                     stbir__support_zero },
         { stbir__filter_trapezoid,  stbir__support_trapezoid },
@@ -861,6 +887,7 @@ static stbir__filter_info stbir__filter_info_table[] = {
         { stbir__filter_cubic,      stbir__support_two },
         { stbir__filter_catmullrom, stbir__support_two },
         { stbir__filter_mitchell,   stbir__support_two },
+        { stbir__filter_lanczos3,   stbir__support_three },
 };
 
 stbir__inline static int stbir__use_upsampling(float ratio)
