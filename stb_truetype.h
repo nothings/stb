@@ -291,7 +291,7 @@ void my_stbtt_initfont(void)
    // can free ttf_buffer at this point
    glGenTextures(1, &ftex);
    glBindTexture(GL_TEXTURE_2D, ftex);
-   glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, 512,512, 0, GL_ALPHA, GL_UNSIGNED_BYTE, temp_bitmap);
+   glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, 512,512, 0, GL_RED, GL_UNSIGNED_BYTE, temp_bitmap);
    // can free temp_bitmap at this point
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 }
@@ -316,6 +316,26 @@ void my_stbtt_print(float x, float y, char *text)
       ++text;
    }
    glEnd();
+}
+#endif
+//
+//
+//////////////////////////////////////////////////////////////////////////////
+//
+//  Snippet showing how to put a single rendered bitmap onto the gpu with opengl.
+#if 0
+void upload_character(const stbtt_fontinfo* font_info)
+{
+  int width, height;
+  unsigned char* bitmap = stbtt_GetCodepointBitmap(font_info, 0, 0.02f, 'U', &width, &height, NULL, NULL);
+  GLuint id;
+  glGenTextures(1, &id);
+  glBindTexture(GL_TEXTURE_2D, id);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  // The bitmap returned does not have padding on every row to match some byte allignment.
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, width, height, 0, GL_RED, GL_UNSIGNED_BYTE, bitmap);
+  glGenerateMipmap(GL_TEXTURE_2D);
 }
 #endif
 //
