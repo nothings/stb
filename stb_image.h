@@ -24,7 +24,7 @@
       PNG 1/2/4/8/16-bit-per-channel
 
       TGA (not sure what subset, if a subset)
-      BMP non-1bpp, non-RLE
+      BMP
       PSD (composited view only, no extra channels, 8/16 bit-per-channel)
 
       GIF (*comp always reports as 4-channel)
@@ -91,7 +91,7 @@ RECENT REVISION HISTORY:
  Optimizations & bugfixes                  Mikhail Morozov (1-bit BMP)
     Fabian "ryg" Giesen                    Anael Seghezzi (is-16-bit query)
     Arseny Kapoulkine                      Simon Breuss (16-bit PNM)
-    John-Mark Allen                        Eivind Vold Aunebakk (8-bit RLE BMP)
+    John-Mark Allen                        Eivind Vold Aunebakk (RLE BMP)
     Carmelo J Fdez-Aguera
 
  Bug & warning fixes
@@ -5407,7 +5407,6 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
    info->bpp = stbi__get16le(s);
    if (hsz != 12) {
       info->compress = stbi__get32le(s);
-      if (info->compress == 2) return stbi__errpuc("BMP RLE4", "BMP type not supported: RLE 4-bit");
       if (info->compress >= 4) return stbi__errpuc("BMP JPEG/PNG", "BMP type not supported: unsupported compression"); // this includes PNG/JPEG modes
       if (info->compress == 3 && info->bpp != 16 && info->bpp != 32) return stbi__errpuc("bad BMP", "bad BMP"); // bitfields requires 16 or 32 bits/pixel
       stbi__get32le(s); // discard sizeof
@@ -5528,45 +5527,66 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
          if (info.hsz != 12) stbi__get8(s);
          pal[i][3] = 255;
       }
-      if (info.compress == 1) {
-         if (info.bpp != 8) { STBI_FREE(out); return stbi__errpuc("invalid", "Corrupt BMP"); }
+      if (info.compress == 1 || info.compress == 2) {
+         if (info.compress == 1 && info.bpp != 8) { STBI_FREE(out); return stbi__errpuc("invalid", "Corrupt BMP"); }
+         if (info.compress == 2 && info.bpp != 4) { STBI_FREE(out); return stbi__errpuc("invalid", "Corrupt BMP"); }
+         // Due to delta records we might not set the value all pixels
+         memset(out, 0, s->img_x * s->img_y * target); 
+         all_a = 0;
          int x = 0, y = 0;
          while (y < s->img_y && x <= s->img_x) {
             stbi_uc a = stbi__get8(s);
             stbi_uc b = stbi__get8(s);
             if (a != 0) { // Compressed
-               stbi_uc rep = a;
-               stbi_uc color = b;
+               stbi_uc rep = a; 
+               if (x + rep > s->img_x) { STBI_FREE(out); return stbi__errpuc("invalid", "Corrupt BMP"); }
+               stbi_uc c1 = b, c2 = b;
+               if (info.bpp == 4) {
+                  c1 = b >> 4;
+                  c2 = b & 0x0F;
+               }
                int z = y * s->img_x * target + x * target;
                for (int n = 0; n < rep; n++) {
-                  out[z++] = pal[color][0];
-                  out[z++] = pal[color][1];
-                  out[z++] = pal[color][2];
-                  if (target == 4) { out[z++] = 255; }
+                  out[z++] = pal[n % 2 == 0 ? c1 : c2][0];
+                  out[z++] = pal[n % 2 == 0 ? c1 : c2][1];
+                  out[z++] = pal[n % 2 == 0 ? c1 : c2][2];
+                  if (target == 4) { z++; }
                }
                x += rep;
             }
-            else if (a == 0 && b == 0) { // Line end
+            else if (a == 0 && b == 0) { // End of line
                x = 0;
                y++;
             }
-            else if (a == 0 && b == 1) /* File end */ { break; }
-            else if (a == 0 && b == 2) { // Move
+            else if (a == 0 && b == 1) /* End of bitmap */ { break; }
+            else if (a == 0 && b == 2) { // Delta
                x += stbi__get8(s);
                y += stbi__get8(s);
             }
             else if (a == 0 && b > 2) { // Uncompressed
+               if (x + b > s->img_x) { STBI_FREE(out); return stbi__errpuc("invalid", "Corrupt BMP"); }
                int z = y * s->img_x * target + x * target;
-               for (i = 0; i < b; ++i) {
-                  stbi_uc color = stbi__get8(s);
-                  out[z++] = pal[color][0];
-                  out[z++] = pal[color][1];
-                  out[z++] = pal[color][2];
-                  if (target == 4) { out[z++] = 255; }
+               for (i = 0; i < b; i+=2) {
+                  stbi_uc c1 = stbi__get8(s), c2 = 0;
+                  if (info.bpp == 4) {
+                     c2 = c1 & 0x0F;
+                     c1 >>= 4;
+                  }
+                  out[z++] = pal[c1][0];
+                  out[z++] = pal[c1][1];
+                  out[z++] = pal[c1][2];
+                  if (target == 4) { z++; }
+                  if (i+1 == b) { break; }
+                  c1 = (info.bpp == 8) ? stbi__get8(s) : c2;
+                  out[z++] = pal[c1][0];
+                  out[z++] = pal[c1][1];
+                  out[z++] = pal[c1][2];
+                  if (target == 4) { z++; }
                }
                x += b;
                // Padded to 16-bit alignment
-               if (b % 2 == 1) { stbi__skip(s, 1); }
+               int mod = info.bpp == 8 ? 2 : 4;
+               if (b % mod != 0) { stbi__skip(s, 1); }
             }
          }
       }
