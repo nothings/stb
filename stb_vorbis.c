@@ -295,6 +295,7 @@ extern stb_vorbis * stb_vorbis_open_file_section(FILE *f, int close_handle_on_cl
 // confused.
 #endif
 
+#ifndef STB_VORBIS_NO_SEEK_API
 extern int stb_vorbis_seek_frame(stb_vorbis *f, unsigned int sample_number);
 extern int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
 // these functions seek in the Vorbis file to (approximately) 'sample_number'.
@@ -306,6 +307,7 @@ extern int stb_vorbis_seek(stb_vorbis *f, unsigned int sample_number);
 
 extern int stb_vorbis_seek_start(stb_vorbis *f);
 // this function is equivalent to stb_vorbis_seek(f,0)
+#endif
 
 extern unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f);
 extern float        stb_vorbis_stream_length_in_seconds(stb_vorbis *f);
@@ -432,6 +434,10 @@ enum STBVorbisError
 // STB_VORBIS_NO_PULLDATA_API
 //     does not compile the code for the non-pushdata APIs
 // #define STB_VORBIS_NO_PULLDATA_API
+
+// STB_VORBIS_NO_SEEK_API
+//     does not compile the code for the vorbis seek APIs
+// #define STB_VORBIS_NO_SEEK_API
 
 // STB_VORBIS_NO_STDIO
 //     does not compile the code for the APIs that use FILE *s internally
@@ -4631,6 +4637,7 @@ static uint32 vorbis_find_page(stb_vorbis *f, uint32 *end, uint32 *last)
 
 #define SAMPLE_unknown  0xffffffff
 
+#ifndef STB_VORBIS_NO_SEEK_API
 // seeking is implemented with a binary search, which narrows down the range to
 // 64K, before using a linear search (because finding the synchronization
 // pattern can be expensive, and the chance we'd find the end page again is
@@ -4942,6 +4949,7 @@ int stb_vorbis_seek_start(stb_vorbis *f)
    f->next_seg = -1;
    return vorbis_pump_first_frame(f);
 }
+#endif /* STB_VORBIS_NO_SEEK_API */
 
 unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f)
 {
