@@ -2614,7 +2614,7 @@ static int expand_palette(png *a, stbi__uint8 *palette, int len, int pal_img_n)
    p = (stbi__uint8 *) malloc(pixel_count * pal_img_n);
    if (p == NULL) return e("outofmem", "Out of memory");
 
-   // between here and free(out) below, exitting would leak
+   // between here and free(out) below, exiting would leak
    temp_out = p;
 
    if (pal_img_n == 3) {
@@ -3541,7 +3541,7 @@ static stbi_uc *psd_load(stbi *s, int *x, int *y, int *comp, int req_comp)
       //     Else if n is 128, noop.
       // Endloop
 
-      // The RLE-compressed data is preceeded by a 2-byte data count for each row in the data,
+      // The RLE-compressed data is preceded by a 2-byte data count for each row in the data,
       // which we're going to just skip.
       skip(s, h * channelCount * 2 );
 

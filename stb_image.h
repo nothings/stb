@@ -4906,7 +4906,7 @@ static int stbi__expand_png_palette(stbi__png *a, stbi_uc *palette, int len, int
    p = (stbi_uc *) stbi__malloc_mad2(pixel_count, pal_img_n, 0);
    if (p == NULL) return stbi__err("outofmem", "Out of memory");
 
-   // between here and free(out) below, exitting would leak
+   // between here and free(out) below, exiting would leak
    temp_out = p;
 
    if (pal_img_n == 3) {
@@ -6754,7 +6754,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
          // 0:  not specified.
       }
 
-      // background is what out is after the undoing of the previou frame;
+      // background is what out is after the undoing of the previous frame;
       memcpy( g->background, g->out, 4 * g->w * g->h );
    }
 

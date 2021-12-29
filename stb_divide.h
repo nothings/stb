@@ -192,7 +192,7 @@ int stb_div_eucl(int v1, int v2)
    q = v1/v2;
    r = v1%v2;
    #else
-   // handle every quadrant separately, since we can't rely on q and r flor
+   // handle every quadrant separately, since we can't rely on q and r floor
    if (v1 >= 0)
       if (v2 >= 0)
          return stb__div(v1,v2);
