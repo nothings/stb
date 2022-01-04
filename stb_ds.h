@@ -302,7 +302,10 @@ NOTES
 
   * The following are the only functions that are thread-safe on a single data
     structure, i.e. can be run in multiple threads simultaneously on the same
-    data structure
+    data structure. hmget*_ts and shget*_ts require non-NULL hashmaps passed
+    to them to avoid leaks as the internal wrapper function reallocates the
+    pointer if it is NULL. The macros don't reassign the hashmap in order to
+    remain thread-safe.
         hmlen        shlen
         hmlenu       shlenu
         hmget_ts     shget_ts
@@ -379,6 +382,7 @@ CREDITS
     Andreas Molzer
     github:hashitaku
     github:srdjanstipic
+    github:git-bruh
     Macoy Madson
     Andreas Vennstrom
     Tobias Mansfield-Williams
@@ -435,9 +439,12 @@ CREDITS
 #define shputi      stbds_shputi
 #define shputs      stbds_shputs
 #define shget       stbds_shget
+#define shget_ts    stbds_shget_ts
 #define shgeti      stbds_shgeti
+#define shgeti_ts   stbds_shgeti_ts
 #define shgets      stbds_shgets
 #define shgetp      stbds_shgetp
+#define shgetp_ts   stbds_shgetp_ts
 #define shgetp_null stbds_shgetp_null
 #define shdel       stbds_shdel
 #define shlen       stbds_shlen
@@ -574,7 +581,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
       stbds_temp((t)-1))
 
 #define stbds_hmgeti_ts(t,k,temp) \
-    ((t) = stbds_hmget_key_ts_wrapper((t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, &(temp), STBDS_HM_BINARY), \
+    (stbds_hmget_key_ts_wrapper((t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, &(temp), STBDS_HM_BINARY), \
       (temp))
 
 #define stbds_hmgetp(t, k) \
@@ -623,12 +630,18 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
      ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
       stbds_temp((t)-1))
 
+#define stbds_shgeti_ts(t,k,temp) \
+     (stbds_hmget_key_ts_wrapper((t), sizeof *(t), (void*) (k), sizeof(t)->key, &(temp), STBDS_HM_STRING), (temp))
+
 #define stbds_pshgeti(t,k) \
      ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (*(t))->key, STBDS_HM_PTR_TO_STRING), \
       stbds_temp((t)-1))
 
 #define stbds_shgetp(t, k) \
     ((void) stbds_shgeti(t,k), &(t)[stbds_temp((t)-1)])
+
+#define stbds_shgetp_ts(t, k, temp) \
+    ((void) stbds_shgeti_ts(t,k,temp), &(t)[temp])
 
 #define stbds_pshget(t, k) \
     ((void) stbds_pshgeti(t,k), (t)[stbds_temp((t)-1)])
@@ -651,6 +664,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 
 #define stbds_shgets(t, k) (*stbds_shgetp(t,k))
 #define stbds_shget(t, k)  (stbds_shgetp(t,k)->value)
+#define stbds_shget_ts(t, k, temp) (stbds_shgetp_ts(t,k,temp)->value)
 #define stbds_shgetp_null(t,k)  (stbds_shgeti(t,k) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
 #define stbds_shlen        stbds_hmlen
 
