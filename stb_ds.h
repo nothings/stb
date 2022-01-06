@@ -1322,12 +1322,12 @@ void * stbds_hmget_key(void *a, size_t elemsize, void *key, size_t keysize, int 
     memset(a, 0, elemsize);
     stbds_temp(a) = STBDS_INDEX_EMPTY;
     return STBDS_ARR_TO_HASH(a,elemsize);
+  } else {
+    ptrdiff_t temp;
+    void *p = stbds_hmget_key_ts(a, elemsize, key, keysize, &temp, mode);
+    stbds_temp(STBDS_HASH_TO_ARR(p,elemsize)) = temp;
+    return p;
   }
-
-  ptrdiff_t temp;
-  void *p = stbds_hmget_key_ts(a, elemsize, key, keysize, &temp, mode);
-  stbds_temp(STBDS_HASH_TO_ARR(p,elemsize)) = temp;
-  return p;
 }
 
 void * stbds_hmput_default(void *a, size_t elemsize)
