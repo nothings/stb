@@ -303,9 +303,9 @@ NOTES
   * The following are the only functions that are thread-safe on a single data
     structure, i.e. can be run in multiple threads simultaneously on the same
     data structure. hmget*_ts and shget*_ts require non-NULL hashmaps passed
-    to them to avoid leaks as the internal wrapper function reallocates the
-    pointer if it is NULL. The macros don't reassign the hashmap in order to
-    remain thread-safe.
+    to them. The non-threadsafe wrapper function reallocates the hashmap in
+    order to return a zeroed value, but this is not feasible in a thread-safe
+    scenario.
         hmlen        shlen
         hmlenu       shlenu
         hmget_ts     shget_ts
