@@ -44,7 +44,7 @@ void *stb_leakcheck_malloc(size_t sz, const char *file, int line)
    if (mi_head)
       mi->next->prev = mi;
    mi->prev = NULL;
-   mi->size = (int) sz;
+   mi->size = sz;
    mi_head = mi;
    return mi+1;
 }
