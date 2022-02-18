@@ -398,7 +398,7 @@ extern "C" {
 
 //C++17 fallthrough macro
 #if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 201703L) && (_MSC_VER >= 1913)) 
-#define STBI_FALLTHROUGH [[fallthrough]];
+#define STBI_FALLTHROUGH [[fallthrough]]; /* fallthrough */
 #else
 #define STBI_FALLTHROUGH
 #endif
