@@ -34,6 +34,7 @@
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
 //    AnthoFoxo          github:morlat       Gabriel Ravier
+//    github:artem-smotrakov
 //
 // Partial history:
 //    1.22    - 2021-07-11 - various small fixes
@@ -1401,7 +1402,7 @@ static int set_file_offset(stb_vorbis *f, unsigned int loc)
    #endif
    f->eof = 0;
    if (USE_MEMORY(f)) {
-      if (f->stream_start + loc >= f->stream_end || f->stream_start + loc < f->stream_start) {
+      if (loc >= f->stream_end - f->stream_start) {
          f->stream = f->stream_end;
          f->eof = 1;
          return 0;
