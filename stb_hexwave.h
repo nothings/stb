@@ -591,9 +591,9 @@ STB_HEXWAVE_DEF void hexwave_init(int width, int oversample, float *user_buffer)
          float sinc   = (i==half) ? 1.0f : (float) sin(sinc_t) / (sinc_t);
          float wt     = 2.0f*3.1415926f * i / (n-1);
          float window = (float) (0.355768 - 0.487396*cos(wt) + 0.144232*cos(2*wt) - 0.012604*cos(3*wt)); // Nuttall
-         double value       =         window * sinc;
-         integrate_impulse +=         value/16;
-         integrate_step    +=         integrate_impulse/16;
+         double value       = (double) window * sinc;
+         integrate_impulse +=          value/16;
+         integrate_step    +=          integrate_impulse/16;
       }
       step[i]            = (float) integrate_impulse;
       ramp[i]            = (float) integrate_step;

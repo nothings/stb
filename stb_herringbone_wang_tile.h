@@ -842,7 +842,7 @@ static void stbhw__parse_h_rect(stbhw__process *p, int xpos, int ypos,
                             int a, int b, int c, int d, int e, int f)
 {
    int len = p->c->short_side_len;
-   stbhw_tile *h = (stbhw_tile *) malloc(sizeof(*h)-1 + 3 * (len*2) * len);
+   stbhw_tile *h = (stbhw_tile *) malloc(sizeof(*h)-1 + (size_t) 3 * (len*2) * len);
    int i,j;
    ++xpos;
    ++ypos;
@@ -858,7 +858,7 @@ static void stbhw__parse_v_rect(stbhw__process *p, int xpos, int ypos,
                             int a, int b, int c, int d, int e, int f)
 {
    int len = p->c->short_side_len;
-   stbhw_tile *h = (stbhw_tile *) malloc(sizeof(*h)-1 + 3 * (len*2) * len);
+   stbhw_tile *h = (stbhw_tile *) malloc(sizeof(*h)-1 + (size_t) 3 * (len*2) * len);
    int i,j;
    ++xpos;
    ++ypos;
