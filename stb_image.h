@@ -546,7 +546,7 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 #if defined(STBI_ONLY_JPEG) || defined(STBI_ONLY_PNG) || defined(STBI_ONLY_BMP) \
   || defined(STBI_ONLY_TGA) || defined(STBI_ONLY_GIF) || defined(STBI_ONLY_PSD) \
   || defined(STBI_ONLY_HDR) || defined(STBI_ONLY_PIC) || defined(STBI_ONLY_PNM) \
-  || defined(STBI_ONLY_ZLIB)
+  || defined(STBI_ONLY_QOI) || defined(STBI_ONLY_ZLIB)
    #ifndef STBI_ONLY_JPEG
    #define STBI_NO_JPEG
    #endif
@@ -573,6 +573,9 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
    #endif
    #ifndef STBI_ONLY_PNM
    #define STBI_NO_PNM
+   #endif
+   #ifndef STBI_ONLY_QOI
+   #define STBI_NO_QOI
    #endif
 #endif
 
@@ -960,6 +963,12 @@ static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp);
 static int      stbi__pnm_is16(stbi__context *s);
 #endif
 
+#ifndef STBI_NO_QOI
+static int      stbi__qoi_test(stbi__context *s);
+static void    *stbi__qoi_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
+static int      stbi__qoi_info(stbi__context *s, int *x, int *y, int *comp);
+#endif
+
 static
 #ifdef STBI_THREAD_LOCAL
 STBI_THREAD_LOCAL
@@ -1156,6 +1165,10 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
       float *hdr = stbi__hdr_load(s, x,y,comp,req_comp, ri);
       return stbi__hdr_to_ldr(hdr, *x, *y, req_comp ? req_comp : *comp);
    }
+   #endif
+
+   #ifndef STBI_NO_QOI
+   if (stbi__qoi_test(s))  return stbi__qoi_load(s,x,y,comp,req_comp, ri);
    #endif
 
    #ifndef STBI_NO_TGA
@@ -1678,7 +1691,7 @@ static int stbi__get16be(stbi__context *s)
 }
 #endif
 
-#if defined(STBI_NO_PNG) && defined(STBI_NO_PSD) && defined(STBI_NO_PIC)
+#if defined(STBI_NO_PNG) && defined(STBI_NO_PSD) && defined(STBI_NO_PIC) && defined(STBI_NO_QOI)
 // nothing
 #else
 static stbi__uint32 stbi__get32be(stbi__context *s)
@@ -7538,6 +7551,152 @@ static int stbi__pnm_is16(stbi__context *s)
 }
 #endif
 
+// Quite OK Image loader
+// by Jack Bendtsen
+#ifndef STBI_NO_QOI
+
+static int   stbi__qoi_test(stbi__context *s)
+{
+   int i;
+   for (i = 0; i < 4; i++) {
+      if (stbi__get8(s) != "qoif"[i]) {
+         stbi__rewind(s);
+         return 0;
+      }
+   }
+   return 1;
+}
+
+static void *stbi__qoi_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
+{
+   if (!stbi__qoi_info(s, (int*)&s->img_x, (int*)&s->img_y, &s->img_n))
+      return NULL;
+
+   if (req_comp == 3 || req_comp == 4)
+      s->img_n = req_comp;
+
+   if (x) *x = s->img_x;
+   if (y) *y = s->img_y;
+   if (comp) *comp = s->img_n;
+
+   if (!stbi__mad3sizes_valid(s->img_x, s->img_y, s->img_n, 0))
+      return stbi__errpuc("too large", "QOI too large");
+
+   stbi_uc *out = (stbi_uc *) stbi__malloc_mad3(s->img_x, s->img_y, s->img_n, 0);
+   if (!out)
+      return stbi__errpuc("outofmem", "Out of memory");
+
+   stbi_uc *dst = out;
+   stbi_uc *end = &dst[s->img_x * s->img_y * s->img_n];
+
+   stbi__uint32 c = 255;
+   stbi__uint32 recent[0x40];
+   memset(recent, 0, 0x40);
+
+   while (dst < end) {
+      stbi_uc tag = stbi__get8(s);
+      if (tag == 0xfe) {
+         stbi__uint32 rgb =
+            ((stbi__uint32) stbi__get8(s) << 24) |
+            ((stbi__uint32) stbi__get8(s) << 16) |
+            ((stbi__uint32) stbi__get8(s) << 8);
+         c = (c & 0xff) | rgb;
+      }
+      else if (tag == 0xff) {
+         c =
+            ((stbi__uint32) stbi__get8(s) << 24) |
+            ((stbi__uint32) stbi__get8(s) << 16) |
+            ((stbi__uint32) stbi__get8(s) << 8) |
+            (stbi__uint32) stbi__get8(s);
+      }
+      else if ((tag >> 6) == 0) {
+         c = recent[tag];
+      }
+      else if ((tag >> 6) == 1) {
+         stbi_uc r = (c >> 24) + ((tag >> 4) & 3) - 2;
+         stbi_uc g = (c >> 16) + ((tag >> 2) & 3) - 2;
+         stbi_uc b = (c >> 8)  + (tag & 3) - 2;
+         c = (c & 0xff) | ((stbi__uint32) r << 24) | ((stbi__uint32) g << 16) | ((stbi__uint32) b << 8);
+      }
+      else if ((tag >> 6) == 2) {
+         stbi_uc rb = stbi__get8(s);
+         stbi_uc dg = (tag & 0x3f) - 32;
+         stbi_uc r = (c >> 24) + dg + (rb >> 4) - 8;
+         stbi_uc g = (c >> 16) + dg;
+         stbi_uc b = (c >> 8)  + dg + (rb & 0xf) - 8;
+         c = (c & 0xff) | ((stbi__uint32) r << 24) | ((stbi__uint32) g << 16) | ((stbi__uint32) b << 8);
+      }
+      else {
+         int run = tag & 0x3f;
+         if (&dst[run * s->img_n] > end)
+            break;
+
+         if (s->img_n == 3) {
+            for (int i = 0; i < run; i++) {
+               *dst++ = c >> 24;
+               *dst++ = c >> 16;
+               *dst++ = c >> 8;
+            }
+         }
+         else {
+            for (int i = 0; i < run; i++) {
+               *dst++ = c >> 24;
+               *dst++ = c >> 16;
+               *dst++ = c >> 8;
+               *dst++ = c;
+            }
+         }
+      }
+
+      *dst++ = c >> 24;
+      *dst++ = c >> 16;
+      *dst++ = c >> 8;
+      if (s->img_n != 3) *dst++ = c;
+
+      recent[0x3f & (
+         ((c >> 24) & 0xff) * 3u +
+         ((c >> 16) & 0xff) * 5u +
+         ((c >>  8) & 0xff) * 7u +
+         (c & 0xff) * 11u
+      )] = c;
+   }
+
+   if (req_comp)
+      out = stbi__convert_format(out, s->img_n, req_comp, s->img_x, s->img_y);
+
+   return out;
+}
+
+static int   stbi__qoi_info(stbi__context *s, int *x, int *y, int *comp)
+{
+   stbi__uint32 length;
+
+   stbi__rewind(s);
+
+   int i;
+   for (i = 0; i < 4; i++) {
+      if (stbi__get8(s) != "qoif"[i]) {
+         stbi__rewind(s);
+         return 0;
+      }
+   }
+
+   length = stbi__get32be(s);
+   if (x) *x = (int)length;
+
+   length = stbi__get32be(s);
+   if (y) *y = (int)length;
+
+   int channels   = stbi__get8(s);       // 3 = RGB, 4 = RGBA
+   int colorspace = stbi__get8(s) != 0;  // 0 = sRGB with linear alpha, 1 = all channels linear
+
+   if (comp) *comp = channels;
+
+   return 1 + colorspace;
+}
+
+#endif
+
 static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 {
    #ifndef STBI_NO_JPEG
@@ -7570,6 +7729,10 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 
    #ifndef STBI_NO_HDR
    if (stbi__hdr_info(s, x, y, comp))  return 1;
+   #endif
+
+   #ifndef STBI_NO_QOI
+   if (stbi__qoi_info(s, x, y, comp))  return 1;
    #endif
 
    // test tga last because it's a crappy test!
