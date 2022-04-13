@@ -7632,14 +7632,16 @@ static void *stbi__qoi_load(stbi__context *s, int *x, int *y, int *comp, int req
             break;
 
          if (s->img_n == 3) {
-            for (int i = 0; i < run; i++) {
+            int i;
+            for (i = 0; i < run; i++) {
                *dst++ = c >> 24;
                *dst++ = c >> 16;
                *dst++ = c >> 8;
             }
          }
          else {
-            for (int i = 0; i < run; i++) {
+            int i;
+            for (i = 0; i < run; i++) {
                *dst++ = c >> 24;
                *dst++ = c >> 16;
                *dst++ = c >> 8;
