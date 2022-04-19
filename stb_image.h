@@ -635,7 +635,7 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
    #endif
 #endif
 
-#if defined (_MSC_VER) || defined __SYMBIAN32__
+#if defined (_MSC_VER) || defined (__SYMBIAN32__)
 typedef unsigned short stbi__uint16;
 typedef   signed short stbi__int16;
 typedef unsigned int   stbi__uint32;
