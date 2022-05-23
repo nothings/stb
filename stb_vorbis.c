@@ -92,7 +92,8 @@ typedef unsigned short uint16;
 typedef   signed short  int16;
 typedef unsigned int   uint32;
 typedef   signed int    int32;
-#if defined(__x86_64) || defined(__x86_64__) || defined(__amd64) || defined(_M_X64) \
+#if defined(__x86_64) || defined(__x86_64__) || defined(__amd64) \
+    || defined(_LP64) || defined(__LP64__) \
     || defined(__ARM_ARCH_8__) || defined(__ARM_ARCH_8A) || defined(__ARM_ARCH_8A__) || defined(__ARM_ARCH_8R__) || defined(__ARM_ARCH_8M__) \
     || (defined(__TARGET_ARCH_ARM) && __TARGET_ARCH_ARM >= 8) \
     || (defined(__ARM_ARCH) && __ARM_ARCH >= 8) \
@@ -100,6 +101,9 @@ typedef   signed int    int32;
     || defined(__ppc64__) || defined(__powerpc64__) || defined(__64BIT__) /* On 64-bit architectures */
 typedef unsigned long  uint64;
 typedef   signed long   int64;
+#elif defined(_WIN64)
+typedef unsigned __int64    uint64;
+typedef   signed __int64     int64;
 #else /* On 32-bit architectures */
 typedef unsigned long long  uint64;
 typedef   signed long long   int64;
