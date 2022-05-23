@@ -5056,7 +5056,7 @@ int64 stb_vorbis_stream_length_in_samples(stb_vorbis *f)
       getn(f, (unsigned char *)header, 6);
       // extract the absolute granule position
       total = get64(f);
-      if (total == 0xffffffffffffffff) {
+      if (total == ~((uint64)0)) {
          f->error = VORBIS_cant_find_last_page;
          f->total_samples = SAMPLE_unknown;
          goto done;
