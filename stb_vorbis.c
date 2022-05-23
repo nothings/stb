@@ -786,7 +786,7 @@ typedef struct
    int     bytes_left;  // bytes left in packet
    uint32  crc_so_far;  // running crc
    int     bytes_done;  // bytes processed in _current_ chunk
-   uint32  sample_loc;  // granule pos encoded in page
+   int64   sample_loc;  // granule pos encoded in page
 } CRCscan;
 
 typedef struct
@@ -4445,9 +4445,9 @@ static int vorbis_search_for_page_pushdata(vorb *f, uint8 *data, int data_len)
                // if the last frame on a page is continued to the next, then
                // we can't recover the sample_loc immediately
                if (data[i+27+data[i+26]-1] == 255)
-                  f->scan[n].sample_loc = ~0;
+                  f->scan[n].sample_loc = -1;
                else
-                  f->scan[n].sample_loc = data[i+6] + (data[i+7] << 8) + (data[i+ 8]<<16) + (data[i+ 9]<<24);
+                  f->scan[n].sample_loc = (int64) get64raw(data + i + 6);
                f->scan[n].bytes_done = i+j;
                if (f->page_crc_tests == STB_VORBIS_PUSHDATA_CRC_COUNT)
                   break;
@@ -4479,7 +4479,7 @@ static int vorbis_search_for_page_pushdata(vorb *f, uint8 *data, int data_len)
             f->next_seg = -1;       // start a new page
             f->current_loc = f->scan[i].sample_loc; // set the current sample location
                                     // to the amount we'd have decoded had we decoded this page
-            f->current_loc_valid = f->current_loc != ~(int64)0;
+            f->current_loc_valid = f->current_loc != (int64)(-1);
             return data_len;
          }
          // delete entry
