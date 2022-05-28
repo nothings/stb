@@ -404,6 +404,8 @@ CREDITS
 #define arraddn     stbds_arraddn // deprecated, use one of the following instead:
 #define arraddnptr  stbds_arraddnptr
 #define arraddnindex stbds_arraddnindex
+//Initialyze array with struct ElementType* ArrayName = arrsetlen(ArrayName, num_elems);
+//Equavalent to ANSI C99/C89 version of struct ElementType ArrayName[num_elems];
 #define arrsetlen   stbds_arrsetlen
 #define arrlast     stbds_arrlast
 #define arrins      stbds_arrins
