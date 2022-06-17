@@ -33,6 +33,7 @@
 //
 // Fixes:
 //  Michal Klos
+//  Jake Ryan
 
 #ifndef STB_INCLUDE_STB_INCLUDE_H
 #define STB_INCLUDE_STB_INCLUDE_H
