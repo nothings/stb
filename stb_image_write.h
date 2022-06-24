@@ -141,6 +141,7 @@ CREDITS:
       github:ignotion
       Adam Schackart
       Andrew Kensler
+      Zhuo Zhang
 
 LICENSE
 
@@ -1375,7 +1376,7 @@ static int stbiw__jpg_processDU(stbi__write_context *s, int *bitBuf, int *bitCnt
       int startpos = i;
       int nrzeroes;
       unsigned short bits[2];
-      for (; DU[i]==0 && i<=end0pos; ++i) {
+      for (; i<=end0pos && DU[i]==0; ++i) {
       }
       nrzeroes = i-startpos;
       if ( nrzeroes >= 16 ) {
