@@ -2536,7 +2536,7 @@ char *stb_replaceext(char *output, char *src, char *ext)
 //
 // Implementation strategy:
 //     chunked allocations come from the middle of chunks, and can't
-//     be freed. thefore they do not need to be on a sibling chain.
+//     be freed. therefore they do not need to be on a sibling chain.
 //     they may need child pointers if they have children.
 //
 // chunked, with-children
@@ -3095,7 +3095,7 @@ void stb_reassign(void *new_context, void *ptr)
 //
 //                                stb_arr
 //
-//  An stb_arr is directly useable as a pointer (use the actual type in your
+//  An stb_arr is directly usable as a pointer (use the actual type in your
 //  definition), but when it resizes, it returns a new pointer and you can't
 //  use the old one, so you have to be careful to copy-in-out as necessary.
 //
@@ -12452,7 +12452,7 @@ STB_EXTERN int stb_bgio_stat    (char *filename, stb_bgstat *result)
 //
 //   We keep an allocation table for pages a la TCMalloc. This would
 //   require 4MB for the entire address space, but we only allocate
-//   the parts that are in use. The overhead from using homogenous heaps
+//   the parts that are in use. The overhead from using homogeneous heaps
 //   everywhere is 3MB. (That is, if you allocate 1 object of each size,
 //   you'll use 3MB.)
 

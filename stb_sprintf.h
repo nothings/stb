@@ -324,7 +324,7 @@ static STBSP__ASAN stbsp__uint32 stbsp__strlen_limited(char const *s, stbsp__uin
 
    // scan over 4 bytes at a time to find terminating 0
    // this will intentionally scan up to 3 bytes past the end of buffers,
-   // but becase it works 4B aligned, it will never cross page boundaries
+   // but because it works 4B aligned, it will never cross page boundaries
    // (hence the STBSP__ASAN markup; the over-read here is intentional
    // and harmless)
    while (limit >= 4) {

@@ -42,7 +42,7 @@ publish, and distribute this file as you see fit.
     it will use assert()
 
  4. optionally #define STB_HBWANG_STATIC to force all symbols to be
-    static instead of public, so they are only accesible
+    static instead of public, so they are only accessible
     in the source file that creates the implementation
 
  5. optionally #define STB_HBWANG_NO_REPITITION_REDUCTION to disable
@@ -714,7 +714,7 @@ STBHW_EXTERN int stbhw_generate_image(stbhw_tileset *ts, int **weighting, unsign
          }
       }
       #ifndef STB_HBWANG_NO_REPITITION_REDUCTION
-      // now go back through and make sure we don't have adjancent 3x2 vertices that are identical,
+      // now go back through and make sure we don't have adjacent 3x2 vertices that are identical,
       // to avoid really obvious repetition (which happens easily with extreme weights)
       for (j=0; j < ymax-3; ++j) {
          for (i=0; i < xmax-3; ++i) {

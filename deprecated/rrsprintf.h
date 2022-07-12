@@ -444,7 +444,7 @@ RRPUBLIC_DEF int RR_SPRINTF_DECORATE( vsprintfcb )( RRSPRINTFCB * callback, void
           if ( pr > (rS32)l ) pr = l-1; else if ( pr ) --pr; // when using %e, there is one digit before the decimal
           goto doexpfromg;
         }
-        // this is the insane action to get the pr to match %g sematics for %f
+        // this is the insane action to get the pr to match %g semantics for %f
         if(dp>0) { pr=(dp<(rS32)l)?l-dp:0; } else { pr = -dp+((pr>(rS32)l)?l:pr); }
         goto dofloatfromg;
 

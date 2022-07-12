@@ -619,10 +619,10 @@ void optimize_table(table *t, char *table_name)
 
    // strip tail end of table
    int orig_length = t->length;
-   int threshhold = 0xffff;
+   int threshold = 0xffff;
    int p = strip_table(t, 2);
    int len_saved = t->length - p;
-   if (len_saved >= threshhold) {
+   if (len_saved >= threshold) {
       t->length = p;
       while (p > 0x10000) {
          p = strip_table(t, 0);
@@ -630,9 +630,9 @@ void optimize_table(table *t, char *table_name)
          if (len_saved < 0x10000)
             break;
          len_saved = orig_length - p;
-         if (len_saved < threshhold)
+         if (len_saved < threshold)
             break;
-         threshhold *= 2;
+         threshold *= 2;
       }
    }
 

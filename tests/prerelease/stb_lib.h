@@ -1158,7 +1158,7 @@ char *stb_replaceext(char *output, char *src, char *ext)
 //
 //                                stb_arr
 //
-//  An stb_arr is directly useable as a pointer (use the actual type in your
+//  An stb_arr is directly usable as a pointer (use the actual type in your
 //  definition), but when it resizes, it returns a new pointer and you can't
 //  use the old one, so you have to be careful to copy-in-out as necessary.
 //
