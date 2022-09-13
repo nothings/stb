@@ -33,7 +33,6 @@
 //   Tor Andersson: kerning, subpixel rendering
 //   Dougall Johnson: OpenType / Type 2 font handling
 //   Daniel Ribeiro Maciel: basic GPOS-based kerning
-//   honey the codewitch: Streaming and low memory support
 //
 //   Misc other:
 //       Ryan Gordon
@@ -562,23 +561,6 @@ extern "C" {
         unsigned short x0, y0, x1, y1; // coordinates of bbox in bitmap
         float xoff, yoff, xadvance;
     } stbtt_bakedchar;
-#ifdef STBTT_STREAM_TYPE
-    STBTT_DEF int stbtt_BakeFontBitmap(STBTT_STREAM_TYPE data, int offset,  // font location (use offset=0 for plain .ttf)
-        float pixel_height,                     // height of font in pixels
-        unsigned char* pixels, int pw, int ph,  // bitmap to be filled in
-        int first_char, int num_chars,          // characters to bake
-        stbtt_bakedchar* chardata);             // you allocate this, it's num_chars long
-#else
-    STBTT_DEF int stbtt_BakeFontBitmap(const unsigned char* data, int offset,  // font location (use offset=0 for plain .ttf)
-        float pixel_height,                     // height of font in pixels
-        unsigned char* pixels, int pw, int ph,  // bitmap to be filled in
-        int first_char, int num_chars,          // characters to bake
-        stbtt_bakedchar* chardata);             // you allocate this, it's num_chars long
-#endif
-// if return is positive, the first unused row of the bitmap
-// if return is negative, returns the negative of the number of characters that fit
-// if return is 0, no characters fit and no rows were used
-// This uses a very crappy packing.
 
     typedef struct
     {
@@ -600,12 +582,6 @@ extern "C" {
 // see discussion of "BASELINE" above.
 //
 // It's inefficient; you might want to c&p it and optimize it.
-#ifdef STBTT_STREAM_TYPE
-    STBTT_DEF void stbtt_GetScaledFontVMetrics(STBTT_STREAM_TYPE fontdata, int index, float size, float* ascent, float* descent, float* lineGap);
-#else
-    STBTT_DEF void stbtt_GetScaledFontVMetrics(const unsigned char* fontdata, int index, float size, float* ascent, float* descent, float* lineGap);
-#endif
-    // Query the font vertical metrics without having to create a font first.
 
 
     //////////////////////////////////////////////////////////////////////////////
@@ -643,25 +619,6 @@ extern "C" {
     // Cleans up the packing context and frees all memory.
 
 #define STBTT_POINT_SIZE(x)   (-(x))
-#ifdef STBTT_STREAM_TYPE
-    STBTT_DEF int  stbtt_PackFontRange(stbtt_pack_context* spc, STBTT_STREAM_TYPE fontdata, int font_index, float font_size,
-        int first_unicode_char_in_range, int num_chars_in_range, stbtt_packedchar* chardata_for_range);
-#else
-    STBTT_DEF int  stbtt_PackFontRange(stbtt_pack_context* spc, const unsigned char* fontdata, int font_index, float font_size,
-        int first_unicode_char_in_range, int num_chars_in_range, stbtt_packedchar* chardata_for_range);
-#endif
-    // Creates character bitmaps from the font_index'th font found in fontdata (use
-    // font_index=0 if you don't know what that is). It creates num_chars_in_range
-    // bitmaps for characters with unicode values starting at first_unicode_char_in_range
-    // and increasing. Data for how to render them is stored in chardata_for_range;
-    // pass these to stbtt_GetPackedQuad to get back renderable quads.
-    //
-    // font_size is the full height of the character from ascender to descender,
-    // as computed by stbtt_ScaleForPixelHeight. To use a point size as computed
-    // by stbtt_ScaleForMappingEmToPixels, wrap the point size in STBTT_POINT_SIZE()
-    // and pass that result as 'font_size':
-    //       ...,                  20 , ... // font max minus min y is 20 pixels tall
-    //       ..., STBTT_POINT_SIZE(20), ... // 'M' is 20 pixels tall
 
     typedef struct
     {
@@ -672,15 +629,6 @@ extern "C" {
         stbtt_packedchar* chardata_for_range; // output
         unsigned char h_oversample, v_oversample; // don't set these, they're used internally
     } stbtt_pack_range;
-#ifdef STBTT_STREAM_TYPE
-    STBTT_DEF int  stbtt_PackFontRanges(stbtt_pack_context* spc, STBTT_STREAM_TYPE fontdata, int font_index, stbtt_pack_range* ranges, int num_ranges);
-#else
-    STBTT_DEF int  stbtt_PackFontRanges(stbtt_pack_context* spc, const unsigned char* fontdata, int font_index, stbtt_pack_range* ranges, int num_ranges);
-#endif
-    // Creates character bitmaps from multiple ranges of characters stored in
-    // ranges. This will usually create a better-packed bitmap than multiple
-    // calls to stbtt_PackFontRange. Note that you can call this multiple
-    // times within a single PackBegin/PackEnd.
 
     STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context* spc, unsigned int h_oversample, unsigned int v_oversample);
     // Oversampling a font increases the quality by allowing higher-quality subpixel
@@ -921,9 +869,9 @@ extern "C" {
     STBTT_DEF void stbtt_FreeShape(const stbtt_fontinfo* info, stbtt_vertex* vertices);
     // frees the data allocated above
 
-    STBTT_DEF unsigned int stbtt_FindSVGDoc(const stbtt_fontinfo* info, int gl);
-    STBTT_DEF int stbtt_GetCodepointSVG(const stbtt_fontinfo* info, int unicode_codepoint, unsigned int* svgOfs);
-    STBTT_DEF int stbtt_GetGlyphSVG(const stbtt_fontinfo* info, int gl, unsigned int* svgOfs);
+    STBTT_DEF stbtt_uint32 stbtt_FindSVGDoc(const stbtt_fontinfo* info, int gl);
+    STBTT_DEF int stbtt_GetCodepointSVG(const stbtt_fontinfo* info, int unicode_codepoint, stbtt_uint32* svgOfs);
+    STBTT_DEF int stbtt_GetGlyphSVG(const stbtt_fontinfo* info, int gl, stbtt_uint32* svgOfs);
     // fills svg with the character's SVG data.
     // returns data size or 0 if SVG not found.
 
@@ -1097,14 +1045,14 @@ extern "C" {
 #define STBTT_MACSTYLE_NONE         8   // <= not same as 0, this makes us check the bitfield is 0
 
 #ifdef STBTT_STREAM_TYPE
-    STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char* s1, int len1, STBTT_STREAM_TYPE s2, unsigned int s2offs, int len2);
+    STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char* s1, int len1, STBTT_STREAM_TYPE s2, stbtt_uint32 s2offs, int len2);
 #else
-    STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char* s1, int len1, const char* s2, unsigned int s2offs, int len2);
+    STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char* s1, int len1, const char* s2, stbtt_uint32 s2offs, int len2);
 #endif
     // returns 1/0 whether the first string interpreted as utf8 is identical to
     // the second string interpreted as big-endian utf16... useful for strings from next func
 
-    STBTT_DEF unsigned int stbtt_GetFontNameString(const stbtt_fontinfo* font, int* length, int platformID, int encodingID, int languageID, int nameID);
+    STBTT_DEF stbtt_uint32 stbtt_GetFontNameString(const stbtt_fontinfo* font, int* length, int platformID, int encodingID, int languageID, int nameID);
 
     // returns the string (which may be big-endian double byte, e.g. for unicode)
     // and puts the length in bytes in *length.
@@ -5209,12 +5157,14 @@ static int stbtt__matches(stbtt_uint8 * fc, stbtt_uint32 offset, stbtt_uint8 * n
     if (!nm) return 0;
 
     if (flags) {
+        if (name == NULL) return 1;
         // if we checked the macStyle flags, then just check the family and ignore the subfamily
         if (stbtt__matchpair(fc, nm, name, nlen, 16, -1))  return 1;
         if (stbtt__matchpair(fc, nm, name, nlen, 1, -1))  return 1;
         if (stbtt__matchpair(fc, nm, name, nlen, 3, -1))  return 1;
     }
     else {
+        if (name == NULL) return 1;
         if (stbtt__matchpair(fc, nm, name, nlen, 16, 17))  return 1;
         if (stbtt__matchpair(fc, nm, name, nlen, 1, 2))  return 1;
         if (stbtt__matchpair(fc, nm, name, nlen, 3, -1))  return 1;
