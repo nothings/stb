@@ -921,7 +921,7 @@ extern "C" {
     STBTT_DEF void stbtt_FreeShape(const stbtt_fontinfo* info, stbtt_vertex* vertices);
     // frees the data allocated above
 
-    STBTT_DEF stbtt_uint32 stbtt_FindSVGDoc(const stbtt_fontinfo* info, int gl);
+    STBTT_DEF unsigned int stbtt_FindSVGDoc(const stbtt_fontinfo* info, int gl);
     STBTT_DEF int stbtt_GetCodepointSVG(const stbtt_fontinfo* info, int unicode_codepoint, unsigned int* svgOfs);
     STBTT_DEF int stbtt_GetGlyphSVG(const stbtt_fontinfo* info, int gl, unsigned int* svgOfs);
     // fills svg with the character's SVG data.
@@ -1104,7 +1104,7 @@ extern "C" {
     // returns 1/0 whether the first string interpreted as utf8 is identical to
     // the second string interpreted as big-endian utf16... useful for strings from next func
 
-    STBTT_DEF stbtt_uint32 stbtt_GetFontNameString(const stbtt_fontinfo* font, int* length, int platformID, int encodingID, int languageID, int nameID);
+    STBTT_DEF unsigned int stbtt_GetFontNameString(const stbtt_fontinfo* font, int* length, int platformID, int encodingID, int languageID, int nameID);
 
     // returns the string (which may be big-endian double byte, e.g. for unicode)
     // and puts the length in bytes in *length.
