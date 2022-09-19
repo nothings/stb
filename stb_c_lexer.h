@@ -31,13 +31,13 @@
 //     - only tested default-config paths by eyeballing output of self-parse
 //
 //     - haven't implemented multiline strings
-//     - haven't implemented octal/hex character constants
 //     - haven't implemented support for unicode CLEX_char
 //     - need to expand error reporting so you don't just get "CLEX_parse_error"
 //
 // Contributors:
 //   Arpad Goretity (bugfix)
 //   Alan Hickman (hex floats)
+//   Daniel Kondratenko (octal and hex chars)
 //
 // LICENSE
 //
@@ -98,6 +98,10 @@
 
 #define STB_C_LEX_DISCARD_PREPROCESSOR    Y   // discard C-preprocessor directives (e.g. after prepocess
                                               // still have #line, #pragma, etc)
+
+#define STB_C_LEX_OCTAL_CHARS          Y  // allow octal chars in strings
+
+#define STB_C_LEX_HEX_CHARS            Y  // allow hex chars in strings
 
 //#define STB_C_LEX_ISWHITE(str)    ... // return length in bytes of whitespace characters if first char is whitespace
 
@@ -212,6 +216,7 @@ enum
 
 #ifdef STB_C_LEXER_IMPLEMENTATION
 
+#include <ctype.h>
 // Hacky definitions so we can easily #if on them
 #define Y(x) 1
 #define N(x) 0
@@ -254,6 +259,14 @@ typedef long       stb__clex_int;
 
 #if STB_C_LEX_DISCARD_PREPROCESSOR(x)
 #define STB__clex_discard_preprocessor
+#endif
+
+#if STB_C_LEX_OCTAL_CHARS(x)
+#define STB__clex_octal_chars
+#endif
+
+#if STB_C_LEX_HEX_CHARS(x)
+#define STB__clex_hex_chars
 #endif
 
 #if STB_C_LEX_USE_STDLIB(x) && (!defined(STB__clex_hex_floats) || __STDC_VERSION__ >= 199901L)
@@ -444,6 +457,71 @@ static double stb__clex_parse_float(char *p, char **q)
 }
 #endif
 
+#ifdef STB__clex_octal_chars
+static int stb__clex_parse_octal(char *p, char **q)
+{
+  int octchar = 0;
+
+  if (p[1] >= '0' && p[1] <= '7') {
+    octchar = (p[1] - '0');
+  }
+  if (p[2] >= '0' && p[2] <= '7') {
+    octchar = (octchar << 3) + (p[2] - '0');
+    *q = p + 3;
+  }
+  if (p[3] >= '0' && p[3] <= '7') {
+    octchar = (octchar << 3) + (p[3] - '0');
+    *q = p + 4;
+  }
+
+  if (octchar >= 256)
+    return -1;
+
+  return (unsigned char)octchar;
+}
+#endif
+
+#ifdef STB__clex_hex_chars
+static int stb__clex_hex_digit(char x)
+{
+  if (x >= '0' && x <= '9')
+    return x - '0';
+
+  if (x >= 'A' && x <= 'F')
+    return (x - 'A') + 10;
+
+  if (x >= 'a' && x <= 'f')
+    return (x - 'a') + 10;
+
+  return -1;
+}
+
+static int stb__clex_parse_hex(char *p, char **q)
+{
+  int hexchar = 0;
+
+  if (isxdigit(p[2])) {
+    hexchar = stb__clex_hex_digit(p[2]);
+    *q = p + 3;
+  }
+
+  if (isxdigit(p[3])) {
+    hexchar = stb__clex_hex_digit(p[3]) + (hexchar << 4);
+    *q = p + 4;
+  }
+
+  if (isxdigit(p[4])) {
+    hexchar = stb__clex_hex_digit(p[4]) + (hexchar << 4);
+    *q = p + 5;
+  }
+
+  if (hexchar >= 256)
+    return -1;
+
+  return (unsigned char)hexchar;
+}
+#endif
+
 static int stb__clex_parse_char(char *p, char **q)
 {
    if (*p == '\\') {
@@ -456,8 +534,23 @@ static int stb__clex_parse_char(char *p, char **q)
          case 'f': return '\f';
          case 'n': return '\n';
          case 'r': return '\r';
-         case '0': return '\0'; // @TODO ocatal constants
-         case 'x': case 'X': return -1; // @TODO hex constants
+#ifdef STB__clex_octal_chars
+         case '0':
+         case '1':
+         case '2':
+         case '3':
+         case '4':
+         case '5':
+         case '6':
+         case '7': return stb__clex_parse_octal(p, q);
+#else
+         case '0': return '\0';
+#endif
+#ifdef STB__clex_hex_chars
+         case 'x': case 'X': return stb__clex_parse_hex(p, q);
+#else
+         case 'x': case 'X': return -1;
+#endif
          case 'u': return -1; // @TODO unicode constants
       }
    }
@@ -869,6 +962,7 @@ void dummy(void)
    (void) some_floats[1];
 
    printf("test %d",1); // https://github.com/nothings/stb/issues/13
+   printf("\n(pg)Jackd\141ws love my big sphinx of qu\x61rtz.\040\n");
 }
 
 int main(int argc, char **argv)
