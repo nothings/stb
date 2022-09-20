@@ -165,12 +165,12 @@ RECENT REVISION HISTORY:
 // in this order in each pixel:
 //
 //     N=#comp            components
-//       1                  red
-//       2                  red, green
+//       1                  grey
+//       2                  grey, alpha
 //       3                  red, green, blue
 //       4                  red, green, blue, alpha
-//       STBI_grey          grey
-//       STBI_grey_alpha    grey, alpha
+//       STBI_r             red
+//       STBI_rg            red, green
 //
 // If image loading fails for any reason, the return value will be NULL,
 // and *x, *y, *channels_in_file will be unchanged. The function
@@ -375,14 +375,13 @@ RECENT REVISION HISTORY:
 enum
 {
    STBI_default = 0, // only used for desired_channels
-   STBI_luma_bit = 1 << 8, //only used for STBI_grey and STBI_grey_alpha
 
-   STBI_r          = 1,
-   STBI_rg         = 2,
+   STBI_grey       = 1,
+   STBI_grey_alpha = 2,
    STBI_rgb        = 3,
    STBI_rgb_alpha  = 4,
-   STBI_grey       = STBI_luma_bit | 1,
-   STBI_grey_alpha = STBI_luma_bit | 2,
+   STBI_r          = 5,
+   STBI_rg         = 6,
 
 };
 
@@ -1761,17 +1760,17 @@ static unsigned char *stbi__convert_format(unsigned char *data, int img_n, int r
       // convert source image with img_n components to one with req_comp components;
       // avoid switch per pixel, so use switch per scanline and massive macros
       switch (STBI__COMBO(img_n, req_comp)) {
-         STBI__CASE(1,2                 ) { dest[0]=src[0]; dest[1]=255;                                     } break;
-         STBI__CASE(1,3                 ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
-         STBI__CASE(1,4                 ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=255;                     } break;
-         STBI__CASE(2,1                 ) { dest[0]=src[0];                                                  } break;
-         STBI__CASE(2,3                 ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
-         STBI__CASE(2,4                 ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=src[1];                  } break;
-         STBI__CASE(3,1                 ) { dest[0]=src[0];                                                  } break;
-         STBI__CASE(3,2                 ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
-         STBI__CASE(4,1                 ) { dest[0]=src[0];                                                  } break;
-         STBI__CASE(4,2                 ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
-         STBI__CASE(4,3                 ) { dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];                    } break;
+         STBI__CASE(1,STBI_rg           ) { dest[0]=src[0]; dest[1]=255;                                     } break;
+         STBI__CASE(1,STBI_rgb          ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
+         STBI__CASE(1,STBI_rgb_alpha    ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=255;                     } break;
+         STBI__CASE(2,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(2,STBI_rgb          ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
+         STBI__CASE(2,STBI_rgb_alpha    ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=src[1];                  } break;
+         STBI__CASE(3,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(3,STBI_rg           ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
+         STBI__CASE(4,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(4,STBI_rg           ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
+         STBI__CASE(4,STBI_rgb          ) { dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];                    } break;
          STBI__CASE(3,STBI_grey         ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]);                   } break;
          STBI__CASE(3,STBI_grey_alpha   ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]); dest[1] = 255;    } break;
          STBI__CASE(4,STBI_grey         ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]);                   } break;
@@ -1821,17 +1820,17 @@ static stbi__uint16 *stbi__convert_format16(stbi__uint16 *data, int img_n, int r
       // convert source image with img_n components to one with req_comp components;
       // avoid switch per pixel, so use switch per scanline and massive macros
       switch (STBI__COMBO(img_n, req_comp)) {
-         STBI__CASE(1,2                 ) { dest[0]=src[0]; dest[1]=255;                                     } break;
-         STBI__CASE(1,3                 ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
-         STBI__CASE(1,4                 ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=255;                     } break;
-         STBI__CASE(2,1                 ) { dest[0]=src[0];                                                  } break;
-         STBI__CASE(2,3                 ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
-         STBI__CASE(2,4                 ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=src[1];                  } break;
-         STBI__CASE(3,1                 ) { dest[0]=src[0];                                                  } break;
-         STBI__CASE(3,2                 ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
-         STBI__CASE(4,1                 ) { dest[0]=src[0];                                                  } break;
-         STBI__CASE(4,2                 ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
-         STBI__CASE(4,3                 ) { dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];                    } break;
+         STBI__CASE(1,STBI_rg           ) { dest[0]=src[0]; dest[1]=255;                                     } break;
+         STBI__CASE(1,STBI_rgb          ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
+         STBI__CASE(1,STBI_rgb_alpha    ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=255;                     } break;
+         STBI__CASE(2,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(2,STBI_rgb          ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
+         STBI__CASE(2,STBI_rgb_alpha    ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=src[1];                  } break;
+         STBI__CASE(3,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(3,STBI_rg           ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
+         STBI__CASE(4,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(4,STBI_rg           ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
+         STBI__CASE(4,STBI_rgb          ) { dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];                    } break;
          STBI__CASE(3,STBI_grey         ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]);                   } break;
          STBI__CASE(3,STBI_grey_alpha   ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]); dest[1] = 255;    } break;
          STBI__CASE(4,STBI_grey         ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]);                   } break;
@@ -5675,8 +5674,8 @@ static int stbi__tga_get_comp(int bits_per_pixel, int is_grey, int* is_rgb16)
    // only RGB or RGBA (incl. 16bit) or grey allowed
    if (is_rgb16) *is_rgb16 = 0;
    switch(bits_per_pixel) {
-      case 8:  return STBI_r;
-      case 16: if(is_grey) return STBI_rg;
+      case 8:  return STBI_grey;
+      case 16: if(is_grey) return STBI_grey_alpha;
                // fallthrough
       case 15: if(is_rgb16) *is_rgb16 = 1;
                return STBI_rgb;
