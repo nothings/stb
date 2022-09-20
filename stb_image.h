@@ -108,7 +108,7 @@ RECENT REVISION HISTORY:
     Cass Everitt            Ryamond Barbiero                        github:grim210
     Paul Du Bois            Engin Manap        Aldo Culquicondor    github:sammyhw
     Philipp Wiesemann       Dale Weiler        Oriol Ferrer Mesia   github:phprus
-    Josh Tobin                                 Matthew Gregan       github:poppolopoppo
+    Josh Tobin              Timothy Lochner    Matthew Gregan       github:poppolopoppo
     Julian Raschke          Gregory Mullen     Christian Floisand   github:darealshinji
     Baldur Karlsson         Kevin Schmidt      JR Smith             github:Michaelangel007
                             Brad Weinberger    Matvey Cherevko      github:mosra
@@ -164,11 +164,13 @@ RECENT REVISION HISTORY:
 // An output image with N components has the following components interleaved
 // in this order in each pixel:
 //
-//     N=#comp     components
-//       1           grey
-//       2           grey, alpha
-//       3           red, green, blue
-//       4           red, green, blue, alpha
+//     N=#comp            components
+//       1                  grey
+//       2                  grey, alpha
+//       3                  red, green, blue
+//       4                  red, green, blue, alpha
+//       STBI_r             red
+//       STBI_rg            red, green
 //
 // If image loading fails for any reason, the return value will be NULL,
 // and *x, *y, *channels_in_file will be unchanged. The function
@@ -377,7 +379,10 @@ enum
    STBI_grey       = 1,
    STBI_grey_alpha = 2,
    STBI_rgb        = 3,
-   STBI_rgb_alpha  = 4
+   STBI_rgb_alpha  = 4,
+   STBI_r          = 5,
+   STBI_rg         = 6,
+
 };
 
 #include <stdlib.h>
@@ -1750,23 +1755,26 @@ static unsigned char *stbi__convert_format(unsigned char *data, int img_n, int r
       unsigned char *src  = data + j * x * img_n   ;
       unsigned char *dest = good + j * x * req_comp;
 
-      #define STBI__COMBO(a,b)  ((a)*8+(b))
+      #define STBI__COMBO(a,b)  (( (a)<<16 ) | (b) )
       #define STBI__CASE(a,b)   case STBI__COMBO(a,b): for(i=x-1; i >= 0; --i, src += a, dest += b)
       // convert source image with img_n components to one with req_comp components;
       // avoid switch per pixel, so use switch per scanline and massive macros
       switch (STBI__COMBO(img_n, req_comp)) {
-         STBI__CASE(1,2) { dest[0]=src[0]; dest[1]=255;                                     } break;
-         STBI__CASE(1,3) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
-         STBI__CASE(1,4) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=255;                     } break;
-         STBI__CASE(2,1) { dest[0]=src[0];                                                  } break;
-         STBI__CASE(2,3) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
-         STBI__CASE(2,4) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=src[1];                  } break;
-         STBI__CASE(3,4) { dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];dest[3]=255;        } break;
-         STBI__CASE(3,1) { dest[0]=stbi__compute_y(src[0],src[1],src[2]);                   } break;
-         STBI__CASE(3,2) { dest[0]=stbi__compute_y(src[0],src[1],src[2]); dest[1] = 255;    } break;
-         STBI__CASE(4,1) { dest[0]=stbi__compute_y(src[0],src[1],src[2]);                   } break;
-         STBI__CASE(4,2) { dest[0]=stbi__compute_y(src[0],src[1],src[2]); dest[1] = src[3]; } break;
-         STBI__CASE(4,3) { dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];                    } break;
+         STBI__CASE(1,STBI_rg           ) { dest[0]=src[0]; dest[1]=255;                                     } break;
+         STBI__CASE(1,STBI_rgb          ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
+         STBI__CASE(1,STBI_rgb_alpha    ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=255;                     } break;
+         STBI__CASE(2,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(2,STBI_rgb          ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
+         STBI__CASE(2,STBI_rgb_alpha    ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=src[1];                  } break;
+         STBI__CASE(3,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(3,STBI_rg           ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
+         STBI__CASE(4,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(4,STBI_rg           ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
+         STBI__CASE(4,STBI_rgb          ) { dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];                    } break;
+         STBI__CASE(3,STBI_grey         ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]);                   } break;
+         STBI__CASE(3,STBI_grey_alpha   ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]); dest[1] = 255;    } break;
+         STBI__CASE(4,STBI_grey         ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]);                   } break;
+         STBI__CASE(4,STBI_grey_alpha   ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]); dest[1] = src[3]; } break;
          default: STBI_ASSERT(0); STBI_FREE(data); STBI_FREE(good); return stbi__errpuc("unsupported", "Unsupported format conversion");
       }
       #undef STBI__CASE
@@ -1807,23 +1815,26 @@ static stbi__uint16 *stbi__convert_format16(stbi__uint16 *data, int img_n, int r
       stbi__uint16 *src  = data + j * x * img_n   ;
       stbi__uint16 *dest = good + j * x * req_comp;
 
-      #define STBI__COMBO(a,b)  ((a)*8+(b))
+      #define STBI__COMBO(a,b)  (( (a)<<16 ) | (b) )
       #define STBI__CASE(a,b)   case STBI__COMBO(a,b): for(i=x-1; i >= 0; --i, src += a, dest += b)
       // convert source image with img_n components to one with req_comp components;
       // avoid switch per pixel, so use switch per scanline and massive macros
       switch (STBI__COMBO(img_n, req_comp)) {
-         STBI__CASE(1,2) { dest[0]=src[0]; dest[1]=0xffff;                                     } break;
-         STBI__CASE(1,3) { dest[0]=dest[1]=dest[2]=src[0];                                     } break;
-         STBI__CASE(1,4) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=0xffff;                     } break;
-         STBI__CASE(2,1) { dest[0]=src[0];                                                     } break;
-         STBI__CASE(2,3) { dest[0]=dest[1]=dest[2]=src[0];                                     } break;
-         STBI__CASE(2,4) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=src[1];                     } break;
-         STBI__CASE(3,4) { dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];dest[3]=0xffff;        } break;
-         STBI__CASE(3,1) { dest[0]=stbi__compute_y_16(src[0],src[1],src[2]);                   } break;
-         STBI__CASE(3,2) { dest[0]=stbi__compute_y_16(src[0],src[1],src[2]); dest[1] = 0xffff; } break;
-         STBI__CASE(4,1) { dest[0]=stbi__compute_y_16(src[0],src[1],src[2]);                   } break;
-         STBI__CASE(4,2) { dest[0]=stbi__compute_y_16(src[0],src[1],src[2]); dest[1] = src[3]; } break;
-         STBI__CASE(4,3) { dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];                       } break;
+         STBI__CASE(1,STBI_rg           ) { dest[0]=src[0]; dest[1]=255;                                     } break;
+         STBI__CASE(1,STBI_rgb          ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
+         STBI__CASE(1,STBI_rgb_alpha    ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=255;                     } break;
+         STBI__CASE(2,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(2,STBI_rgb          ) { dest[0]=dest[1]=dest[2]=src[0];                                  } break;
+         STBI__CASE(2,STBI_rgb_alpha    ) { dest[0]=dest[1]=dest[2]=src[0]; dest[3]=src[1];                  } break;
+         STBI__CASE(3,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(3,STBI_rg           ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
+         STBI__CASE(4,STBI_r            ) { dest[0]=src[0];                                                  } break;
+         STBI__CASE(4,STBI_rg           ) { dest[0]=src[0];dest[1]=src[1];                                   } break;
+         STBI__CASE(4,STBI_rgb          ) { dest[0]=src[0];dest[1]=src[1];dest[2]=src[2];                    } break;
+         STBI__CASE(3,STBI_grey         ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]);                   } break;
+         STBI__CASE(3,STBI_grey_alpha   ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]); dest[1] = 255;    } break;
+         STBI__CASE(4,STBI_grey         ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]);                   } break;
+         STBI__CASE(4,STBI_grey_alpha   ) { dest[0]=stbi__compute_y(src[0],src[1],src[2]); dest[1] = src[3]; } break;
          default: STBI_ASSERT(0); STBI_FREE(data); STBI_FREE(good); return (stbi__uint16*) stbi__errpuc("unsupported", "Unsupported format conversion");
       }
       #undef STBI__CASE
