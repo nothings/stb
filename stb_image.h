@@ -375,6 +375,7 @@ RECENT REVISION HISTORY:
 enum
 {
    STBI_default = 0, // only used for desired_channels
+   STBI_luma_bit = 1 << 8, //only used for STBI_grey and STBI_grey_alpha
 
    STBI_r          = 1,
    STBI_rg         = 2,
@@ -383,7 +384,6 @@ enum
    STBI_grey       = STBI_luma_bit | 1,
    STBI_grey_alpha = STBI_luma_bit | 2,
 
-   STBI_luma_bit = 1 << 8, // 
 };
 
 #include <stdlib.h>
@@ -1756,7 +1756,7 @@ static unsigned char *stbi__convert_format(unsigned char *data, int img_n, int r
       unsigned char *src  = data + j * x * img_n   ;
       unsigned char *dest = good + j * x * req_comp;
 
-      #define STBI__COMBO(a,b)  (((a)<<16)&(b))
+      #define STBI__COMBO(a,b)  (( (a)<<16 ) | (b) )
       #define STBI__CASE(a,b)   case STBI__COMBO(a,b): for(i=x-1; i >= 0; --i, src += a, dest += b)
       // convert source image with img_n components to one with req_comp components;
       // avoid switch per pixel, so use switch per scanline and massive macros
@@ -1816,7 +1816,7 @@ static stbi__uint16 *stbi__convert_format16(stbi__uint16 *data, int img_n, int r
       stbi__uint16 *src  = data + j * x * img_n   ;
       stbi__uint16 *dest = good + j * x * req_comp;
 
-      #define STBI__COMBO(a,b)  (((a)<<16)&(b))
+      #define STBI__COMBO(a,b)  (( (a)<<16 ) | (b) )
       #define STBI__CASE(a,b)   case STBI__COMBO(a,b): for(i=x-1; i >= 0; --i, src += a, dest += b)
       // convert source image with img_n components to one with req_comp components;
       // avoid switch per pixel, so use switch per scanline and massive macros
