@@ -216,7 +216,6 @@ enum
 
 #ifdef STB_C_LEXER_IMPLEMENTATION
 
-#include <ctype.h>
 // Hacky definitions so we can easily #if on them
 #define Y(x) 1
 #define N(x) 0
@@ -460,24 +459,17 @@ static double stb__clex_parse_float(char *p, char **q)
 #ifdef STB__clex_octal_chars
 static int stb__clex_parse_octal(char *p, char **q)
 {
-  int octchar = 0;
+  unsigned int octchar = 0;
 
-  if (p[1] >= '0' && p[1] <= '7') {
-    octchar = (p[1] - '0');
+  p++; // skipping first char
+  while (*p >= '0' && *p <= '7') {
+    octchar = (octchar << 3) + (*p++) - '0';
+    if (octchar >= 256)
+      return -1;
   }
-  if (p[2] >= '0' && p[2] <= '7') {
-    octchar = (octchar << 3) + (p[2] - '0');
-    *q = p + 3;
-  }
-  if (p[3] >= '0' && p[3] <= '7') {
-    octchar = (octchar << 3) + (p[3] - '0');
-    *q = p + 4;
-  }
+  *q = p;
 
-  if (octchar >= 256)
-    return -1;
-
-  return (unsigned char)octchar;
+  return octchar;
 }
 #endif
 
@@ -498,27 +490,20 @@ static int stb__clex_hex_digit(char x)
 
 static int stb__clex_parse_hex(char *p, char **q)
 {
-  int hexchar = 0;
+  unsigned int hexchar = 0;
+  int digit = 0;
 
-  if (isxdigit(p[2])) {
-    hexchar = stb__clex_hex_digit(p[2]);
-    *q = p + 3;
+  p++;
+  p++; // skipping first two chars: '\\' and 'x' or 'X'
+  while ((digit = stb__clex_hex_digit(*p)) != -1) {
+    hexchar = (hexchar << 4) + digit;
+    p++;
+    if (hexchar >= 256)
+      return -1;
   }
 
-  if (isxdigit(p[3])) {
-    hexchar = stb__clex_hex_digit(p[3]) + (hexchar << 4);
-    *q = p + 4;
-  }
-
-  if (isxdigit(p[4])) {
-    hexchar = stb__clex_hex_digit(p[4]) + (hexchar << 4);
-    *q = p + 5;
-  }
-
-  if (hexchar >= 256)
-    return -1;
-
-  return (unsigned char)hexchar;
+  *q = p;
+  return hexchar;
 }
 #endif
 
@@ -925,7 +910,7 @@ static void print_token(stb_lexer *lexer)
       case CLEX_eqarrow   : printf("=>"); break;
       case CLEX_dqstring  : printf("\"%s\"", lexer->string); break;
       case CLEX_sqstring  : printf("'\"%s\"'", lexer->string); break;
-      case CLEX_charlit   : printf("'%s'", lexer->string); break;
+      case CLEX_charlit   : printf("'%s'(%ld)", lexer->string, lexer->int_number); break;
       #if defined(STB__clex_int_as_double) && !defined(STB__CLEX_use_stdlib)
       case CLEX_intlit    : printf("#%g", lexer->real_number); break;
       #else
@@ -963,6 +948,9 @@ void dummy(void)
 
    printf("test %d",1); // https://github.com/nothings/stb/issues/13
    printf("\n(pg)Jackd\141ws love my big sphinx of qu\x61rtz.\040\n");
+   (void)'\x21';
+   (void)'\042';
+   (void)"\478";
 }
 
 int main(int argc, char **argv)
