@@ -1734,7 +1734,7 @@ static void stbir__encode_scanline(stbir__info* stbir_info, int num_pixels, void
     #define STBIR__ROUND_INT(f)    ((int)          ((f)+0.5))
     #define STBIR__ROUND_UINT(f)   ((stbir_uint32) ((f)+0.5))
 
-    #ifdef STBIR__SATURATE_INT
+    #ifdef STBIR_SATURATE_INT
     #define STBIR__ENCODE_LINEAR8(f)   stbir__saturate8 (STBIR__ROUND_INT((f) * stbir__max_uint8_as_float ))
     #define STBIR__ENCODE_LINEAR16(f)  stbir__saturate16(STBIR__ROUND_INT((f) * stbir__max_uint16_as_float))
     #else
