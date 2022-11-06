@@ -113,7 +113,7 @@ RECENT REVISION HISTORY:
     Baldur Karlsson         Kevin Schmidt      JR Smith             github:Michaelangel007
                             Brad Weinberger    Matvey Cherevko      github:mosra
     Luca Sas                Alexander Veselov  Zack Middleton       [reserved]
-    Ryan C. Gordon          [reserved]                              [reserved]
+    Ryan C. Gordon          Cocoa Xu                                [reserved]
                      DO NOT ADD YOUR NAME HERE
 
                      Jacko Dirks
