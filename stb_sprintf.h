@@ -158,6 +158,8 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
  #if defined(__SANITIZE_ADDRESS__) && __SANITIZE_ADDRESS__
   #define STBSP__ASAN __attribute__((__no_sanitize_address__))
  #endif
+#elif defined(_MSC_VER) && (_MSC_VER >= 1900)
+ #define STBSP__ASAN __declspec(no_sanitize_address)
 #endif
 
 #ifndef STBSP__ASAN
