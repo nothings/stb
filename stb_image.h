@@ -1379,7 +1379,12 @@ STBIDEF stbi_uc *stbi_load_from_file(FILE *f, int *x, int *y, int *comp, int req
    result = stbi__load_and_postprocess_8bit(&s,x,y,comp,req_comp);
    if (result) {
       // need to 'unget' all the characters in the IO buffer
-      fseek(f, - (int) (s.img_buffer_end - s.img_buffer), SEEK_CUR);
+      if (fseek(f, -(int)(s.img_buffer_end - s.img_buffer), SEEK_CUR) != 0) {
+         // fseek() failed; we can no longer maintain the file cursor position
+         // guarantee of this function, so return null.
+         STBI_FREE(result);
+         return stbi__errpuc("bad file", "fseek() failed; seek position unreliable");
+      }
    }
    return result;
 }
@@ -1392,7 +1397,12 @@ STBIDEF stbi__uint16 *stbi_load_from_file_16(FILE *f, int *x, int *y, int *comp,
    result = stbi__load_and_postprocess_16bit(&s,x,y,comp,req_comp);
    if (result) {
       // need to 'unget' all the characters in the IO buffer
-      fseek(f, - (int) (s.img_buffer_end - s.img_buffer), SEEK_CUR);
+      if (fseek(f, -(int)(s.img_buffer_end - s.img_buffer), SEEK_CUR) != 0) {
+         // fseek() failed; we can no longer maintain the file cursor position
+         // guarantee of this function, so return null.
+         STBI_FREE(result);
+         return (stbi__uint16 *) stbi__errpuc("bad file", "fseek() failed; seek position unreliable");
+      }
    }
    return result;
 }
@@ -1540,12 +1550,13 @@ STBIDEF int      stbi_is_hdr          (char const *filename)
 STBIDEF int stbi_is_hdr_from_file(FILE *f)
 {
    #ifndef STBI_NO_HDR
-   long pos = ftell(f);
    int res;
+   long pos = ftell(f);
+   if (pos < 0) return stbi__err("bad file", "ftell() failed");
    stbi__context s;
    stbi__start_file(&s,f);
    res = stbi__hdr_test(&s);
-   fseek(f, pos, SEEK_SET);
+   if (fseek(f, pos, SEEK_SET) != 0) return stbi__err("bad file", "fseek() failed");
    return res;
    #else
    STBI_NOTUSED(f);
@@ -7702,9 +7713,10 @@ STBIDEF int stbi_info_from_file(FILE *f, int *x, int *y, int *comp)
    int r;
    stbi__context s;
    long pos = ftell(f);
+   if (pos < 0) return stbi__err("bad file", "ftell() failed");
    stbi__start_file(&s, f);
    r = stbi__info_main(&s,x,y,comp);
-   fseek(f,pos,SEEK_SET);
+   if (fseek(f, pos, SEEK_SET) != 0) return stbi__err("bad file", "fseek() failed");
    return r;
 }
 
@@ -7723,9 +7735,10 @@ STBIDEF int stbi_is_16_bit_from_file(FILE *f)
    int r;
    stbi__context s;
    long pos = ftell(f);
+   if (pos < 0) return stbi__err("bad file", "ftell() failed");
    stbi__start_file(&s, f);
    r = stbi__is_16_main(&s);
-   fseek(f,pos,SEEK_SET);
+   if (fseek(f, pos, SEEK_SET) != 0) return stbi__err("bad file", "fseek() failed");
    return r;
 }
 #endif // !STBI_NO_STDIO
