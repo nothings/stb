@@ -781,7 +781,9 @@ static int stbi__sse2_available(void)
 #undef STBI_NEON
 #endif
 #elif defined(STBI__ARM64_TARGET)
+#if !defined(STBI_NEON)
 #define STBI_NEON
+#endif
 #endif
 
 #ifdef STBI_NEON
