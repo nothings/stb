@@ -692,6 +692,8 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #define STBI__X64_TARGET
 #elif defined(__i386) || defined(_M_IX86)
 #define STBI__X86_TARGET
+#elif defined(__aarch64__) || defined(_M_ARM64)
+#define STBI__ARM64_TARGET
 #endif
 
 #if defined(__GNUC__) && defined(STBI__X86_TARGET) && !defined(__SSE2__) && !defined(STBI_NO_SIMD)
@@ -774,8 +776,12 @@ static int stbi__sse2_available(void)
 #endif
 
 // ARM NEON
-#if defined(STBI_NO_SIMD) && defined(STBI_NEON)
+#if defined(STBI_NO_SIMD)
+#if defined(STBI_NEON)
 #undef STBI_NEON
+#endif
+#elif defined(STBI__ARM64_TARGET)
+#define STBI_NEON
 #endif
 
 #ifdef STBI_NEON
