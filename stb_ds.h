@@ -64,6 +64,10 @@ LICENSE
   Placed in the public domain and also MIT licensed.
   See end of file for detailed license information.
 
+CONTRIBUTORS
+
+  Rongcui Dong
+
 DOCUMENTATION
 
   Dynamic Arrays
@@ -558,23 +562,23 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrmaybegrow(a,n)  ((!(a) || stbds_header(a)->length + (n) > stbds_header(a)->capacity) \
                                   ? (stbds_arrgrow(a,n,0),0) : 0)
 
-#define stbds_arrgrow(a,b,c)   ((a) = stbds_arrgrowf_wrapper((a), sizeof *(a), (b), (c)))
+#define stbds_arrgrow(a,b,c)   ((a) = stbds_arrgrowf_wrapper((void *)(a), sizeof *(a), (b), (c)))
 
 #define stbds_hmput(t, k, v) \
-    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, 0),   \
+    ((t) = stbds_hmput_key_wrapper((void *)(t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, 0),   \
      (t)[stbds_temp((t)-1)].key = (k),    \
      (t)[stbds_temp((t)-1)].value = (v))
 
 #define stbds_hmputs(t, s) \
-    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), &(s).key, sizeof (s).key, STBDS_HM_BINARY), \
+    ((t) = stbds_hmput_key_wrapper((void *)(t), sizeof *(t), (void*) &(s).key, sizeof (s).key, STBDS_HM_BINARY), \
      (t)[stbds_temp((t)-1)] = (s))
 
 #define stbds_hmgeti(t,k) \
-    ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, STBDS_HM_BINARY), \
+    ((t) = stbds_hmget_key_wrapper((void *)(t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, STBDS_HM_BINARY), \
       stbds_temp((t)-1))
 
 #define stbds_hmgeti_ts(t,k,temp) \
-    ((t) = stbds_hmget_key_ts_wrapper((t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, &(temp), STBDS_HM_BINARY), \
+    ((t) = stbds_hmget_key_ts_wrapper((void *)(t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, &(temp), STBDS_HM_BINARY), \
       (temp))
 
 #define stbds_hmgetp(t, k) \
@@ -584,13 +588,13 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
     ((void) stbds_hmgeti_ts(t,k,temp), &(t)[temp])
 
 #define stbds_hmdel(t,k) \
-    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, STBDS_OFFSETOF((t),key), STBDS_HM_BINARY)),(t)?stbds_temp((t)-1):0)
+    (((t) = stbds_hmdel_key_wrapper((void *)(t),sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, STBDS_OFFSETOF((t),key), STBDS_HM_BINARY)),(t)?stbds_temp((t)-1):0)
 
 #define stbds_hmdefault(t, v) \
-    ((t) = stbds_hmput_default_wrapper((t), sizeof *(t)), (t)[-1].value = (v))
+    ((t) = stbds_hmput_default_wrapper((void *)(t), sizeof *(t)), (t)[-1].value = (v))
 
 #define stbds_hmdefaults(t, s) \
-    ((t) = stbds_hmput_default_wrapper((t), sizeof *(t)), (t)[-1] = (s))
+    ((t) = stbds_hmput_default_wrapper((void *)(t), sizeof *(t)), (t)[-1] = (s))
 
 #define stbds_hmfree(p)        \
     ((void) ((p) != NULL ? stbds_hmfree_func((p)-1,sizeof*(p)),0 : 0),(p)=NULL)
@@ -603,28 +607,28 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_hmgetp_null(t,k)  (stbds_hmgeti(t,k) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
 
 #define stbds_shput(t, k, v) \
-    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING),   \
+    ((t) = stbds_hmput_key_wrapper((void *)(t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING),   \
      (t)[stbds_temp((t)-1)].value = (v))
 
 #define stbds_shputi(t, k, v) \
-    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING),   \
+    ((t) = stbds_hmput_key_wrapper((void *)(t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING),   \
      (t)[stbds_temp((t)-1)].value = (v), stbds_temp((t)-1))
 
 #define stbds_shputs(t, s) \
-    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (s).key, sizeof (s).key, STBDS_HM_STRING), \
+    ((t) = stbds_hmput_key_wrapper((void *)(t), sizeof *(t), (void*) (s).key, sizeof (s).key, STBDS_HM_STRING), \
      (t)[stbds_temp((t)-1)] = (s), \
      (t)[stbds_temp((t)-1)].key = stbds_temp_key((t)-1)) // above line overwrites whole structure, so must rewrite key here if it was allocated internally
 
 #define stbds_pshput(t, p) \
-    ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (p)->key, sizeof (p)->key, STBDS_HM_PTR_TO_STRING), \
+    ((t) = stbds_hmput_key_wrapper((void *)(t), sizeof *(t), (void*) (p)->key, sizeof (p)->key, STBDS_HM_PTR_TO_STRING), \
      (t)[stbds_temp((t)-1)] = (p))
 
 #define stbds_shgeti(t,k) \
-     ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
+     ((t) = stbds_hmget_key_wrapper((void *)(t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING), \
       stbds_temp((t)-1))
 
 #define stbds_pshgeti(t,k) \
-     ((t) = stbds_hmget_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (*(t))->key, STBDS_HM_PTR_TO_STRING), \
+     ((t) = stbds_hmget_key_wrapper((void *)(t), sizeof *(t), (void*) (k), sizeof (*(t))->key, STBDS_HM_PTR_TO_STRING), \
       stbds_temp((t)-1))
 
 #define stbds_shgetp(t, k) \
@@ -634,9 +638,9 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
     ((void) stbds_pshgeti(t,k), (t)[stbds_temp((t)-1)])
 
 #define stbds_shdel(t,k) \
-    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_OFFSETOF((t),key), STBDS_HM_STRING)),(t)?stbds_temp((t)-1):0)
+    (((t) = stbds_hmdel_key_wrapper((void *)(t),sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_OFFSETOF((t),key), STBDS_HM_STRING)),(t)?stbds_temp((t)-1):0)
 #define stbds_pshdel(t,k) \
-    (((t) = stbds_hmdel_key_wrapper((t),sizeof *(t), (void*) (k), sizeof (*(t))->key, STBDS_OFFSETOF(*(t),key), STBDS_HM_PTR_TO_STRING)),(t)?stbds_temp((t)-1):0)
+    (((t) = stbds_hmdel_key_wrapper((void *)(t),sizeof *(t), (void*) (k), sizeof (*(t))->key, STBDS_OFFSETOF(*(t),key), STBDS_HM_PTR_TO_STRING)),(t)?stbds_temp((t)-1):0)
 
 #define stbds_sh_new_arena(t)  \
     ((t) = stbds_shmode_func_wrapper(t, sizeof *(t), STBDS_SH_ARENA))
