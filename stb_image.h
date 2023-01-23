@@ -5535,9 +5535,23 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
          psize = (info.offset - info.extra_read - info.hsz) >> 2;
    }
    if (psize == 0) {
-      if (info.offset != s->callback_already_read + (s->img_buffer - s->img_buffer_original)) {
-        return stbi__errpuc("bad offset", "Corrupt BMP");
-      }
+	  // accept some number of extra bytes after the header, but if the offset points either to before
+	  // the header ends or implies a large amount of extra data, reject the file as malformed
+	  int bytes_read_so_far = s->callback_already_read + (int)(s->img_buffer - s->img_buffer_original);
+	  int header_limit = 1024; // max we actually read is below 256 bytes currently.
+	  int extra_data_limit = 256*4; // what ordinarily goes here is a palette; 256 entries*4 bytes is its max size.
+	  if (bytes_read_so_far <= 0 || bytes_read_so_far > header_limit) {
+		 return stbi__errpuc("bad header", "Corrupt BMP");
+	  }
+	  // we established that bytes_read_so_far is positive and sensible.
+	  // the first half of this test rejects offsets that are either too small positives, or
+	  // negative, and guarantees that info.offset >= bytes_read_so_far > 0. this in turn
+	  // ensures the number computed in the second half of the test can't overflow.
+	  if (info.offset < bytes_read_so_far || info.offset - bytes_read_so_far > extra_data_limit) {
+         return stbi__errpuc("bad offset", "Corrupt BMP");
+      } else {
+		 stbi__skip(s, info.offset - bytes_read_so_far);
+	  }
    }
 
    if (info.bpp == 24 && ma == 0xff000000)
