@@ -3384,12 +3384,12 @@ static int stbi__decode_jpeg_header(stbi__jpeg *z, int scan)
    return 1;
 }
 
-static int stbi__skip_jpeg_junk_at_end(stbi__jpeg *j)
+static stbi_uc stbi__skip_jpeg_junk_at_end(stbi__jpeg *j)
 {
    // some JPEGs have junk at end, skip over it but if we find what looks
    // like a valid marker, resume there
    while (!stbi__at_eof(j->s)) {
-      int x = stbi__get8(j->s);
+      stbi_uc x = stbi__get8(j->s);
       while (x == 255) { // might be a marker
          if (stbi__at_eof(j->s)) return STBI__MARKER_none;
          x = stbi__get8(j->s);
@@ -3422,7 +3422,7 @@ static int stbi__decode_jpeg_image(stbi__jpeg *j)
          if (!stbi__process_scan_header(j)) return 0;
          if (!stbi__parse_entropy_coded_data(j)) return 0;
          if (j->marker == STBI__MARKER_none ) {
-         j->marker = (unsigned char) stbi__skip_jpeg_junk_at_end(j);
+         j->marker = stbi__skip_jpeg_junk_at_end(j);
             // if we reach eof without hitting a marker, stbi__get_marker() below will fail and we'll eventually return 0
          }
          m = stbi__get_marker(j);
