@@ -2651,10 +2651,10 @@ STBTT_DEF int  stbtt_GetFontVMetricsOS2(const stbtt_fontinfo *info, int *typoAsc
 
 STBTT_DEF void stbtt_GetFontBoundingBox(const stbtt_fontinfo *info, int *x0, int *y0, int *x1, int *y1)
 {
-   *x0 = ttSHORT(info->data + info->head + 36);
-   *y0 = ttSHORT(info->data + info->head + 38);
-   *x1 = ttSHORT(info->data + info->head + 40);
-   *y1 = ttSHORT(info->data + info->head + 42);
+   if (x0) *x0 = ttSHORT(info->data + info->head + 36);
+   if (y0) *y0 = ttSHORT(info->data + info->head + 38);
+   if (x1) *x1 = ttSHORT(info->data + info->head + 40);
+   if (y1) *y1 = ttSHORT(info->data + info->head + 42);
 }
 
 STBTT_DEF float stbtt_ScaleForPixelHeight(const stbtt_fontinfo *info, float height)
