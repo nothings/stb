@@ -949,7 +949,7 @@ struct stbvox_input_description
 
    unsigned char *texlerp_simple;
    // Indexed by 3D coordinates, this is the smallest texlerp encoding
-   // that can do useful work. It consits of three values: baselerp,
+   // that can do useful work. It consists of three values: baselerp,
    // vertlerp, and face_vertlerp. Baselerp defines the value
    // to use on all of the faces but one, from the STBVOX_TEXLERP_BASE
    // values. face_vertlerp is one of the 6 face values (or STBVOX_FACE_NONE)

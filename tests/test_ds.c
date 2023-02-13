@@ -6,7 +6,7 @@
 
 //#define STBDS_INTERNAL_SMALL_BUCKET    // make 64-bit bucket fit both keys and hash bits
 //#define STBDS_SIPHASH_2_4     // performance test 1_3 against 2_4
-//#define STBDS_INTERNAL_BUCKET_START    // don't bother offseting differently within bucket for different hash values
+//#define STBDS_INTERNAL_BUCKET_START    // don't bother offsetting differently within bucket for different hash values
 //#define STBDS_FLUSH_CACHE  (1u<<20) // do this much memory traffic to flush the cache between some benchmarking measurements
 
 #include <stdio.h>
@@ -923,7 +923,7 @@ int main(int arg, char **argv)
 #else
   printf("0,");
 #endif
-#ifdef STBDS_BUCKET_START    // don't bother offseting differently within bucket for different hash values
+#ifdef STBDS_BUCKET_START    // don't bother offsetting differently within bucket for different hash values
   printf("STBDS_BUCKET_START,");
 #else
   printf(",");

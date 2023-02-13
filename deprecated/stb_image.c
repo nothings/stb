@@ -2614,7 +2614,7 @@ static int expand_palette(png *a, stbi__uint8 *palette, int len, int pal_img_n)
    p = (stbi__uint8 *) malloc(pixel_count * pal_img_n);
    if (p == NULL) return e("outofmem", "Out of memory");
 
-   // between here and free(out) below, exitting would leak
+   // between here and free(out) below, exiting would leak
    temp_out = p;
 
    if (pal_img_n == 3) {
@@ -3271,7 +3271,7 @@ static stbi_uc *tga_load(stbi *s, int *x, int *y, int *comp, int req_comp)
    int RLE_repeating = 0;
    int read_next_pixel = 1;
 
-   //   do a tiny bit of precessing
+   //   do a tiny bit of processing
    if ( tga_image_type >= 8 )
    {
       tga_image_type -= 8;
@@ -3541,7 +3541,7 @@ static stbi_uc *psd_load(stbi *s, int *x, int *y, int *comp, int req_comp)
       //     Else if n is 128, noop.
       // Endloop
 
-      // The RLE-compressed data is preceeded by a 2-byte data count for each row in the data,
+      // The RLE-compressed data is preceded by a 2-byte data count for each row in the data,
       // which we're going to just skip.
       skip(s, h * channelCount * 2 );
 
@@ -4599,7 +4599,7 @@ int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int *x, int
       1.31 (2011-06-20)
              a few more leak fixes, bug in PNG handling (SpartanJ)
       1.30 (2011-06-11)
-             added ability to load files via callbacks to accomidate custom input streams (Ben Wenger)
+             added ability to load files via callbacks to accommodate custom input streams (Ben Wenger)
              removed deprecated format-specific test/load functions
              removed support for installable file formats (stbi_loader) -- would have been broken for IO callbacks anyway
              error cases in bmp and tga give messages and don't leak (Raymond Barbiero, grisha)
