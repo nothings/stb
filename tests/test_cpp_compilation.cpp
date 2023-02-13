@@ -6,7 +6,7 @@
 #include "stb_truetype.h"
 #include "stb_image_write.h"
 #include "stb_c_lexer.h"
-#include "stb_perlin.h"
+// #include "stb_perlin.h" // @TODO: stb_perlin is coming back
 #include "stb_dxt.h"
 #include "stb_divide.h"
 #include "stb_herringbone_wang_tile.h"
@@ -45,7 +45,6 @@ void my_free(void *) { }
 #include "stb_rect_pack.h"
 #include "stb_truetype.h"
 #include "stb_image_write.h"
-#include "stb_perlin.h"
 #include "stb_dxt.h"
 #include "stb_divide.h"
 #include "stb_herringbone_wang_tile.h"
