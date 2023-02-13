@@ -14,4 +14,4 @@ jobs:
           check_filenames: true
           check_hidden: true
           skip: ./.git
-          ignore_words_list: acount,alo,alloced,ba,bloc,finaly,fo,leas,lod,nmake,ore,ot,paeth
+          ignore_words_list: acount,alo,alloced,ba,bloc,clen,finaly,fo,leas,lod,nmake,ore,ot,paeth

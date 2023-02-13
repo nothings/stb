@@ -70,7 +70,7 @@ Version History
    1.95   hack stb__rec_max; clean up recursion code to use new functions
    1.94   stb_dirtree; rename stb_extra to stb_ptrmap
    1.93   stb_sem_new() API cleanup (no blockflag-starts blocked; use 'extra')
-   1.92   stb_threadqueue--multi reader/writer queue, fixed size or resizeable
+   1.92   stb_threadqueue--multi reader/writer queue, fixed size or resizable
    1.91   stb_bgio_* for reading disk asynchronously
    1.90   stb_mutex uses CRITICAL_REGION; new stb_sync primitive for thread
           joining; workqueue supports stb_sync instead of stb_semaphore

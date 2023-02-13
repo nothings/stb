@@ -132,7 +132,7 @@ STB_EXTERN void stbwingraph_Priority(int n);
 
 STB_EXTERN void stbwingraph_MakeFonts(void *window, int font_base);
 STB_EXTERN void stbwingraph_ShowWindow(void *window);
-STB_EXTERN void *stbwingraph_CreateWindow(int primary, stbwingraph_window_proc func, void *data, char *text, int width, int height, int fullscreen, int resizeable, int dest_alpha, int stencil);
+STB_EXTERN void *stbwingraph_CreateWindow(int primary, stbwingraph_window_proc func, void *data, char *text, int width, int height, int fullscreen, int resizable, int dest_alpha, int stencil);
 STB_EXTERN void *stbwingraph_CreateWindowSimple(stbwingraph_window_proc func, int width, int height);
 STB_EXTERN void *stbwingraph_CreateWindowSimpleFull(stbwingraph_window_proc func, int fullscreen, int ww, int wh, int fw, int fh);
 STB_EXTERN void stbwingraph_DestroyWindow(void *window);
@@ -533,7 +533,7 @@ void stbwingraph_ShowWindow(void *window)
 }
 
 void *stbwingraph_CreateWindow(int primary, stbwingraph_window_proc func, void *data, char *text,
-           int width, int height, int fullscreen, int resizeable, int dest_alpha, int stencil)
+           int width, int height, int fullscreen, int resizable, int dest_alpha, int stencil)
 {
    HWND win;
    DWORD dwstyle;
@@ -568,7 +568,7 @@ void *stbwingraph_CreateWindow(int primary, stbwingraph_window_proc func, void *
    } else {
       RECT rect;
       dwstyle = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
-      if (resizeable)
+      if (resizable)
          dwstyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
       rect.top = 0;
       rect.left = 0;
