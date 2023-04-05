@@ -826,7 +826,7 @@ static void print_token(stb_lexer *lexer)
       case CLEX_minuseq   : printf("-="); break;
       case CLEX_muleq     : printf("*="); break;
       case CLEX_diveq     : printf("/="); break;
-      case CLEX_modeq     : printf("%%="); break;
+      case CLEX_modeq     : printf("%="); break;
       case CLEX_shleq     : printf("<<="); break;
       case CLEX_shreq     : printf(">>="); break;
       case CLEX_eqarrow   : printf("=>"); break;
