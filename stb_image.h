@@ -113,7 +113,7 @@ RECENT REVISION HISTORY:
     Julian Raschke          Gregory Mullen     Christian Floisand   github:darealshinji
     Baldur Karlsson         Kevin Schmidt      JR Smith             github:Michaelangel007
                             Brad Weinberger    Matvey Cherevko      github:mosra
-    Luca Sas                Alexander Veselov  Zack Middleton       [reserved]
+    Luca Sas                Alexander Veselov  Zack Middleton       srht:siiky
     Ryan C. Gordon          [reserved]                              [reserved]
                      DO NOT ADD YOUR NAME HERE
 
@@ -7683,6 +7683,7 @@ static int stbi__is_16_main(stbi__context *s)
    #ifndef STBI_NO_PNM
    if (stbi__pnm_is16(s))  return 1;
    #endif
+   STBI_NOTUSED(s);
    return 0;
 }
 
