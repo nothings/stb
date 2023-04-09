@@ -43,7 +43,7 @@
             #define STBIR_MALLOC(size,context) ...
             #define STBIR_FREE(ptr,context)   ...
 
-         Each resize function makes exactly one call to malloc/free, so to use
+         Each resize function makes exactly one call to malloc/free, so as to use
          temp memory, store the temp memory in the context and return that.
 
       ASSERT
@@ -86,7 +86,7 @@
 
             static void my_progress_report(float progress)
             {
-               printf("Progress: %f%%\n", progress*100);
+               printf("Progress: %f\n", progress*100);
             }
 
       MAX CHANNELS
@@ -111,7 +111,7 @@
          and 1% transparent black produces 50% transparent dark green when
          non-premultiplied, whereas premultiplied it produces 50%
          transparent near-black. The former introduces green energy
-         that doesn't exist in the source image.)
+         that doesn't exist in the source image).
 
          2. Artists should not edit premultiplied-alpha images; artists
          want non-premultiplied alpha images. Thus, art tools generally output
@@ -574,10 +574,9 @@ static stbir__inline float stbir__saturate(float x)
     if (x < 0)
         return 0;
 
-    if (x > 1)
+    else if (x > 1)
         return 1;
 
-    return x;
 }
 
 #ifdef STBIR_SATURATE_INT
