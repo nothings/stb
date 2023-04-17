@@ -371,6 +371,7 @@ CREDITS
   Per Vognsen  -- idea for hash table API/implementation
   Rafael Sachetto -- arrpop()
   github:HeroicKatora -- arraddn() reworking
+  github:riri -- arrctx() context for custom realloc/free
 
   Bugfixes:
     Andy Durdin
@@ -413,6 +414,7 @@ CREDITS
 #define arrdelswap  stbds_arrdelswap
 #define arrcap      stbds_arrcap
 #define arrsetcap   stbds_arrsetcap
+#define arrctx      stbds_arrctx
 
 #define hmput       stbds_hmput
 #define hmputs      stbds_hmputs
@@ -548,12 +550,13 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arraddnindex(a,n)(stbds_arrmaybegrow(a,n), (n) ? (stbds_header(a)->length += (n), stbds_header(a)->length-(n)) : stbds_arrlen(a))
 #define stbds_arraddnoff       stbds_arraddnindex
 #define stbds_arrlast(a)       ((a)[stbds_header(a)->length-1])
-#define stbds_arrfree(a)       ((void) ((a) ? STBDS_FREE(NULL,stbds_header(a)) : (void)0), (a)=NULL)
+#define stbds_arrfree(a)       ((void) ((a) ? stbds_arrfreef(stbds_header(a)) : (void)0), (a)=NULL)
 #define stbds_arrdel(a,i)      stbds_arrdeln(a,i,1)
 #define stbds_arrdeln(a,i,n)   (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
 #define stbds_arrdelswap(a,i)  ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
 #define stbds_arrinsn(a,i,n)   (stbds_arraddn((a),(n)), memmove(&(a)[(i)+(n)], &(a)[i], sizeof *(a) * (stbds_header(a)->length-(n)-(i))))
 #define stbds_arrins(a,i,v)    (stbds_arrinsn((a),(i),1), (a)[i]=(v))
+#define stbds_arrctx(a,c)      (stbds_arrmaybegrow(a,0), stbds_header(a)->context = (c))
 
 #define stbds_arrmaybegrow(a,n)  ((!(a) || stbds_header(a)->length + (n) > stbds_header(a)->capacity) \
                                   ? (stbds_arrgrow(a,n,0),0) : 0)
@@ -660,6 +663,7 @@ typedef struct
   size_t      capacity;
   void      * hash_table;
   ptrdiff_t   temp;
+  void      * context;
 } stbds_array_header;
 
 typedef struct stbds_string_block
@@ -782,13 +786,14 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
   //if (num_prev < 65536) if (a) prev_allocs[num_prev++] = (int *) ((char *) a+1);
   //if (num_prev == 2201)
   //  num_prev = num_prev;
-  b = STBDS_REALLOC(NULL, (a) ? stbds_header(a) : 0, elemsize * min_cap + sizeof(stbds_array_header));
+  b = STBDS_REALLOC((a) ? stbds_header(a)->context : NULL, (a) ? stbds_header(a) : 0, elemsize * min_cap + sizeof(stbds_array_header));
   //if (num_prev < 65536) prev_allocs[num_prev++] = (int *) (char *) b;
   b = (char *) b + sizeof(stbds_array_header);
   if (a == NULL) {
     stbds_header(b)->length = 0;
     stbds_header(b)->hash_table = 0;
     stbds_header(b)->temp = 0;
+    stbds_header(b)->context = NULL;
   } else {
     STBDS_STATS(++stbds_array_grow);
   }
@@ -799,7 +804,7 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
 
 void stbds_arrfreef(void *a)
 {
-  STBDS_FREE(NULL, stbds_header(a));
+  STBDS_FREE(stbds_header(a)->context, stbds_header(a));
 }
 
 //
