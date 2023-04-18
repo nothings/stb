@@ -48,8 +48,8 @@ COMPILE-TIME OPTIONS
 
      By default stb_ds uses stdlib realloc() and free() for memory management. You can
      substitute your own functions instead by defining these symbols. You must either
-     define both, or neither. Note that at the moment, 'context' will always be NULL.
-     @TODO add an array/hash initialization function that takes a memory context pointer.
+     define both, or neither. To forward 'context' to those functions, call stbds_arrctx().
+     @TODO add an hash initialization function that takes a memory context pointer.
 
   #define STBDS_UNIT_TESTS
 
