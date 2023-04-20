@@ -205,6 +205,8 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
    #ifndef _CRT_NONSTDC_NO_DEPRECATE
    #define _CRT_NONSTDC_NO_DEPRECATE
    #endif
+#elif defined(__clang__)
+   #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
