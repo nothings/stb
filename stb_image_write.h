@@ -206,7 +206,9 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
    #define _CRT_NONSTDC_NO_DEPRECATE
    #endif
 #elif defined(__clang__)
+   #pragma clang diagnostic push
    #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+   #pragma clang diagnostic ignored "-Wmissing-field-initializers"
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
@@ -1625,6 +1627,10 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
    } else
       return 0;
 }
+#endif
+
+#if defined(__clang__)
+   #pragma clang diagnostic pop
 #endif
 
 #endif // STB_IMAGE_WRITE_IMPLEMENTATION
