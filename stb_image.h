@@ -4654,13 +4654,15 @@ static stbi_uc first_row_filter[5] =
 
 static int stbi__paeth(int a, int b, int c)
 {
-   int p = a + b - c;
-   int pa = abs(p-a);
-   int pb = abs(p-b);
-   int pc = abs(p-c);
-   if (pa <= pb && pa <= pc) return a;
-   if (pb <= pc) return b;
-   return c;
+   // This formulation looks very different from the reference in the PNG spec, but is
+   // actually equivalent and has favorable data dependencies and admits straightforward
+   // generation of branch-free code, which helps performance significantly.
+   int thresh = c*3 - (a + b);
+   int lo = a < b ? a : b;
+   int hi = a < b ? b : a;
+   int t0 = (hi <= thresh) ? lo : c;
+   int t1 = (thresh <= lo) ? hi : t0;
+   return t1;
 }
 
 static const stbi_uc stbi__depth_scale_table[9] = { 0, 0xff, 0x55, 0, 0x11, 0,0,0, 0x01 };
