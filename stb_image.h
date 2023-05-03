@@ -1072,8 +1072,8 @@ static int stbi__addints_valid(int a, int b)
    return a <= INT_MAX - b;
 }
 
-// returns 1 if the product of two signed shorts is valid, 0 on overflow.
-static int stbi__mul2shorts_valid(short a, short b)
+// returns 1 if the product of two ints fits in a signed short, 0 on overflow.
+static int stbi__mul2shorts_valid(int a, int b)
 {
    if (b == 0 || b == -1) return 1; // multiplication by 0 is always 0; check for -1 so SHRT_MIN/b doesn't overflow
    if ((a >= 0) == (b >= 0)) return a <= SHRT_MAX/b; // product is positive, so similar to mul2sizes_valid
@@ -3384,13 +3384,13 @@ static int stbi__decode_jpeg_header(stbi__jpeg *z, int scan)
    return 1;
 }
 
-static int stbi__skip_jpeg_junk_at_end(stbi__jpeg *j)
+static stbi_uc stbi__skip_jpeg_junk_at_end(stbi__jpeg *j)
 {
    // some JPEGs have junk at end, skip over it but if we find what looks
    // like a valid marker, resume there
    while (!stbi__at_eof(j->s)) {
-      int x = stbi__get8(j->s);
-      while (x == 255) { // might be a marker
+      stbi_uc x = stbi__get8(j->s);
+      while (x == 0xff) { // might be a marker
          if (stbi__at_eof(j->s)) return STBI__MARKER_none;
          x = stbi__get8(j->s);
          if (x != 0x00 && x != 0xff) {
