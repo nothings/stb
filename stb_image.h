@@ -7529,7 +7529,7 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
       ri->bits_per_channel = 8;
       line = s->img_x/8+((s->img_x%8>0)?1:0);
       
-      filebuf = stbi__malloc_mad2(line, s->img_y, 0);
+      filebuf = (stbi_uc *) stbi__malloc_mad2(line, s->img_y, 0);
       if (!filebuf) {
          STBI_FREE(out);
          return stbi__errpuc("outofmem", "Out of memory");
@@ -7546,7 +7546,7 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
       for(y = 0; y < s->img_y; y++) {
          for(x = 0; x < s->img_x; x++) {
             offset--;
-            *(p_out++) = ((*p_in>>offset)&0x1>0)?0:255;
+            *(p_out++) = ((*p_in>>offset)&0x1)?0:255;
             if(offset == 0) {
                offset = 8;
                p_in++;
