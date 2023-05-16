@@ -7519,7 +7519,7 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
    if (!stbi__mad4sizes_valid(s->img_n, s->img_x, s->img_y, ri->bits_per_channel / 8, 0))
       return stbi__errpuc("too large", "PNM too large");
 
-   if (ri->bits_per_channel) bytes_per_channel = 2; else bytes_per_channel = 1;
+   if (ri->bits_per_channel == 16) bytes_per_channel = 2; else bytes_per_channel = 1;
    out = (stbi_uc *) stbi__malloc_mad4(s->img_n, s->img_x, s->img_y, bytes_per_channel, 0);
    if (!out) return stbi__errpuc("outofmem", "Out of memory");
    if (ri->bits_per_channel == 1) {
