@@ -7574,8 +7574,8 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
          filesize = s->img_n * s->img_x * s->img_y;
          while(filesize--) {
             // Convert from BIG-ENDIAN
-            // p[0]*256+p[1]
-            *(p16++) = *(p8++) + *(p8++)*256;
+            *(p16++) = p8[1] + p8[0]*256;
+            p8 += 2;
          }
       }
    }
