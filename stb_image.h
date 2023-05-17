@@ -7564,6 +7564,20 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
          STBI_FREE(out);
          return stbi__errpuc("bad PNM", "PNM file truncated");
       }
+      if (ri->bits_per_channel == 16) {
+         stbi_uc *p8;
+         stbi__uint16 *p16;
+         size_t filesize;
+         
+         p8 = out;
+         p16 = (stbi__uint16 *) out;
+         filesize = s->img_n * s->img_x * s->img_y;
+         while(filesize--) {
+            // Convert from BIG-ENDIAN
+            // p[0]*256+p[1]
+            *(p16++) = *(p8++) + *(p8++)*256;
+         }
+      }
    }
 
    if (req_comp && req_comp != s->img_n) {
