@@ -298,13 +298,17 @@ float stb_perlin_fbm_noise3(float x, float y, float z, float lacunarity, float g
    float frequency = 1.0f;
    float amplitude = 1.0f;
    float sum = 0.0f;
+   float maxAmplitude = 0.0f; // For normalization
 
    for (i = 0; i < octaves; i++) {
       sum += stb_perlin_noise3_internal(x*frequency,y*frequency,z*frequency,0,0,0,(unsigned char)i)*amplitude;
+      maxAmplitude += amplitude;
       frequency *= lacunarity;
       amplitude *= gain;
    }
-   return sum;
+
+   // Normalize the result to the range [-1, 1]
+   return sum / maxAmplitude;
 }
 
 float stb_perlin_turbulence_noise3(float x, float y, float z, float lacunarity, float gain, int octaves)
