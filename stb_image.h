@@ -5555,7 +5555,7 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
 
    if (info.hsz == 12) {
       if (info.bpp < 24)
-         psize = (info.offset - info.extra_read - 24) / 3;
+         psize = (info.offset - info.extra_read - info.hsz) / 3;
    } else {
       if (info.bpp < 16)
          psize = (info.offset - info.extra_read - info.hsz) >> 2;
