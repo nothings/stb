@@ -1583,8 +1583,8 @@ static int get32_packet(vorb *f)
 {
    uint32 x;
    x = get8_packet(f);
-   x += get8_packet(f) << 8;
-   x += get8_packet(f) << 16;
+   x += (uint32) get8_packet(f) << 8;
+   x += (uint32) get8_packet(f) << 16;
    x += (uint32) get8_packet(f) << 24;
    return x;
 }
@@ -3058,7 +3058,7 @@ void inverse_mdct_naive(float *buffer, int n)
 
 static float *get_window(vorb *f, int len)
 {
-   len <<= 1;
+    len = (unsigned int)len << 1;
    if (len == f->blocksize_0) return f->window[0];
    if (len == f->blocksize_1) return f->window[1];
    return NULL;
