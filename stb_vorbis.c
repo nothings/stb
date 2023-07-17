@@ -1696,7 +1696,7 @@ static int codebook_decode_scalar_raw(vorb *f, Codebook *c)
    assert(!c->sparse);
    for (i=0; i < c->entries; ++i) {
       if (c->codeword_lengths[i] == NO_CODE) continue;
-      if (c->codewords[i] == (f->acc & ((1 << c->codeword_lengths[i])-1))) {
+      if (c->codewords[i] == (f->acc & ((1U << c->codeword_lengths[i])-1))) {
          if (f->valid_bits >= c->codeword_lengths[i]) {
             f->acc >>= c->codeword_lengths[i];
             f->valid_bits -= c->codeword_lengths[i];
