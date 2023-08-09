@@ -381,6 +381,20 @@ enum
    STBI_rgb_alpha  = 4
 };
 
+enum
+{
+	STBI_type_error = 0,
+	STBI_type_jpeg,
+	STBI_type_png,
+	STBI_type_bmp,
+	STBI_type_psd,
+	STBI_type_tga,
+	STBI_type_gif,
+	STBI_type_hdr,
+	STBI_type_pic,
+	STBI_type_pnm,
+};
+
 #include <stdlib.h>
 typedef unsigned char stbi_uc;
 typedef unsigned short stbi_us;
@@ -7631,41 +7645,41 @@ static int stbi__pnm_is16(stbi__context *s)
 static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 {
    #ifndef STBI_NO_JPEG
-   if (stbi__jpeg_info(s, x, y, comp)) return 1;
+   if (stbi__jpeg_info(s, x, y, comp)) return STBI_type_jpeg;
    #endif
 
    #ifndef STBI_NO_PNG
-   if (stbi__png_info(s, x, y, comp))  return 1;
+   if (stbi__png_info(s, x, y, comp))  return STBI_type_png;
    #endif
 
    #ifndef STBI_NO_GIF
-   if (stbi__gif_info(s, x, y, comp))  return 1;
+   if (stbi__gif_info(s, x, y, comp))  return STBI_type_gif;
    #endif
 
    #ifndef STBI_NO_BMP
-   if (stbi__bmp_info(s, x, y, comp))  return 1;
+   if (stbi__bmp_info(s, x, y, comp))  return STBI_type_bmp;
    #endif
 
    #ifndef STBI_NO_PSD
-   if (stbi__psd_info(s, x, y, comp))  return 1;
+   if (stbi__psd_info(s, x, y, comp))  return STBI_type_psd;
    #endif
 
    #ifndef STBI_NO_PIC
-   if (stbi__pic_info(s, x, y, comp))  return 1;
+   if (stbi__pic_info(s, x, y, comp))  return STBI_type_pic;
    #endif
 
    #ifndef STBI_NO_PNM
-   if (stbi__pnm_info(s, x, y, comp))  return 1;
+   if (stbi__pnm_info(s, x, y, comp))  returnSTBI_type_pnm;
    #endif
 
    #ifndef STBI_NO_HDR
-   if (stbi__hdr_info(s, x, y, comp))  return 1;
+   if (stbi__hdr_info(s, x, y, comp))  return STBI_type_hdr;
    #endif
 
    // test tga last because it's a crappy test!
    #ifndef STBI_NO_TGA
    if (stbi__tga_info(s, x, y, comp))
-       return 1;
+       return STBI_type_tga;
    #endif
    return stbi__err("unknown image type", "Image not of any known type, or corrupt");
 }
