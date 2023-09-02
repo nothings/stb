@@ -141,6 +141,7 @@ CREDITS:
       github:ignotion
       Adam Schackart
       Andrew Kensler
+      Elie Michel
 
 LICENSE
 
