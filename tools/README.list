@@ -3,7 +3,7 @@ stb_hexwave.h               | audio            | audio waveform synthesizer
 stb_image.h                 | graphics         | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 stb_truetype.h              | graphics         | parse, decode, and rasterize characters from truetype fonts
 stb_image_write.h           | graphics         | image writing to disk: PNG, TGA, BMP
-stb_image_resize.h          | graphics         | resize images larger/smaller with good quality
+stb_image_resize2.h         | graphics         | resize images larger/smaller with good quality
 stb_rect_pack.h             | graphics         | simple 2D rectangle packer with decent quality
 stb_perlin.h                | graphics         | perlin's revised simplex noise w/ different seeds
 stb_ds.h                    | utility          | typesafe dynamic array and hash tables for C, will compile in C++
