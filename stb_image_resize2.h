@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.00 - public domain image resizing
+/* stb_image_resize2 - v2.01 - public domain image resizing
    
    by Jeff Roberts (v2) and Jorge L Rodriguez 
    http://github.com/nothings/stb
@@ -1178,10 +1178,10 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
   #define STBIR_NO_UNROLL( ptr ) __assume(ptr) // this oddly keeps msvc from unrolling a loop
 #elif defined(  __clang__ )
   #define STBIR_STREAMOUT_PTR( star ) star __restrict__
-  #define STBIR_NO_UNROLL( ptr ) asm (""::"r"(ptr))
+  #define STBIR_NO_UNROLL( ptr ) __asm__ (""::"r"(ptr))
 #elif defined(  __GNUC__ )
   #define STBIR_STREAMOUT_PTR( star ) star __restrict__
-  #define STBIR_NO_UNROLL( ptr ) asm (""::"r"(ptr))
+  #define STBIR_NO_UNROLL( ptr ) __asm__ (""::"r"(ptr))
 #else
   #define STBIR_STREAMOUT_PTR( star ) star
   #define STBIR_NO_UNROLL( ptr )
