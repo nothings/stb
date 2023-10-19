@@ -952,6 +952,7 @@ static void *setup_malloc(vorb *f, int sz)
    sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
    f->setup_memory_required += sz;
    if (f->alloc.alloc_buffer) {
+      if (sz == 0) return NULL;
       void *p = (char *) f->alloc.alloc_buffer + f->setup_offset;
       if (f->setup_offset + sz > f->temp_offset) return NULL;
       f->setup_offset += sz;
