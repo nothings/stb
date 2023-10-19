@@ -3661,6 +3661,10 @@ static int start_decoder(vorb *f)
    f->comment_list = NULL;
    if (f->comment_list_length > 0)
    {
+      if (INT_MAX / sizeof(char*) < f->comment_list_length) {
+         f->comment_list_length = 0;
+         return error(f, VORBIS_outofmem);
+      }
       f->comment_list = (char**) setup_malloc(f, sizeof(char*) * (f->comment_list_length));
       if (f->comment_list == NULL)                  return error(f, VORBIS_outofmem);
    }
