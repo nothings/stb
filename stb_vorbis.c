@@ -3668,7 +3668,10 @@ static int start_decoder(vorb *f)
    for(i=0; i < f->comment_list_length; ++i) {
       len = get32_packet(f);
       f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * (len+1));
-      if (f->comment_list[i] == NULL)               return error(f, VORBIS_outofmem);
+      if (f->comment_list[i] == NULL) {
+         f->comment_list_length = 0;
+         return error(f, VORBIS_outofmem);
+      }
 
       for(j=0; j < len; ++j) {
          f->comment_list[i][j] = get8_packet(f);
