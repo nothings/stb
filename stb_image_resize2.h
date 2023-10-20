@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.01 - public domain image resizing
+/* stb_image_resize2 - v2.02 - public domain image resizing
    
    by Jeff Roberts (v2) and Jorge L Rodriguez 
    http://github.com/nothings/stb
@@ -3697,7 +3697,7 @@ static int stbir__pack_coefficients( int num_contributors, stbir__contributors* 
     float * coeffs = coefficents + widest * ( num_contributors - 1 );
 
     // go until no chance of clipping (this is usually less than 8 lops)
-    while ( ( ( contribs->n0 + widest*2 ) >= row_width ) && ( contribs >= contributors ) )
+    while ( ( contribs >= contributors ) && ( ( contribs->n0 + widest*2 ) >= row_width ) )
     {
       // might we clip??
       if ( ( contribs->n0 + widest ) > row_width )
