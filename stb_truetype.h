@@ -785,6 +785,11 @@ STBTT_DEF int  stbtt_GetFontVMetricsOS2(const stbtt_fontinfo *info, int *typoAsc
 STBTT_DEF void stbtt_GetFontBoundingBox(const stbtt_fontinfo *info, int *x0, int *y0, int *x1, int *y1);
 // the bounding box around all possible characters
 
+STBTT_DEF int stbtt_GetFontUnderlineMetrics(const stbtt_fontinfo *info, int *position, int *thickness);
+// the underline position and thickness as defined in the "post" table
+//
+// Returns 1 on success (table present), 0 on failure.
+
 STBTT_DEF void stbtt_GetCodepointHMetrics(const stbtt_fontinfo *info, int codepoint, int *advanceWidth, int *leftSideBearing);
 // leftSideBearing is the offset from the current horizontal position to the left edge of the character
 // advanceWidth is the offset from the current horizontal position to the next horizontal position
@@ -2655,6 +2660,16 @@ STBTT_DEF void stbtt_GetFontBoundingBox(const stbtt_fontinfo *info, int *x0, int
    *y0 = ttSHORT(info->data + info->head + 38);
    *x1 = ttSHORT(info->data + info->head + 40);
    *y1 = ttSHORT(info->data + info->head + 42);
+}
+
+STBTT_DEF int stbtt_GetFontUnderlineMetrics(const stbtt_fontinfo *info, int *position, int *thickness)
+{
+   int tab = stbtt__find_table(info->data, info->fontstart, "post");
+   if (!tab)
+      return 0;
+   *position = ttSHORT(info->data + tab + 8);
+   *thickness = ttSHORT(info->data + tab + 10);
+   return 1;
 }
 
 STBTT_DEF float stbtt_ScaleForPixelHeight(const stbtt_fontinfo *info, float height)
