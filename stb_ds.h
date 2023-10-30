@@ -382,6 +382,7 @@ CREDITS
     Macoy Madson
     Andreas Vennstrom
     Tobias Mansfield-Williams
+    Stephan Soller
 */
 
 #ifdef STBDS_UNIT_TESTS
@@ -545,7 +546,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrpop(a)        (stbds_header(a)->length--, (a)[stbds_header(a)->length])
 #define stbds_arraddn(a,n)     ((void)(stbds_arraddnindex(a, n)))    // deprecated, use one of the following instead:
 #define stbds_arraddnptr(a,n)  (stbds_arrmaybegrow(a,n), (n) ? (stbds_header(a)->length += (n), &(a)[stbds_header(a)->length-(n)]) : (a))
-#define stbds_arraddnindex(a,n)(stbds_arrmaybegrow(a,n), (n) ? (stbds_header(a)->length += (n), stbds_header(a)->length-(n)) : stbds_arrlen(a))
+#define stbds_arraddnindex(a,n)(stbds_arrmaybegrow(a,n), (n) ? (stbds_header(a)->length += (n), stbds_header(a)->length-(n)) : stbds_arrlenu(a))
 #define stbds_arraddnoff       stbds_arraddnindex
 #define stbds_arrlast(a)       ((a)[stbds_header(a)->length-1])
 #define stbds_arrfree(a)       ((void) ((a) ? STBDS_FREE(NULL,stbds_header(a)) : (void)0), (a)=NULL)
