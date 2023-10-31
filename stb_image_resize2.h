@@ -7636,7 +7636,12 @@ STBIRDEF int stbir_build_samplers_with_splits( STBIR_RESIZE * resize, int splits
       stbir_free_samplers( resize );
 
     resize->called_alloc = 1;
-    return stbir__perform_build( resize, splits );
+    splits = stbir__perform_build( resize, splits );
+
+    // update anything that can be changed without recalcing samplers
+    stbir__update_info_from_resize( resize->samplers, resize );
+
+    return splits;
   }
 
   STBIR_PROFILE_BUILD_CLEAR( resize->samplers );
@@ -7711,9 +7716,6 @@ STBIRDEF int stbir_resize_extended_split( STBIR_RESIZE * resize, int split_start
     
   if ( ( split_start >= resize->splits ) || ( split_start < 0 ) || ( ( split_start + split_count ) > resize->splits ) || ( split_count <= 0 ) )
     return 0;
-  
-  // update anything that can be changed without recalcing samplers
-  stbir__update_info_from_resize( resize->samplers, resize );
  
   // do resize
   return stbir__perform_resize( resize->samplers, split_start, split_count );
