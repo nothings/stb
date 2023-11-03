@@ -4652,10 +4652,10 @@ static void stbir__decode_scanline(stbir__info const * stbir_info, int n, float 
     stbir__simdf8_madd( tot0, tot0, c, d ); }               
 
 #define stbir__store_output()                     \
-    { stbir__simdf t,c;                           \
+    { stbir__simdf t,d;                           \
     stbir__simdf8_add4halves( t, stbir__if_simdf8_cast_to_simdf4(tot0), tot0 );    \
-    stbir__simdf_0123to2301( c, t );              \
-    stbir__simdf_add( t, t, c );                  \
+    stbir__simdf_0123to2301( d, t );              \
+    stbir__simdf_add( t, t, d );                  \
     stbir__simdf_store2( output, t );             \
     horizontal_coefficients += coefficient_width; \
     ++horizontal_contributors;                    \
