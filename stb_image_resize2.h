@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.02 - public domain image resizing
+/* stb_image_resize2 - v2.03 - public domain image resizing
    
    by Jeff Roberts (v2) and Jorge L Rodriguez 
    http://github.com/nothings/stb
@@ -328,16 +328,17 @@
       Nathan Reed: warning fixes for 1.0
 
    REVISIONS
-      2.00 (2022-02-20) mostly new source: new api, optimizations, simd, vertical-first, etc 
-                       (2x-5x faster without simd, 4x-12x faster with simd)
-                       (in some cases, 20x to 40x faster - resizing to very small for example)
-      0.96 (2019-03-04) fixed warnings
-      0.95 (2017-07-23) fixed warnings
-      0.94 (2017-03-18) fixed warnings
-      0.93 (2017-03-03) fixed bug with certain combinations of heights
-      0.92 (2017-01-02) fix integer overflow on large (>2GB) images
-      0.91 (2016-04-02) fix warnings; fix handling of subpixel regions
-      0.90 (2014-09-17) first released version
+      2.01-03 (2023-11-01)  ASAN and TSAN warnings fixed, minor tweaks.
+      2.00 (2023-10-10)     Mostly new source: new api, optimizations, simd, vertical-first, etc 
+                              (2x-5x faster without simd, 4x-12x faster with simd)
+                              (in some cases, 20x to 40x faster - resizing to very small for example)
+      0.96 (2019-03-04)     Fixed warnings
+      0.95 (2017-07-23)     Fixed warnings
+      0.94 (2017-03-18)     Fixed warnings
+      0.93 (2017-03-03)     Fixed bug with certain combinations of heights
+      0.92 (2017-01-02)     Fix integer overflow on large (>2GB) images
+      0.91 (2016-04-02)     Fix warnings; fix handling of subpixel regions
+      0.90 (2014-09-17)     First released version
 
    LICENSE
      See end of file for license information.
@@ -450,25 +451,33 @@ typedef uint64_t stbir_uint64;
 // for back compatibility, you can cast the old channel count to an stbir_pixel_layout
 typedef enum 
 {
-  STBIR_BGR      = 0,               // 3-chan, with order specified (for channel flipping)
   STBIR_1CHANNEL = 1,              
   STBIR_2CHANNEL = 2,
   STBIR_RGB      = 3,               // 3-chan, with order specified (for channel flipping) 
-  STBIR_RGBA     = 4,               // alpha formats, alpha is NOT premultiplied into color channels
-
+  STBIR_BGR      = 0,               // 3-chan, with order specified (for channel flipping)
   STBIR_4CHANNEL = 5,
+
+  STBIR_RGBA = 4,                   // alpha formats, where alpha is NOT premultiplied into color channels
   STBIR_BGRA = 6,
   STBIR_ARGB = 7,
   STBIR_ABGR = 8,
   STBIR_RA   = 9,
   STBIR_AR   = 10,
 
-  STBIR_RGBA_PM = 11,               // alpha formats, alpha is premultiplied into color channels
+  STBIR_RGBA_PM = 11,               // alpha formats, where alpha is premultiplied into color channels
   STBIR_BGRA_PM = 12,
   STBIR_ARGB_PM = 13,
   STBIR_ABGR_PM = 14,
   STBIR_RA_PM   = 15,
   STBIR_AR_PM   = 16,
+
+  STBIR_RGBA_NO_AW = 11,            // alpha formats, where NO alpha weighting is applied at all!
+  STBIR_BGRA_NO_AW = 12,            //   these are just synonyms for the _PM flags (which also do
+  STBIR_ARGB_NO_AW = 13,            //   no alpha weighting). These names just make it more clear
+  STBIR_ABGR_NO_AW = 14,            //   for some folks).
+  STBIR_RA_NO_AW   = 15,
+  STBIR_AR_NO_AW   = 16,
+
 } stbir_pixel_layout;
 
 //===============================================================
@@ -1170,6 +1179,10 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
 
 #ifndef STBIR_FORCE_GATHER_FILTER_SCANLINES_AMOUNT
 #define STBIR_FORCE_GATHER_FILTER_SCANLINES_AMOUNT 32 // when downsampling and <= 32 scanlines of buffering, use gather. gather used down to 1/8th scaling for 25% win.
+#endif
+
+#ifndef STBIR_FORCE_MINIMUM_SCANLINES_FOR_SPLITS 
+#define STBIR_FORCE_MINIMUM_SCANLINES_FOR_SPLITS 4 // when threading, what is the minimum number of scanlines for a split?
 #endif
 
 // restrict pointers for the output pointers
@@ -7389,7 +7402,6 @@ static void stbir__init_and_set_layout( STBIR_RESIZE * resize, stbir_pixel_layou
   resize->output_cb = 0;
   resize->user_data = resize;
   resize->samplers = 0;
-  resize->needs_rebuild = 1;
   resize->called_alloc = 0;
   resize->horizontal_filter = STBIR_FILTER_DEFAULT;
   resize->horizontal_filter_kernel = 0; resize->horizontal_filter_support = 0;
@@ -7403,6 +7415,7 @@ static void stbir__init_and_set_layout( STBIR_RESIZE * resize, stbir_pixel_layou
   resize->output_data_type = data_type;
   resize->input_pixel_layout_public = pixel_layout;
   resize->output_pixel_layout_public = pixel_layout;
+  resize->needs_rebuild = 1;
 }
 
 STBIRDEF void stbir_resize_init( STBIR_RESIZE * resize, 
@@ -7428,17 +7441,27 @@ STBIRDEF void stbir_set_datatypes( STBIR_RESIZE * resize, stbir_datatype input_t
 {
   resize->input_data_type = input_type;
   resize->output_data_type = output_type;
+  if ( ( resize->samplers ) && ( !resize->needs_rebuild ) ) 
+    stbir__update_info_from_resize( resize->samplers, resize );
 }
 
 STBIRDEF void stbir_set_pixel_callbacks( STBIR_RESIZE * resize, stbir_input_callback * input_cb, stbir_output_callback * output_cb )   // no callbacks by default
 {
   resize->input_cb = input_cb;
   resize->output_cb = output_cb;
+
+  if ( ( resize->samplers ) && ( !resize->needs_rebuild ) ) 
+  {
+    resize->samplers->in_pixels_cb = input_cb;
+    resize->samplers->out_pixels_cb = output_cb;
+  }
 }
 
 STBIRDEF void stbir_set_user_data( STBIR_RESIZE * resize, void * user_data )                                     // pass back STBIR_RESIZE* by default
 {
   resize->user_data = user_data;
+  if ( ( resize->samplers ) && ( !resize->needs_rebuild ) ) 
+    resize->samplers->user_data = user_data;
 }
 
 STBIRDEF void stbir_set_buffer_ptrs( STBIR_RESIZE * resize, const void * input_pixels, int input_stride_in_bytes, void * output_pixels, int output_stride_in_bytes )
@@ -7447,6 +7470,8 @@ STBIRDEF void stbir_set_buffer_ptrs( STBIR_RESIZE * resize, const void * input_p
   resize->input_stride_in_bytes = input_stride_in_bytes;
   resize->output_pixels = output_pixels;
   resize->output_stride_in_bytes = output_stride_in_bytes;
+  if ( ( resize->samplers ) && ( !resize->needs_rebuild ) ) 
+    stbir__update_info_from_resize( resize->samplers, resize );
 }
 
 
@@ -7593,9 +7618,9 @@ static int stbir__perform_build( STBIR_RESIZE * resize, int splits )
   stbir__get_conservative_extents( &horizontal, &conservative, resize->user_data );
   stbir__set_sampler(&vertical, resize->vertical_filter, resize->horizontal_filter_kernel, resize->vertical_filter_support, resize->vertical_edge, &vertical.scale_info, 0, resize->user_data );
 
-  if ( ( vertical.scale_info.output_sub_size / splits ) < 4 ) // each split should be a minimum of 4 scanlines (handwavey choice)
+  if ( ( vertical.scale_info.output_sub_size / splits ) < STBIR_FORCE_MINIMUM_SCANLINES_FOR_SPLITS ) // each split should be a minimum of 4 scanlines (handwavey choice)
   {
-    splits = vertical.scale_info.output_sub_size / 4;
+    splits = vertical.scale_info.output_sub_size / STBIR_FORCE_MINIMUM_SCANLINES_FOR_SPLITS;
     if ( splits == 0 ) splits = 1;
   }
 
@@ -7612,6 +7637,10 @@ static int stbir__perform_build( STBIR_RESIZE * resize, int splits )
     #ifdef STBIR_PROFILE
       STBIR_MEMCPY( &out_info->profile, &profile_infod.profile, sizeof( out_info->profile ) );
     #endif
+
+    // update anything that can be changed without recalcing samplers
+    stbir__update_info_from_resize( out_info, resize );
+ 
     return splits;
   }
 
@@ -7680,10 +7709,6 @@ STBIRDEF int stbir_resize_extended( STBIR_RESIZE * resize )
     STBIR_PROFILE_BUILD_CLEAR( resize->samplers );
   }
 
-
-  // update anything that can be changed without recalcing samplers
-  stbir__update_info_from_resize( resize->samplers, resize );
-
   // do resize
   result = stbir__perform_resize( resize->samplers, 0, resize->splits );
 
@@ -7712,9 +7737,6 @@ STBIRDEF int stbir_resize_extended_split( STBIR_RESIZE * resize, int split_start
   if ( ( split_start >= resize->splits ) || ( split_start < 0 ) || ( ( split_start + split_count ) > resize->splits ) || ( split_count <= 0 ) )
     return 0;
   
-  // update anything that can be changed without recalcing samplers
-  stbir__update_info_from_resize( resize->samplers, resize );
- 
   // do resize
   return stbir__perform_resize( resize->samplers, split_start, split_count );
 }
