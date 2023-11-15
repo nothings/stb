@@ -3,7 +3,7 @@ stb
 
 single-file public domain (or MIT licensed) libraries for C/C++
 
-# This project discusses security-relevant bugs in public in Github Issues and Pull Requests, and they make some time to be fixed. If this poses an unreasonable risk to your project, do not use stb libraries.
+# This project discusses security-relevant bugs in public in Github Issues and Pull Requests, and it may take significant time for security fixes to be implemented or merged. If this poses an unreasonable risk to your project, do not use stb libraries.
 
 Noteworthy:
 
