@@ -1554,7 +1554,7 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
 
     static __m256i stbir_00112233 = { STBIR__CONST_4d_32i( 0, 0, 1, 1 ), STBIR__CONST_4d_32i( 2, 2, 3, 3 ) };
     #define stbir__simdf8_0123to00112233( out, in ) (out) = _mm256_permutevar_ps ( in, stbir_00112233 )
-    #define stbir__simdf8_add4( out, a8, b ) (out) = _mm256_add_ps( a8,  _mm256_castps128_ps256( b ) )
+    #define stbir__simdf8_add4( out, a8, b ) (out) = _mm256_add_ps( a8, _mm256_blend_ps( _mm256_castps128_ps256( b ), _mm256_setzero_ps(), 0xf0 ) )
 
     static __m256i stbir_load6 = { STBIR__CONST_4_32i( 0x80000000 ), STBIR__CONST_4d_32i(  0x80000000,  0x80000000, 0, 0 ) };
     #define stbir__simdf8_load6z( out, ptr ) (out) = _mm256_maskload_ps( ptr, stbir_load6 )
@@ -1582,11 +1582,11 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
     #ifdef STBIR_USE_FMA           // not on by default to maintain bit identical simd to non-simd
     #define stbir__simdf8_madd( out, add, mul1, mul2 ) (out) = _mm256_fmadd_ps( mul1, mul2, add )
     #define stbir__simdf8_madd_mem( out, add, mul, ptr ) (out) = _mm256_fmadd_ps( mul, _mm256_loadu_ps( (float const*)(ptr) ), add )
-    #define stbir__simdf8_madd_mem4( out, add, mul, ptr ) (out) = _mm256_fmadd_ps( _mm256_castps128_ps256( mul ), _mm256_castps128_ps256( _mm_loadu_ps( (float const*)(ptr) ) ), add )
+    #define stbir__simdf8_madd_mem4( out, add, mul, ptr ) (out) = _mm256_fmadd_ps( _mm256_blend_ps( _mm256_castps128_ps256( mul ), _mm256_setzero_ps(), 0xf0 ), _mm256_blend_ps( _mm256_castps128_ps256( _mm_loadu_ps( (float const*)(ptr) ) ), _mm256_setzero_ps(), 0xf0 ), add )
     #else
     #define stbir__simdf8_madd( out, add, mul1, mul2 ) (out) = _mm256_add_ps( add, _mm256_mul_ps( mul1, mul2 ) )
     #define stbir__simdf8_madd_mem( out, add, mul, ptr ) (out) = _mm256_add_ps( add, _mm256_mul_ps( mul, _mm256_loadu_ps( (float const*)(ptr) ) ) )
-    #define stbir__simdf8_madd_mem4( out, add, mul, ptr ) (out) = _mm256_add_ps( add, _mm256_castps128_ps256( _mm_mul_ps( mul, _mm_loadu_ps( (float const*)(ptr) ) ) ) )
+    #define stbir__simdf8_madd_mem4( out, add, mul, ptr ) (out) = _mm256_add_ps( add, _mm256_blend_ps( _mm256_castps128_ps256( _mm_mul_ps( mul, _mm_loadu_ps( (float const*)(ptr) ) ) ), _mm256_setzero_ps(), 0xf0 ) )
     #endif
     #define stbir__if_simdf8_cast_to_simdf4( val ) _mm256_castps256_ps128( val )
 
