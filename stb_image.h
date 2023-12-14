@@ -1,4 +1,4 @@
-/* stb_image - v2.28 - public domain image loader - http://nothings.org/stb
+/* stb_image - v2.29 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 
    Do this:
@@ -48,6 +48,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.29  (2023-05-xx) optimizations
       2.28  (2023-01-29) many error fixes, security errors, just tons of stuff
       2.27  (2021-07-11) document stbi_info better, 16-bit PNM support, bug fixes
       2.26  (2020-07-13) many minor fixes
