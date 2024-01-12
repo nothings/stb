@@ -5958,7 +5958,7 @@ static void stbir__encode_scanline( stbir__info const * stbir_info, void *output
 
   // if we have an output callback, call it to send the data
   if ( stbir_info->out_pixels_cb )
-    stbir_info->out_pixels_cb( output_buffer_data, num_pixels, row, stbir_info->user_data );
+    stbir_info->out_pixels_cb( output_buffer, num_pixels, row, stbir_info->user_data );
 }
 
 
