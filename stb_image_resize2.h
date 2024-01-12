@@ -326,6 +326,7 @@
       Jorge L Rodriguez: Original 1.0 implementation
       Aras Pranckevicius: bugfixes for 1.0
       Nathan Reed: warning fixes for 1.0
+      Julien Koenen: bug fix
 
    REVISIONS
       2.04 (2023-11-17) Fix for rare AVX bug, shadowed symbol (thanks Nikola Smiljanic).
