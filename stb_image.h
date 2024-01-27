@@ -495,7 +495,7 @@ STBIDEF int      stbi_is_hdr_from_file(FILE *f);
 
 // get a VERY brief reason for failure
 // on most compilers (and ALL modern mainstream compilers) this is threadsafe
-STBIDEF stbi__failure_reason_type stbi_failure_reason  (void);
+STBIDEF stbi__failure_reason_type stbi_failure_reason (void);
 
 // free the loaded image -- this is just free()
 STBIDEF void     stbi_image_free      (void *retval_from_stbi_load);
