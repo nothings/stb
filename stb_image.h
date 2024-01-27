@@ -489,8 +489,10 @@ STBIDEF int      stbi_is_hdr_from_file(FILE *f);
 
 #ifndef STBI_NO_FAILURE_STRINGS
     #define stbi__failure_reason_type const char*
+    #define stbi__failure_reason_default_value ""
 #else
     #define stbi__failure_reason_type int
+    #define stbi__failure_reason_default_value STBI_ERROR_NONE
 #endif
 
 // get a VERY brief reason for failure
@@ -6642,7 +6644,7 @@ static int stbi__gif_header(stbi__context *s, stbi__gif *g, int *comp, int is_in
    if (version != '7' && version != '9')    return stbi__err("not GIF", "Corrupt GIF", STBI_ERROR_BAD_GIF);
    if (stbi__get8(s) != 'a')                return stbi__err("not GIF", "Corrupt GIF", STBI_ERROR_BAD_GIF);
 
-   stbi__g_failure_reason = "";
+   stbi__g_failure_reason = stbi__failure_reason_default_value;
    g->w = stbi__get16le(s);
    g->h = stbi__get16le(s);
    g->flags = stbi__get8(s);
