@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.04 - public domain image resizing
+/* stb_image_resize2 - v2.05 - public domain image resizing
 
    by Jeff Roberts (v2) and Jorge L Rodriguez
    http://github.com/nothings/stb
@@ -324,11 +324,13 @@
       Fabian Giesen: half float and srgb converters
       Sean Barrett: API design, optimizations
       Jorge L Rodriguez: Original 1.0 implementation
-      Aras Pranckevicius: bugfixes for 1.0
+      Aras Pranckevicius: bugfixes
       Nathan Reed: warning fixes for 1.0
 
    REVISIONS
-      2.04 (2023-11-17) Fix for rare AVX bug, shadowed symbol (thanks Nikola Smiljanic).
+      2.05 (2024-02-24) fix for 2 pixel to 1 pixel resizes with wrap (thanks Aras)
+                        fix for output callback (thanks Julien Koenen)
+      2.04 (2023-11-17) fix for rare AVX bug, shadowed symbol (thanks Nikola Smiljanic).
       2.03 (2023-11-01) ASAN and TSAN warnings fixed, minor tweaks.
       2.00 (2023-10-10) mostly new source: new api, optimizations, simd, vertical-first, etc
                           (2x-5x faster without simd, 4x-12x faster with simd)
@@ -5958,7 +5960,7 @@ static void stbir__encode_scanline( stbir__info const * stbir_info, void *output
 
   // if we have an output callback, call it to send the data
   if ( stbir_info->out_pixels_cb )
-    stbir_info->out_pixels_cb( output_buffer_data, num_pixels, row, stbir_info->user_data );
+    stbir_info->out_pixels_cb( output_buffer, num_pixels, row, stbir_info->user_data );
 }
 
 
@@ -6352,15 +6354,24 @@ static void stbir__set_sampler(stbir__sampler * samp, stbir_filter filter, stbir
   // pre calculate stuff based on the above
   samp->coefficient_width = stbir__get_coefficient_width(samp, samp->is_gather, user_data);
 
-  if ( edge == STBIR_EDGE_WRAP )
-    if ( samp->filter_pixel_width > ( scale_info->input_full_size * 2 ) )  // this can only happen when shrinking to a single pixel
-      samp->filter_pixel_width = scale_info->input_full_size * 2;
+  // don't double reflect on edges (happens on 2 pixel to 1 pixel output)
+  if ( samp->filter_pixel_width > ( scale_info->input_full_size * 3 ) )
+    samp->filter_pixel_width = scale_info->input_full_size * 3;
 
   // This is how much to expand buffers to account for filters seeking outside
   // the image boundaries.
   samp->filter_pixel_margin = samp->filter_pixel_width / 2;
+  
+  // again, no double reflect
+  if ( samp->filter_pixel_margin > scale_info->input_full_size )
+    samp->filter_pixel_margin = scale_info->input_full_size;
 
   samp->num_contributors = stbir__get_contributors(samp, samp->is_gather);
+
+  // again, no double reflect
+  if ( samp->num_contributors > ( scale_info->input_full_size * 3 ) )
+    samp->num_contributors = scale_info->input_full_size * 3;
+
   samp->contributors_size = samp->num_contributors * sizeof(stbir__contributors);
   samp->coefficients_size = samp->num_contributors * samp->coefficient_width * sizeof(float) + sizeof(float); // extra sizeof(float) is padding
 
