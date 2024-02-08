@@ -3202,8 +3202,8 @@ static void stbir__calculate_in_pixel_range( int * first_pixel, int * last_pixel
 
   if ( edge == STBIR_EDGE_WRAP )
   {
-    if ( first <= -input_size )
-      first = -(input_size-1);
+    if ( first < -input_size )
+      first = -input_size;
     if ( last >= (input_size*2))
       last = (input_size*2) - 1;
   }
@@ -3562,7 +3562,7 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
   filter_info->widest = widest;
 }
 
-static int stbir__pack_coefficients( int num_contributors, stbir__contributors* contributors, float * coefficents, int coefficient_width, int widest, int row_width )
+static int stbir__pack_coefficients( int num_contributors, stbir__contributors* contributors, float * coefficents, int coefficient_width, int widest, int row0, int row1 ) 
 {
   #define STBIR_MOVE_1( dest, src ) { STBIR_NO_UNROLL(dest); ((stbir_uint32*)(dest))[0] = ((stbir_uint32*)(src))[0]; }
   #define STBIR_MOVE_2( dest, src ) { STBIR_NO_UNROLL(dest); ((stbir_uint64*)(dest))[0] = ((stbir_uint64*)(src))[0]; }
@@ -3571,6 +3571,9 @@ static int stbir__pack_coefficients( int num_contributors, stbir__contributors* 
   #else
   #define STBIR_MOVE_4( dest, src ) { STBIR_NO_UNROLL(dest); ((stbir_uint64*)(dest))[0] = ((stbir_uint64*)(src))[0]; ((stbir_uint64*)(dest))[1] = ((stbir_uint64*)(src))[1]; }
   #endif
+  
+  int row_end = row1 + 1;
+
   if ( coefficient_width != widest )
   {
     float * pc = coefficents;
@@ -3712,10 +3715,10 @@ static int stbir__pack_coefficients( int num_contributors, stbir__contributors* 
     float * coeffs = coefficents + widest * ( num_contributors - 1 );
 
     // go until no chance of clipping (this is usually less than 8 lops)
-    while ( ( contribs >= contributors ) && ( ( contribs->n0 + widest*2 ) >= row_width ) )
+    while ( ( contribs >= contributors ) && ( ( contribs->n0 + widest*2 ) >= row_end ) )
     {
       // might we clip??
-      if ( ( contribs->n0 + widest ) > row_width )
+      if ( ( contribs->n0 + widest ) > row_end )
       {
         int stop_range = widest;
 
@@ -3734,15 +3737,15 @@ static int stbir__pack_coefficients( int num_contributors, stbir__contributors* 
         }
 
         // now see if we still clip with the refined range
-        if ( ( contribs->n0 + stop_range ) > row_width )
+        if ( ( contribs->n0 + stop_range ) > row_end )
         {
-          int new_n0 = row_width - stop_range;
+          int new_n0 = row_end - stop_range;
           int num = contribs->n1 - contribs->n0 + 1;
           int backup = contribs->n0 - new_n0;
           float * from_co = coeffs + num - 1;
           float * to_co = from_co + backup;
 
-          STBIR_ASSERT( ( new_n0 >= 0 ) && ( new_n0 < contribs->n0 ) );
+          STBIR_ASSERT( ( new_n0 >= row0 ) && ( new_n0 < contribs->n0 ) );
 
           // move the coeffs over
           while( num )
@@ -6354,23 +6357,30 @@ static void stbir__set_sampler(stbir__sampler * samp, stbir_filter filter, stbir
   // pre calculate stuff based on the above
   samp->coefficient_width = stbir__get_coefficient_width(samp, samp->is_gather, user_data);
 
-  // don't double reflect on edges (happens on 2 pixel to 1 pixel output)
-  if ( samp->filter_pixel_width > ( scale_info->input_full_size * 3 ) )
-    samp->filter_pixel_width = scale_info->input_full_size * 3;
+  // filter_pixel_width is the conservative size in pixels of input that affect an output pixel.
+  //   In rare cases (only with 2 pix to 1 pix with the default filters), it's possible that the 
+  //   filter will extend before or after the scanline beyond just one extra entire copy of the 
+  //   scanline (we would hit the edge twice). We don't let you do that, so we clamp the total 
+  //   width to 3x the total of input pixel (once for the scanline, once for the left side 
+  //   overhang, and once for the right side). We only do this for edge mode, since the other 
+  //   modes can just re-edge clamp back in again.
+  if ( edge == STBIR_EDGE_WRAP )
+    if ( samp->filter_pixel_width > ( scale_info->input_full_size * 3 ) )
+      samp->filter_pixel_width = scale_info->input_full_size * 3;
 
   // This is how much to expand buffers to account for filters seeking outside
   // the image boundaries.
   samp->filter_pixel_margin = samp->filter_pixel_width / 2;
   
-  // again, no double reflect
-  if ( samp->filter_pixel_margin > scale_info->input_full_size )
-    samp->filter_pixel_margin = scale_info->input_full_size;
+  // filter_pixel_margin is the amount that this filter can overhang on just one side of either 
+  //   end of the scanline (left or the right). Since we only allow you to overhang 1 scanline's 
+  //   worth of pixels, we clamp this one side of overhang to the input scanline size. Again, 
+  //   this clamping only happens in rare cases with the default filters (2 pix to 1 pix). 
+  if ( edge == STBIR_EDGE_WRAP )
+    if ( samp->filter_pixel_margin > scale_info->input_full_size )
+      samp->filter_pixel_margin = scale_info->input_full_size;
 
   samp->num_contributors = stbir__get_contributors(samp, samp->is_gather);
-
-  // again, no double reflect
-  if ( samp->num_contributors > ( scale_info->input_full_size * 3 ) )
-    samp->num_contributors = scale_info->input_full_size * 3;
 
   samp->contributors_size = samp->num_contributors * sizeof(stbir__contributors);
   samp->coefficients_size = samp->num_contributors * samp->coefficient_width * sizeof(float) + sizeof(float); // extra sizeof(float) is padding
@@ -7007,7 +7017,7 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
       stbir__get_extents( horizontal, &info->scanline_extents );
 
       // pack the horizontal coeffs
-      horizontal->coefficient_width = stbir__pack_coefficients(horizontal->num_contributors, horizontal->contributors, horizontal->coefficients, horizontal->coefficient_width, horizontal->extent_info.widest, info->scanline_extents.conservative.n1 + 1 );
+      horizontal->coefficient_width = stbir__pack_coefficients(horizontal->num_contributors, horizontal->contributors, horizontal->coefficients, horizontal->coefficient_width, horizontal->extent_info.widest, info->scanline_extents.conservative.n0, info->scanline_extents.conservative.n1 );
 
       STBIR_MEMCPY( &info->horizontal, horizontal, sizeof( stbir__sampler ) );
 
