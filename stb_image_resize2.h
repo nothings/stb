@@ -3571,9 +3571,9 @@ static int stbir__pack_coefficients( int num_contributors, stbir__contributors* 
   #else
   #define STBIR_MOVE_4( dest, src ) { STBIR_NO_UNROLL(dest); ((stbir_uint64*)(dest))[0] = ((stbir_uint64*)(src))[0]; ((stbir_uint64*)(dest))[1] = ((stbir_uint64*)(src))[1]; }
   #endif
-  STBIR__UNUSED( row0 ); // only used in an assert
 
   int row_end = row1 + 1;
+  STBIR__UNUSED( row0 ); // only used in an assert
 
   if ( coefficient_width != widest )
   {
