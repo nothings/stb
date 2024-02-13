@@ -755,8 +755,8 @@ typedef struct
    uint16 coupling_steps;
    MappingChannel *chan;
    uint8  submaps;
-   uint8  submap_floor[15]; // varies
-   uint8  submap_residue[15]; // varies
+   uint8  submap_floor[16]; // varies
+   uint8  submap_residue[16]; // varies
 } Mapping;
 
 typedef struct
