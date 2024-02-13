@@ -3395,7 +3395,7 @@ static void stbir__calculate_coefficients_for_gather_downsample( int start, int 
     }
   }
 }
-#define STBIR_RENORMALIZE_IN_FLOAT
+
 #ifdef STBIR_RENORMALIZE_IN_FLOAT
 #define STBIR_RENORM_TYPE float
 #else
