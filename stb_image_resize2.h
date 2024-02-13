@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.05 - public domain image resizing
+/* stb_image_resize2 - v2.06 - public domain image resizing
 
    by Jeff Roberts (v2) and Jorge L Rodriguez
    http://github.com/nothings/stb
@@ -328,7 +328,9 @@
       Nathan Reed: warning fixes for 1.0
 
    REVISIONS
-      2.05 (2024-02-24) fix for 2 pixel to 1 pixel resizes with wrap (thanks Aras)
+      2.06 (2024-02-10) fix for indentical width/height 3x or more down-scaling 
+                          undersampling a single row on rare resize ratios (about 1%)
+      2.05 (2024-02-07) fix for 2 pixel to 1 pixel resizes with wrap (thanks Aras)
                         fix for output callback (thanks Julien Koenen)
       2.04 (2023-11-17) fix for rare AVX bug, shadowed symbol (thanks Nikola Smiljanic).
       2.03 (2023-11-01) ASAN and TSAN warnings fixed, minor tweaks.
@@ -3394,6 +3396,12 @@ static void stbir__calculate_coefficients_for_gather_downsample( int start, int 
   }
 }
 
+#ifdef STBIR_RENORMALIZE_IN_FLOAT
+#define STBIR_RENORM_TYPE float
+#else
+#define STBIR_RENORM_TYPE double
+#endif
+
 static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter_extent_info* filter_info, stbir__scale_info * scale_info, int num_contributors, stbir__contributors* contributors, float * coefficient_group, int coefficient_width )
 {
   int input_size = scale_info->input_full_size;
@@ -3415,14 +3423,14 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
   for (n = 0; n < end; n++)
   {
     int i;
-    float filter_scale, total_filter = 0;
+    STBIR_RENORM_TYPE filter_scale, total_filter = 0;
     int e;
 
     // add all contribs
     e = contribs->n1 - contribs->n0;
     for( i = 0 ; i <= e ; i++ )
     {
-      total_filter += coeffs[i];
+      total_filter += (STBIR_RENORM_TYPE) coeffs[i];
       STBIR_ASSERT( ( coeffs[i] >= -2.0f ) && ( coeffs[i] <= 2.0f )  ); // check for wonky weights
     }
 
@@ -3438,10 +3446,11 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
       // if the total isn't 1.0, rescale everything
       if ( ( total_filter < (1.0f-stbir__small_float) ) || ( total_filter > (1.0f+stbir__small_float) ) )
       {
-        filter_scale = 1.0f / total_filter;
+        filter_scale = ((STBIR_RENORM_TYPE)1.0) / total_filter;
+
         // scale them all
         for (i = 0; i <= e; i++)
-          coeffs[i] *= filter_scale;
+          coeffs[i] = (float) ( coeffs[i] * filter_scale );
       }
     }
     ++contribs;
@@ -3561,6 +3570,8 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
   filter_info->highest = highest;
   filter_info->widest = widest;
 }
+
+#undef STBIR_RENORM_TYPE 
 
 static int stbir__pack_coefficients( int num_contributors, stbir__contributors* contributors, float * coefficents, int coefficient_width, int widest, int row0, int row1 ) 
 {
@@ -3869,26 +3880,33 @@ static void stbir__calculate_filters( stbir__sampler * samp, stbir__sampler * ot
           for (k = gn0 ; k <= gn1 ; k++ )
           {
             float gc = *g_coeffs++;
-            if ( ( k > highest_set ) || ( scatter_contributors->n0 > scatter_contributors->n1 ) )
+            
+            // skip zero and denormals - must skip zeros to avoid adding coeffs beyond scatter_coefficient_width
+            //   (which happens when pivoting from horizontal, which might have dummy zeros)
+            if ( ( ( gc >= stbir__small_float ) || ( gc <= -stbir__small_float ) ) )
             {
+              if ( ( k > highest_set ) || ( scatter_contributors->n0 > scatter_contributors->n1 ) )
               {
-                // if we are skipping over several contributors, we need to clear the skipped ones
-                stbir__contributors * clear_contributors = samp->contributors + ( highest_set + filter_pixel_margin + 1);
-                while ( clear_contributors < scatter_contributors )
                 {
-                  clear_contributors->n0 = 0;
-                  clear_contributors->n1 = -1;
-                  ++clear_contributors;
+                  // if we are skipping over several contributors, we need to clear the skipped ones
+                  stbir__contributors * clear_contributors = samp->contributors + ( highest_set + filter_pixel_margin + 1);
+                  while ( clear_contributors < scatter_contributors )
+                  {
+                    clear_contributors->n0 = 0;
+                    clear_contributors->n1 = -1;
+                    ++clear_contributors;
+                  }
                 }
+                scatter_contributors->n0 = n;
+                scatter_contributors->n1 = n;
+                scatter_coeffs[0]  = gc;
+                highest_set = k;
               }
-              scatter_contributors->n0 = n;
-              scatter_contributors->n1 = n;
-              scatter_coeffs[0]  = gc;
-              highest_set = k;
-            }
-            else
-            {
-              stbir__insert_coeff( scatter_contributors, scatter_coeffs, n, gc );
+              else
+              {
+                stbir__insert_coeff( scatter_contributors, scatter_coeffs, n, gc );
+              }
+              STBIR_ASSERT( ( scatter_contributors->n1 - scatter_contributors->n0 + 1 ) <= scatter_coefficient_width );
             }
             ++scatter_contributors;
             scatter_coeffs += scatter_coefficient_width;
