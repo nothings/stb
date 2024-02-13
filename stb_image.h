@@ -6526,6 +6526,7 @@ static void *stbi__pic_load(stbi__context *s,int *px,int *py,int *comp,int req_c
    if (!stbi__pic_load_core(s,x,y,comp, result)) {
       STBI_FREE(result);
       result=0;
+      return result;
    }
    *px = x;
    *py = y;
