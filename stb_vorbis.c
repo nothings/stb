@@ -1583,8 +1583,8 @@ static int get32_packet(vorb *f)
 {
    uint32 x;
    x = get8_packet(f);
-   x += get8_packet(f) << 8;
-   x += get8_packet(f) << 16;
+   x += (uint32) get8_packet(f) << 8;
+   x += (uint32) get8_packet(f) << 16;
    x += (uint32) get8_packet(f) << 24;
    return x;
 }
@@ -1696,7 +1696,7 @@ static int codebook_decode_scalar_raw(vorb *f, Codebook *c)
    assert(!c->sparse);
    for (i=0; i < c->entries; ++i) {
       if (c->codeword_lengths[i] == NO_CODE) continue;
-      if (c->codewords[i] == (f->acc & ((1 << c->codeword_lengths[i])-1))) {
+      if (c->codewords[i] == (f->acc & ((1U << c->codeword_lengths[i])-1))) {
          if (f->valid_bits >= c->codeword_lengths[i]) {
             f->acc >>= c->codeword_lengths[i];
             f->valid_bits -= c->codeword_lengths[i];
@@ -3058,7 +3058,7 @@ void inverse_mdct_naive(float *buffer, int n)
 
 static float *get_window(vorb *f, int len)
 {
-   len <<= 1;
+    len = (unsigned int)len << 1;
    if (len == f->blocksize_0) return f->window[0];
    if (len == f->blocksize_1) return f->window[1];
    return NULL;
