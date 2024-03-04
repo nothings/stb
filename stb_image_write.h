@@ -772,6 +772,8 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
 
 #ifdef __STDC_LIB_EXT1__
       len = sprintf_s(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
+      len = snprintf(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
 #else
       len = sprintf(buffer, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
 #endif
