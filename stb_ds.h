@@ -49,7 +49,7 @@ COMPILE-TIME OPTIONS
      By default stb_ds uses stdlib realloc() and free() for memory management. You can
      substitute your own functions instead by defining these symbols. You must either
      define both, or neither. Note that at the moment, 'context' will always be NULL.
-     @TODO add an array/hash initialization function that takes a memory context pointer.
+     @TODO add a hash initialization function that takes a memory context pointer.
 
   #define STBDS_UNIT_TESTS
 
@@ -77,6 +77,10 @@ DOCUMENTATION
         foo[i]
 
     Functions (actually macros)
+
+      arrinit:
+        void arrinit(T*, void* context, size_t capacity);
+          Initialize array with memory context and capacity
 
       arrfree:
         void arrfree(T*);
@@ -371,6 +375,7 @@ CREDITS
   Per Vognsen  -- idea for hash table API/implementation
   Rafael Sachetto -- arrpop()
   github:HeroicKatora -- arraddn() reworking
+  github:hugoArregui -- arrinit()
 
   Bugfixes:
     Andy Durdin
@@ -395,6 +400,7 @@ CREDITS
 #include <string.h>
 
 #ifndef STBDS_NO_SHORT_NAMES
+#define arrinit     stbds_arrinit
 #define arrlen      stbds_arrlen
 #define arrlenu     stbds_arrlenu
 #define arrput      stbds_arrput
@@ -491,6 +497,7 @@ extern void stbds_unit_tests(void);
 // Everything below here is implementation details
 //
 
+extern void * stbds_arrgrowf_ctx(void* ctx, void *a, size_t elemsize, size_t addlen, size_t min_cap);
 extern void * stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap);
 extern void   stbds_arrfreef(void *a);
 extern void   stbds_hmfree_func(void *p, size_t elemsize);
@@ -540,6 +547,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arrcap(a)        ((a) ? stbds_header(a)->capacity : 0)
 #define stbds_arrlen(a)        ((a) ? (ptrdiff_t) stbds_header(a)->length : 0)
 #define stbds_arrlenu(a)       ((a) ?             stbds_header(a)->length : 0)
+#define stbds_arrinit(a, ctx, c) ((a) = stbds_arrgrowf_ctx_wrapper(ctx, a, sizeof *(a), 0, (c)))
 #define stbds_arrput(a,v)      (stbds_arrmaybegrow(a,1), (a)[stbds_header(a)->length++] = (v))
 #define stbds_arrpush          stbds_arrput  // synonym
 #define stbds_arrpop(a)        (stbds_header(a)->length--, (a)[stbds_header(a)->length])
@@ -660,6 +668,7 @@ typedef struct
   size_t      capacity;
   void      * hash_table;
   ptrdiff_t   temp;
+  void        *context;
 } stbds_array_header;
 
 typedef struct stbds_string_block
@@ -693,6 +702,9 @@ enum
 template<class T> static T * stbds_arrgrowf_wrapper(T *a, size_t elemsize, size_t addlen, size_t min_cap) {
   return (T*)stbds_arrgrowf((void *)a, elemsize, addlen, min_cap);
 }
+template<class T> static T * stbds_arrgrowf_ctx_wrapper(void* ctx, T *a, size_t elemsize, size_t addlen, size_t min_cap) {
+  return (T*)stbds_arrgrowf_ctx(ctx, (void *)a, elemsize, addlen, min_cap);
+}
 template<class T> static T * stbds_hmget_key_wrapper(T *a, size_t elemsize, void *key, size_t keysize, int mode) {
   return (T*)stbds_hmget_key((void*)a, elemsize, key, keysize, mode);
 }
@@ -712,6 +724,7 @@ template<class T> static T * stbds_shmode_func_wrapper(T *, size_t elemsize, int
   return (T*)stbds_shmode_func(elemsize, mode);
 }
 #else
+#define stbds_arrgrowf_ctx_wrapper        stbds_arrgrowf_ctx
 #define stbds_arrgrowf_wrapper            stbds_arrgrowf
 #define stbds_hmget_key_wrapper           stbds_hmget_key
 #define stbds_hmget_key_ts_wrapper        stbds_hmget_key_ts
@@ -758,8 +771,7 @@ size_t stbds_rehash_items;
 
 //int *prev_allocs[65536];
 //int num_prev;
-
-void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
+void *stbds_arrgrowf_ctx(void* ctx, void *a, size_t elemsize, size_t addlen, size_t min_cap)
 {
   stbds_array_header temp={0}; // force debugging
   void *b;
@@ -782,19 +794,25 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
   //if (num_prev < 65536) if (a) prev_allocs[num_prev++] = (int *) ((char *) a+1);
   //if (num_prev == 2201)
   //  num_prev = num_prev;
-  b = STBDS_REALLOC(NULL, (a) ? stbds_header(a) : 0, elemsize * min_cap + sizeof(stbds_array_header));
+  b = STBDS_REALLOC(ctx, (a) ? stbds_header(a) : 0, elemsize * min_cap + sizeof(stbds_array_header));
   //if (num_prev < 65536) prev_allocs[num_prev++] = (int *) (char *) b;
   b = (char *) b + sizeof(stbds_array_header);
   if (a == NULL) {
     stbds_header(b)->length = 0;
     stbds_header(b)->hash_table = 0;
     stbds_header(b)->temp = 0;
+    stbds_header(b)->context = ctx;
   } else {
     STBDS_STATS(++stbds_array_grow);
   }
   stbds_header(b)->capacity = min_cap;
 
   return b;
+}
+
+void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
+{
+  return stbds_arrgrowf_ctx((a) ? stbds_header(a)->context : 0, a, elemsize, addlen, min_cap);
 }
 
 void stbds_arrfreef(void *a)
