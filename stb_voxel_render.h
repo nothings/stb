@@ -3126,15 +3126,17 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       stbvox_mesh_vertex vmesh[6][4];
       stbvox_rotate rotate = { 0,0,0,0 };
       unsigned char simple_rot = rot;
-      int i;
+      int i, j;
       // we only need to do this for the displayed faces, but it's easier
       // to just do it up front; @OPTIMIZE check if it's faster to do it
       // for visible faces only
-      for (i=0; i < 6*4; ++i) {
-         int vert = stbvox_vertex_selector[0][i];
-         vert = stbvox_rotate_vertex[vert][rot];
-         vmesh[0][i] = stbvox_vmesh_pre_vheight[0][i]
-                     + stbvox_geometry_vheight[geo][vert];
+      for (i=0; i < 6; ++i) {
+         for (j=0; j < 4; ++j) {
+            int vert = stbvox_vertex_selector[i][j];
+            vert = stbvox_rotate_vertex[vert][rot];
+            vmesh[i][j] = stbvox_vmesh_pre_vheight[i][j]
+                        + stbvox_geometry_vheight[geo][vert];
+         }
       }
 
       basevert = stbvox_vertex_encode(pos.x, pos.y, pos.z << STBVOX_CONFIG_PRECISION_Z, 0,0);
@@ -3275,11 +3277,13 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
 
       // build vertex mesh
       {
-         int i;
-         for (i=0; i < 6*4; ++i) {
-            int vert = stbvox_vertex_selector[0][i];
-            vmesh[0][i] = stbvox_vmesh_pre_vheight[0][i]
-                        + cube[vert];
+         int i, j;
+         for (i=0; i < 6; ++i) {
+            for (j=0; j < 4; ++j) {
+               int vert = stbvox_vertex_selector[i][j];
+               vmesh[i][j] = stbvox_vmesh_pre_vheight[i][j]
+                           + cube[vert];
+            }
          }
       }
 
@@ -3541,10 +3545,12 @@ int stbvox_get_buffer_size_per_quad(stbvox_mesh_maker *mm, int n)
 
 void stbvox_reset_buffers(stbvox_mesh_maker *mm)
 {
-   int i;
-   for (i=0; i < STBVOX_MAX_MESHES*STBVOX_MAX_MESH_SLOTS; ++i) {
-      mm->output_cur[0][i] = 0;
-      mm->output_buffer[0][i] = 0;
+   int i, j;
+   for (i=0; i < STBVOX_MAX_MESHES; ++i) {
+      for (j=0; j < STBVOX_MAX_MESH_SLOTS; ++j) {
+         mm->output_cur[i][j] = 0;
+         mm->output_buffer[i][j] = 0;
+      }
    }
 }
 
