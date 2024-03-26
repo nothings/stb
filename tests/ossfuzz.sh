@@ -10,6 +10,30 @@ $CXX $CXXFLAGS -std=c++11 -I. \
     $SRC/stb/tests/stbi_read_fuzzer.c \
     -o $OUT/stbi_read_fuzzer $LIB_FUZZING_ENGINE
 
+$CXX $CXXFLAGS -std=c++11 -I. -DSTB_IMAGE_IMPLEMENTATION  \
+    $SRC/stb/tests/stbi_gif_read_fuzzer.c \
+    -o $OUT/stb_gif_read_fuzzer $LIB_FUZZING_ENGINE
+
+$CXX $CXXFLAGS -std=c++11 -I. -DSTB_IMAGE_IMPLEMENTATION  \
+    $SRC/stb/tests/stbi_bmp_read_fuzzer.c \
+    -o $OUT/stb_bmp_read_fuzzer $LIB_FUZZING_ENGINE
+
+$CXX $CXXFLAGS -std=c++11 -I. -DSTB_IMAGE_IMPLEMENTATION  \
+    $SRC/stb/tests/stbi_jpeg_read_fuzzer.c \
+    -o $OUT/stb_jpeg_read_fuzzer $LIB_FUZZING_ENGINE
+
+$CXX $CXXFLAGS -std=c++11 -I. -DSTB_IMAGE_IMPLEMENTATION  \
+    $SRC/stb/tests/stbi_pic_read_fuzzer.c \
+    -o $OUT/stb_pic_read_fuzzer $LIB_FUZZING_ENGINE
+
+$CXX $CXXFLAGS -std=c++11 -I. -DSTB_IMAGE_IMPLEMENTATION  \
+    $SRC/stb/tests/stbi_psd_read_fuzzer.c \
+    -o $OUT/stb_psd_read_fuzzer $LIB_FUZZING_ENGINE
+
+$CXX $CXXFLAGS -std=c++11 -I. -DSTB_IMAGE_IMPLEMENTATION  \
+    $SRC/stb/tests/stbi_extended_read_fuzzer.c \
+    -o $OUT/stb_extended_read_fuzzer $LIB_FUZZING_ENGINE
+
 find $SRC/stb/tests/pngsuite -name "*.png" | \
      xargs zip $OUT/stb_png_read_fuzzer_seed_corpus.zip
 
