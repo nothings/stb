@@ -3,6 +3,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+#define STBI_LSX 1
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
