@@ -2071,7 +2071,215 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
   }
 
   #define STBIR_SIMD
+#elif defined(STBIR_LSX)
+  #include <lsxintrin.h>
 
+  #define stbir__simdf __m128
+  #define stbir__simdi __m128i
+
+  typedef union
+  {
+    int32_t i;
+    float f;
+  } FloatInt;
+static __m128 __lsx_vreplfr2vr_s(float val)
+{
+    FloatInt fi_tmpval = {.f = val};
+    return (__m128)__lsx_vreplgr2vr_w(fi_tmpval.i);
+}
+  #define stbir_simdi_castf( reg ) (__m128i)(reg)
+  #define stbir_simdf_casti( reg ) (__m128)(reg)
+
+  #define stbir__simdf_load( reg, ptr ) (reg) = ( (__m128)__lsx_vld( (float const*)(ptr), 0 ) )
+  #define stbir__simdi_load( reg, ptr ) (reg) = __lsx_vld( (stbir__simdi const*)(ptr), 0 )
+  #define stbir__simdf_load1( out, ptr ) (out) = (__m128)__lsx_vreplfr2vr_s( *((float const*)(ptr)) )
+  #define stbir__simdi_load1( out, ptr ) (out) = ( (__m128i) __lsx_vreplgr2vr_s( *((uint32_t const*)(ptr)) ) )
+  #define stbir__simdf_load1z( out, ptr ) (out) = (__m128)__lsx_vinsgr2vr_w(__lsx_vldi(0), *((uint32_t *)(ptr)), 0) // top values must be zero
+  #define stbir__simdf_frep4( fvar ) (__m128)__lsx_vreplfr2vr_s( (fvar) )
+  #define stbir__simdf_load1frep4( out, fvar ) (out) = (__m128)__lsx_vreplfr2vr_s( fvar )
+  #define stbir__simdf_load2( out, ptr ) (out) =  (__m128)__lsx_vreplgr2vr_d( *(uint64_t*)(ptr)) // top values can be random (not denormal or nan for perf)
+  #define stbir__simdf_load2z( out, ptr ) (out) = (__m128)__lsx_vinsgr2vr_d(__lsx_vldi(0), *(uint64_t*)(ptr), 0) // top values must be zero
+  #define stbir__simdf_load2hmerge( out, reg, ptr ) (out) = (__m128)__lsx_vinsgr2vr_d(reg, *(uint64_t*)(ptr), 1)
+
+  #define stbir__simdf_zeroP() (__m128)__lsx_vldi(0)
+  #define stbir__simdf_zero( reg ) (reg) = (__m128)__lsx_vldi(0)
+
+  #define stbir__simdf_store( ptr, reg )  __lsx_vst((__m128i)(reg), (ptr), 0)
+  #define stbir__simdf_store1( ptr, reg ) __lsx_vstelm_w((__m128i)(reg), (ptr), 0, 0)
+  #define stbir__simdf_store2( ptr, reg ) __lsx_vstelm_d((__m128i)(reg), (ptr), 0, 0)
+  #define stbir__simdf_store2h( ptr, reg ) __lsx_vstelm_d((__m128i)(reg), (ptr), 0, 1)
+
+  #define stbir__simdi_store( ptr, reg )  __lsx_vst((__m128i)(reg), (ptr), 0)
+  #define stbir__simdi_store1( ptr, reg ) __lsx_vstelm_w((__m128i)(reg), (ptr), 0, 0)
+  #define stbir__simdi_store2( ptr, reg ) __lsx_vstelm_d((__m128i)(reg), (ptr), 0, 0)
+
+  #define stbir__prefetch( ptr ) __builtin_prefetch((char*)ptr, 0, 3)
+
+  #define stbir__simdi_expand_u8_to_u32(out0,out1,out2,out3,ireg) \
+  { \
+    stbir__simdi zero = __lsx_vldi(0); \
+    out2 = __lsx_vilvl_b(zero, ireg); \
+    out3 = __lsx_vilvh_b(zero, ireg); \
+    out0 = __lsx_vilvl_h(zero, out2); \
+    out1 = __lsx_vilvh_h(zero, out2); \
+    out2 = __lsx_vilvl_h(zero, out3); \
+    out3 = __lsx_vilvh_h(zero, out3); \
+  }
+
+#define stbir__simdi_expand_u8_to_1u32(out,ireg) \
+  { \
+    stbir__simdi zero = __lsx_vldi(0); \
+    out = __lsx_vilvl_b( zero, ireg ); \
+    out = __lsx_vilvl_h( zero, out ); \
+  }
+
+  #define stbir__simdi_expand_u16_to_u32(out0,out1,ireg) \
+  { \
+    stbir__simdi zero = __lsx_vldi(0); \
+    out0 = __lsx_vilvl_h( zero, ireg ); \
+    out1 = __lsx_vilvh_h( zero, ireg ); \
+  }
+
+  #define stbir__simdf_convert_float_to_i32( i, f ) (i) = __lsx_vftintrz_w_s(f)
+  #define stbir__simdf_convert_float_to_int( f ) __lsx_pickve2gr_w(__lsx_vftintrz_w_s(f), 0)
+  #define stbir__simdf_convert_float_to_uint8( f ) ((unsigned char)__lsx_vpickve2gr_w(__lsx_vftintrz_w_s(__lsx_vfmax_s(__lsx_vfmin_s(f,STBIR__CONSTF(STBIR_max_uint8_as_float)),(stbir__simdf)__lsx_vldi(0))), 0))
+  #define stbir__simdf_convert_float_to_short( f ) ((unsigned short)__lsx_vpickve2gr_w(__lsx_vftintrz_w_s(__lsx_vfmax_s(__lsx_vfmin_s(f,STBIR__CONSTF(STBIR_max_uint16_as_float)),(stbir__simdf)__lsx_vldi(0))), 0))
+
+  #define stbir__simdi_to_int( i ) __lsx_vpickve2gr_w(i, 0)
+  #define stbir__simdi_convert_i32_to_float(out, ireg) (out) = __lsx_vffint_s_w( ireg )
+  #define stbir__simdf_add( out, reg0, reg1 ) (out) = __lsx_vfadd_s( reg0, reg1 )
+  #define stbir__simdf_mult( out, reg0, reg1 ) (out) = __lsx_vfmul_s( reg0, reg1 )
+  #define stbir__simdf_mult_mem( out, reg, ptr ) (out) = __lsx_vfmul_s( reg, (stbir__simdf)__lsx_vld( (ptr), 0 ) )
+  #define stbir__simdf_mult1_mem( out, reg, ptr ) (out) = (__m128)__lsx_vextrins_w((stbir__simdi)(reg), (__m128i)__lsx_vfmul_s( reg, (__m128)__lsx_vldrepl_w( (ptr), 0 ) ), 0)
+  #define stbir__simdf_add_mem( out, reg, ptr ) (out) = __lsx_vfadd_s( reg, (stbir__simdf)__lsx_vld( (ptr), 0 ) )
+  #define stbir__simdf_add1_mem( out, reg, ptr ) (out) = (__m128)__lsx_vextrins_w((stbir__simdi)(reg), (stbir__simdi)__lsx_vfadd_s( (reg), (stbir__simdf)__lsx_vldrepl_w( (ptr), 0 ) ), 0)
+
+  #define stbir__simdf_madd( out, add, mul1, mul2 ) (out) = __lsx_vfadd_s(__lsx_vfmul_s(mul1, mul2), add)
+  #define stbir__simdf_madd1( out, add, mul1, mul2 ) (out) = (stbir__simdf)__lsx_vextrins_w((stbir__simdi)add, (stbir__simdi)__lsx_vfadd_s(__lsx_vfmul_s(mul1, mul2), add), 0)
+  #define stbir__simdf_madd_mem( out, add, mul, ptr ) (out) = __lsx_vfadd_s(__lsx_vfmul_s(mul, (stbir__simdf)__lsx_vld((ptr), 0)), add)
+  #define stbir__simdf_madd1_mem( out, add, mul, ptr ) (out) = (stbir__simdf)__lsx_vextrins_w((stbir__simdi)add, (stbir__simdi)__lsx_vfadd_s(__lsx_vfmul_s(mul, (stbir__simdf)__lsx_vldrepl_w((ptr), 0)), add), 0)
+  
+  #define stbir__simdf_add1( out, reg0, reg1 ) (out) = (stbir__simdf)__lsx_vextrins_w((stbir__simdi)reg0, (stbir__simdi)__lsx_vfadd_s( reg0, reg1 ), 0)
+  #define stbir__simdf_mult1( out, reg0, reg1 ) (out) = (stbir__simdf)__lsx_vextrins_w((stbir__simdi)reg0, (stbir__simdi)__lsx_vfmul_s( reg0, reg1 ), 0)
+
+  #define stbir__simdf_and( out, reg0, reg1 ) (out) = (__m128)__lsx_vand_v( (__m128i)reg0, (__m128i)reg1 )
+  #define stbir__simdf_or( out, reg0, reg1 ) (out) = (__m128)__lsx_vor_v( (__m128i)reg0, (__m128i)reg1 )
+
+  #define stbir__simdf_min( out, reg0, reg1 ) (out) = __lsx_vfmin_s( reg0, reg1 )
+  #define stbir__simdf_max( out, reg0, reg1 ) (out) = __lsx_vfmax_s( reg0, reg1 )
+  #define stbir__simdf_min1( out, reg0, reg1 ) (out) = (stbir__simdf)__lsx_vextrins_w((__m128i)reg0, (__m128i)__lsx_vfmin_s( reg0, reg1 ), 0)
+  #define stbir__simdf_max1( out, reg0, reg1 ) (out) = (stbir__simdf)__lsx_vextrins_w((__m128i)reg0, (__m128i)__lsx_vfmax_s( reg0, reg1 ), 0)
+
+  #define stbir__simdf_0123ABCDto3ABx( out, reg0, reg1 ) (out)=(stbir__simdf)( __lsx_vshuf4i_w( __lsx_vpermi_w( (stbir__simdi)reg0, (stbir__simdi)reg1, (0<<0) + (1<<2) + (2<<4) + (3<<6) ), (3<<0) + (0<<2) + (1<<4) + (2<<6) ) )
+  #define stbir__simdf_0123ABCDto23Ax( out, reg0, reg1 ) (out)=(stbir__simdf)( __lsx_vshuf4i_w( __lsx_vpermi_w( (stbir__simdi)reg0, (stbir__simdi)reg1, (0<<0) + (1<<2) + (2<<4) + (3<<6) ), (2<<0) + (3<<2) + (0<<4) + (1<<6) ) )
+
+  static const stbir__simdf STBIR_zeroones = { 0.0f,1.0f,0.0f,1.0f };
+  static const stbir__simdf STBIR_onezeros = { 1.0f,0.0f,1.0f,0.0f };
+  #define stbir__simdf_aaa1( out, alp, ones ) (out) = (stbir__simdf)__lsx_vshuf4i_w( __lsx_vilvh_d( (stbir__simdi)ones, (stbir__simdi)alp ), (1<<0) + (1<<2) + (1<<4) + (2<<6) )
+  #define stbir__simdf_1aaa( out, alp, ones ) (out) = (stbir__simdf)__lsx_vshuf4i_w( __lsx_vilvl_d( (stbir__simdi)alp, (stbir__simdi)ones ), (0<<0) + (2<<2) + (2<<4) + (2<<6) )
+  #define stbir__simdf_a1a1( out, alp, ones) (out) = (stbir__simdf)__lsx_vor_v( ( __lsx_vslli_d( (stbir__simdi)(alp), 32 ) ), (__m128i)STBIR_zeroones )
+  #define stbir__simdf_1a1a( out, alp, ones) (out) = (stbir__simdf)__lsx_vor_v( ( __lsx_vslli_d( (stbir__simdi)(alp), 32 ) ), (__m128i)STBIR_onezeros )
+
+  #define stbir__simdf_swiz( reg, one, two, three, four ) (stbir__simdf)( __lsx_vshuf4i_w( (stbir__simdi)( reg ), (one<<0) + (two<<2) + (three<<4) + (four<<6) ) )
+
+  #define stbir__simdi_and( out, reg0, reg1 ) (out) = __lsx_vand_v( reg0, reg1 )
+  #define stbir__simdi_or( out, reg0, reg1 ) (out) = __lsx_vor_v( reg0, reg1 )
+  #define stbir__simdi_16madd( out, reg0, reg1 ) (out) = __lsx_vadd_w(__lsx_vmulwev_w_h(reg0, reg1), __lsx_vmulwod_w_h(reg0, reg1));
+  
+  #define stbir__simdf_pack_to_8bytes(out,aa,bb) \
+  { \
+    stbir__simdf af,bf; \
+    stbir__simdi a,b; \
+    af = __lsx_vfmin_s( aa, STBIR_max_uint8_as_float ); \
+    bf = __lsx_vfmin_s( bb, STBIR_max_uint8_as_float ); \
+    af = __lsx_vfmax_s( af, (__m128)__lsx_vldi(0) ); \
+    bf = __lsx_vfmax_s( bf, (__m128)__lsx_vldi(0) ); \
+    a = __lsx_vftintrz_w_s( af ); \
+    b = __lsx_vftintrz_w_s( bf ); \
+    a = __lsx_vpickev_h( __lsx_vsat_w(b, 15), __lsx_vsat_w(a, 15) ); \
+    out = __lsx_vpickev_b( __lsx_vsat_hu( __lsx_vmax_h(__lsx_vldi(0), a), 7), __lsx_vsat_hu( __lsx_vmax_h(__lsx_vldi(0), a),7) ); \
+  }
+
+  #define stbir__simdf_load4_transposed( o0, o1, o2, o3, ptr ) \
+      stbir__simdf_load( o0, (ptr) );    \
+      stbir__simdf_load( o1, (ptr)+4 );  \
+      stbir__simdf_load( o2, (ptr)+8 );  \
+      stbir__simdf_load( o3, (ptr)+12 ); \
+      {                                  \
+        __m128 tmp0, tmp1, tmp2, tmp3;   \
+        tmp0 = (__m128)__lsx_vilvl_w((__m128i)o1, (__m128i)o0);  \
+        tmp2 = (__m128)__lsx_vilvl_w((__m128i)o3, (__m128i)o2);  \
+        tmp1 = (__m128)__lsx_vilvh_w((__m128i)o1, (__m128i)o0);  \
+        tmp3 = (__m128)__lsx_vilvh_w((__m128i)o3, (__m128i)o2);  \
+        o0 = (__m128)__lsx_vilvl_d((__m128i)tmp2, (__m128i)tmp0);  \
+        o1 = (__m128)__lsx_vilvh_d((__m128i)tmp2, (__m128i)tmp0);  \
+        o2 = (__m128)__lsx_vilvl_d((__m128i)tmp3, (__m128i)tmp1);  \
+        o3 = (__m128)__lsx_vilvh_d((__m128i)tmp3, (__m128i)tmp1);  \
+      }
+
+  #define stbir__interleave_pack_and_store_16_u8( ptr, r0, r1, r2, r3 ) \
+      r0 = __lsx_vpickev_h( __lsx_vsat_w(r1, 15), __lsx_vsat_w(r0, 15) ); \
+      r2 = __lsx_vpickev_h( __lsx_vsat_w(r3, 15), __lsx_vsat_w(r2, 15) ); \
+      r1 = __lsx_vilvl_h( r2, r0 ); \
+      r3 = __lsx_vilvh_h( r2, r0 ); \
+      r0 = __lsx_vilvl_h( r3, r1 ); \
+      r2 = __lsx_vilvh_h( r3, r1 ); \
+      r0 = __lsx_vpickev_b( __lsx_vsat_hu( __lsx_vmax_h(__lsx_vldi(0), r2), 7), __lsx_vsat_hu( __lsx_vmax_h(__lsx_vldi(0), r0),7) ); \
+      stbir__simdi_store( ptr, r0 ); \
+  
+  #define stbir__simdi_32shr( out, reg, imm ) out = __lsx_vsrli_w( (__m128i)reg, imm )
+
+  #define STBIR__CONST_4_32i( v ) (long long)((((stbir_uint64)(stbir_uint32)(v))<<32)|((stbir_uint64)(stbir_uint32)(v))),(long long)((((stbir_uint64)(stbir_uint32)(v))<<32)|((stbir_uint64)(stbir_uint32)(v)))
+  #define STBIR__CONST_4d_32i( v0, v1, v2, v3 ) (long long)((((stbir_uint64)(stbir_uint32)(v1))<<32)|((stbir_uint64)(stbir_uint32)(v0))),(long long)((((stbir_uint64)(stbir_uint32)(v3))<<32)|((stbir_uint64)(stbir_uint32)(v2)))
+
+  #define STBIR__SIMDF_CONST(var, x) stbir__simdf var = { x, x, x, x }
+  #define STBIR__SIMDI_CONST(var, x) stbir__simdi var = { STBIR__CONST_4_32i(x) }
+  #define STBIR__CONSTF(var) (var)
+  #define STBIR__CONSTI(var) (var)
+
+  STBIR__SIMDI_CONST(stbir__s32_32768, 32768);
+  STBIR__SIMDI_CONST(stbir__s16_32768, ((32768<<16)|32768));
+  
+  #define stbir__simdf_pack_to_8words(out,reg0,reg1) \
+      { \
+      stbir__simdi tmp0,tmp1; \
+      tmp0 = __lsx_vftintrz_w_s(__lsx_vfmax_s(__lsx_vfmin_s(reg0,STBIR__CONSTF(STBIR_max_uint16_as_float)),(stbir__simdf)__lsx_vldi(0))); \
+      tmp1 = __lsx_vftintrz_w_s(__lsx_vfmax_s(__lsx_vfmin_s(reg1,STBIR__CONSTF(STBIR_max_uint16_as_float)),(stbir__simdf)__lsx_vldi(0))); \
+      tmp0 = __lsx_vsub_w( tmp0, stbir__s32_32768 ); \
+      tmp1 = __lsx_vsub_w( tmp1, stbir__s32_32768 ); \
+      out = __lsx_vpickev_h( __lsx_vsat_w(tmp1, 15), __lsx_vsat_w(tmp0, 15) ); \
+      out = __lsx_vsub_h( out, stbir__s16_32768 ); \
+      }
+
+  #define STBIR_SIMD
+
+  #ifdef STBIR_FLOORF
+  #undef STBIR_FLOORF
+  #endif
+  #define STBIR_FLOORF stbir_simd_floorf
+  static stbir__inline float stbir_simd_floorf(float x)  // martins floorf
+  {
+    FloatInt fi;
+    __m128 f = __lsx_vreplfr2vr_s(x);
+    __m128 t = __lsx_vfrintrz_s(f);
+    __m128 r = __lsx_vfadd_s(t, (__m128)__lsx_vand_v((__m128i)__lsx_vfcmp_clt_s(f, t), (__m128i)__lsx_vreplfr2vr_s(-1.0f)));
+    fi.i = __lsx_vpickve2gr_w((__m128i)r, 0);
+    return fi.f;
+  }
+
+  #ifdef STBIR_CEILF
+  #undef STBIR_CEILF
+  #endif
+  #define STBIR_CEILF stbir_simd_ceilf
+  static stbir__inline float stbir_simd_ceilf(float x)  // martins ceilf
+  {
+    FloatInt fi;
+    __m128 f = __lsx_vreplfr2vr_s(x);
+    __m128 t = __lsx_vfrintrz_s(f);
+    __m128 r = __lsx_vfadd_s(t, (__m128)__lsx_vand_v((__m128i)__lsx_vfcmp_clt_s(t, f), (__m128i)__lsx_vreplfr2vr_s(1.0f)));
+    fi.i = __lsx_vpickve2gr_w((__m128i)r, 0);
+    return fi.f;
+  }
 #endif  // SSE2/NEON/WASM
 
 #endif // NO SIMD
@@ -2457,7 +2665,142 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
   {
     return vget_lane_f16(vcvt_f16_f32(vdupq_n_f32(f)), 0);
   }
+#elif defined(STBIR_LSX)
 
+  // Fabian's half float routines, see: https://gist.github.com/rygorous/2156668
+  stbir__inline static void stbir__half_to_float_SIMD(float * output, void const * input)
+  {
+    static const STBIR__SIMDI_CONST(mask_nosign,      0x7fff);
+    static const STBIR__SIMDI_CONST(smallest_normal,  0x0400);
+    static const STBIR__SIMDI_CONST(infinity,         0x7c00);
+    static const STBIR__SIMDI_CONST(expadjust_normal, (127 - 15) << 23);
+    static const STBIR__SIMDI_CONST(magic_denorm,     113 << 23);
+
+    __m128i i = __lsx_vld ( (__m128i const*)(input), 0 );
+    __m128i h = __lsx_vilvl_h ( __lsx_vldi(0), i );
+    __m128i mnosign     = STBIR__CONSTI(mask_nosign);
+    __m128i eadjust     = STBIR__CONSTI(expadjust_normal);
+    __m128i smallest    = STBIR__CONSTI(smallest_normal);
+    __m128i infty       = STBIR__CONSTI(infinity);
+    __m128i expmant     = __lsx_vand_v(mnosign, h);
+    __m128i justsign    = __lsx_vxor_v(h, expmant);
+    __m128i b_notinfnan = __lsx_vsle_w( expmant, infty );
+    __m128i b_isdenorm  = __lsx_vsle_w( expmant, smallest );
+    __m128i shifted     = __lsx_vslli_w(expmant, 13);
+    __m128i adj_infnan  = __lsx_vandn_v(b_notinfnan, eadjust);
+    __m128i adjusted    = __lsx_vadd_w(eadjust, shifted);
+    __m128i den1        = __lsx_vadd_w(shifted, STBIR__CONSTI(magic_denorm));
+    __m128i adjusted2   = __lsx_vadd_w(adjusted, adj_infnan);
+    __m128  den2        = __lsx_vfsub_s((__m128)(den1), *(const __m128 *)&magic_denorm);
+    __m128  adjusted3   = (__m128)__lsx_vand_v((__m128i)den2, (__m128i)(b_isdenorm));
+    __m128  adjusted4   = (__m128)__lsx_vandn_v((__m128i)b_isdenorm, (__m128i)adjusted2);
+    __m128  adjusted5   = (__m128)__lsx_vor_v((__m128i)adjusted3, (__m128i)adjusted4);
+    __m128i sign        = __lsx_vslli_w(justsign, 16);
+    __m128  final       = (__m128)__lsx_vor_v((__m128i)adjusted5, sign);
+    stbir__simdf_store( output + 0,  final );
+
+    h = __lsx_vilvh_h ( __lsx_vldi(0), i );
+    expmant     = __lsx_vand_v(mnosign, h);
+    justsign    = __lsx_vxor_v(h, expmant);
+    b_notinfnan = __lsx_vsle_w( expmant, infty );
+    b_isdenorm  = __lsx_vsle_w( expmant, smallest );
+    shifted     = __lsx_vslli_w(expmant, 13);
+    adj_infnan  = __lsx_vandn_v(b_notinfnan, eadjust);
+    adjusted    = __lsx_vadd_w(eadjust, shifted);
+    den1        = __lsx_vadd_w(shifted, STBIR__CONSTI(magic_denorm));
+    adjusted2   = __lsx_vadd_w(adjusted, adj_infnan);
+    den2        = __lsx_vfsub_s((__m128)(den1), *(const __m128 *)&magic_denorm);
+    adjusted3   = (__m128)__lsx_vand_v((__m128i)den2, (__m128i)(b_isdenorm));
+    adjusted4   = (__m128)__lsx_vandn_v((__m128i)b_isdenorm, (__m128i)adjusted2);
+    adjusted5   = (__m128)__lsx_vor_v((__m128i)adjusted3, (__m128i)adjusted4);
+    sign        = __lsx_vslli_w(justsign, 16);
+    final       = (__m128)__lsx_vor_v((__m128i)adjusted5, (__m128i)sign);
+    stbir__simdf_store( output + 4,  final );
+
+    // ~38 SSE2 ops for 8 values
+  }
+
+  // Fabian's round-to-nearest-even float to half
+  // ~48 SSE2 ops for 8 output
+  stbir__inline static void stbir__float_to_half_SIMD(void * output, float const * input)
+  {
+    static const STBIR__SIMDI_CONST(mask_sign,      0x80000000u);
+    static const STBIR__SIMDI_CONST(c_f16max,       (127 + 16) << 23); // all FP32 values >=this round to +inf
+    static const STBIR__SIMDI_CONST(c_nanbit,        0x200);
+    static const STBIR__SIMDI_CONST(c_infty_as_fp16, 0x7c00);
+    static const STBIR__SIMDI_CONST(c_min_normal,    (127 - 14) << 23); // smallest FP32 that yields a normalized FP16
+    static const STBIR__SIMDI_CONST(c_subnorm_magic, ((127 - 15) + (23 - 10) + 1) << 23);
+    static const STBIR__SIMDI_CONST(c_normal_bias,    0xfff - ((127 - 15) << 23)); // adjust exponent and add mantissa rounding
+
+    __m128  f           =  (__m128)__lsx_vld(input, 0);
+    __m128  msign       = (__m128)(STBIR__CONSTI(mask_sign));
+    __m128  justsign    = (__m128)__lsx_vand_v((__m128i)msign, (__m128i)f);
+    __m128  absf        = (__m128)__lsx_vxor_v((__m128i)f, (__m128i)justsign);
+    __m128i absf_int    = (__m128i)(absf); // the cast is "free" (extra bypass latency, but no thruput hit)
+    __m128i f16max      = STBIR__CONSTI(c_f16max);
+    __m128  b_isnan     = (__m128)__lsx_vfcmp_cune_s(absf, absf); // is this a NaN?
+    __m128i b_isregular = __lsx_vsle_w(absf_int, f16max); // (sub)normalized or special?
+    __m128i nanbit      = __lsx_vand_v((__m128i)(b_isnan), STBIR__CONSTI(c_nanbit));
+    __m128i inf_or_nan  = __lsx_vor_v(nanbit, STBIR__CONSTI(c_infty_as_fp16)); // output for specials
+
+    __m128i min_normal  = STBIR__CONSTI(c_min_normal);
+    __m128i b_issub     = __lsx_vsle_w(absf_int, min_normal);
+
+    // "result is subnormal" path
+    __m128  subnorm1    = __lsx_vfadd_s(absf, (__m128)(STBIR__CONSTI(c_subnorm_magic))); // magic value to round output mantissa
+    __m128i subnorm2    = __lsx_vsub_w((__m128i)(subnorm1), STBIR__CONSTI(c_subnorm_magic)); // subtract out bias
+
+    // "result is normal" path
+    __m128i mantoddbit  = __lsx_vslli_w(absf_int, 31 - 13); // shift bit 13 (mantissa LSB) to sign
+    __m128i mantodd     = __lsx_vsrai_w(mantoddbit, 31); // -1 if FP16 mantissa odd, else 0
+
+    __m128i round1      = __lsx_vadd_w(absf_int, STBIR__CONSTI(c_normal_bias));
+    __m128i round2      = __lsx_vsub_w(round1, mantodd); // if mantissa LSB odd, bias towards rounding up (RTNE)
+    __m128i normal      = __lsx_vsrli_w(round2, 13); // rounded result
+
+    // combine the two non-specials
+    __m128i nonspecial  = __lsx_vor_v(__lsx_vand_v(subnorm2, b_issub), __lsx_vandn_v(b_issub, normal));
+
+    // merge in specials as well
+    __m128i joined      = __lsx_vor_v(__lsx_vand_v(nonspecial, b_isregular), __lsx_vandn_v(b_isregular, inf_or_nan));
+
+    __m128i sign_shift  = __lsx_vsrai_w((__m128i)(justsign), 16);
+    __m128i final2, final= __lsx_vor_v(joined, sign_shift);
+
+    f           =  (__m128)__lsx_vld(input+4, 0);
+    justsign    = (__m128)__lsx_vand_v((__m128i)msign, (__m128i)f);
+    absf        = (__m128)__lsx_vxor_v((__m128i)f, (__m128i)justsign);
+    absf_int    = (__m128i)(absf); // the cast is "free" (extra bypass latency, but no thruput hit)
+    b_isnan     = (__m128)__lsx_vfcmp_cune_s(absf, absf); // is this a NaN?
+    b_isregular = __lsx_vsle_w (absf_int, f16max); // (sub)normalized or special?
+    nanbit      = __lsx_vand_v((__m128i)(b_isnan), c_nanbit);
+    inf_or_nan  = __lsx_vor_v(nanbit, STBIR__CONSTI(c_infty_as_fp16)); // output for specials
+
+    b_issub     = __lsx_vsle_w(absf_int, min_normal);
+
+    // "result is subnormal" path
+    subnorm1    = __lsx_vfadd_s(absf, (__m128)(STBIR__CONSTI(c_subnorm_magic))); // magic value to round output mantissa
+    subnorm2    = __lsx_vsub_w((__m128i)(subnorm1), STBIR__CONSTI(c_subnorm_magic)); // subtract out bias
+
+    // "result is normal" path
+    mantoddbit  = __lsx_vslli_w(absf_int, 31 - 13); // shift bit 13 (mantissa LSB) to sign
+    mantodd     = __lsx_vsrai_w(mantoddbit, 31); // -1 if FP16 mantissa odd, else 0
+
+    round1      = __lsx_vadd_w(absf_int, STBIR__CONSTI(c_normal_bias));
+    round2      = __lsx_vsub_w(round1, mantodd); // if mantissa LSB odd, bias towards rounding up (RTNE)
+    normal      = __lsx_vsrli_w(round2, 13); // rounded result
+
+    // combine the two non-specials
+    nonspecial  = __lsx_vor_v(__lsx_vand_v(subnorm2, b_issub), __lsx_vandn_v(b_issub, normal));
+
+    // merge in specials as well
+    joined      = __lsx_vor_v(__lsx_vand_v(nonspecial, b_isregular), __lsx_vandn_v(b_isregular, inf_or_nan));
+
+    sign_shift  = __lsx_vsrai_w((__m128i)(justsign), 16);
+    final2      = __lsx_vor_v(joined, sign_shift);
+    final       = __lsx_vpickev_h(__lsx_vsat_w(final2, 15), __lsx_vsat_w(final, 15));
+    stbir__simdi_store( output,final );
+  }
 #endif
 
 

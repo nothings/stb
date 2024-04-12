@@ -3856,9 +3856,9 @@ static stbi_uc *stbi__resample_row_hv_2_simd(stbi_uc *out, stbi_uc *in_near, stb
         // this uses 3*x + y = 4*x + (y - x)
         __m128i zero = __lsx_vldi(0);
         __m128i farb = __lsx_vldi(0);
-        __lsx_vinsgr2vr_d(farb, __lsx_vpickve2gr_d(__lsx_vld((__m128i *)(in_far + i), 0), 0), 0);
+        farb = __lsx_vinsgr2vr_d(farb, __lsx_vpickve2gr_d(__lsx_vld((__m128i *)(in_far + i), 0), 0), 0);
         __m128i nearb = __lsx_vldi(0);
-        __lsx_vinsgr2vr_d(nearb, __lsx_vpickve2gr_d(__lsx_vld((__m128i *)(in_near + i), 0), 0), 0);
+        nearb = __lsx_vinsgr2vr_d(nearb, __lsx_vpickve2gr_d(__lsx_vld((__m128i *)(in_near + i), 0), 0), 0);
         __m128i farw = __lsx_vilvl_b(zero, farb);
         __m128i nearw = __lsx_vilvl_b(zero, nearb);
         __m128i diff = __lsx_vsub_h(farw, nearw);
@@ -3880,7 +3880,7 @@ static stbi_uc *stbi__resample_row_hv_2_simd(stbi_uc *out, stbi_uc *in_near, stb
         // odd  pixels = 3*cur + next = cur*4 + (next - cur)
         // note the shared term.
         __m128i bias = __lsx_vldi(0);
-        __lsx_vinsgr2vr_h(bias, 8, 0);
+        bias = __lsx_vinsgr2vr_h(bias, 8, 0);
         __m128i curs = __lsx_vslli_h(curr, 2);
         __m128i prvd = __lsx_vsub_h(prev, curr);
         __m128i nxtd = __lsx_vsub_h(next, curr);
@@ -4116,10 +4116,10 @@ static void stbi__YCbCr_to_RGB_simd(stbi_uc *out, stbi_uc const *y, stbi_uc cons
 
             // color transform
             __m128i yws = __lsx_vsrli_h(yw, 4);
-            __m128i cr0 = __lsx_vmul_h(cr_const0, crw);
-            __m128i cb0 = __lsx_vmul_h(cb_const0, cbw);
-            __m128i cb1 = __lsx_vmul_h(cbw, cb_const1);
-            __m128i cr1 = __lsx_vmul_h(crw, cr_const1);
+            __m128i cr0 = __lsx_vmuh_h(cr_const0, crw);
+            __m128i cb0 = __lsx_vmuh_h(cb_const0, cbw);
+            __m128i cb1 = __lsx_vmuh_h(cbw, cb_const1);
+            __m128i cr1 = __lsx_vmuh_h(crw, cr_const1);
             __m128i rws = __lsx_vadd_h(cr0, yws);
             __m128i gwt = __lsx_vadd_h(cb0, yws);
             __m128i bws = __lsx_vadd_h(yws, cb1);
