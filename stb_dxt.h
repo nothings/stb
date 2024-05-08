@@ -174,9 +174,9 @@ static void stb__From16Bit(unsigned char *out, unsigned short v)
    int bv = (v & 0x001f) >>  0;
 
    // expand to 8 bits via bit replication
-   out[0] = (rv * 33) >> 2;
-   out[1] = (gv * 65) >> 4;
-   out[2] = (bv * 33) >> 2;
+   out[0] = (unsigned char)((rv * 33) >> 2);
+   out[1] = (unsigned char)((gv * 65) >> 4);
+   out[2] = (unsigned char)((bv * 33) >> 2);
    out[3] = 0;
 }
 
