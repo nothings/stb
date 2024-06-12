@@ -399,6 +399,14 @@ extern "C" {
 #endif
 #endif
 
+//C++17 fallthrough macro
+#if (__cplusplus >= 201703L) || (defined(_MSVC_LANG) && (_MSVC_LANG >= 201703L) && (_MSC_VER >= 1913)) 
+#define STBI_FALLTHROUGH [[fallthrough]];
+#else
+#define STBI_FALLTHROUGH
+#endif
+
+
 //////////////////////////////////////////////////////////////////////////////
 //
 // PRIMARY API - works on images of any type
@@ -5743,10 +5751,10 @@ static int stbi__tga_get_comp(int bits_per_pixel, int is_grey, int* is_rgb16)
    switch(bits_per_pixel) {
       case 8:  return STBI_grey;
       case 16: if(is_grey) return STBI_grey_alpha;
-               // fallthrough
+               STBI_FALLTHROUGH /*fallthrough*/
       case 15: if(is_rgb16) *is_rgb16 = 1;
                return STBI_rgb;
-      case 24: // fallthrough
+      case 24: STBI_FALLTHROUGH /*fallthrough*/
       case 32: return bits_per_pixel/8;
       default: return 0;
    }
@@ -7145,10 +7153,10 @@ static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp)
       if (req_comp == 4) output[3] = 1;
    } else {
       switch (req_comp) {
-         case 4: output[3] = 1; /* fallthrough */
+      case 4: output[3] = 1; STBI_FALLTHROUGH /*fallthrough*/
          case 3: output[0] = output[1] = output[2] = 0;
                  break;
-         case 2: output[1] = 1; /* fallthrough */
+         case 2: output[1] = 1; STBI_FALLTHROUGH /*fallthrough*/
          case 1: output[0] = 0;
                  break;
       }
