@@ -38,6 +38,7 @@
 // Contributors:
 //   Arpad Goretity (bugfix)
 //   Alan Hickman (hex floats)
+//   Viliam Holly (finish lex chars)
 //
 // LICENSE
 //
@@ -456,9 +457,58 @@ static int stb__clex_parse_char(char *p, char **q)
          case 'f': return '\f';
          case 'n': return '\n';
          case 'r': return '\r';
-         case '0': return '\0'; // @TODO ocatal constants
-         case 'x': case 'X': return -1; // @TODO hex constants
-         case 'u': return -1; // @TODO unicode constants
+         case 'a': return '\a';
+         case 'b': return '\b';
+         case 'e': return '\e';
+         case 'v': return '\v';
+         case '?': return '\?';
+         case '0': {
+            *p += 2;
+            unsigned int oct = 0;
+            unsigned int shift = 8;
+
+            for(char *it = p + 2; it < p + 4; it++) {
+               if(*it >= '0' && *it <= '7') {
+                  oct += (*it - '0') * shift;
+               }
+               else {
+                  return -1;
+               }
+               shift /= 8;
+            }
+            return oct;
+         }
+         case 'x': case 'X': case 'u': case 'U': {
+            unsigned int len;
+
+            if(p[1] == 'x' || p[1] == 'X')
+               len = 2;
+            else if(p[1] == 'u')
+               len = 4;
+            else
+               len = 8;
+
+            *q += len;
+            unsigned int hex = 0;
+            unsigned int shift = len * 16 - 16;
+
+            for(char *it = p + 2; it < p + 2 + len; it++) {
+               if(*it >= '0' && *it <= '9') {
+                  hex += (*it - '0') * shift;
+               }
+               else if (*it >= 'A' && *it <= 'F') {
+                  hex += (*it - 'A' + 10) * shift;
+               }
+               else if(*it >= 'a' && *it <= 'f') {
+                  hex += (*it - 'a' + 10) * shift;
+               }
+               else {
+                  return -1;
+               }
+               shift /= 16;
+            }
+            return hex;
+         }
       }
    }
    *q = p+1;
