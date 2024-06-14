@@ -671,7 +671,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
                return stb__clex_token(lexer, CLEX_parse_error, start,start);
             if (p == lexer->eof || *p != '\'')
                return stb__clex_token(lexer, CLEX_parse_error, start,p);
-            return stb__clex_token(lexer, CLEX_charlit, start, p+1);
+            return stb__clex_token(lexer, CLEX_charlit, start, p);
          })
          goto single_char;
 
