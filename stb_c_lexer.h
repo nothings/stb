@@ -38,7 +38,7 @@
 // Contributors:
 //   Arpad Goretity (bugfix)
 //   Alan Hickman (hex floats)
-//   Viliam Holly (finish lex chars)
+//   Viliam Holly (finish 'stb__clex_parse_char')
 //
 // LICENSE
 //
