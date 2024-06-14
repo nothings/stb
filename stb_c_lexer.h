@@ -31,13 +31,13 @@
 //     - only tested default-config paths by eyeballing output of self-parse
 //
 //     - haven't implemented multiline strings
-//     - haven't implemented octal/hex character constants
 //     - haven't implemented support for unicode CLEX_char
 //     - need to expand error reporting so you don't just get "CLEX_parse_error"
 //
 // Contributors:
 //   Arpad Goretity (bugfix)
 //   Alan Hickman (hex floats)
+//   Daniel Kondratenko (octal and hex chars)
 //
 // LICENSE
 //
@@ -98,6 +98,10 @@
 
 #define STB_C_LEX_DISCARD_PREPROCESSOR    Y   // discard C-preprocessor directives (e.g. after prepocess
                                               // still have #line, #pragma, etc)
+
+#define STB_C_LEX_OCTAL_CHARS          Y  // allow octal chars in strings
+
+#define STB_C_LEX_HEX_CHARS            Y  // allow hex chars in strings
 
 //#define STB_C_LEX_ISWHITE(str)    ... // return length in bytes of whitespace characters if first char is whitespace
 
@@ -254,6 +258,14 @@ typedef long       stb__clex_int;
 
 #if STB_C_LEX_DISCARD_PREPROCESSOR(x)
 #define STB__clex_discard_preprocessor
+#endif
+
+#if STB_C_LEX_OCTAL_CHARS(x)
+#define STB__clex_octal_chars
+#endif
+
+#if STB_C_LEX_HEX_CHARS(x)
+#define STB__clex_hex_chars
 #endif
 
 #if STB_C_LEX_USE_STDLIB(x) && (!defined(STB__clex_hex_floats) || __STDC_VERSION__ >= 199901L)
@@ -444,6 +456,57 @@ static double stb__clex_parse_float(char *p, char **q)
 }
 #endif
 
+#ifdef STB__clex_octal_chars
+static int stb__clex_parse_octal(char *p, char **q)
+{
+  unsigned int octchar = 0;
+
+  p++; // skipping first char
+  while (*p >= '0' && *p <= '7') {
+    octchar = (octchar << 3) + (*p++) - '0';
+    if (octchar >= 256)
+      return -1;
+  }
+  *q = p;
+
+  return octchar;
+}
+#endif
+
+#ifdef STB__clex_hex_chars
+static int stb__clex_hex_digit(char x)
+{
+  if (x >= '0' && x <= '9')
+    return x - '0';
+
+  if (x >= 'A' && x <= 'F')
+    return (x - 'A') + 10;
+
+  if (x >= 'a' && x <= 'f')
+    return (x - 'a') + 10;
+
+  return -1;
+}
+
+static int stb__clex_parse_hex(char *p, char **q)
+{
+  unsigned int hexchar = 0;
+  int digit = 0;
+
+  p++;
+  p++; // skipping first two chars: '\\' and 'x' or 'X'
+  while ((digit = stb__clex_hex_digit(*p)) != -1) {
+    hexchar = (hexchar << 4) + digit;
+    p++;
+    if (hexchar >= 256)
+      return -1;
+  }
+
+  *q = p;
+  return hexchar;
+}
+#endif
+
 static int stb__clex_parse_char(char *p, char **q)
 {
    if (*p == '\\') {
@@ -456,8 +519,23 @@ static int stb__clex_parse_char(char *p, char **q)
          case 'f': return '\f';
          case 'n': return '\n';
          case 'r': return '\r';
-         case '0': return '\0'; // @TODO ocatal constants
-         case 'x': case 'X': return -1; // @TODO hex constants
+#ifdef STB__clex_octal_chars
+         case '0':
+         case '1':
+         case '2':
+         case '3':
+         case '4':
+         case '5':
+         case '6':
+         case '7': return stb__clex_parse_octal(p, q);
+#else
+         case '0': return '\0';
+#endif
+#ifdef STB__clex_hex_chars
+         case 'x': case 'X': return stb__clex_parse_hex(p, q);
+#else
+         case 'x': case 'X': return -1;
+#endif
          case 'u': return -1; // @TODO unicode constants
       }
    }
@@ -832,7 +910,7 @@ static void print_token(stb_lexer *lexer)
       case CLEX_eqarrow   : printf("=>"); break;
       case CLEX_dqstring  : printf("\"%s\"", lexer->string); break;
       case CLEX_sqstring  : printf("'\"%s\"'", lexer->string); break;
-      case CLEX_charlit   : printf("'%s'", lexer->string); break;
+      case CLEX_charlit   : printf("'%s'(%ld)", lexer->string, lexer->int_number); break;
       #if defined(STB__clex_int_as_double) && !defined(STB__CLEX_use_stdlib)
       case CLEX_intlit    : printf("#%g", lexer->real_number); break;
       #else
@@ -869,6 +947,10 @@ void dummy(void)
    (void) some_floats[1];
 
    printf("test %d",1); // https://github.com/nothings/stb/issues/13
+   printf("\n(pg)Jackd\141ws love my big sphinx of qu\x61rtz.\040\n");
+   (void)'\x21';
+   (void)'\042';
+   (void)"\478";
 }
 
 int main(int argc, char **argv)

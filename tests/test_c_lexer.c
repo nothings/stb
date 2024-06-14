@@ -43,6 +43,10 @@
 #define STB_C_LEX_DISCARD_PREPROCESSOR    Y   // discard C-preprocessor directives (e.g. after prepocess
                                               // still have #line, #pragma, etc)
 
+#define STB_C_LEX_OCTAL_CHARS         Y // allow octal chars in strings
+
+#define STB_C_LEX_HEX_CHARS           Y // allow hex chars in strings
+
 //#define STB_C_LEX_ISWHITE(str)    ... // return length in bytes of whitespace characters if first char is whitespace
 
 #define STB_C_LEXER_DEFINITIONS         // This line prevents the header file from replacing your definitions
