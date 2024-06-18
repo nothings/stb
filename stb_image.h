@@ -5934,7 +5934,10 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
       for (i=0; i < tga_height; ++i) {
          int row = tga_inverted ? tga_height -i - 1 : i;
          stbi_uc *tga_row = tga_data + row*tga_width*tga_comp;
-         stbi__getn(s, tga_row, tga_width * tga_comp);
+         if(!stbi__getn(s, tga_row, tga_width * tga_comp)) {
+            STBI_FREE(tga_data);
+            return stbi__errpuc("bad palette", "Corrupt TGA");
+         }
       }
    } else  {
       //   do I need to load a palette?
@@ -7219,7 +7222,10 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
          for (i=0; i < width; ++i) {
             stbi_uc rgbe[4];
            main_decode_loop:
-            stbi__getn(s, rgbe, 4);
+            if (!stbi__getn(s, rgbe, 4)) {
+               STBI_FREE(hdr_data);
+               return stbi__errpf("invalid decoded scanline length", "corrupt HDR");
+            }
             stbi__hdr_convert(hdr_data + j * width * req_comp + i * req_comp, rgbe, req_comp);
          }
       }
