@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.08 - public domain image resizing
+/* stb_image_resize2 - v2.09 - public domain image resizing
 
    by Jeff Roberts (v2) and Jorge L Rodriguez
    http://github.com/nothings/stb
@@ -320,7 +320,7 @@
 
    CONTRIBUTORS
       Jeff Roberts: 2.0 implementation, optimizations, SIMD
-      Martins Mozeiko: NEON simd, WASM simd, clang and GCC whisperer.
+      Martins Mozeiko: NEON simd, WASM simd, clang and GCC whisperer
       Fabian Giesen: half float and srgb converters
       Sean Barrett: API design, optimizations
       Jorge L Rodriguez: Original 1.0 implementation
@@ -328,6 +328,8 @@
       Nathan Reed: warning fixes for 1.0
 
    REVISIONS
+      2.09 (2024-06-19) fix the defines for 32-bit ARM GCC builds (was selecting
+                          hardware half floats).
       2.08 (2024-06-10) fix for RGB->BGR three channel flips and add SIMD (thanks
                           to Ryan Salsbury), fix for sub-rect resizes, use the
                           pragmas to control unrolling when they are available.
@@ -413,13 +415,13 @@ typedef uint64_t stbir_uint64;
   #endif
 #endif
 
-#if defined( _M_ARM64 ) || defined( __aarch64__ ) || defined( __arm64__ ) || defined(_M_ARM) || (__ARM_NEON_FP & 4) != 0 &&  __ARM_FP16_FORMAT_IEEE != 0
+#if defined( _M_ARM64 ) || defined( __aarch64__ ) || defined( __arm64__ ) || ((__ARM_NEON_FP & 4) != 0) || defined(__ARM_NEON__)
 #ifndef STBIR_NEON
 #define STBIR_NEON
 #endif
 #endif
 
-#if defined(_M_ARM)
+#if defined(_M_ARM) || defined(__arm__)
 #ifdef STBIR_USE_FMA
 #undef STBIR_USE_FMA // no FMA for 32-bit arm on MSVC
 #endif
@@ -2174,7 +2176,7 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
 #endif
 
 
-#if defined(STBIR_NEON) && !defined(_M_ARM)
+#if defined(STBIR_NEON) && !defined(_M_ARM) && !defined(__arm__)
 
   #if defined( _MSC_VER ) && !defined(__clang__)
   typedef __int16 stbir__FP16;
@@ -2191,7 +2193,7 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
 
 #endif
 
-#if !defined(STBIR_NEON) && !defined(STBIR_FP16C) || defined(STBIR_NEON) && defined(_M_ARM)
+#if (!defined(STBIR_NEON) && !defined(STBIR_FP16C)) || (defined(STBIR_NEON) && defined(_M_ARM)) || (defined(STBIR_NEON) && defined(__arm__))
 
   // Fabian's half float routines, see: https://gist.github.com/rygorous/2156668
 
@@ -2418,7 +2420,7 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
     stbir__simdi_store( output,final );
   }
 
-#elif defined(STBIR_WASM) || (defined(STBIR_NEON) && defined(_MSC_VER) && defined(_M_ARM)) // WASM or 32-bit ARM on MSVC/clang
+#elif defined(STBIR_WASM) || (defined(STBIR_NEON) && (defined(_MSC_VER) || defined(_M_ARM) || defined(__arm__))) // WASM or 32-bit ARM on MSVC/clang
 
   static stbir__inline void stbir__half_to_float_SIMD(float * output, stbir__FP16 const * input)
   {
@@ -2464,7 +2466,7 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
     return vget_lane_f16(vcvt_f16_f32(vdupq_n_f32(f)), 0).n16_u16[0];
   }
 
-#elif defined(STBIR_NEON) // 64-bit ARM
+#elif defined(STBIR_NEON) && ( defined( _M_ARM64 ) || defined( __aarch64__ ) || defined( __arm64__ ) ) // 64-bit ARM
 
   static stbir__inline void stbir__half_to_float_SIMD(float * output, stbir__FP16 const * input)
   {
