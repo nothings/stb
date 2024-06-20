@@ -1449,7 +1449,8 @@ STBIDEF stbi_uc *stbi_load_gif_from_memory(stbi_uc const *buffer, int len, int *
 
    result = (unsigned char*) stbi__load_gif_main(&s, delays, x, y, z, comp, req_comp);
    if (stbi__vertically_flip_on_load) {
-      stbi__vertical_flip_slices( result, *x, *y, *z, *comp );
+      int channels = req_comp ? req_comp : *comp;
+      stbi__vertical_flip_slices( result, *x, *y, *z, channels );
    }
 
    return result;
