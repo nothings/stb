@@ -740,7 +740,7 @@ STBTT_DEF int stbtt_InitFont(stbtt_fontinfo *info, const unsigned char *data, in
 
 //////////////////////////////////////////////////////////////////////////////
 //
-// CHARACTER TO GLYPH-INDEX CONVERSIOn
+// CHARACTER TO GLYPH-INDEX CONVERSION
 
 STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codepoint);
 // If you're going to perform multiple operations on the same character
