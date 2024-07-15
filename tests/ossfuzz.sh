@@ -15,11 +15,15 @@ find $SRC/stb/tests/pngsuite -name "*.png" | \
 
 cp $SRC/stb/tests/stb_png.dict $OUT/stb_png_read_fuzzer.dict
 
-tar xvzf $SRC/stb/jpg.tar.gz --directory $SRC/stb/tests
-tar xvzf $SRC/stb/gif.tar.gz --directory $SRC/stb/tests
+tar xvzf $SRC/stbi/jpg.tar.gz --directory $SRC/stb/tests
+tar xvzf $SRC/stbi/gif.tar.gz --directory $SRC/stb/tests
+unzip    $SRC/stbi/bmp.zip    -d $SRC/stb/tests
+unzip    $SRC/stbi/tga.zip    -d $SRC/stb/tests
 
-find $SRC/stb/tests -name "*.png" -o -name "*.jpg" -o -name ".gif" | \
-     xargs zip $OUT/stbi_read_fuzzer_seed_corpus.zip
+find $SRC/stb/tests -name "*.png" -o -name "*.jpg" -o -name "*.gif" \
+                 -o -name "*.bmp" -o -name "*.tga" -o -name "*.TGA" \
+                 -o -name "*.ppm" -o -name "*.pgm" \
+    | xargs zip $OUT/stbi_read_fuzzer_seed_corpus.zip
 
-echo "" >> $SRC/stb/tests/gif.dict
-cat $SRC/stb/tests/gif.dict $SRC/stb/tests/stb_png.dict > $OUT/stbi_read_fuzzer.dict
+echo "" >> $SRC/stbi/gif.dict
+cat $SRC/stbi/gif.dict $SRC/stb/tests/stb_png.dict > $OUT/stbi_read_fuzzer.dict

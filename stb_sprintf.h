@@ -1,4 +1,4 @@
-// stb_sprintf - v1.09 - public domain snprintf() implementation
+// stb_sprintf - v1.10 - public domain snprintf() implementation
 // originally by Jeff Roberts / RAD Game Tools, 2015/10/20
 // http://github.com/nothings/stb
 //
@@ -154,8 +154,8 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
    #endif
   #endif
  #endif
-#elif __GNUC__ >= 5 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8)
- #if __SANITIZE_ADDRESS__
+#elif defined(__GNUC__) && (__GNUC__ >= 5 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8))
+ #if defined(__SANITIZE_ADDRESS__) && __SANITIZE_ADDRESS__
   #define STBSP__ASAN __attribute__((__no_sanitize_address__))
  #endif
 #endif
@@ -187,6 +187,12 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 #define STBSP__ATTRIBUTE_FORMAT(fmt,va)
 #endif
 
+#ifdef _MSC_VER
+#define STBSP__NOTUSED(v)  (void)(v)
+#else
+#define STBSP__NOTUSED(v)  (void)sizeof(v)
+#endif
+
 #include <stdarg.h> // for va_arg(), va_list()
 #include <stddef.h> // size_t, ptrdiff_t
 
@@ -199,13 +205,13 @@ typedef char *STBSP_SPRINTFCB(const char *buf, void *user, int len);
 #define STB_SPRINTF_DECORATE(name) stbsp_##name // define this before including if you want to change the names
 #endif
 
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintf)(char *buf, char const *fmt, va_list va);
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsnprintf)(char *buf, int count, char const *fmt, va_list va);
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(sprintf)(char *buf, char const *fmt, ...) STBSP__ATTRIBUTE_FORMAT(2,3);
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(snprintf)(char *buf, int count, char const *fmt, ...) STBSP__ATTRIBUTE_FORMAT(3,4);
+STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(vsprintf)(char *buf, char const *fmt, va_list va);
+STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(vsnprintf)(char *buf, int count, char const *fmt, va_list va);
+STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(sprintf)(char *buf, char const *fmt, ...) STBSP__ATTRIBUTE_FORMAT(2,3);
+STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(snprintf)(char *buf, int count, char const *fmt, ...) STBSP__ATTRIBUTE_FORMAT(3,4);
 
-STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, char *buf, char const *fmt, va_list va);
-STBSP__PUBLICDEF void STB_SPRINTF_DECORATE(set_separators)(char comma, char period);
+STBSP__PUBLICDEC int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, char *buf, char const *fmt, va_list va);
+STBSP__PUBLICDEC void STB_SPRINTF_DECORATE(set_separators)(char comma, char period);
 
 #endif // STB_SPRINTF_H_INCLUDE
 
@@ -298,6 +304,46 @@ static void stbsp__lead_sign(stbsp__uint32 fl, char *sign)
       sign[0] = 1;
       sign[1] = '+';
    }
+}
+
+static STBSP__ASAN stbsp__uint32 stbsp__strlen_limited(char const *s, stbsp__uint32 limit)
+{
+   char const * sn = s;
+
+   // get up to 4-byte alignment
+   for (;;) {
+      if (((stbsp__uintptr)sn & 3) == 0)
+         break;
+
+      if (!limit || *sn == 0)
+         return (stbsp__uint32)(sn - s);
+
+      ++sn;
+      --limit;
+   }
+
+   // scan over 4 bytes at a time to find terminating 0
+   // this will intentionally scan up to 3 bytes past the end of buffers,
+   // but becase it works 4B aligned, it will never cross page boundaries
+   // (hence the STBSP__ASAN markup; the over-read here is intentional
+   // and harmless)
+   while (limit >= 4) {
+      stbsp__uint32 v = *(stbsp__uint32 *)sn;
+      // bit hack to find if there's a 0 byte in there
+      if ((v - 0x01010101) & (~v) & 0x80808080UL)
+         break;
+
+      sn += 4;
+      limit -= 4;
+   }
+
+   // handle the last few characters to find actual size
+   while (limit && *sn) {
+      ++sn;
+      --limit;
+   }
+
+   return (stbsp__uint32)(sn - s);
 }
 
 STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback, void *user, char *buf, char const *fmt, va_list va)
@@ -543,37 +589,9 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          s = va_arg(va, char *);
          if (s == 0)
             s = (char *)"null";
-         // get the length
-         sn = s;
-         for (;;) {
-            if ((((stbsp__uintptr)sn) & 3) == 0)
-               break;
-         lchk:
-            if (sn[0] == 0)
-               goto ld;
-            ++sn;
-         }
-         n = 0xffffffff;
-         if (pr >= 0) {
-            n = (stbsp__uint32)(sn - s);
-            if (n >= (stbsp__uint32)pr)
-               goto ld;
-            n = ((stbsp__uint32)(pr - n)) >> 2;
-         }
-         while (n) {
-            stbsp__uint32 v = *(stbsp__uint32 *)sn;
-            if ((v - 0x01010101) & (~v) & 0x80808080UL)
-               goto lchk;
-            sn += 4;
-            --n;
-         }
-         goto lchk;
-      ld:
-
-         l = (stbsp__uint32)(sn - s);
-         // clamp to precision
-         if (l > (stbsp__uint32)pr)
-            l = pr;
+         // get the length, limited to desired precision
+         // always limit to ~0u chars since our counts are 32b
+         l = stbsp__strlen_limited(s, (pr >= 0) ? pr : ~0u);
          lead[0] = 0;
          tail[0] = 0;
          pr = 0;
@@ -614,8 +632,8 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          lead[0] = 0;
          tail[0] = 0;
          pr = 0;
-         dp = 0;
          cs = 0;
+         STBSP__NOTUSED(dp);
          goto scopy;
 #else
       case 'A': // hex float
@@ -1010,7 +1028,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             lead[0] = 0;
             if (pr == 0) {
                l = 0;
-               cs = (((l >> 4) & 15)) << 24;
+               cs = 0;
                goto scopy;
             }
          }

@@ -5,9 +5,9 @@
 #include "stb_rect_pack.h"
 #include "stb_truetype.h"
 #include "stb_image_write.h"
+#include "stb_c_lexer.h"
 #include "stb_perlin.h"
 #include "stb_dxt.h"
-#include "stb_c_lexer.h"
 #include "stb_divide.h"
 #include "stb_herringbone_wang_tile.h"
 #include "stb_ds.h"
@@ -47,7 +47,6 @@ void my_free(void *) { }
 #include "stb_image_write.h"
 #include "stb_perlin.h"
 #include "stb_dxt.h"
-#include "stb_c_lexer.h"
 #include "stb_divide.h"
 #include "stb_herringbone_wang_tile.h"
 #include "stb_ds.h"
@@ -71,7 +70,7 @@ void my_free(void *) { }
 #include "stb_leakcheck.h"
 
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize.h"
+#include "stb_image_resize2.h"
 
 //#include "stretchy_buffer.h"  // deprecating
 
@@ -183,3 +182,5 @@ void dummy3(void)
   stb_textedit_initialize_state(0,0);
   stb_textedit_paste(0,0,0,0);
 }
+
+#include "stb_c_lexer.h"
