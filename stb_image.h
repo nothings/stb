@@ -372,7 +372,14 @@ RECENT REVISION HISTORY:
 
 #define STBI_VERSION 1
 
-#define STBI_FALLTHROUGH __attribute__((fallthrough))
+#if defined(__has_attribute)
+#  if __has_attribute(fallthrough)
+#    define STBI_FALLTHROUGH __attribute__((fallthrough));
+#  endif
+#endif
+#if !defined(STBI_FALLTHROUGH)
+#  define STBI_FALLTHROUGH
+#endif
 
 enum
 {
