@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.09 - public domain image resizing
+/* stb_image_resize2 - v2.10 - public domain image resizing
 
    by Jeff Roberts (v2) and Jorge L Rodriguez
    http://github.com/nothings/stb
@@ -328,6 +328,8 @@
       Nathan Reed: warning fixes for 1.0
 
    REVISIONS
+      2.10 (2024-07-27) fix the defines GCC and mingw for loop unroll control,
+                          fix MSVC 32-bit arm half float routines.
       2.09 (2024-06-19) fix the defines for 32-bit ARM GCC builds (was selecting
                           hardware half floats).
       2.08 (2024-06-10) fix for RGB->BGR three channel flips and add SIMD (thanks
@@ -1225,10 +1227,15 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
   #else
     #define STBIR_NO_UNROLL_LOOP_START
   #endif
+  #define STBIR_NO_UNROLL_LOOP_START_INF_FOR
 #else
   #define STBIR_STREAMOUT_PTR( star ) star
   #define STBIR_NO_UNROLL( ptr )
   #define STBIR_NO_UNROLL_LOOP_START
+#endif
+
+#ifndef STBIR_NO_UNROLL_LOOP_START_INF_FOR
+#define STBIR_NO_UNROLL_LOOP_START_INF_FOR STBIR_NO_UNROLL_LOOP_START
 #endif
 
 #ifdef STBIR_NO_SIMD // force simd off for whatever reason
@@ -2420,24 +2427,6 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
     stbir__simdi_store( output,final );
   }
 
-#elif defined(STBIR_WASM) || (defined(STBIR_NEON) && (defined(_MSC_VER) || defined(_M_ARM) || defined(__arm__))) // WASM or 32-bit ARM on MSVC/clang
-
-  static stbir__inline void stbir__half_to_float_SIMD(float * output, stbir__FP16 const * input)
-  {
-    for (int i=0; i<8; i++)
-    {
-      output[i] = stbir__half_to_float(input[i]);
-    }
-  }
-
-  static stbir__inline void stbir__float_to_half_SIMD(stbir__FP16 * output, float const * input)
-  {
-    for (int i=0; i<8; i++)
-    {
-      output[i] = stbir__float_to_half(input[i]);
-    }
-  }
-
 #elif defined(STBIR_NEON) && defined(_MSC_VER) && defined(_M_ARM64) && !defined(__clang__) // 64-bit ARM on MSVC (not clang)
 
   static stbir__inline void stbir__half_to_float_SIMD(float * output, stbir__FP16 const * input)
@@ -2490,6 +2479,23 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
   static stbir__inline stbir__FP16 stbir__float_to_half( float f )
   {
     return vget_lane_f16(vcvt_f16_f32(vdupq_n_f32(f)), 0);
+  }
+
+#elif defined(STBIR_WASM) || (defined(STBIR_NEON) && (defined(_MSC_VER) || defined(_M_ARM) || defined(__arm__))) // WASM or 32-bit ARM on MSVC/clang
+
+  static stbir__inline void stbir__half_to_float_SIMD(float * output, stbir__FP16 const * input)
+  {
+    for (int i=0; i<8; i++)
+    {
+      output[i] = stbir__half_to_float(input[i]);
+    }
+  }
+  static stbir__inline void stbir__float_to_half_SIMD(stbir__FP16 * output, float const * input)
+  {
+    for (int i=0; i<8; i++)
+    {
+      output[i] = stbir__float_to_half(input[i]);
+    }
   }
 
 #endif
@@ -2545,6 +2551,7 @@ static const STBIR__SIMDI_CONST(STBIR_topscale,      0x02000000);
 #define STBIR_SIMD_STREAMOUT_PTR( star )  STBIR_STREAMOUT_PTR( star )
 #define STBIR_SIMD_NO_UNROLL(ptr) STBIR_NO_UNROLL(ptr)
 #define STBIR_SIMD_NO_UNROLL_LOOP_START STBIR_NO_UNROLL_LOOP_START
+#define STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR STBIR_NO_UNROLL_LOOP_START_INF_FOR
 
 #ifdef STBIR_MEMCPY
 #undef STBIR_MEMCPY
@@ -2584,7 +2591,7 @@ static void stbir_simd_memcpy( void * dest, void const * src, size_t bytes )
       stbir__simdf_store( d, x );
       d = (char*)( ( ( (size_t)d ) + 16 ) & ~15 );
 
-      STBIR_SIMD_NO_UNROLL_LOOP_START
+      STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
       for(;;)
       {
         STBIR_SIMD_NO_UNROLL(d);
@@ -2617,7 +2624,7 @@ static void stbir_simd_memcpy( void * dest, void const * src, size_t bytes )
     stbir__simdfX_store( d + 12*stbir__simdfX_float_count, x3 );
     d = (char*)( ( ( (size_t)d ) + (16*stbir__simdfX_float_count) ) & ~((16*stbir__simdfX_float_count)-1) );
 
-    STBIR_SIMD_NO_UNROLL_LOOP_START
+    STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       STBIR_SIMD_NO_UNROLL(d);
@@ -2682,11 +2689,14 @@ static void stbir_overlapping_memcpy( void * dest, void const * src, size_t byte
 #define STBIR_SIMD_STREAMOUT_PTR( star ) STBIR_STREAMOUT_PTR( star )
 #define STBIR_SIMD_NO_UNROLL(ptr)
 #define STBIR_SIMD_NO_UNROLL_LOOP_START
+#define STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
 
 #endif // SSE2
 
 
 #ifdef STBIR_PROFILE
+
+#ifndef STBIR_PROFILE_FUNC
 
 #if defined(_x86_64) || defined( __x86_64__ ) || defined( _M_X64 ) || defined(__x86_64) || defined(__SSE2__) || defined(STBIR_SSE) || defined( _M_IX86_FP ) || defined(__i386) || defined( __i386__ ) || defined( _M_IX86 ) || defined( _X86_ )
 
@@ -2727,8 +2737,9 @@ static void stbir_overlapping_memcpy( void * dest, void const * src, size_t byte
 
 #error Unknown platform for profiling.
 
-#endif  //x64 and
+#endif  // x64, arm
 
+#endif // STBIR_PROFILE_FUNC
 
 #define STBIR_ONLY_PROFILE_GET_SPLIT_INFO ,stbir__per_split_info * split_info
 #define STBIR_ONLY_PROFILE_SET_SPLIT_INFO ,split_info
@@ -8197,7 +8208,7 @@ static void STBIR__CODER_NAME( stbir__decode_uint8_linear_scaled )( float * deco
   if ( width_times_channels >= 16 )
   {
     decode_end -= 16;
-    STBIR_NO_UNROLL_LOOP_START
+    STBIR_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       #ifdef STBIR_SIMD8
@@ -8296,7 +8307,7 @@ static void STBIR__CODER_NAME( stbir__encode_uint8_linear_scaled )( void * outpu
   {
     float const * end_encode_m8 = encode + width_times_channels - stbir__simdfX_float_count*2;
     end_output -= stbir__simdfX_float_count*2;
-    STBIR_NO_UNROLL_LOOP_START
+    STBIR_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       stbir__simdfX e0, e1;
@@ -8414,7 +8425,7 @@ static void STBIR__CODER_NAME(stbir__decode_uint8_linear)( float * decodep, int 
   if ( width_times_channels >= 16 )
   {
     decode_end -= 16;
-    STBIR_NO_UNROLL_LOOP_START
+    STBIR_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       #ifdef STBIR_SIMD8
@@ -8507,7 +8518,7 @@ static void STBIR__CODER_NAME( stbir__encode_uint8_linear )( void * outputp, int
   {
     float const * end_encode_m8 = encode + width_times_channels - stbir__simdfX_float_count*2;
     end_output -= stbir__simdfX_float_count*2;
-    STBIR_SIMD_NO_UNROLL_LOOP_START
+    STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       stbir__simdfX e0, e1;
@@ -8710,7 +8721,7 @@ static void STBIR__CODER_NAME( stbir__encode_uint8_srgb )( void * outputp, int w
   {
     float const * end_encode_m16 = encode + width_times_channels - 16;
     end_output -= 16;
-    STBIR_SIMD_NO_UNROLL_LOOP_START
+    STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       stbir__simdf f0, f1, f2, f3;
@@ -8813,7 +8824,7 @@ static void STBIR__CODER_NAME( stbir__encode_uint8_srgb4_linearalpha )( void * o
   {
     float const * end_encode_m16 = encode + width_times_channels - 16;
     end_output -= 16;
-    STBIR_SIMD_NO_UNROLL_LOOP_START
+    STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       stbir__simdf f0, f1, f2, f3;
@@ -8905,7 +8916,7 @@ static void STBIR__CODER_NAME( stbir__encode_uint8_srgb2_linearalpha )( void * o
   {
     float const * end_encode_m16 = encode + width_times_channels - 16;
     end_output -= 16;
-    STBIR_SIMD_NO_UNROLL_LOOP_START
+    STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       stbir__simdf f0, f1, f2, f3;
@@ -8968,7 +8979,7 @@ static void STBIR__CODER_NAME(stbir__decode_uint16_linear_scaled)( float * decod
   if ( width_times_channels >= 8 )
   {
     decode_end -= 8;
-    STBIR_NO_UNROLL_LOOP_START
+    STBIR_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       #ifdef STBIR_SIMD8
@@ -9057,7 +9068,7 @@ static void STBIR__CODER_NAME(stbir__encode_uint16_linear_scaled)( void * output
     {
       float const * end_encode_m8 = encode + width_times_channels - stbir__simdfX_float_count*2;
       end_output -= stbir__simdfX_float_count*2;
-      STBIR_SIMD_NO_UNROLL_LOOP_START
+      STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
       for(;;)
       {
         stbir__simdfX e0, e1;
@@ -9173,7 +9184,7 @@ static void STBIR__CODER_NAME(stbir__decode_uint16_linear)( float * decodep, int
   if ( width_times_channels >= 8 )
   {
     decode_end -= 8;
-    STBIR_NO_UNROLL_LOOP_START
+    STBIR_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       #ifdef STBIR_SIMD8
@@ -9258,7 +9269,7 @@ static void STBIR__CODER_NAME(stbir__encode_uint16_linear)( void * outputp, int 
     {
       float const * end_encode_m8 = encode + width_times_channels - stbir__simdfX_float_count*2;
       end_output -= stbir__simdfX_float_count*2;
-      STBIR_SIMD_NO_UNROLL_LOOP_START
+      STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
       for(;;)
       {
         stbir__simdfX e0, e1;
@@ -9356,7 +9367,7 @@ static void STBIR__CODER_NAME(stbir__decode_half_float_linear)( float * decodep,
   {
     stbir__FP16 const * end_input_m8 = input + width_times_channels - 8;
     decode_end -= 8;
-    STBIR_NO_UNROLL_LOOP_START
+    STBIR_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       STBIR_NO_UNROLL(decode);
@@ -9441,7 +9452,7 @@ static void STBIR__CODER_NAME( stbir__encode_half_float_linear )( void * outputp
   {
     float const * end_encode_m8 = encode + width_times_channels - 8;
     end_output -= 8;
-    STBIR_SIMD_NO_UNROLL_LOOP_START
+    STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       STBIR_SIMD_NO_UNROLL(encode);
@@ -9527,7 +9538,7 @@ static void STBIR__CODER_NAME(stbir__decode_float_linear)( float * decodep, int 
   {
     float const * end_input_m16 = input + width_times_channels - 16;
     decode_end -= 16;
-    STBIR_NO_UNROLL_LOOP_START
+    STBIR_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       STBIR_NO_UNROLL(decode);
@@ -9652,7 +9663,7 @@ static void STBIR__CODER_NAME( stbir__encode_float_linear )( void * outputp, int
   {
     float const * end_encode_m8 = encode + width_times_channels - ( stbir__simdfX_float_count * 2 );
     end_output -= ( stbir__simdfX_float_count * 2 );
-    STBIR_SIMD_NO_UNROLL_LOOP_START
+    STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
     {
       stbir__simdfX e0, e1;
