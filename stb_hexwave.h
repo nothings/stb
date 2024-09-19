@@ -433,19 +433,6 @@ STB_HEXWAVE_DEF void hexwave_generate_samples(float *output, int num_samples, He
 
    // convert parameters to times and slopes
    hexwave_generate_linesegs(vert, hex, dt);
-
-   if (hex->prev_dt != dt) {
-      // if frequency changes, add a fixup at the derivative discontinuity starting at now
-      float slope;
-      for (j=1; j < 6; ++j)
-         if (t < vert[j].t)
-            break;
-      slope = vert[j].s;
-      if (slope != 0)
-         hex_blamp(output, 0, (dt - hex->prev_dt)*slope);
-      hex->prev_dt = dt;
-   }
-
    // copy the buffered data from last call and clear the rest of the output array
    memset(output, 0, sizeof(float)*num_samples);
    memset(temp_output, 0, 2*hexblep.width*sizeof(float));
