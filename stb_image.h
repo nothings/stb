@@ -4886,16 +4886,15 @@ static int stbi__create_png_image(stbi__png *a, stbi_uc *image_data, stbi__uint3
             return 0;
          }
          stbi__uint32 img_x = a->s->img_x;
-         stbi_uc* a_out = a->out;
          for (j=0; j < y; ++j) {
             for (i=0; i < x; ++i) {
                int out_y = j*yspc[p]+yorig[p];
                int out_x = i*xspc[p]+xorig[p];
                memcpy(final + out_y*img_x*out_bytes + out_x*out_bytes,
-                      a_out + (j*x+i)*out_bytes, out_bytes);
+                      a->out + (j*x+i)*out_bytes, out_bytes);
             }
          }
-         STBI_FREE(a_out);
+         STBI_FREE(a->out);
          image_data += img_len;
          image_data_len -= img_len;
       }
