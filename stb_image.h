@@ -100,7 +100,7 @@ RECENT REVISION HISTORY:
  Bug & warning fixes
     Marc LeBlanc            David Woo          Guillaume George     Martins Mozeiko
     Christpher Lloyd        Jerry Jansson      Joseph Thomson       Blazej Dariusz Roszkowski
-    Phil Jordan                                Dave Moore           Roy Eltham
+    Phil Jordan             Alexey Pavlov      Dave Moore           Roy Eltham
     Hayaki Saito            Nathan Reed        Won Chun
     Luke Graham             Johan Duparc       Nick Verigakis       the Horde3D community
     Thomas Ruf              Ronny Chevalier                         github:rlyeh
@@ -1066,6 +1066,7 @@ static void *stbi__malloc_mad4(int a, int b, int c, int d, int add)
 }
 #endif
 
+#ifndef STBI_NO_JPEG
 // returns 1 if the sum of two signed ints is valid (between -2^31 and 2^31-1 inclusive), 0 on overflow.
 static int stbi__addints_valid(int a, int b)
 {
@@ -1082,6 +1083,7 @@ static int stbi__mul2shorts_valid(int a, int b)
    if (b < 0) return a <= SHRT_MIN / b; // same as a * b >= SHRT_MIN
    return a >= SHRT_MIN / b;
 }
+#endif
 
 // stbi__err - error
 // stbi__errpf - error returning pointer to float
