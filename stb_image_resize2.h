@@ -6731,7 +6731,7 @@ static void stbir__free_internal_mem( stbir__info *info )
     STBIR__FREE_AND_CLEAR( info->horizontal.coefficients );
     STBIR__FREE_AND_CLEAR( info->horizontal.contributors );
     STBIR__FREE_AND_CLEAR( info->alloced_mem );
-    STBIR_FREE( info );
+    STBIR_FREE( info, info->user_data );
   #endif
   }
 
