@@ -6689,7 +6689,7 @@ static void stbir__get_split_info( stbir__per_split_info* split_info, int splits
 
 static void stbir__free_internal_mem( stbir__info *info )
 {
-  #define STBIR__FREE_AND_CLEAR( ptr ) { if ( ptr ) { void * p = (ptr); (ptr) = 0; STBIR_FREE( p, info->user_data); } }
+  #define STBIR__FREE_AND_CLEAR( ptr ) { if ( ptr ) { void * p = (ptr); STBIR_FREE( p, info->user_data); (ptr) = 0; } }
 
   if ( info )
   {
