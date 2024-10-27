@@ -313,14 +313,16 @@ static FILE *stbiw__fopen(char const *filename, char const *mode)
    if (0 == MultiByteToWideChar(65001 /* UTF8 */, 0, mode, -1, wMode, sizeof(wMode)/sizeof(*wMode)))
       return 0;
 
-#if defined(_MSC_VER) && _MSC_VER >= 1400
+#if (defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ && defined(__STDC_LIB_EXT1__)) \
+      || (defined(_MSC_VER) && _MSC_VER >= 1400)
    if (0 != _wfopen_s(&f, wFilename, wMode))
       f = 0;
 #else
    f = _wfopen(wFilename, wMode);
 #endif
 
-#elif (defined(_MSC_VER) && _MSC_VER >= 1400)
+#elif (defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ && defined(__STDC_LIB_EXT1__)) \
+      || (defined(_MSC_VER) && _MSC_VER >= 1400)
    if (0 != fopen_s(&f, filename, mode))
       f = 0;
 #else
@@ -770,7 +772,8 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
       char header[] = "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n";
       s->func(s->context, header, sizeof(header)-1);
 
-#if defined(_MSC_VER) && _MSC_VER >= 1400
+#if (defined(__STDC_WANT_LIB_EXT1__) && __STDC_WANT_LIB_EXT1__ && defined(__STDC_LIB_EXT1__)) \
+      || (defined(_MSC_VER) && _MSC_VER >= 1400)
       len = sprintf_s(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
 #elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199001L
       len = snprintf(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
