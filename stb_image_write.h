@@ -320,9 +320,9 @@ static FILE *stbiw__fopen(char const *filename, char const *mode)
    f = _wfopen(wFilename, wMode);
 #endif
 
-#elif defined(_MSC_VER) && _MSC_VER >= 1400
+#elif (defined(_MSC_VER) && _MSC_VER >= 1400)
    if (0 != fopen_s(&f, filename, mode))
-      f=0;
+      f = 0;
 #else
    f = fopen(filename, mode);
 #endif
@@ -772,6 +772,8 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
 
 #if defined(_MSC_VER) && _MSC_VER >= 1400
       len = sprintf_s(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
+#elif defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199001L
+      len = snprintf(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
 #else
       len = sprintf(buffer, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
 #endif
