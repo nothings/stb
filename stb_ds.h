@@ -941,7 +941,7 @@ static stbds_hash_index *stbds_make_hash_index(size_t slot_count, stbds_hash_ind
   } else {
     size_t a,b,temp;
     memset(&t->string, 0, sizeof(t->string));
-    t->seed = stbds_hash_seed;
+    t->seed = stbds_BB;
     // LCG
     // in 32-bit, a =          2147001325   b =  715136305
     // in 64-bit, a = 2862933555777941757   b = 3037000493
