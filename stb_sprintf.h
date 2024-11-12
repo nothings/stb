@@ -12,6 +12,7 @@
 // Contributors (bugfixes):
 //    github:d26435
 //    github:trex78
+//    github:septag
 //    github:account-login
 //    Jari Komppa (SI suffixes)
 //    Rohit Nirmal
@@ -157,6 +158,10 @@ PERFORMANCE vs MSVC 2008 32-/64-bit (GCC is even slower than MSVC):
 #elif defined(__GNUC__) && (__GNUC__ >= 5 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 8))
  #if defined(__SANITIZE_ADDRESS__) && __SANITIZE_ADDRESS__
   #define STBSP__ASAN __attribute__((__no_sanitize_address__))
+ #endif
+#elif defined(_MSC_VER) && _MSC_VER >= 1928
+ #if defined(__SANITIZE_ADDRESS__)
+  #define STBSP__ASAN __declspec(no_sanitize_address)
  #endif
 #endif
 
