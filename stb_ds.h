@@ -529,7 +529,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define STBDS_ADDRESSOF(typevar, value)     &(value)
 #endif
 
-#define STBDS_OFFSETOF(var,field)           ((char *) &(var)->field - (char *) (var))
+#define STBDS_OFFSETOF(var,field)           ((size_t)((char *) &(var)->field - (char *) (var)))
 
 #define stbds_header(t)  ((stbds_array_header *) (t) - 1)
 #define stbds_temp(t)    stbds_header(t)->temp
