@@ -1,0 +1,51 @@
+image: Visual Studio 2015
+
+platform:
+- x64
+- x86
+
+environment:
+  matrix:
+
+  - VS_VERSION: Visual Studio 2008
+    VSINSTALL: "Microsoft Visual Studio 9.0\\VC"
+
+  - VS_VERSION: Visual Studio 2010
+    VSINSTALL: "Microsoft Visual Studio 10.0\\VC"
+
+  - VS_VERSION: Visual Studio 2012
+    VSINSTALL: "Microsoft Visual Studio 11.0\\VC"
+
+  - VS_VERSION: Visual Studio 2013
+    VSINSTALL: "Microsoft Visual Studio 12.0\\VC"
+
+  - VS_VERSION: Visual Studio 2015
+    VSINSTALL: "Microsoft Visual Studio 14.0\\VC"
+
+  - VS_VERSION: Visual Studio 2017
+    VSINSTALL: "Microsoft Visual Studio\\2017\\Community\\VC\\Auxiliary\\Build"
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+
+build_script:
+  - echo build_script
+  - echo platform %platform%
+  - call "C:\\Program Files (x86)\\%VSINSTALL%\vcvarsall.bat" %platform%
+  - cd tests
+  - nmake /f Makefile.nmake
+
+test_script:
+  - test_cpp_compilation.exe
+  - stb_vorbis.exe
+
+matrix:
+  exclude:
+    - VS_VERSION: Visual Studio 2008
+      platform: x64
+    - VS_VERSION: Visual Studio 2010
+      platform: x64
+    - VS_VERSION: Visual Studio 2012
+      platform: x64
+
+deploy: off
+
+shallow_clone: true
