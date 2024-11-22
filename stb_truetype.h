@@ -45,7 +45,7 @@
 //       Cass Everitt               Martins Mozeiko       github:aloucks
 //       stoiko (Haemimont Games)   Cap Petschulat        github:oyvindjam
 //       Brian Hook                 Omar Cornut           github:vassvik
-//       Walter van Niftrik         Ryan Griege
+//       Walter van Niftrik         Ryan Griege           github:Cerallin
 //       David Gow                  Peter LaValle
 //       David Given                Sergey Popov
 //       Ivan-Assen Ivanov          Giumo X. Clanjor
@@ -718,7 +718,7 @@ struct stbtt_fontinfo
 
    int numGlyphs;                     // number of glyphs, needed for range checking
 
-   int loca,head,glyf,hhea,hmtx,kern,gpos,svg; // table locations as offset from start of .ttf
+   int loca,head,glyf,hhea,hmtx,vhea,vmtx,kern,gpos,svg; // table locations as offset from start of .ttf
    int index_map;                     // a cmap mapping for our chosen character encoding
    int indexToLocFormat;              // format needed to map from glyph index to glyph
 
@@ -776,6 +776,9 @@ STBTT_DEF void stbtt_GetFontVMetrics(const stbtt_fontinfo *info, int *ascent, in
 //   these are expressed in unscaled coordinates, so you must multiply by
 //   the scale factor for a given size
 
+STBTT_DEF void stbtt_GetFontHMetrics(const stbtt_fontinfo *info, int *vertTypoAscender, int *vertTypoDescender, int *vertTypoLineGap);
+
+
 STBTT_DEF int  stbtt_GetFontVMetricsOS2(const stbtt_fontinfo *info, int *typoAscent, int *typoDescent, int *typoLineGap);
 // analogous to GetFontVMetrics, but returns the "typographic" values from the OS/2
 // table (specific to MS/Windows TTF files).
@@ -797,6 +800,7 @@ STBTT_DEF int stbtt_GetCodepointBox(const stbtt_fontinfo *info, int codepoint, i
 // Gets the bounding box of the visible part of the glyph, in unscaled coordinates
 
 STBTT_DEF void stbtt_GetGlyphHMetrics(const stbtt_fontinfo *info, int glyph_index, int *advanceWidth, int *leftSideBearing);
+STBTT_DEF void stbtt_GetGlyphVMetrics(const stbtt_fontinfo *info, int glyph_index, int *advanceHeight, int *topSideBearing);
 STBTT_DEF int  stbtt_GetGlyphKernAdvance(const stbtt_fontinfo *info, int glyph1, int glyph2);
 STBTT_DEF int  stbtt_GetGlyphBox(const stbtt_fontinfo *info, int glyph_index, int *x0, int *y0, int *x1, int *y1);
 // as above, but takes one or more glyph indices for greater efficiency
@@ -1395,6 +1399,8 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, in
    info->glyf = stbtt__find_table(data, fontstart, "glyf"); // required
    info->hhea = stbtt__find_table(data, fontstart, "hhea"); // required
    info->hmtx = stbtt__find_table(data, fontstart, "hmtx"); // required
+   info->vhea = stbtt__find_table(data, fontstart, "vhea"); // not required
+   info->vmtx = stbtt__find_table(data, fontstart, "vmtx"); // not required
    info->kern = stbtt__find_table(data, fontstart, "kern"); // not required
    info->gpos = stbtt__find_table(data, fontstart, "GPOS"); // not required
 
@@ -2314,6 +2320,12 @@ STBTT_DEF void stbtt_GetGlyphHMetrics(const stbtt_fontinfo *info, int glyph_inde
    }
 }
 
+STBTT_DEF void stbtt_GetGlyphVMetrics(const stbtt_fontinfo *info, int glyph_index, int *advanceHeight, int *topSideBearing)
+{
+   if (advanceHeight)   *advanceHeight    = ttSHORT(info->data + info->vmtx + 4*glyph_index);
+   if (topSideBearing)  *topSideBearing   = ttSHORT(info->data + info->vmtx + 4*glyph_index + 2);
+}
+
 STBTT_DEF int  stbtt_GetKerningTableLength(const stbtt_fontinfo *info)
 {
    stbtt_uint8 *data = info->data + info->kern;
@@ -2631,11 +2643,23 @@ STBTT_DEF void stbtt_GetCodepointHMetrics(const stbtt_fontinfo *info, int codepo
    stbtt_GetGlyphHMetrics(info, stbtt_FindGlyphIndex(info,codepoint), advanceWidth, leftSideBearing);
 }
 
+STBTT_DEF void stbtt_GetCodepointVMetrics(const stbtt_fontinfo *info, int codepoint, int *advanceHeight, int *topSideBearing)
+{
+   stbtt_GetGlyphVMetrics(info, stbtt_FindGlyphIndex(info,codepoint), advanceHeight, topSideBearing);
+}
+
 STBTT_DEF void stbtt_GetFontVMetrics(const stbtt_fontinfo *info, int *ascent, int *descent, int *lineGap)
 {
    if (ascent ) *ascent  = ttSHORT(info->data+info->hhea + 4);
    if (descent) *descent = ttSHORT(info->data+info->hhea + 6);
    if (lineGap) *lineGap = ttSHORT(info->data+info->hhea + 8);
+}
+
+STBTT_DEF void stbtt_GetFontHMetrics(const stbtt_fontinfo *info, int *vertTypoAscender, int *vertTypoDescender, int *vertTypoLineGap)
+{
+   if (vertTypoAscender )  *vertTypoAscender    = ttSHORT(info->data+info->vhea + 4);
+   if (vertTypoDescender)  *vertTypoDescender   = ttSHORT(info->data+info->vhea + 6);
+   if (vertTypoLineGap)    *vertTypoLineGap     = ttSHORT(info->data+info->vhea + 8);
 }
 
 STBTT_DEF int  stbtt_GetFontVMetricsOS2(const stbtt_fontinfo *info, int *typoAscent, int *typoDescent, int *typoLineGap)
