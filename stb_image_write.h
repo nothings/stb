@@ -1100,7 +1100,7 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
    int signed_stride = stbi__flip_vertically_on_write ? -stride_bytes : stride_bytes;
 
    if (type==0) {
-      memcpy(line_buffer, z, width*n);
+      memcpy(line_buffer, z, stride_bytes);
       return;
    }
 
@@ -1116,12 +1116,12 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
       }
    }
    switch (type) {
-      case 1: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - z[i-n]; break;
-      case 2: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - z[i-signed_stride]; break;
-      case 3: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - ((z[i-n] + z[i-signed_stride])>>1); break;
-      case 4: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - stbiw__paeth(z[i-n], z[i-signed_stride], z[i-signed_stride-n]); break;
-      case 5: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - (z[i-n]>>1); break;
-      case 6: for (i=n; i < width*n; ++i) line_buffer[i] = z[i] - stbiw__paeth(z[i-n], 0,0); break;
+      case 1: for (i=n; i < stride_bytes; ++i) line_buffer[i] = z[i] - z[i-n]; break;
+      case 2: for (i=n; i < stride_bytes; ++i) line_buffer[i] = z[i] - z[i-signed_stride]; break;
+      case 3: for (i=n; i < stride_bytes; ++i) line_buffer[i] = z[i] - ((z[i-n] + z[i-signed_stride])>>1); break;
+      case 4: for (i=n; i < stride_bytes; ++i) line_buffer[i] = z[i] - stbiw__paeth(z[i-n], z[i-signed_stride], z[i-signed_stride-n]); break;
+      case 5: for (i=n; i < stride_bytes; ++i) line_buffer[i] = z[i] - (z[i-n]>>1); break;
+      case 6: for (i=n; i < stride_bytes; ++i) line_buffer[i] = z[i] - stbiw__paeth(z[i-n], 0,0); break;
    }
 }
 
@@ -1141,8 +1141,8 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
       force_filter = -1;
    }
 
-   filt = (unsigned char *) STBIW_MALLOC((x*n+1) * y); if (!filt) return 0;
-   line_buffer = (signed char *) STBIW_MALLOC(x * n); if (!line_buffer) { STBIW_FREE(filt); return 0; }
+   filt = (unsigned char *) STBIW_MALLOC((stride_bytes +1) * y); if (!filt) return 0;
+   line_buffer = (signed char *) STBIW_MALLOC(stride_bytes); if (!line_buffer) { STBIW_FREE(filt); return 0; }
    for (j=0; j < y; ++j) {
       int filter_type;
       if (force_filter > -1) {
@@ -1155,7 +1155,7 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
 
             // Estimate the entropy of the line using this filter; the less, the better.
             est = 0;
-            for (i = 0; i < x*n; ++i) {
+            for (i = 0; i < stride_bytes; ++i) {
                est += abs((signed char) line_buffer[i]);
             }
             if (est < best_filter_val) {
@@ -1169,11 +1169,11 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
          }
       }
       // when we get here, filter_type contains the filter type, and line_buffer contains the data
-      filt[j*(x*n+1)] = (unsigned char) filter_type;
-      STBIW_MEMMOVE(filt+j*(x*n+1)+1, line_buffer, x*n);
+      filt[j*(stride_bytes +1)] = (unsigned char) filter_type;
+      STBIW_MEMMOVE(filt+j*(stride_bytes +1)+1, line_buffer, stride_bytes);
    }
    STBIW_FREE(line_buffer);
-   zlib = stbi_zlib_compress(filt, y*( x*n+1), &zlen, stbi_write_png_compression_level);
+   zlib = stbi_zlib_compress(filt, y*(stride_bytes +1), &zlen, stbi_write_png_compression_level);
    STBIW_FREE(filt);
    if (!zlib) return 0;
 
@@ -1188,7 +1188,7 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
    stbiw__wptag(o, "IHDR");
    stbiw__wp32(o, x);
    stbiw__wp32(o, y);
-   *o++ = 8;
+   *o++ = stride_bytes/x/n*8;
    *o++ = STBIW_UCHAR(ctype[n]);
    *o++ = 0;
    *o++ = 0;
