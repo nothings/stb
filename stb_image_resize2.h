@@ -1451,8 +1451,8 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
     #include <smmintrin.h>
     #define stbir__simdf_pack_to_8words(out,reg0,reg1) out = _mm_packus_epi32(_mm_cvttps_epi32(_mm_max_ps(_mm_min_ps(reg0,STBIR__CONSTF(STBIR_max_uint16_as_float)),_mm_setzero_ps())), _mm_cvttps_epi32(_mm_max_ps(_mm_min_ps(reg1,STBIR__CONSTF(STBIR_max_uint16_as_float)),_mm_setzero_ps())))
   #else
-    STBIR__SIMDI_CONST(stbir__s32_32768, 32768);
-    STBIR__SIMDI_CONST(stbir__s16_32768, ((32768<<16)|32768));
+    STBIRDEF STBIR__SIMDI_CONST(stbir__s32_32768, 32768);
+    STBIRDEF STBIR__SIMDI_CONST(stbir__s16_32768, ((32768<<16)|32768));
 
     #define stbir__simdf_pack_to_8words(out,reg0,reg1) \
       { \
