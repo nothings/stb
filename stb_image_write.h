@@ -1259,7 +1259,7 @@ static void stbiw__encode_png_line_16(unsigned short* pixels, int stride_bytes, 
 
 STBIWDEF unsigned char* stbi_write_png_to_mem_16(const unsigned char* pixels, int stride_bytes, int x, int y, int n, int* out_len)
 {
-    int force_filter = 4;
+    int force_filter = stbi_write_force_png_filter;
     int ctype[5] = { -1, 0, 4, 2, 6 };
     unsigned char sig[8] = { 137,80,78,71,13,10,26,10 };
     unsigned char* out, * o, * filt, * zlib;
