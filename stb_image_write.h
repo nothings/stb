@@ -1220,6 +1220,11 @@ static unsigned short stbiw__paeth_16(int a, int b, int c)
     return (c & 0xffff);
 }
 
+signed short stbiw_swap_bit(unsigned short d)
+{
+    return ((d >> 8) & 0xff) | ((d << 8) & 0xff00);
+}
+
 static void stbiw__encode_png_line_16(unsigned short* pixels, int stride_bytes, int width, int height, int y, int n, int filter_type, signed short* line_buffer)
 {
     static int mapping[] = { 0,1,2,3,4 };
@@ -1229,30 +1234,58 @@ static void stbiw__encode_png_line_16(unsigned short* pixels, int stride_bytes, 
     int type = mymap[filter_type];
     unsigned short* z = (unsigned short*)(pixels + width*n * (stbi__flip_vertically_on_write ? height - 1 - y : y));
     int signed_stride = stbi__flip_vertically_on_write ? -width * n : width * n;
-
+    bool multi_channel = n > 1;
     if (type == 0) {
-        memcpy(line_buffer, pixels, stride_bytes);
+        if (multi_channel){
+            for (i = 0; i < width * n;++i)
+                line_buffer[i] = stbiw_swap_bit(z[i]);
+        }
+        else
+            memcpy(line_buffer, z, stride_bytes);
         return;
     }
 
-    // first loop isn't optimized since it's just one pixel
-    for (i = 0; i < n; ++i) {
+    if (multi_channel){
+        // first loop isn't optimized since it's just one pixel
+        for (i = 0; i < n; ++i) {
+            switch (type) {
+            case 1: line_buffer[i] = stbiw_swap_bit(z[i]); break;
+            case 2: line_buffer[i] = stbiw_swap_bit(z[i]) - stbiw_swap_bit(z[i - signed_stride]); break;
+            case 3: line_buffer[i] = stbiw_swap_bit(z[i]) - stbiw_swap_bit((z[i - signed_stride] >> 1)); break;
+            case 4: line_buffer[i] = (signed short)(stbiw_swap_bit(z[i]) - stbiw__paeth_16(0, stbiw_swap_bit(z[i - signed_stride]), 0)); break;
+            case 5: line_buffer[i] = stbiw_swap_bit(z[i]); break;
+            case 6: line_buffer[i] = stbiw_swap_bit(z[i]); break;
+            }
+        }
         switch (type) {
-        case 1: line_buffer[i] = z[i]; break;
-        case 2: line_buffer[i] = z[i] - z[i - signed_stride]; break;
-        case 3: line_buffer[i] = z[i] - (z[i - signed_stride] >> 1); break;
-        case 4: line_buffer[i] = (signed short)(z[i] - stbiw__paeth_16(0, z[i - signed_stride], 0)); break;
-        case 5: line_buffer[i] = z[i]; break;
-        case 6: line_buffer[i] = z[i]; break;
+        case 1: for (i = n; i < width * n; ++i) line_buffer[i] = stbiw_swap_bit(z[i]) - stbiw_swap_bit(z[i - n]); break;
+        case 2: for (i = n; i < width * n; ++i) line_buffer[i] = stbiw_swap_bit(z[i]) - stbiw_swap_bit(z[i - signed_stride]); break;
+        case 3: for (i = n; i < width * n; ++i) line_buffer[i] = stbiw_swap_bit(z[i]) - ((stbiw_swap_bit(z[i - n]) + stbiw_swap_bit(z[i - signed_stride])) >> 1); break;
+        case 4: for (i = n; i < width * n; ++i) line_buffer[i] = stbiw_swap_bit(z[i]) - stbiw__paeth_16(stbiw_swap_bit(z[i - n]), stbiw_swap_bit(z[i - signed_stride]), stbiw_swap_bit(z[i - signed_stride - n])); break;
+        case 5: for (i = n; i < width * n; ++i) line_buffer[i] = stbiw_swap_bit(z[i]) - stbiw_swap_bit((z[i - n]) >> 1); break;
+        case 6: for (i = n; i < width * n; ++i) line_buffer[i] = stbiw_swap_bit(z[i]) - stbiw__paeth_16(stbiw_swap_bit(z[i - n]), 0, 0); break;
         }
     }
-    switch (type) {
-    case 1: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - z[i - n]; break;
-    case 2: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - z[i - signed_stride]; break;
-    case 3: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - ((z[i - n] + z[i - signed_stride]) >> 1); break;
-    case 4: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - stbiw__paeth_16(z[i - n], z[i - signed_stride], z[i - signed_stride - n]); break;
-    case 5: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - (z[i - n] >> 1); break;
-    case 6: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - stbiw__paeth_16(z[i - n], 0, 0); break;
+    else{
+        // first loop isn't optimized since it's just one pixel
+        for (i = 0; i < n; ++i) {
+            switch (type) {
+            case 1: line_buffer[i] = z[i]; break;
+            case 2: line_buffer[i] = z[i] - z[i - signed_stride]; break;
+            case 3: line_buffer[i] = z[i] - (z[i - signed_stride] >> 1); break;
+            case 4: line_buffer[i] = (signed short)(z[i] - stbiw__paeth_16(0, z[i - signed_stride], 0)); break;
+            case 5: line_buffer[i] = z[i]; break;
+            case 6: line_buffer[i] = z[i]; break;
+            }
+        }
+        switch (type) {
+        case 1: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - z[i - n]; break;
+        case 2: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - z[i - signed_stride]; break;
+        case 3: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - ((z[i - n] + z[i - signed_stride]) >> 1); break;
+        case 4: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - stbiw__paeth_16(z[i - n], z[i - signed_stride], z[i - signed_stride - n]); break;
+        case 5: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - (z[i - n] >> 1); break;
+        case 6: for (i = n; i < width * n; ++i) line_buffer[i] = z[i] - stbiw__paeth_16(z[i - n], 0, 0); break;
+        }
     }
 }
 
