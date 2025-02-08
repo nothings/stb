@@ -598,7 +598,10 @@ enum STBVorbisError
    #define realloc(s)  0
 #endif // STB_VORBIS_NO_CRT
 
-#include <limits.h>
+#ifndef UINT_MAX
+// limits.h constant defined independently:
+#define UINT_MAX ((unsigned int) ~0)
+#endif
 
 #ifdef __MINGW32__
    // eff you mingw:
