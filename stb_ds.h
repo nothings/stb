@@ -143,7 +143,7 @@ DOCUMENTATION
 
       arrcap:
         size_t arrcap(T* a);
-          Returns the number of total elements the array can contain without
+          Returns the total number of elements the array can contain without
           needing to be reallocated.
 
   Hash maps & String hash maps
@@ -273,6 +273,13 @@ DOCUMENTATION
           If 'key' is in the hashmap, deletes its entry and returns 1.
           Otherwise returns 0.
 
+      hmcap
+      shcap
+        size_t hmcap(T*)
+        size_t shcap(T*)
+          Returns the total number of elements the hashmap can contain without
+          needing to be reallocated.
+
     Function interface (actually macros) for strings only:
 
       sh_new_strdup
@@ -371,6 +378,7 @@ CREDITS
   Per Vognsen  -- idea for hash table API/implementation
   Rafael Sachetto -- arrpop()
   github:HeroicKatora -- arraddn() reworking
+  Carter Thaxton -- hmcap() / shcap()
 
   Bugfixes:
     Andy Durdin
@@ -427,6 +435,7 @@ CREDITS
 #define hmdel       stbds_hmdel
 #define hmlen       stbds_hmlen
 #define hmlenu      stbds_hmlenu
+#define hmcap       stbds_hmcap
 #define hmfree      stbds_hmfree
 #define hmdefault   stbds_hmdefault
 #define hmdefaults  stbds_hmdefaults
@@ -442,6 +451,7 @@ CREDITS
 #define shdel       stbds_shdel
 #define shlen       stbds_shlen
 #define shlenu      stbds_shlenu
+#define shcap       stbds_shcap
 #define shfree      stbds_shfree
 #define shdefault   stbds_shdefault
 #define shdefaults  stbds_shdefaults
@@ -600,6 +610,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_hmget_ts(t, k, temp)  (stbds_hmgetp_ts(t,k,temp)->value)
 #define stbds_hmlen(t)        ((t) ? (ptrdiff_t) stbds_header((t)-1)->length-1 : 0)
 #define stbds_hmlenu(t)       ((t) ?             stbds_header((t)-1)->length-1 : 0)
+#define stbds_hmcap(t)        ((t) ?             stbds_header((t)-1)->capacity-1 : 0)
 #define stbds_hmgetp_null(t,k)  (stbds_hmgeti(t,k) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
 
 #define stbds_shput(t, k, v) \
@@ -653,6 +664,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_shget(t, k)  (stbds_shgetp(t,k)->value)
 #define stbds_shgetp_null(t,k)  (stbds_shgeti(t,k) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
 #define stbds_shlen        stbds_hmlen
+#define stbds_shcap        stbds_hmcap
 
 typedef struct
 {
