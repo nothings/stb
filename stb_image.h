@@ -114,7 +114,7 @@ RECENT REVISION HISTORY:
     Josh Tobin              Neil Bickford      Matthew Gregan       github:poppolopoppo
     Julian Raschke          Gregory Mullen     Christian Floisand   github:darealshinji
     Baldur Karlsson         Kevin Schmidt      JR Smith             github:Michaelangel007
-                            Brad Weinberger    Matvey Cherevko      github:mosra
+    Raymond Lucke           Brad Weinberger    Matvey Cherevko      github:mosra
     Luca Sas                Alexander Veselov  Zack Middleton       [reserved]
     Ryan C. Gordon          [reserved]                              [reserved]
                      DO NOT ADD YOUR NAME HERE
@@ -4992,6 +4992,7 @@ static int stbi__expand_png_palette(stbi__png *a, stbi_uc *palette, int len, int
 
 static int stbi__unpremultiply_on_load_global = 0;
 static int stbi__de_iphone_flag_global = 0;
+static int stbi__de_iphone_flag_version = 0;
 
 STBIDEF void stbi_set_unpremultiply_on_load(int flag_true_if_should_unpremultiply)
 {
@@ -5001,6 +5002,7 @@ STBIDEF void stbi_set_unpremultiply_on_load(int flag_true_if_should_unpremultipl
 STBIDEF void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert)
 {
    stbi__de_iphone_flag_global = flag_true_if_should_convert;
+   stbi__de_iphone_flag_version = 0;
 }
 
 #ifndef STBI_THREAD_LOCAL
@@ -5097,7 +5099,14 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
       switch (c.type) {
          case STBI__PNG_TYPE('C','g','B','I'):
             is_iphone = 1;
-            stbi__skip(s, c.length);
+            if (c.length >= 4) {
+                unsigned char cgbi[4];
+                for (int i = 0; i < 4; i++)
+                   cgbi[i] = stbi__get8(s);
+                stbi__de_iphone_flag_version = cgbi[3];
+            } else {
+                stbi__skip(s, c.length);
+            }
             break;
          case STBI__PNG_TYPE('I','H','D','R'): {
             int comp,filter;
@@ -5204,7 +5213,26 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             // initial guess for decoded data size to avoid unnecessary reallocs
             bpl = (s->img_x * z->depth + 7) / 8; // bytes per line, per component
             raw_len = bpl * s->img_y * s->img_n /* pixels */ + s->img_y /* filter mode per row */;
-            z->expanded = (stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag((char *) z->idata, ioff, raw_len, (int *) &raw_len, !is_iphone);
+            if (is_iphone && stbi__de_iphone_flag_version == 0x06) {
+               unsigned char* wrapped_data = (unsigned char*)malloc(ioff + 6);
+               if (!wrapped_data) return stbi__err("outofmem", "Out of memory");
+    
+               wrapped_data[0] = 0x78;  // CMF byte
+               wrapped_data[1] = 0x01;  // FLG byte
+               memcpy(wrapped_data + 2, z->idata, ioff);
+               wrapped_data[ioff + 2] = 0;
+               wrapped_data[ioff + 3] = 0;
+               wrapped_data[ioff + 4] = 0;
+               wrapped_data[ioff + 5] = 1;
+    
+               z->expanded = (stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag(
+                  (char *)wrapped_data, ioff + 6, raw_len, (int *) &raw_len, 1);
+    
+               free(wrapped_data);
+            } else {
+               z->expanded = (stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag(
+                  (char *) z->idata, ioff, raw_len, (int *) &raw_len, !is_iphone);
+            }
             if (z->expanded == NULL) return 0; // zlib should set error
             STBI_FREE(z->idata); z->idata = NULL;
             if ((req_comp == s->img_n+1 && req_comp != 3 && !pal_img_n) || has_trans)
