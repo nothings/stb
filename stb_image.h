@@ -101,7 +101,7 @@ RECENT REVISION HISTORY:
     Marc LeBlanc            David Woo          Guillaume George     Martins Mozeiko
     Christpher Lloyd        Jerry Jansson      Joseph Thomson       Blazej Dariusz Roszkowski
     Phil Jordan                                Dave Moore           Roy Eltham
-    Hayaki Saito            Nathan Reed        Won Chun
+    Hayaki Saito            Nathan Reed        Won Chun             Thomas Bernard
     Luke Graham             Johan Duparc       Nick Verigakis       the Horde3D community
     Thomas Ruf              Ronny Chevalier                         github:rlyeh
     Janez Zemva             John Bartholomew   Michal Cichon        github:romigrou
@@ -5235,6 +5235,10 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             STBI_FREE(z->expanded); z->expanded = NULL;
             // end of PNG chunk, read and skip CRC
             stbi__get32be(s);
+            if (s->io.skip && s->img_buffer_end > s->img_buffer) {
+               // rewind the additional bytes that have been read to the buffer
+               (s->io.skip)(s->io_user_data, (int)(s->img_buffer - s->img_buffer_end));
+            }
             return 1;
          }
 
