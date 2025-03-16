@@ -382,6 +382,7 @@ CREDITS
     Macoy Madson
     Andreas Vennstrom
     Tobias Mansfield-Williams
+    Guilherme Espirito Santo
 */
 
 #ifdef STBDS_UNIT_TESTS
