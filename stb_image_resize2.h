@@ -6965,6 +6965,8 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
   size_t decode_buffer_size, ring_buffer_length_bytes, ring_buffer_size, vertical_buffer_size;
   int alloc_ring_buffer_num_entries;
 
+  (void)ring_buffer_size; // not used
+  
   int alpha_weighting_type = 0; // 0=none, 1=simple, 2=fancy
   int conservative_split_output_size = stbir__get_max_split( splits, vertical->scale_info.output_sub_size );
   stbir_internal_pixel_layout input_pixel_layout = stbir__pixel_layout_convert_public_to_internal[ input_pixel_layout_public ];
@@ -7137,7 +7139,7 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
         ++info->split_info[i].decode_buffer; // avx in 3 channel mode needs one float at the start of the buffer
       #endif
 
-      STBIR__NEXT_PTR( info->split_info[i].ring_buffers, alloc_ring_buffer_num_entries * sizeof(float*), float* );
+      STBIR__NEXT_PTR( info->split_info[i].ring_buffers, (size_t)alloc_ring_buffer_num_entries * sizeof(float*), float* );
       {
         int j;
         for( j = 0 ; j < alloc_ring_buffer_num_entries ; j++ )
@@ -7188,13 +7190,13 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
       else
       {
         // ring+decode memory is too small, so allocate temp memory
-        STBIR__NEXT_PTR( vertical->gather_prescatter_contributors, vertical->gather_prescatter_contributors_size, stbir__contributors );
-        STBIR__NEXT_PTR( vertical->gather_prescatter_coefficients, vertical->gather_prescatter_coefficients_size, float );
+        STBIR__NEXT_PTR( vertical->gather_prescatter_contributors, (size_t)vertical->gather_prescatter_contributors_size, stbir__contributors );
+        STBIR__NEXT_PTR( vertical->gather_prescatter_coefficients, (size_t)vertical->gather_prescatter_coefficients_size, float );
       }
     }
 
-    STBIR__NEXT_PTR( horizontal->contributors, horizontal->contributors_size, stbir__contributors );
-    STBIR__NEXT_PTR( horizontal->coefficients, horizontal->coefficients_size, float );
+    STBIR__NEXT_PTR( horizontal->contributors, (size_t)horizontal->contributors_size, stbir__contributors );
+    STBIR__NEXT_PTR( horizontal->coefficients, (size_t)horizontal->coefficients_size, float );
 
     // are the two filters identical?? (happens a lot with mipmap generation)
     if ( ( horizontal->filter_kernel == vertical->filter_kernel ) && ( horizontal->filter_support == vertical->filter_support ) && ( horizontal->edge == vertical->edge ) && ( horizontal->scale_info.output_sub_size == vertical->scale_info.output_sub_size ) )
@@ -7215,8 +7217,8 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
       }
     }
 
-    STBIR__NEXT_PTR( vertical->contributors, vertical->contributors_size, stbir__contributors );
-    STBIR__NEXT_PTR( vertical->coefficients, vertical->coefficients_size, float );
+    STBIR__NEXT_PTR( vertical->contributors, (size_t)vertical->contributors_size, stbir__contributors );
+    STBIR__NEXT_PTR( vertical->coefficients, (size_t)vertical->coefficients_size, float );
 
    no_vert_alloc:
 
