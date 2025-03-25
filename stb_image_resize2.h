@@ -1051,7 +1051,7 @@ struct stbir__info
 #define stbir__max_uint16_as_float            65535.0f
 #define stbir__max_uint8_as_float_inverted    (1.0f/255.0f)
 #define stbir__max_uint16_as_float_inverted   (1.0f/65535.0f)
-#define stbir__small_float ((float)1 / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20))
+#define stbir__small_float ((float)1 / (float)(1 << 20) / (float)(1 << 20) / (float)(1 << 20) / (float)(1 << 20) / (float)(1 << 20) / (float)(1 << 20))
 
 // min/max friendly
 #define STBIR_CLAMP(x, xmin, xmax) for(;;) { \
@@ -1200,7 +1200,8 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
   #endif
 #endif
 
-#if defined( _M_ARM64 ) || defined( __aarch64__ ) || defined( __arm64__ ) || ((__ARM_NEON_FP & 4) != 0) || defined(__ARM_NEON__)
+#if defined( _M_ARM64 ) || defined( __aarch64__ ) || defined( __arm64__ ) || \
+    (defined(__ARM_NEON_FP) && ((__ARM_NEON_FP & 4) != 0)) || defined(__ARM_NEON__)
 #ifndef STBIR_NEON
 #define STBIR_NEON
 #endif
@@ -1464,8 +1465,8 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
     #include <smmintrin.h>
     #define stbir__simdf_pack_to_8words(out,reg0,reg1) out = _mm_packus_epi32(_mm_cvttps_epi32(_mm_max_ps(_mm_min_ps(reg0,STBIR__CONSTF(STBIR_max_uint16_as_float)),_mm_setzero_ps())), _mm_cvttps_epi32(_mm_max_ps(_mm_min_ps(reg1,STBIR__CONSTF(STBIR_max_uint16_as_float)),_mm_setzero_ps())))
   #else
-    static STBIR__SIMDI_CONST(stbir__s32_32768, 32768);
-    static STBIR__SIMDI_CONST(stbir__s16_32768, ((32768<<16)|32768));
+    static const STBIR__SIMDI_CONST(stbir__s32_32768, 32768U);
+    static const STBIR__SIMDI_CONST(stbir__s16_32768, ((32768U<<16U)|32768U));
 
     #define stbir__simdf_pack_to_8words(out,reg0,reg1) \
       { \
@@ -2226,11 +2227,11 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
     static const stbir__FP32 was_infnan = { (127 + 16) << 23 };
     stbir__FP32 o;
 
-    o.u = (h.u & 0x7fff) << 13;     // exponent/mantissa bits
+    o.u = (h.u & 0x7fffU) << 13U;     // exponent/mantissa bits
     o.f *= magic.f;                 // exponent adjust
     if (o.f >= was_infnan.f)        // make sure Inf/NaN survive
       o.u |= 255 << 23;
-    o.u |= (h.u & 0x8000) << 16;    // sign bit
+    o.u |= (h.u & 0x8000U) << 16U;    // sign bit
     return o.f;
   }
 
@@ -2273,7 +2274,7 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
       }
     }
 
-    o.u |= sign >> 16;
+    o.u |= (stbtt_uint16)(sign >> 16);
     return o;
   }
 
@@ -2605,7 +2606,7 @@ static void stbir_simd_memcpy( void * dest, void const * src, size_t bytes )
       // do one unaligned to get us aligned for the stream out below
       stbir__simdf_load( x, ( d + ofs_to_src ) );
       stbir__simdf_store( d, x );
-      d = (char*)( ( ( (size_t)d ) + 16 ) & ~15 );
+      d = (char*)( ( ( (size_t)d ) + 16U ) & ~15U );
 
       STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
       for(;;)
@@ -2638,7 +2639,7 @@ static void stbir_simd_memcpy( void * dest, void const * src, size_t bytes )
     stbir__simdfX_store( d +  4*stbir__simdfX_float_count, x1 );
     stbir__simdfX_store( d +  8*stbir__simdfX_float_count, x2 );
     stbir__simdfX_store( d + 12*stbir__simdfX_float_count, x3 );
-    d = (char*)( ( ( (size_t)d ) + (16*stbir__simdfX_float_count) ) & ~((16*stbir__simdfX_float_count)-1) );
+    d = (char*)( ( ( (size_t)d ) + (size_t)(16*stbir__simdfX_float_count) ) & (size_t)~((16*stbir__simdfX_float_count)-1) );
 
     STBIR_SIMD_NO_UNROLL_LOOP_START_INF_FOR
     for(;;)
@@ -2676,7 +2677,7 @@ static void stbir_overlapping_memcpy( void * dest, void const * src, size_t byte
 
   if ( ofs_to_dest >= 16 ) // is the overlap more than 16 away?
   {
-    char STBIR_SIMD_STREAMOUT_PTR( * ) s_end16 = ((char*) src) + (bytes&~15);
+    char STBIR_SIMD_STREAMOUT_PTR( * ) s_end16 = ((char*) src) + (bytes&~15U);
     STBIR_SIMD_NO_UNROLL_LOOP_START
     do
     {
@@ -3289,8 +3290,8 @@ static void stbir__calculate_coefficients_for_gather_upsample( float out_filter_
   float inv_scale = scale_info->inv_scale;
   float out_shift = scale_info->pixel_shift;
   int input_size  = scale_info->input_full_size;
-  int numerator = scale_info->scale_numerator;
-  int polyphase = ( ( scale_info->scale_is_rational ) && ( numerator < num_contributors ) );
+  int numerator   = (int) scale_info->scale_numerator;
+  int polyphase   = ( ( scale_info->scale_is_rational ) && ( numerator < num_contributors ) );
 
   // Looping through out pixels
   end = num_contributors; if ( polyphase ) end = numerator;
@@ -3354,9 +3355,9 @@ static void stbir__insert_coeff( stbir__contributors * contribs, float * coeffs,
       if ( ( contribs->n1 - new_pixel + 1 ) <= max_width )
       { 
         int j, o = contribs->n0 - new_pixel;
-        for ( j = contribs->n1 - contribs->n0 ; j <= 0 ; j-- )
+        for ( j = (contribs->n1 - contribs->n0) ; j >= 0 ; j-- )
           coeffs[ j + o ] = coeffs[ j ];
-        for ( j = 1 ; j < o ; j-- )
+        for ( j = 1 ; j < o ; j++ )
           coeffs[ j ] = coeffs[ 0 ];
         coeffs[ 0 ] = new_coeff;
         contribs->n0 = new_pixel;
@@ -3406,7 +3407,7 @@ static void stbir__calculate_coefficients_for_gather_downsample( int start, int 
   float scale = scale_info->scale;
   float out_shift = scale_info->pixel_shift;
   int out_size = scale_info->output_sub_size;
-  int numerator = scale_info->scale_numerator;
+  int numerator = (int)scale_info->scale_numerator;
   int polyphase = ( ( scale_info->scale_is_rational ) && ( numerator < out_size ) );
 
   STBIR__UNUSED(num_contributors);
@@ -3490,8 +3491,8 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
   int lowest = 0x7fffffff;
   int highest = -0x7fffffff;
   int widest = -1;
-  int numerator = scale_info->scale_numerator;
-  int denominator = scale_info->scale_denominator;
+  int numerator = (int)scale_info->scale_numerator;
+  int denominator = (int)scale_info->scale_denominator;
   int polyphase = ( ( scale_info->scale_is_rational ) && ( numerator < num_contributors ) );
   float * coeffs;
   stbir__contributors * contribs;
@@ -3515,7 +3516,7 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
     }
 
     // rescale
-    if ( ( total_filter < stbir__small_float ) && ( total_filter > -stbir__small_float ) )
+    if ( ( (float)total_filter < stbir__small_float ) && ( (float)total_filter > -stbir__small_float ) )
     {
       // all coeffs are extremely small, just zero it
       contribs->n1 = contribs->n0;
@@ -3524,13 +3525,13 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
     else
     {
       // if the total isn't 1.0, rescale everything
-      if ( ( total_filter < (1.0f-stbir__small_float) ) || ( total_filter > (1.0f+stbir__small_float) ) )
+      if ( ( (float)total_filter < (1.0f-stbir__small_float) ) || ( (float)total_filter > (1.0f+stbir__small_float) ) )
       {
         filter_scale = ((STBIR_RENORM_TYPE)1.0) / total_filter;
 
         // scale them all
         for (i = 0; i <= e; i++)
-          coeffs[i] = (float) ( coeffs[i] * filter_scale );
+          coeffs[i] = (float) ( coeffs[i] * (float)filter_scale );
       }
     }
     ++contribs;
@@ -3551,7 +3552,7 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
       ++cur_contribs;
       ++prev_contribs;
     }
-    stbir_overlapping_memcpy( coefficient_group + numerator * coefficient_width, coefficient_group, ( num_contributors - numerator ) * coefficient_width * sizeof( coeffs[ 0 ] ) );
+    stbir_overlapping_memcpy( coefficient_group + numerator * coefficient_width, coefficient_group, (size_t)(( num_contributors - numerator ) * coefficient_width) * sizeof( coeffs[ 0 ] ) );
   }
 
   coeffs = coefficient_group;
@@ -4647,7 +4648,7 @@ static void stbir__decode_scanline(stbir__info const * stbir_info, int n, float 
         int x = start_x[e];
         float * marg = full_decode_buffer + x * effective_channels;
         float const * src = full_decode_buffer + stbir__edge_wrap(edge_horizontal, x, input_full_size) * effective_channels;
-        STBIR_MEMCPY( marg, src, margin * effective_channels * sizeof(float) );
+        STBIR_MEMCPY( marg, src, (size_t) (margin * effective_channels) * sizeof(float) );
         if ( e == 1 ) last_decoded = marg + margin * effective_channels;
       }
     }
@@ -4655,12 +4656,16 @@ static void stbir__decode_scanline(stbir__info const * stbir_info, int n, float 
   
   // some of the horizontal gathers read one float off the edge (which is masked out), but we force a zero here to make sure no NaNs leak in
   //   (we can't pre-zero it, because the input callback can use that area as padding)
-  last_decoded[0] = 0.0f; 
+  if (last_decoded) 
+  {
+    last_decoded[0] = 0.0f;
+    last_decoded[1] = 0.0f;
+  } 
 
   // we clear this extra float, because the final output pixel filter kernel might have used one less coeff than the max filter width
   //   when this happens, we do read that pixel from the input, so it too could be Nan, so just zero an extra one.
   //   this fits because each scanline is padded by three floats (STBIR_INPUT_CALLBACK_PADDING)
-  last_decoded[1] = 0.0f;
+  
 }
 
 
@@ -6201,9 +6206,9 @@ static void stbir__resample_horizontal_gather(stbir__info const * stbir_info, fl
 
   STBIR_PROFILE_START( horizontal );
   if ( ( stbir_info->horizontal.filter_enum == STBIR_FILTER_POINT_SAMPLE ) && ( stbir_info->horizontal.scale_info.scale == 1.0f ) )
-    STBIR_MEMCPY( output_buffer, input_buffer, stbir_info->horizontal.scale_info.output_sub_size * sizeof( float ) * stbir_info->effective_channels );
+    STBIR_MEMCPY( output_buffer, input_buffer, (size_t) stbir_info->horizontal.scale_info.output_sub_size * sizeof( float ) * (size_t)stbir_info->effective_channels );
   else
-    stbir_info->horizontal_gather_channels( output_buffer, stbir_info->horizontal.scale_info.output_sub_size, decode_buffer, stbir_info->horizontal.contributors, stbir_info->horizontal.coefficients, stbir_info->horizontal.coefficient_width );
+    stbir_info->horizontal_gather_channels( output_buffer, (unsigned int)stbir_info->horizontal.scale_info.output_sub_size, decode_buffer, stbir_info->horizontal.contributors, stbir_info->horizontal.coefficients, stbir_info->horizontal.coefficient_width );
   STBIR_PROFILE_END( horizontal );
 }
 
@@ -6428,13 +6433,13 @@ static void stbir__vertical_scatter_loop( stbir__info const * stbir_info, stbir_
   {
     handle_scanline_for_scatter = stbir__horizontal_resample_and_encode_first_scanline_from_scatter;
     scanline_scatter_buffer = split_info->decode_buffer;
-    scanline_scatter_buffer_end = ( (char*) scanline_scatter_buffer ) + sizeof( float ) * stbir_info->effective_channels * (stbir_info->scanline_extents.conservative.n1-stbir_info->scanline_extents.conservative.n0+1);
+    scanline_scatter_buffer_end = ( (char*) scanline_scatter_buffer ) + sizeof( float ) * (size_t)stbir_info->effective_channels * (size_t)(stbir_info->scanline_extents.conservative.n1-stbir_info->scanline_extents.conservative.n0+1);
   }
   else
   {
     handle_scanline_for_scatter = stbir__encode_first_scanline_from_scatter;
     scanline_scatter_buffer = split_info->vertical_buffer;
-    scanline_scatter_buffer_end = ( (char*) scanline_scatter_buffer ) + sizeof( float ) * stbir_info->effective_channels * stbir_info->horizontal.scale_info.output_sub_size;
+    scanline_scatter_buffer_end = ( (char*) scanline_scatter_buffer ) + sizeof( float ) * (size_t)(stbir_info->effective_channels * stbir_info->horizontal.scale_info.output_sub_size);
   }
 
   // initialize the ring buffer for scattering
@@ -6591,8 +6596,8 @@ static void stbir__set_sampler(stbir__sampler * samp, stbir_filter filter, stbir
 
   samp->num_contributors = stbir__get_contributors(samp, samp->is_gather);
 
-  samp->contributors_size = samp->num_contributors * sizeof(stbir__contributors);
-  samp->coefficients_size = samp->num_contributors * samp->coefficient_width * sizeof(float) + sizeof(float)*STBIR_INPUT_CALLBACK_PADDING; // extra sizeof(float) is padding
+  samp->contributors_size = samp->num_contributors * (int) sizeof(stbir__contributors);
+  samp->coefficients_size = samp->num_contributors * samp->coefficient_width * (int)sizeof(float) + (int)sizeof(float)*STBIR_INPUT_CALLBACK_PADDING; // extra sizeof(float) is padding
 
   samp->gather_prescatter_contributors = 0;
   samp->gather_prescatter_coefficients = 0;
@@ -6600,8 +6605,8 @@ static void stbir__set_sampler(stbir__sampler * samp, stbir_filter filter, stbir
   {
     samp->gather_prescatter_coefficient_width = samp->filter_pixel_width;
     samp->gather_prescatter_num_contributors  = stbir__get_contributors(samp, 2);
-    samp->gather_prescatter_contributors_size = samp->gather_prescatter_num_contributors * sizeof(stbir__contributors);
-    samp->gather_prescatter_coefficients_size = samp->gather_prescatter_num_contributors * samp->gather_prescatter_coefficient_width * sizeof(float);
+    samp->gather_prescatter_contributors_size = (samp->gather_prescatter_num_contributors) * (int)sizeof(stbir__contributors);
+    samp->gather_prescatter_coefficients_size = (samp->gather_prescatter_num_contributors * samp->gather_prescatter_coefficient_width) * (int)sizeof(float);
   }
 }
 
@@ -6911,8 +6916,8 @@ static int stbir__should_do_vertical_first( float weights_table[STBIR_RESIZE_CLA
   weights = weights_table[ v_classification ];
 
   // this is the costs when you don't take into account modern CPUs with high ipc and simd and caches - wish we had a better estimate
-  h_cost = (float)horizontal_filter_pixel_width * weights[0] + horizontal_scale * (float)vertical_filter_pixel_width * weights[1];
-  v_cost = (float)vertical_filter_pixel_width  * weights[2] + vertical_scale * (float)horizontal_filter_pixel_width * weights[3];
+  h_cost = (double)horizontal_filter_pixel_width * (double)((weights[0] + horizontal_scale * (float)vertical_filter_pixel_width   )* weights[1]);
+  v_cost = (double)vertical_filter_pixel_width   * (double)((weights[2] + vertical_scale   * (float)horizontal_filter_pixel_width )* weights[3]);
 
   // use computation estimate to decide vertical first or not
   vertical_first = ( v_cost <= h_cost ) ? 1 : 0;
@@ -6960,6 +6965,8 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
   size_t decode_buffer_size, ring_buffer_length_bytes, ring_buffer_size, vertical_buffer_size;
   int alloc_ring_buffer_num_entries;
 
+  (void)ring_buffer_size; // not used
+  
   int alpha_weighting_type = 0; // 0=none, 1=simple, 2=fancy
   int conservative_split_output_size = stbir__get_max_split( splits, vertical->scale_info.output_sub_size );
   stbir_internal_pixel_layout input_pixel_layout = stbir__pixel_layout_convert_public_to_internal[ input_pixel_layout_public ];
@@ -7000,12 +7007,13 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
     return 0;
 
   // get vertical first
-  vertical_first = stbir__should_do_vertical_first( stbir__compute_weights[ (int)stbir_channel_count_index[ effective_channels ] ], horizontal->filter_pixel_width, horizontal->scale_info.scale, horizontal->scale_info.output_sub_size, vertical->filter_pixel_width, vertical->scale_info.scale, vertical->scale_info.output_sub_size, vertical->is_gather, STBIR__V_FIRST_INFO_POINTER );
+  // another Hack to make MSVC happy!
+  vertical_first = stbir__should_do_vertical_first( stbir__compute_weights[ (int)stbir_channel_count_index[ effective_channels % 8 ] % 5], horizontal->filter_pixel_width, horizontal->scale_info.scale, horizontal->scale_info.output_sub_size, vertical->filter_pixel_width, vertical->scale_info.scale, vertical->scale_info.output_sub_size, vertical->is_gather, STBIR__V_FIRST_INFO_POINTER );
 
   // sometimes read one float off in some of the unrolled loops (with a weight of zero coeff, so it doesn't have an effect)
   //   we use a few extra floats instead of just 1, so that input callback buffer can overlap with the decode buffer without
   //   the conversion routines overwriting the callback input data.
-  decode_buffer_size = ( conservative->n1 - conservative->n0 + 1 ) * effective_channels * sizeof(float) + sizeof(float)*STBIR_INPUT_CALLBACK_PADDING; // extra floats for input callback stagger
+  decode_buffer_size = (size_t)(( conservative->n1 - conservative->n0 + 1 ) * effective_channels) * sizeof(float) + sizeof(float)*(size_t)STBIR_INPUT_CALLBACK_PADDING; // extra floats for input callback stagger
 
 #if defined( STBIR__SEPARATE_ALLOCATIONS ) && defined(STBIR_SIMD8)
   if ( effective_channels == 3 )
@@ -7016,7 +7024,7 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
 
   // if we do vertical first, the ring buffer holds a whole decoded line
   if ( vertical_first )
-    ring_buffer_length_bytes = ( decode_buffer_size + 15 ) & ~15;
+    ring_buffer_length_bytes = ( decode_buffer_size + 15U ) & ~15U;
 
   if ( ( ring_buffer_length_bytes & 4095 ) == 0 ) ring_buffer_length_bytes += 64*3; // avoid 4k alias
 
@@ -7046,12 +7054,12 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
 #ifdef STBIR__SEPARATE_ALLOCATIONS
     #define STBIR__NEXT_PTR( ptr, size, ntype ) if ( alloced ) { void * p = STBIR_MALLOC( size, user_data); if ( p == 0 ) { stbir__free_internal_mem( info ); return 0; } (ptr) = (ntype*)p; }
 #else
-    #define STBIR__NEXT_PTR( ptr, size, ntype ) advance_mem = (void*) ( ( ((size_t)advance_mem) + 15 ) & ~15 ); if ( alloced ) ptr = (ntype*)advance_mem; advance_mem = ((char*)advance_mem) + (size);
+    #define STBIR__NEXT_PTR( ptr, size, ntype ) advance_mem = (void*) ( ( ((size_t)advance_mem) + 15U ) & ~15U ); if ( alloced ) ptr = (ntype*)advance_mem; advance_mem = ((char*)advance_mem) + (size);
 #endif
 
     STBIR__NEXT_PTR( info, sizeof( stbir__info ), stbir__info );
 
-    STBIR__NEXT_PTR( info->split_info, sizeof( stbir__per_split_info ) * splits, stbir__per_split_info );
+    STBIR__NEXT_PTR( info->split_info, sizeof( stbir__per_split_info ) * (size_t)splits, stbir__per_split_info );
 
     if ( info )
     {
@@ -7131,7 +7139,7 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
         ++info->split_info[i].decode_buffer; // avx in 3 channel mode needs one float at the start of the buffer
       #endif
 
-      STBIR__NEXT_PTR( info->split_info[i].ring_buffers, alloc_ring_buffer_num_entries * sizeof(float*), float* );
+      STBIR__NEXT_PTR( info->split_info[i].ring_buffers, (size_t)alloc_ring_buffer_num_entries * sizeof(float*), float* );
       {
         int j;
         for( j = 0 ; j < alloc_ring_buffer_num_entries ; j++ )
@@ -7182,13 +7190,13 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
       else
       {
         // ring+decode memory is too small, so allocate temp memory
-        STBIR__NEXT_PTR( vertical->gather_prescatter_contributors, vertical->gather_prescatter_contributors_size, stbir__contributors );
-        STBIR__NEXT_PTR( vertical->gather_prescatter_coefficients, vertical->gather_prescatter_coefficients_size, float );
+        STBIR__NEXT_PTR( vertical->gather_prescatter_contributors, (size_t)vertical->gather_prescatter_contributors_size, stbir__contributors );
+        STBIR__NEXT_PTR( vertical->gather_prescatter_coefficients, (size_t)vertical->gather_prescatter_coefficients_size, float );
       }
     }
 
-    STBIR__NEXT_PTR( horizontal->contributors, horizontal->contributors_size, stbir__contributors );
-    STBIR__NEXT_PTR( horizontal->coefficients, horizontal->coefficients_size, float );
+    STBIR__NEXT_PTR( horizontal->contributors, (size_t)horizontal->contributors_size, stbir__contributors );
+    STBIR__NEXT_PTR( horizontal->coefficients, (size_t)horizontal->coefficients_size, float );
 
     // are the two filters identical?? (happens a lot with mipmap generation)
     if ( ( horizontal->filter_kernel == vertical->filter_kernel ) && ( horizontal->filter_support == vertical->filter_support ) && ( horizontal->edge == vertical->edge ) && ( horizontal->scale_info.output_sub_size == vertical->scale_info.output_sub_size ) )
@@ -7209,8 +7217,8 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
       }
     }
 
-    STBIR__NEXT_PTR( vertical->contributors, vertical->contributors_size, stbir__contributors );
-    STBIR__NEXT_PTR( vertical->coefficients, vertical->coefficients_size, float );
+    STBIR__NEXT_PTR( vertical->contributors, (size_t)vertical->contributors_size, stbir__contributors );
+    STBIR__NEXT_PTR( vertical->coefficients, (size_t)vertical->coefficients_size, float );
 
    no_vert_alloc:
 
@@ -7557,11 +7565,11 @@ static int stbir__calculate_region_transform( stbir__scale_info * scale_info, in
 
   // null area
   if ( ( output_full_range == 0 ) || ( input_full_range == 0 ) ||
-       ( output_sub_range == 0 ) || ( input_s <= stbir__small_float ) )
+       ( output_sub_range == 0 ) || ( (float)input_s <= stbir__small_float ) )
     return 0;
 
   // are either of the ranges completely out of bounds?
-  if ( ( *output_offset >= output_full_range ) || ( ( *output_offset + output_sub_range ) <= 0 ) || ( input_s0 >= (1.0f-stbir__small_float) ) || ( input_s1 <= stbir__small_float ) )
+  if ( ( *output_offset >= output_full_range ) || ( ( *output_offset + output_sub_range ) <= 0 ) || ( input_s0 >= (double)(1.0f-stbir__small_float) ) || ( (float)input_s1 <= stbir__small_float ) )
     return 0;
 
   output_range = (double)output_full_range;
@@ -7584,13 +7592,13 @@ static int stbir__calculate_region_transform( stbir__scale_info * scale_info, in
   input_s = input_s1 - input_s0;
 
   // after clipping do we have zero input area?
-  if ( input_s <= stbir__small_float )
+  if ( (float) input_s <= stbir__small_float )
     return 0;
 
   // calculate and store the starting source offsets in output pixel space
   scale_info->pixel_shift = (float) ( input_s0 * ratio * output_range );
 
-  scale_info->scale_is_rational = stbir__double_to_rational( scale, ( scale <= 1.0 ) ? output_full_range : input_full_range, &scale_info->scale_numerator, &scale_info->scale_denominator, ( scale >= 1.0 ) );
+  scale_info->scale_is_rational = stbir__double_to_rational( scale, ( scale <= 1.0 ) ? (stbtt_uint32)output_full_range : (stbtt_uint32)input_full_range, &scale_info->scale_numerator, &scale_info->scale_denominator, ( scale >= 1.0 ) );
 
   scale_info->input_full_size = input_full_range;
   scale_info->output_sub_size = output_sub_range;
@@ -7727,10 +7735,10 @@ STBIRDEF int stbir_set_input_subrect( STBIR_RESIZE * resize, double s0, double t
   resize->needs_rebuild = 1;
 
   // are we inbounds?
-  if ( ( s1 < stbir__small_float ) || ( (s1-s0) < stbir__small_float ) ||
-       ( t1 < stbir__small_float ) || ( (t1-t0) < stbir__small_float ) ||
-       ( s0 > (1.0f-stbir__small_float) ) ||
-       ( t0 > (1.0f-stbir__small_float) ) )
+  if ( ( (float)s1 < stbir__small_float ) || ( (float)(s1-s0) < stbir__small_float ) ||
+       ( (float)t1 < stbir__small_float ) || ( (float)(t1-t0) < stbir__small_float ) ||
+       ( (float)s0 > (1.0f-stbir__small_float) ) ||
+       ( (float)t0 > (1.0f-stbir__small_float) ) )
     return 0;
 
   return 1;
@@ -9664,7 +9672,7 @@ static float * STBIR__CODER_NAME(stbir__decode_float_linear)( float * decodep, i
   #else
 
   if ( (void*)decodep != inputp )
-    STBIR_MEMCPY( decodep, inputp, width_times_channels * sizeof( float ) );
+    STBIR_MEMCPY( decodep, inputp, (size_t)width_times_channels * sizeof( float ) );
 
   return decodep + width_times_channels;
 
@@ -9676,7 +9684,7 @@ static void STBIR__CODER_NAME( stbir__encode_float_linear )( void * outputp, int
   #if !defined( STBIR_FLOAT_HIGH_CLAMP ) && !defined(STBIR_FLOAT_LO_CLAMP) && !defined(stbir__decode_swizzle)
 
   if ( (void*)outputp != (void*) encode )
-    STBIR_MEMCPY( outputp, encode, width_times_channels * sizeof( float ) );
+    STBIR_MEMCPY( outputp, encode, (size_t) width_times_channels * sizeof( float ) );
 
   #else
 
@@ -10065,7 +10073,7 @@ static void STBIR_chans( stbir__vertical_gather_with_,_coeffs)( float * outputp,
   // check single channel one weight
   if ( ( c0s >= (1.0f-0.000001f) ) && ( c0s <= (1.0f+0.000001f) ) )
   {
-    STBIR_MEMCPY( output, input0, (char*)input0_end - (char*)input0 );
+    STBIR_MEMCPY( output, input0, (size_t)((char*)input0_end - (char*)input0) );
     return;
   }
 #endif
