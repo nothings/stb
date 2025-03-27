@@ -502,12 +502,12 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
    // skip whitespace and comments
    for (;;) {
       #ifdef STB_C_LEX_ISWHITE
-      while (p != lexer->stream_end) {
+      while (p != lexer->eof) {
          int n;
          n = STB_C_LEX_ISWHITE(p);
          if (n == 0) break;
          if (lexer->eof && lexer->eof - lexer->parse_point < n)
-            return stb__clex_token(tok, CLEX_parse_error, p,lexer->eof-1);
+            return stb__clex_token(lexer, CLEX_parse_error, p,lexer->eof-1);
          p += n;
       }
       #else
