@@ -97,6 +97,8 @@ DOCUMENTATION
       arrput:
         T arrput(T* a, T b);
           Appends the item b to the end of array a. Returns b.
+          The array may change prior to evaluation of b: items that depend 
+          on its observables may need to be passed through a temporary.
 
       arrins:
         T arrins(T* a, int p, T b);
