@@ -366,6 +366,8 @@ STBHW_EXTERN const char *stbhw_get_last_error(void)
 //  need to try to do more sophisticated parsing of edge color
 //  markup or something.
 
+struct stbhw__process;
+
 typedef void stbhw__process_rect(struct stbhw__process *p, int xpos, int ypos,
                                  int a, int b, int c, int d, int e, int f);
 
