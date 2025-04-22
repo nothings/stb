@@ -135,7 +135,7 @@ static int stb_include_find_includes(const char *text, include_info **plist)
             while (*s == ' ' || *s == '\t')
                ++s;
             if (*s == '"') {
-               char *t = ++s;
+               const char *t = ++s;
                while (*t != '"' && *t != '\n' && *t != '\r' && *t != 0)
                   ++t;
                if (*t == '"') {
