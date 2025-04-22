@@ -37,15 +37,24 @@
 #ifndef STB_INCLUDE_STB_INCLUDE_H
 #define STB_INCLUDE_STB_INCLUDE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Do include-processing on the string 'str'. To free the return value, pass it to free()
-char *stb_include_string(char *str, char *inject, char *path_to_includes, char *filename_for_line_directive, char error[256]);
+char *stb_include_string(const char *str, const char *inject, const char *path_to_includes, const char *filename_for_line_directive, char error[256]);
 
 // Concatenate the strings 'strs' and do include-processing on the result. To free the return value, pass it to free()
-char *stb_include_strings(char **strs, int count, char *inject, char *path_to_includes, char *filename_for_line_directive, char error[256]);
+char *stb_include_strings(const char **strs, int count, const char *inject, const char *path_to_includes, const char *filename_for_line_directive, char error[256]);
 
 // Load the file 'filename' and do include-processing on the string therein. note that
-// 'filename' is opened directly; 'path_to_includes' is not used. To free the return value, pass it to free()
-char *stb_include_file(char *filename, char *inject, char *path_to_includes, char error[256]);
+// 'filename' is opened directly; 'path_to_includes' should point to the base include directory. To free the return value, pass it to free()
+char *stb_include_file(const char *filename, const char *inject, const char *path_to_includes, char error[256]);
+
+#ifdef __cplusplus
+}
+#endif
+
 
 #endif
 
@@ -56,7 +65,7 @@ char *stb_include_file(char *filename, char *inject, char *path_to_includes, cha
 #include <stdlib.h>
 #include <string.h>
 
-static char *stb_include_load_file(char *filename, size_t *plen)
+static char *stb_include_load_file(const char *filename, size_t *plen)
 {
    char *text;
    size_t len;
@@ -106,15 +115,15 @@ static int stb_include_isspace(int ch)
 }
 
 // find location of all #include and #inject
-static int stb_include_find_includes(char *text, include_info **plist)
+static int stb_include_find_includes(const char *text, include_info **plist)
 {
    int line_count = 1;
    int inc_count = 0;
-   char *s = text, *start;
+   const char *s = text;
    include_info *list = NULL;
    while (*s) {
       // parse is always at start of line when we reach here
-      start = s;
+      const char *start = s;
       while (*s == ' ' || *s == '\t')
          ++s;
       if (*s == '#') {
@@ -173,7 +182,7 @@ static void stb_include_itoa(char str[9], int n)
    }
 }
 
-static char *stb_include_append(char *str, size_t *curlen, char *addstr, size_t addlen)
+static char *stb_include_append(char *str, size_t *curlen, const char *addstr, size_t addlen)
 {
    str = (char *) realloc(str, *curlen + addlen);
    memcpy(str + *curlen, addstr, addlen);
@@ -181,15 +190,15 @@ static char *stb_include_append(char *str, size_t *curlen, char *addstr, size_t 
    return str;
 }
 
-char *stb_include_string(char *str, char *inject, char *path_to_includes, char *filename, char error[256])
+char *stb_include_string(const char *str, const char *inject, const char *path_to_includes, const char *filename, char error[256])
 {
    char temp[4096];
    include_info *inc_list;
-   int i, num = stb_include_find_includes(str, &inc_list);
-   size_t source_len = strlen(str);
+   const int num = stb_include_find_includes(str, &inc_list);
+   const size_t source_len = strlen(str);
    char *text=0;
    size_t textlen=0, last=0;
-   for (i=0; i < num; ++i) {
+   for (int i = 0; i < num; ++i) {
       text = stb_include_append(text, &textlen, str+last, inc_list[i].offset - last);
       // write out line directive for the include
       #ifndef STB_INCLUDE_LINE_NONE
@@ -250,29 +259,25 @@ char *stb_include_string(char *str, char *inject, char *path_to_includes, char *
    return text;
 }
 
-char *stb_include_strings(char **strs, int count, char *inject, char *path_to_includes, char *filename, char error[256])
+char *stb_include_strings(const char **strs, int count, const char *inject, const char *path_to_includes, const char *filename, char error[256])
 {
-   char *text;
-   char *result;
-   int i;
    size_t length=0;
-   for (i=0; i < count; ++i)
+   for (int i=0; i < count; ++i)
       length += strlen(strs[i]);
-   text = (char *) malloc(length+1);
+   char *text = (char *) malloc(length + 1);
    length = 0;
-   for (i=0; i < count; ++i) {
+   for (int i=0; i < count; ++i) {
       strcpy(text + length, strs[i]);
       length += strlen(strs[i]);
    }
-   result = stb_include_string(text, inject, path_to_includes, filename, error);
+   char *result = stb_include_string(text, inject, path_to_includes, filename, error);
    free(text);
    return result;
 }
 
-char *stb_include_file(char *filename, char *inject, char *path_to_includes, char error[256])
+char *stb_include_file(const char *filename, const char *inject, const char *path_to_includes, char error[256])
 {
    size_t len;
-   char *result;
    char *text = stb_include_load_file(filename, &len);
    if (text == NULL) {
       strcpy(error, "Error: couldn't load '");
@@ -280,7 +285,7 @@ char *stb_include_file(char *filename, char *inject, char *path_to_includes, cha
       strcat(error, "'");
       return 0;
    }
-   result = stb_include_string(text, inject, path_to_includes, filename, error);
+   char *result = stb_include_string(text, inject, path_to_includes, filename, error);
    free(text);
    return result;
 }
