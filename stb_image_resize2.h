@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.13 - public domain image resizing
+/* stb_image_resize2 - v2.14 - public domain image resizing
 
    by Jeff Roberts (v2) and Jorge L Rodriguez
    http://github.com/nothings/stb
@@ -329,6 +329,8 @@
       Nathan Reed: warning fixes for 1.0
 
    REVISIONS
+      2.14 (2025-05-09) fixed a bug using downsampling gather horizontal first, and 
+                          scatter with vertical first.
       2.13 (2025-02-27) fixed a bug when using input callbacks, turned off simd for 
                           tiny-c, fixed some variables that should have been static,
                           fixes a bug when calculating temp memory with resizes that
@@ -1049,8 +1051,8 @@ struct stbir__info
 
 #define stbir__max_uint8_as_float             255.0f
 #define stbir__max_uint16_as_float            65535.0f
-#define stbir__max_uint8_as_float_inverted    (1.0f/255.0f)
-#define stbir__max_uint16_as_float_inverted   (1.0f/65535.0f)
+#define stbir__max_uint8_as_float_inverted    3.9215689e-03f     // (1.0f/255.0f)
+#define stbir__max_uint16_as_float_inverted   1.5259022e-05f     // (1.0f/65535.0f)
 #define stbir__small_float ((float)1 / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20))
 
 // min/max friendly
@@ -6239,6 +6241,8 @@ static void stbir__resample_vertical_gather(stbir__info const * stbir_info, stbi
   if ( vertical_first )
   {
     // Now resample the gathered vertical data in the horizontal axis into the encode buffer
+    decode_buffer[ width_times_channels ] = 0.0f; // clear two over for horizontals with a remnant of 3
+    decode_buffer[ width_times_channels+1 ] = 0.0f; 
     stbir__resample_horizontal_gather(stbir_info, encode_buffer, decode_buffer  STBIR_ONLY_PROFILE_SET_SPLIT_INFO );
   }
 
@@ -6410,6 +6414,8 @@ static void stbir__vertical_scatter_loop( stbir__info const * stbir_info, stbir_
   void * scanline_scatter_buffer;
   void * scanline_scatter_buffer_end;
   int on_first_input_y, last_input_y;
+  int width = (stbir_info->vertical_first) ? ( stbir_info->scanline_extents.conservative.n1-stbir_info->scanline_extents.conservative.n0+1 ) : stbir_info->horizontal.scale_info.output_sub_size;
+  int width_times_channels = stbir_info->effective_channels * width;
 
   STBIR_ASSERT( !stbir_info->vertical.is_gather );
 
@@ -6444,7 +6450,12 @@ static void stbir__vertical_scatter_loop( stbir__info const * stbir_info, stbir_
 
   // mark all the buffers as empty to start
   for( y = 0 ; y < stbir_info->ring_buffer_num_entries ; y++ )
-    stbir__get_ring_buffer_entry( stbir_info, split_info, y )[0] = STBIR__FLOAT_EMPTY_MARKER; // only used on scatter
+  {
+    float * decode_buffer = stbir__get_ring_buffer_entry( stbir_info, split_info, y );
+    decode_buffer[ width_times_channels ] = 0.0f; // clear two over for horizontals with a remnant of 3
+    decode_buffer[ width_times_channels+1 ] = 0.0f; 
+    decode_buffer[0] = STBIR__FLOAT_EMPTY_MARKER; // only used on scatter
+  }
 
   // do the loop in input space
   on_first_input_y = 1; last_input_y = start_input_y;
@@ -7012,7 +7023,7 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
     decode_buffer_size += sizeof(float); // avx in 3 channel mode needs one float at the start of the buffer (only with separate allocations)
 #endif
 
-  ring_buffer_length_bytes = (size_t)horizontal->scale_info.output_sub_size * (size_t)effective_channels * sizeof(float) + sizeof(float); // extra float for padding
+  ring_buffer_length_bytes = (size_t)horizontal->scale_info.output_sub_size * (size_t)effective_channels * sizeof(float) + sizeof(float)*STBIR_INPUT_CALLBACK_PADDING; // extra floats for padding
 
   // if we do vertical first, the ring buffer holds a whole decoded line
   if ( vertical_first )
