@@ -27,7 +27,7 @@ library    | lastest version | category | LoC | description
 **[stb_image.h](stb_image.h)** | 2.30 | graphics | 7988 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **[stb_truetype.h](stb_truetype.h)** | 1.26 | graphics | 5079 | parse, decode, and rasterize characters from truetype fonts
 **[stb_image_write.h](stb_image_write.h)** | 1.16 | graphics | 1724 | image writing to disk: PNG, TGA, BMP
-**[stb_image_resize2.h](stb_image_resize2.h)** | 2.13 | graphics | 10616 | resize images larger/smaller with good quality
+**[stb_image_resize2.h](stb_image_resize2.h)** | 2.14 | graphics | 10627 | resize images larger/smaller with good quality
 **[stb_rect_pack.h](stb_rect_pack.h)** | 1.01 | graphics | 623 | simple 2D rectangle packer with decent quality
 **[stb_perlin.h](stb_perlin.h)** | 0.5 | graphics | 428 | perlin's revised simplex noise w/ different seeds
 **[stb_ds.h](stb_ds.h)** | 0.67 | utility | 1895 | typesafe dynamic array and hash tables for C, will compile in C++
@@ -45,7 +45,7 @@ library    | lastest version | category | LoC | description
 **[stb_include.h](stb_include.h)** | 0.02 | misc | 295 | implement recursive #include support, particularly for GLSL
 
 Total libraries: 21
-Total lines of C code: 51103
+Total lines of C code: 51114
 
 
 FAQ
