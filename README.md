@@ -20,7 +20,7 @@ by Jorge L. "VinoBS" Rodriguez, and stb_image_resize2 and stb_sprintf by Jeff Ro
 
 <a name="stb_libs"></a>
 
-library    | lastest version | category | LoC | description
+library    | latest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
 **[stb_vorbis.c](stb_vorbis.c)** | 1.22 | audio | 5584 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **[stb_hexwave.h](stb_hexwave.h)** | 0.5 | audio | 680 | audio waveform synthesizer
@@ -30,9 +30,9 @@ library    | lastest version | category | LoC | description
 **[stb_image_resize2.h](stb_image_resize2.h)** | 2.14 | graphics | 10627 | resize images larger/smaller with good quality
 **[stb_rect_pack.h](stb_rect_pack.h)** | 1.01 | graphics | 623 | simple 2D rectangle packer with decent quality
 **[stb_perlin.h](stb_perlin.h)** | 0.5 | graphics | 428 | perlin's revised simplex noise w/ different seeds
-**[stb_ds.h](stb_ds.h)** | 0.67 | utility | 1895 | typesafe dynamic array and hash tables for C, will compile in C++
+**[stb_ds.h](stb_ds.h)** | 0.67 | utility | 1895 | type-safe dynamic array and hash tables for C, will compile in C++
 **[stb_sprintf.h](stb_sprintf.h)** | 1.10 | utility | 1906 | fast sprintf, snprintf for C/C++
-**[stb_textedit.h](stb_textedit.h)** | 1.14 | user&nbsp;interface | 1429 | guts of a text editor for games etc implementing them from scratch
+**[stb_textedit.h](stb_textedit.h)** | 1.14 | user&nbsp;interface | 1429 | guts of a text editor for games, etc., for implementing them from scratch
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.89 | 3D&nbsp;graphics | 3807 | Minecraft-esque voxel rendering "engine" with many more features
 **[stb_dxt.h](stb_dxt.h)** | 1.12 | 3D&nbsp;graphics | 719 | Fabian "ryg" Giesen's real-time DXT compressor
 **[stb_easy_font.h](stb_easy_font.h)** | 1.1 | 3D&nbsp;graphics | 305 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
