@@ -18,5 +18,5 @@ by Jorge L. "VinoBS" Rodriguez, and stb_image_resize2 and stb_sprintf by Jeff Ro
 
 <a name="stb_libs"></a>
 
-library    | lastest version | category | LoC | description
+library    | latest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
