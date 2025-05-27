@@ -1022,11 +1022,11 @@ size_t stbds_hash_string(char *str, size_t seed)
   // Thomas Wang 64-to-32 bit mix function, hopefully also works in 32 bits
   hash ^= seed;
   hash = (~hash) + (hash << 18);
-  hash ^= hash ^ STBDS_ROTATE_RIGHT(hash,31);
+  hash = hash ^ STBDS_ROTATE_RIGHT(hash,31);
   hash = hash * 21;
-  hash ^= hash ^ STBDS_ROTATE_RIGHT(hash,11);
-  hash += (hash << 6);
-  hash ^= STBDS_ROTATE_RIGHT(hash,22);
+  hash = hash ^ STBDS_ROTATE_RIGHT(hash,11);
+  hash = hash + (hash << 6);
+  hash = hash ^ STBDS_ROTATE_RIGHT(hash,22);
   return hash+seed;
 }
 
