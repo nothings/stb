@@ -18,28 +18,28 @@
 #define STB_C_LEX_C_BITWISEEQ       Y   //  "&="  CLEX_andeq    "|="  CLEX_oreq     "^="  CLEX_xoreq
 #define STB_C_LEX_C_ARITHEQ         Y   //  "+="  CLEX_pluseq   "-="  CLEX_minuseq
                                         //  "*="  CLEX_muleq    "/="  CLEX_diveq    "%=" CLEX_modeq
-                                        //  if both STB_C_LEX_SHIFTS & STB_C_LEX_ARITHEQ:
+                                        //  if both STB_C_LEX_C_SHIFTS & STB_C_LEX_C_ARITHEQ:
                                         //                      "<<=" CLEX_shleq    ">>=" CLEX_shreq
 
 #define STB_C_LEX_PARSE_SUFFIXES    Y   // letters after numbers are parsed as part of those numbers, and must be in suffix list below
 #define STB_C_LEX_DECIMAL_SUFFIXES  "uUlL"  // decimal integer suffixes e.g. "uUlL" -- these are returned as-is in string storage
 #define STB_C_LEX_HEX_SUFFIXES      "lL"  // e.g. "uUlL"
 #define STB_C_LEX_OCTAL_SUFFIXES    "lL"  // e.g. "uUlL"
-#define STB_C_LEX_FLOAT_SUFFIXES    "uulL"  //
+#define STB_C_LEX_FLOAT_SUFFIXES    "uUlL"  //
 
 #define STB_C_LEX_0_IS_EOF             N  // if Y, ends parsing at '\0'; if N, returns '\0' as token
-#define STB_C_LEX_INTEGERS_AS_DOUBLES  N  // parses integers as doubles so they can be larger than 'int', but only if STB_C_LEX_STDLIB==N
-#define STB_C_LEX_MULTILINE_DSTRINGS   Y  // allow newlines in double-quoted strings
-#define STB_C_LEX_MULTILINE_SSTRINGS   Y  // allow newlines in single-quoted strings
+#define STB_C_LEX_INTEGERS_AS_DOUBLES  N  // parses integers as doubles so they can be larger than 'int', but only if STB_C_LEX_USE_STDLIB==N
+#define STB_C_LEX_MULTILINE_DSTRINGS   Y  // allow newlines in double-quoted strings // @TODO These two don't currently do anything. See
+                                          //                                                  the Status section at the start of the file.
+#define STB_C_LEX_MULTILINE_SSTRINGS   Y  // allow newlines in single-quoted strings // @TODO See comment above
 #define STB_C_LEX_USE_STDLIB           N  // use strtod,strtol for parsing #s; otherwise inaccurate hack
 #define STB_C_LEX_DOLLAR_IDENTIFIER    Y  // allow $ as an identifier character
 #define STB_C_LEX_FLOAT_NO_DECIMAL     Y  // allow floats that have no decimal point if they have an exponent
 
-#define STB_C_LEX_DEFINE_ALL_TOKEN_NAMES  Y   // if Y, all CLEX_ token names are defined, even if never returned
-                                              // leaving it as N should help you catch config bugs
-
 #define STB_C_LEX_DISCARD_PREPROCESSOR    Y   // discard C-preprocessor directives (e.g. after prepocess
                                               // still have #line, #pragma, etc)
+
+//#define STB_C_LEX_ISWHITE(str)    ... // return length in bytes of whitespace characters if first char is whitespace
 
 #define STB_C_LEXER_DEFINITIONS         // This line prevents the header file from replacing your definitions
 
