@@ -1,5 +1,5 @@
 #define STB_DEFINE
-#include "../stb.h"
+#include "../deprecated/stb.h"
 
 int main(int argc, char  **argv)
 {
