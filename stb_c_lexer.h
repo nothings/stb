@@ -96,8 +96,8 @@
 #define STB_C_LEX_DOLLAR_IDENTIFIER    Y  // allow $ as an identifier character
 #define STB_C_LEX_FLOAT_NO_DECIMAL     Y  // allow floats that have no decimal point if they have an exponent
 
-#define STB_C_LEX_DISCARD_PREPROCESSOR    Y   // discard C-preprocessor directives (e.g. after prepocess
-                                              // still have #line, #pragma, etc)
+#define STB_C_LEX_DISCARD_PREPROCESSOR Y  // discard C-preprocessor directives (e.g. after prepocess
+                                          // still have #line, #pragma, etc)
 
 //#define STB_C_LEX_ISWHITE(str)    ... // return length in bytes of whitespace characters if first char is whitespace
 
@@ -228,20 +228,12 @@ typedef long       stb__clex_int;
 // Convert these config options to simple conditional #defines so we can more
 // easily test them once we've change the meaning of Y/N
 
-#if STB_C_LEX_PARSE_SUFFIXES(x)
-#define STB__clex_parse_suffixes
-#endif
-
-#if STB_C_LEX_C99_HEX_FLOATS(x)
-#define STB__clex_hex_floats
+#if STB_C_LEX_C_DECIMAL_INTS(x)
+#define STB__clex_decimal_ints
 #endif
 
 #if STB_C_LEX_C_HEX_INTS(x)
 #define STB__clex_hex_ints
-#endif
-
-#if STB_C_LEX_C_DECIMAL_INTS(x)
-#define STB__clex_decimal_ints
 #endif
 
 #if STB_C_LEX_C_OCTAL_INTS(x)
@@ -252,8 +244,16 @@ typedef long       stb__clex_int;
 #define STB__clex_decimal_floats
 #endif
 
+#if STB_C_LEX_C99_HEX_FLOATS(x)
+#define STB__clex_hex_floats
+#endif
+
 #if STB_C_LEX_C_IDENTIFIERS(x)
 #define STB__clex_identifiers
+#endif
+
+#if STB_C_LEX_PARSE_SUFFIXES(x)
+#define STB__clex_parse_suffixes
 #endif
 
 #if STB_C_LEX_DISCARD_PREPROCESSOR(x)
