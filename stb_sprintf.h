@@ -21,6 +21,7 @@
 //    Adam Allison
 //    Arvid Gerstmann
 //    Markus Kolb
+//    Matthew Good
 //
 // LICENSE:
 //
@@ -1599,7 +1600,7 @@ static stbsp__uint64 const stbsp__powten[20] = {
 #define stbsp__ddmulthi(oh, ol, xh, yh)                            \
    {                                                               \
       double ahi = 0, alo, bhi = 0, blo;                           \
-      stbsp__int64 bt;                                             \
+      stbsp__int64 bt = 0; /* variable bt may be uninitialized */  \
       oh = xh * yh;                                                \
       STBSP__COPYFP(bt, xh);                                       \
       bt &= ((~(stbsp__uint64)0) << 27);                           \
