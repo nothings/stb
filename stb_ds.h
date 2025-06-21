@@ -373,6 +373,7 @@ CREDITS
   Per Vognsen  -- idea for hash table API/implementation
   Rafael Sachetto -- arrpop()
   github:HeroicKatora -- arraddn() reworking
+  Jonathan Wilson
 
   Bugfixes:
     Andy Durdin
