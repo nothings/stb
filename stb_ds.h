@@ -795,7 +795,7 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
   //if (num_prev < 65536) if (a) prev_allocs[num_prev++] = (int *) ((char *) a+1);
   //if (num_prev == 2201)
   //  num_prev = num_prev;
-  b = STBDS_REALLOC_SIZED(NULL, (a) ? stbds_header(a) : 0, stbds_arrcap(a), elemsize * min_cap + sizeof(stbds_array_header));
+  b = STBDS_REALLOC_SIZED(NULL, (a) ? stbds_header(a) : 0, elemsize * stbds_arrcap(a), elemsize * min_cap + sizeof(stbds_array_header));
   //if (num_prev < 65536) prev_allocs[num_prev++] = (int *) (char *) b;
   b = (char *) b + sizeof(stbds_array_header);
   if (a == NULL) {
