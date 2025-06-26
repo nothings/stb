@@ -469,7 +469,7 @@ CREDITS
 #endif
 
 #ifndef STBDS_REALLOC_SIZED
-#define STBDS_REALLOC_SIZED(c,p,oldsz,newsz) STBDS_REALLOC(p,newsz)
+#define STBDS_REALLOC_SIZED(c,p,oldsz,newsz) STBDS_REALLOC(c,p,newsz)
 #endif
 
 #ifdef _MSC_VER
