@@ -334,6 +334,7 @@ RECENT REVISION HISTORY:
 //        STBI_NO_JPEG
 //        STBI_NO_PNG
 //        STBI_NO_BMP
+//        STBI_NO_SGI
 //        STBI_NO_PSD
 //        STBI_NO_TGA
 //        STBI_NO_GIF
@@ -348,6 +349,7 @@ RECENT REVISION HISTORY:
 //        STBI_ONLY_JPEG
 //        STBI_ONLY_PNG
 //        STBI_ONLY_BMP
+//        STBI_ONLY_SGI
 //        STBI_ONLY_PSD
 //        STBI_ONLY_TGA
 //        STBI_ONLY_GIF
@@ -549,7 +551,7 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
 #if defined(STBI_ONLY_JPEG) || defined(STBI_ONLY_PNG) || defined(STBI_ONLY_BMP) \
   || defined(STBI_ONLY_TGA) || defined(STBI_ONLY_GIF) || defined(STBI_ONLY_PSD) \
   || defined(STBI_ONLY_HDR) || defined(STBI_ONLY_PIC) || defined(STBI_ONLY_PNM) \
-  || defined(STBI_ONLY_ZLIB)
+  || defined(STBI_ONLY_ZLIB)|| defined(STBI_ONLY_SGI)
    #ifndef STBI_ONLY_JPEG
    #define STBI_NO_JPEG
    #endif
@@ -558,6 +560,9 @@ STBIDEF int   stbi_zlib_decode_noheader_buffer(char *obuffer, int olen, const ch
    #endif
    #ifndef STBI_ONLY_BMP
    #define STBI_NO_BMP
+   #endif
+   #ifndef STBI_ONLY_SGI
+   #define STBI_NO_SGI
    #endif
    #ifndef STBI_ONLY_PSD
    #define STBI_NO_PSD
