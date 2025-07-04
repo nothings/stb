@@ -5758,29 +5758,29 @@ static int stbi__sgi_test(stbi__context *s) {
     return r == 0x01DA;
 }
 
-static void stbi__sgi_rle_decode(stbi_uc *dst, int dst_length, stbi_uc *src, int rle_length) 
+static void stbi__sgi_rle_decode(stbi_uc *dst, int dst_length, stbi__context* s)
 {
-    while (rle_length > 0 && dst_length > 0) {
-        stbi_uc action = *src++;
+    while (true) {
+        stbi_uc action = stbi__get8(s);
         stbi_uc count = action & 0x7F;
 
-        if (action == 0)
+        if (count == 0)
             break;
 
         if (action & 0x80) {
             // Copy literal bytes
-            if (count <= dst_length)
-                memcpy(dst, src, count);
-            rle_length -= (count + 1);
-            src += count;
+            if (count <= dst_length) {
+               for (int i = 0; i < count; ++i) {
+                  *dst++ = stbi__get8(s);
+               }
+            }
         } else {
             // Run of repeated bytes
-            stbi_uc value = *src++;
+            stbi_uc value = stbi__get8(s);
             if (count <= dst_length)
                 memset(dst, value, count);
-            rle_length -= 2;
+            dst += count;
         }
-        dst += count;
         dst_length -= count;
     }
 }
@@ -5825,7 +5825,7 @@ static void *stbi__sgi_load(stbi__context *s, int *x, int *y, int *comp, int req
     stbi__skip(s, 404);
 
     // Validate header
-    if (bytes_per_channel != 1 || channels_in_file < 1 || channels_in_file > 4 || colormap != 0) {
+    if (bytes_per_channel != 1 || channels_in_file < 1 || channels_in_file > 4 ) {
         return stbi__errpuc("unsupported SGI format", "SGI image has unsupported format");
     }
 
@@ -5961,13 +5961,11 @@ static void *stbi__sgi_load(stbi__context *s, int *x, int *y, int *comp, int req
             {
                 int index = c * ysize + j;
                 int offset = offset_table[index];
-                int length = length_table[index];
+                //int length = length_table[index];
 
-                // Seek to the compressed data 
-                stbi_uc *src = s->img_buffer_original + offset;
                 stbi_uc *dst = decompressed_data + c * xsize * ysize + j * xsize;
 
-                stbi__sgi_rle_decode(dst, xsize, src, length);
+                stbi__sgi_rle_decode(dst, xsize, s);
             }
         }
 
