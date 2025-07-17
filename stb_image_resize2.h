@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.14 - public domain image resizing
+/* stb_image_resize2 - v2.15 - public domain image resizing
 
    by Jeff Roberts (v2) and Jorge L Rodriguez
    http://github.com/nothings/stb
@@ -329,6 +329,9 @@
       Nathan Reed: warning fixes for 1.0
 
    REVISIONS
+      2.15 (2025-07-17) fixed an assert in debug mode when using floats with input
+                          callbacks, work around GCC warning when adding to null ptr
+                          (thanks Johannes Spohr and Pyry Kovanen).
       2.14 (2025-05-09) fixed a bug using downsampling gather horizontal first, and 
                           scatter with vertical first.
       2.13 (2025-02-27) fixed a bug when using input callbacks, turned off simd for 
@@ -4610,7 +4613,7 @@ static void stbir__decode_scanline(stbir__info const * stbir_info, int n, float 
     if ( stbir_info->in_pixels_cb )
     {
       // call the callback with a temp buffer (that they can choose to use or not).  the temp is just right aligned memory in the decode_buffer itself
-      input_data = stbir_info->in_pixels_cb( ( (char*) end_decode ) - ( width * input_sample_in_bytes ) + sizeof(float)*STBIR_INPUT_CALLBACK_PADDING, input_plane_data, width, spans->pixel_offset_for_input, row, stbir_info->user_data );
+      input_data = stbir_info->in_pixels_cb( ( (char*) end_decode ) - ( width * input_sample_in_bytes ) + ( ( stbir_info->input_type != STBIR_TYPE_FLOAT ) ? ( sizeof(float)*STBIR_INPUT_CALLBACK_PADDING ) : 0 ), input_plane_data, width, spans->pixel_offset_for_input, row, stbir_info->user_data );
     }
 
     STBIR_PROFILE_START( decode );
@@ -7057,7 +7060,7 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
 #ifdef STBIR__SEPARATE_ALLOCATIONS
     #define STBIR__NEXT_PTR( ptr, size, ntype ) if ( alloced ) { void * p = STBIR_MALLOC( size, user_data); if ( p == 0 ) { stbir__free_internal_mem( info ); return 0; } (ptr) = (ntype*)p; }
 #else
-    #define STBIR__NEXT_PTR( ptr, size, ntype ) advance_mem = (void*) ( ( ((size_t)advance_mem) + 15 ) & ~15 ); if ( alloced ) ptr = (ntype*)advance_mem; advance_mem = ((char*)advance_mem) + (size);
+    #define STBIR__NEXT_PTR( ptr, size, ntype ) advance_mem = (void*) ( ( ((size_t)advance_mem) + 15 ) & ~15 ); if ( alloced ) ptr = (ntype*)advance_mem; advance_mem = (char*)(((size_t)advance_mem) + (size));
 #endif
 
     STBIR__NEXT_PTR( info, sizeof( stbir__info ), stbir__info );
