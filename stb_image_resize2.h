@@ -7968,10 +7968,10 @@ static int stbir__check_output_stuff( void ** ret_ptr, int * ret_pitch, void * o
   if ( output_stride_in_bytes == 0 )
     output_stride_in_bytes = pitch;
 
-  if ( output_stride_in_bytes < pitch )
+  if ( abs(output_stride_in_bytes) < pitch )
     return 0;
 
-  size = (size_t)output_stride_in_bytes * (size_t)output_h;
+  size = (size_t)abs(output_stride_in_bytes) * (size_t)output_h;
   if ( size == 0 )
     return 0;
 
