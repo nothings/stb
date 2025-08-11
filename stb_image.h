@@ -103,7 +103,7 @@ RECENT REVISION HISTORY:
     Phil Jordan                                Dave Moore           Roy Eltham
     Hayaki Saito            Nathan Reed        Won Chun
     Luke Graham             Johan Duparc       Nick Verigakis       the Horde3D community
-    Thomas Ruf              Ronny Chevalier                         github:rlyeh
+    Thomas Ruf              Ronny Chevalier    Wojciech Jarosz      github:rlyeh
     Janez Zemva             John Bartholomew   Michal Cichon        github:romigrou
     Jonathan Blow           Ken Hamada         Tero Hanninen        github:svdijk
     Eugene Golushkov        Laurent Gomila     Cort Stratton        github:snagar
@@ -7527,6 +7527,17 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
    if (!stbi__getn(s, out, s->img_n * s->img_x * s->img_y * (ri->bits_per_channel / 8))) {
       STBI_FREE(out);
       return stbi__errpuc("bad PNM", "PNM file truncated");
+   }
+
+   if (ri->bits_per_channel == 16) {
+      // convert the image data from big-endian to platform-native
+      stbi__uint32 i;
+      stbi_uc *cur = out;
+      stbi__uint16 *out16 = (stbi__uint16*)out;
+      stbi__uint32 nsmp = s->img_n * s->img_x * s->img_y;
+
+      for (i = 0; i < nsmp; ++i, ++out16, cur += 2)
+         *out16 = (cur[0] << 8) | cur[1];
    }
 
    if (req_comp && req_comp != s->img_n) {
