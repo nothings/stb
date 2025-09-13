@@ -1097,6 +1097,7 @@ static size_t stbds_siphash_bytes(void *p, size_t len, size_t seed)
     case 2: data |= (d[1] << 8); // fall through
     case 1: data |= d[0]; // fall through
     case 0: break;
+    default: STBDS_ASSERT(0); // unreachable
   }
   v3 ^= data;
   for (j=0; j < STBDS_SIPHASH_C_ROUNDS; ++j)
