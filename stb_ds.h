@@ -136,6 +136,11 @@ DOCUMENTATION
           Changes the length of the array to n. Allocates uninitialized
           slots at the end if necessary.
 
+      arrclear:
+        void arrclear(T* a);
+          Changes the length of the array to 0. Doesn't destroy the allocated
+          elements if any are present. Equivalent to arrsetlen(a, 0).
+
       arrsetcap:
         size_t arrsetcap(T* a, int n);
           Sets the length of allocated storage to at least n. It will not
@@ -405,6 +410,7 @@ CREDITS
 #define arraddnptr  stbds_arraddnptr
 #define arraddnindex stbds_arraddnindex
 #define arrsetlen   stbds_arrsetlen
+#define arrclear    stbds_arrclear
 #define arrlast     stbds_arrlast
 #define arrins      stbds_arrins
 #define arrinsn     stbds_arrinsn
@@ -537,6 +543,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 
 #define stbds_arrsetcap(a,n)   (stbds_arrgrow(a,0,n))
 #define stbds_arrsetlen(a,n)   ((stbds_arrcap(a) < (size_t) (n) ? stbds_arrsetcap((a),(size_t)(n)),0 : 0), (a) ? stbds_header(a)->length = (size_t) (n) : 0)
+#define stbds_arrclear(a)      ((a) ? stbds_header(a)->length = 0 : 0)
 #define stbds_arrcap(a)        ((a) ? stbds_header(a)->capacity : 0)
 #define stbds_arrlen(a)        ((a) ? (ptrdiff_t) stbds_header(a)->length : 0)
 #define stbds_arrlenu(a)       ((a) ?             stbds_header(a)->length : 0)
