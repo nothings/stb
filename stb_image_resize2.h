@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.15 - public domain image resizing
+/* stb_image_resize2 - v2.16 - public domain image resizing
 
    by Jeff Roberts (v2) and Jorge L Rodriguez
    http://github.com/nothings/stb
@@ -329,6 +329,10 @@
       Nathan Reed: warning fixes for 1.0
 
    REVISIONS
+      2.16 (2025-10-21) fixed the easy-to-use APIs to allow inverted bitmaps (negative
+                          strides), fix vertical filter kernel callback, fix threaded
+                          gather buffer priming (and assert).
+                          (thanks adipose, TainZerL, and Harrison Green)
       2.15 (2025-07-17) fixed an assert in debug mode when using floats with input
                           callbacks, work around GCC warning when adding to null ptr
                           (thanks Johannes Spohr and Pyry Kovanen).
@@ -6711,7 +6715,7 @@ static void stbir__get_conservative_extents( stbir__sampler * samp, stbir__contr
   }
 }
 
-static void stbir__get_split_info( stbir__per_split_info* split_info, int splits, int output_height, int vertical_pixel_margin, int input_full_height )
+static void stbir__get_split_info( stbir__per_split_info* split_info, int splits, int output_height, int vertical_pixel_margin, int input_full_height, int is_gather, stbir__contributors * contribs )
 {
   int i, cur;
   int left = output_height;
@@ -6720,9 +6724,58 @@ static void stbir__get_split_info( stbir__per_split_info* split_info, int splits
   for( i = 0 ; i < splits ; i++ )
   {
     int each;
+
     split_info[i].start_output_y = cur;
     each = left / ( splits - i );
     split_info[i].end_output_y = cur + each;
+
+    // ok, when we are gathering, we need to make sure we are starting on a y offset that doesn't have
+    //   a "special" set of coefficients. Basically, with exactly the right filter at exactly the right
+    //   resize at exactly the right phase, some of the coefficents can be zero. When they are zero, we
+    //   don't process them at all.  But this leads to a tricky thing with the thread splits, where we
+    //   might have a set of two coeffs like this for example: (4,4) and (3,6).  The 4,4 means there was
+    //   just one single coeff because things worked out perfectly (normally, they all have 4 coeffs
+    //   like the range 3,6.  The problem is that if we start right on the (4,4) on a brand new thread,
+    //   then when we get to (3,6), we don't have the "3" sample in memory (because we didn't load
+    //   it on the initial (4,4) range because it didn't have a 3 (we only add new samples that are 
+    //   larger than our existing samples - it's just how the eviction works). So, our solution here
+    //   is pretty simple, if we start right on a range that has samples that start earlier, then we 
+    //   simply bump up our previous thread split range to include it, and then start this threads
+    //   range with the smaller sample. It just moves one scanline from one thread split to another,
+    //   so that we end with the unusual one, instead of start with it. To do this, we check 2-4 
+    //   sample at each thread split start and then occassionally move them.
+    
+    if ( ( is_gather ) && ( i ) )
+    {
+      stbir__contributors * small_contribs;
+      int j, smallest, stop, start_n0;
+      stbir__contributors * split_contribs = contribs + cur;
+
+      // scan for a max of 3x the filter width or until the next thread split
+      stop = vertical_pixel_margin * 3;
+      if ( each < stop )
+        stop = each;
+
+      // loops a few times before early out
+      smallest = 0;
+      small_contribs = split_contribs;
+      start_n0 = small_contribs->n0;
+      for( j = 1 ; j <= stop ; j++ )
+      {
+        ++split_contribs;
+        if ( split_contribs->n0 > start_n0 )
+          break;
+        if ( split_contribs->n0 < small_contribs->n0 )
+        {
+          small_contribs = split_contribs;
+          smallest = j;
+        }
+      }
+
+      split_info[i-1].end_output_y += smallest;
+      split_info[i].start_output_y += smallest;
+    }
+
     cur += each;
     left -= each;
 
@@ -7269,7 +7322,7 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
       }
 
       // setup the vertical split ranges
-      stbir__get_split_info( info->split_info, info->splits, info->vertical.scale_info.output_sub_size, info->vertical.filter_pixel_margin, info->vertical.scale_info.input_full_size );
+      stbir__get_split_info( info->split_info, info->splits, info->vertical.scale_info.output_sub_size, info->vertical.filter_pixel_margin, info->vertical.scale_info.input_full_size, info->vertical.is_gather, info->vertical.contributors );
 
       // now we know precisely how many entries we need
       info->ring_buffer_num_entries = info->vertical.extent_info.widest;
@@ -7833,7 +7886,7 @@ static int stbir__perform_build( STBIR_RESIZE * resize, int splits )
 
   stbir__set_sampler(&horizontal, resize->horizontal_filter, resize->horizontal_filter_kernel, resize->horizontal_filter_support, resize->horizontal_edge, &horizontal.scale_info, 1, resize->user_data );
   stbir__get_conservative_extents( &horizontal, &conservative, resize->user_data );
-  stbir__set_sampler(&vertical, resize->vertical_filter, resize->horizontal_filter_kernel, resize->vertical_filter_support, resize->vertical_edge, &vertical.scale_info, 0, resize->user_data );
+  stbir__set_sampler(&vertical, resize->vertical_filter, resize->vertical_filter_kernel, resize->vertical_filter_support, resize->vertical_edge, &vertical.scale_info, 0, resize->user_data );
 
   if ( ( vertical.scale_info.output_sub_size / splits ) < STBIR_FORCE_MINIMUM_SCANLINES_FOR_SPLITS ) // each split should be a minimum of 4 scanlines (handwavey choice)
   {
@@ -7958,138 +8011,64 @@ STBIRDEF int stbir_resize_extended_split( STBIR_RESIZE * resize, int split_start
   return stbir__perform_resize( resize->samplers, split_start, split_count );
 }
 
-static int stbir__check_output_stuff( void ** ret_ptr, int * ret_pitch, void * output_pixels, int type_size, int output_w, int output_h, int output_stride_in_bytes, stbir_internal_pixel_layout pixel_layout )
+
+static void * stbir_quick_resize_helper( const void *input_pixels , int input_w , int input_h, int input_stride_in_bytes,
+                                               void *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
+                                               stbir_pixel_layout pixel_layout, stbir_datatype data_type, stbir_edge edge, stbir_filter filter )
 {
-  size_t size;
-  int pitch;
-  void * ptr;
+  STBIR_RESIZE resize;
+  int scanline_output_in_bytes;
+  int positive_output_stride_in_bytes;
+  void * start_ptr;
+  void * free_ptr;
 
-  pitch = output_w * type_size * stbir__pixel_channels[ pixel_layout ];
-  if ( pitch == 0 )
+  scanline_output_in_bytes = output_w * stbir__type_size[ data_type ] * stbir__pixel_channels[ pixel_layout ];
+  if ( scanline_output_in_bytes == 0 )
     return 0;
 
+  // if zero stride, use scanline output
   if ( output_stride_in_bytes == 0 )
-    output_stride_in_bytes = pitch;
+    output_stride_in_bytes = scanline_output_in_bytes;
 
-  if ( output_stride_in_bytes < pitch )
+  // abs value for inverted images (negative pitches)
+  positive_output_stride_in_bytes = output_stride_in_bytes;
+  if ( positive_output_stride_in_bytes < 0 )
+    positive_output_stride_in_bytes = -positive_output_stride_in_bytes;
+
+  // is the requested stride smaller than the scanline output? if so, just fail
+  if ( positive_output_stride_in_bytes < scanline_output_in_bytes )
     return 0;
 
-  size = (size_t)output_stride_in_bytes * (size_t)output_h;
-  if ( size == 0 )
-    return 0;
+  start_ptr = output_pixels;
+  free_ptr = 0;  // no free pointer, since they passed buffer to use
 
-  *ret_ptr = 0;
-  *ret_pitch = output_stride_in_bytes;
-
+  // did they pass a zero for the dest? if so, allocate the buffer
   if ( output_pixels == 0 )
   {
-    ptr = STBIR_MALLOC( size, 0 );
+    size_t size;
+    char * ptr;
+  
+    size = (size_t)positive_output_stride_in_bytes * (size_t)output_h;
+    if ( size == 0 )
+      return 0;
+
+    ptr = (char*) STBIR_MALLOC( size, 0 );
     if ( ptr == 0 )
       return 0;
 
-    *ret_ptr = ptr;
-    *ret_pitch = pitch;
+    free_ptr = ptr;
+
+    // point at the last scanline, if they requested a flipped image
+    if ( output_stride_in_bytes < 0 )
+      start_ptr = ptr + ( (size_t)positive_output_stride_in_bytes * (size_t)( output_h - 1 ) );
+    else
+      start_ptr = ptr;
   }
 
-  return 1;
-}
-
-
-STBIRDEF unsigned char * stbir_resize_uint8_linear( const unsigned char *input_pixels , int input_w , int input_h, int input_stride_in_bytes,
-                                                          unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-                                                          stbir_pixel_layout pixel_layout )
-{
-  STBIR_RESIZE resize;
-  unsigned char * optr;
-  int opitch;
-
-  if ( !stbir__check_output_stuff( (void**)&optr, &opitch, output_pixels, sizeof( unsigned char ), output_w, output_h, output_stride_in_bytes, stbir__pixel_layout_convert_public_to_internal[ pixel_layout ] ) )
-    return 0;
-
+  // ok, now do the resize
   stbir_resize_init( &resize,
                      input_pixels,  input_w,  input_h,  input_stride_in_bytes,
-                     (optr) ? optr : output_pixels, output_w, output_h, opitch,
-                     pixel_layout, STBIR_TYPE_UINT8 );
-
-  if ( !stbir_resize_extended( &resize ) )
-  {
-    if ( optr )
-      STBIR_FREE( optr, 0 );
-    return 0;
-  }
-
-  return (optr) ? optr : output_pixels;
-}
-
-STBIRDEF unsigned char * stbir_resize_uint8_srgb( const unsigned char *input_pixels , int input_w , int input_h, int input_stride_in_bytes,
-                                                        unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-                                                        stbir_pixel_layout pixel_layout )
-{
-  STBIR_RESIZE resize;
-  unsigned char * optr;
-  int opitch;
-
-  if ( !stbir__check_output_stuff( (void**)&optr, &opitch, output_pixels, sizeof( unsigned char ), output_w, output_h, output_stride_in_bytes, stbir__pixel_layout_convert_public_to_internal[ pixel_layout ] ) )
-    return 0;
-
-  stbir_resize_init( &resize,
-                     input_pixels,  input_w,  input_h,  input_stride_in_bytes,
-                     (optr) ? optr : output_pixels, output_w, output_h, opitch,
-                     pixel_layout, STBIR_TYPE_UINT8_SRGB );
-
-  if ( !stbir_resize_extended( &resize ) )
-  {
-    if ( optr )
-      STBIR_FREE( optr, 0 );
-    return 0;
-  }
-
-  return (optr) ? optr : output_pixels;
-}
-
-
-STBIRDEF float * stbir_resize_float_linear( const float *input_pixels , int input_w , int input_h, int input_stride_in_bytes,
-                                                  float *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-                                                  stbir_pixel_layout pixel_layout )
-{
-  STBIR_RESIZE resize;
-  float * optr;
-  int opitch;
-
-  if ( !stbir__check_output_stuff( (void**)&optr, &opitch, output_pixels, sizeof( float ), output_w, output_h, output_stride_in_bytes, stbir__pixel_layout_convert_public_to_internal[ pixel_layout ] ) )
-    return 0;
-
-  stbir_resize_init( &resize,
-                     input_pixels,  input_w,  input_h,  input_stride_in_bytes,
-                     (optr) ? optr : output_pixels, output_w, output_h, opitch,
-                     pixel_layout, STBIR_TYPE_FLOAT );
-
-  if ( !stbir_resize_extended( &resize ) )
-  {
-    if ( optr )
-      STBIR_FREE( optr, 0 );
-    return 0;
-  }
-
-  return (optr) ? optr : output_pixels;
-}
-
-
-STBIRDEF void * stbir_resize( const void *input_pixels , int input_w , int input_h, int input_stride_in_bytes,
-                                    void *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
-                              stbir_pixel_layout pixel_layout, stbir_datatype data_type,
-                              stbir_edge edge, stbir_filter filter )
-{
-  STBIR_RESIZE resize;
-  float * optr;
-  int opitch;
-
-  if ( !stbir__check_output_stuff( (void**)&optr, &opitch, output_pixels, stbir__type_size[data_type], output_w, output_h, output_stride_in_bytes, stbir__pixel_layout_convert_public_to_internal[ pixel_layout ] ) )
-    return 0;
-
-  stbir_resize_init( &resize,
-                     input_pixels,  input_w,  input_h,  input_stride_in_bytes,
-                     (optr) ? optr : output_pixels, output_w, output_h, output_stride_in_bytes,
+                     start_ptr, output_w, output_h, output_stride_in_bytes,
                      pixel_layout, data_type );
 
   resize.horizontal_edge = edge;
@@ -8099,12 +8078,53 @@ STBIRDEF void * stbir_resize( const void *input_pixels , int input_w , int input
 
   if ( !stbir_resize_extended( &resize ) )
   {
-    if ( optr )
-      STBIR_FREE( optr, 0 );
+    if ( free_ptr )
+      STBIR_FREE( free_ptr, 0 );
     return 0;
   }
 
-  return (optr) ? optr : output_pixels;
+  return (free_ptr) ? free_ptr : start_ptr;
+}
+
+
+
+STBIRDEF unsigned char * stbir_resize_uint8_linear( const unsigned char *input_pixels , int input_w , int input_h, int input_stride_in_bytes,
+                                                          unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
+                                                          stbir_pixel_layout pixel_layout )
+{
+  return (unsigned char *) stbir_quick_resize_helper( input_pixels , input_w , input_h, input_stride_in_bytes, 
+                                                      output_pixels, output_w, output_h, output_stride_in_bytes, 
+                                                      pixel_layout, STBIR_TYPE_UINT8, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT );
+}
+
+STBIRDEF unsigned char * stbir_resize_uint8_srgb( const unsigned char *input_pixels , int input_w , int input_h, int input_stride_in_bytes,
+                                                        unsigned char *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
+                                                        stbir_pixel_layout pixel_layout )
+{
+  return (unsigned char *) stbir_quick_resize_helper( input_pixels , input_w , input_h, input_stride_in_bytes, 
+                                                      output_pixels, output_w, output_h, output_stride_in_bytes, 
+                                                      pixel_layout, STBIR_TYPE_UINT8_SRGB, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT );
+}
+
+
+STBIRDEF float * stbir_resize_float_linear( const float *input_pixels , int input_w , int input_h, int input_stride_in_bytes,
+                                                  float *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
+                                                  stbir_pixel_layout pixel_layout )
+{
+  return (float *) stbir_quick_resize_helper( input_pixels , input_w , input_h, input_stride_in_bytes, 
+                                              output_pixels, output_w, output_h, output_stride_in_bytes, 
+                                              pixel_layout, STBIR_TYPE_FLOAT, STBIR_EDGE_CLAMP, STBIR_FILTER_DEFAULT  );
+}
+
+
+STBIRDEF void * stbir_resize( const void *input_pixels , int input_w , int input_h, int input_stride_in_bytes,
+                                    void *output_pixels, int output_w, int output_h, int output_stride_in_bytes,
+                                    stbir_pixel_layout pixel_layout, stbir_datatype data_type,
+                                    stbir_edge edge, stbir_filter filter )
+{
+  return (void *) stbir_quick_resize_helper( input_pixels , input_w , input_h, input_stride_in_bytes, 
+                                             output_pixels, output_w, output_h, output_stride_in_bytes, 
+                                             pixel_layout, data_type, edge, filter  );
 }
 
 #ifdef STBIR_PROFILE
