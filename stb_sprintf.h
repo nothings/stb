@@ -808,7 +808,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
          // do kilos
          if (fl & STBSP__METRIC_SUFFIX) {
             double divisor;
-            divisor = 1000.0f;
+            divisor = 1000.0;
             if (fl & STBSP__METRIC_1024)
                divisor = 1024.0;
             while (fl < 0x4000000) {
