@@ -85,9 +85,21 @@ USAGE:
    For PNG, "stride_in_bytes" is the distance in bytes from the first byte of
    a row of pixels to the first byte of the next row of pixels.
 
+   IMPORTANT: While you can provide 1, 2, 3, or 4 channel input data to any 
+   format, the actual number of channels written to the file varies by format:
+   - PNG and TGA preserve your input channel count
+   - BMP and JPEG always write 3-channel RGB (expanding 1/2 channel input)
+   - HDR always writes 3-channel RGB
+
+   Channel count behavior by format:
    PNG creates output files with the same number of components as the input.
-   The BMP format expands Y to RGB in the file format and does not
-   output alpha.
+   TGA creates output files with the same number of components as the input.
+   BMP always writes 3-channel RGB output, expanding 1-channel (Y) and 
+   2-channel (YA) input to RGB by replicating the Y value. Alpha is discarded.
+   JPEG always writes 3-channel RGB output, expanding 1-channel (Y) and
+   2-channel (YA) input to RGB by replicating the Y value. Alpha is discarded.
+   HDR always writes 3-channel RGB output, discarding alpha and replicating
+   monochrome data across all three channels.
 
    PNG supports writing rectangles of data even when the bytes storing rows of
    data are not consecutive in memory (e.g. sub-rectangles of a larger image),
@@ -106,9 +118,8 @@ USAGE:
    TGA supports RLE or non-RLE compressed data. To use non-RLE-compressed
    data, set the global variable 'stbi_write_tga_with_rle' to 0.
 
-   JPEG does ignore alpha channels in input data; quality is between 1 and 100.
-   Higher quality looks better but results in a bigger image.
-   JPEG baseline (no JPEG progressive).
+   JPEG quality is between 1 and 100. Higher quality looks better but results 
+   in a bigger image. JPEG baseline (no JPEG progressive).
 
 CREDITS:
 
