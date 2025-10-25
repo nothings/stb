@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.16 - public domain image resizing
+/* stb_image_resize2 - v2.17 - public domain image resizing
 
    by Jeff Roberts (v2) and Jorge L Rodriguez
    http://github.com/nothings/stb
@@ -329,6 +329,7 @@
       Nathan Reed: warning fixes for 1.0
 
    REVISIONS
+      2.17 (2025-10-25) silly format bug in easy-to-use APIs.
       2.16 (2025-10-21) fixed the easy-to-use APIs to allow inverted bitmaps (negative
                           strides), fix vertical filter kernel callback, fix threaded
                           gather buffer priming (and assert).
@@ -8022,7 +8023,7 @@ static void * stbir_quick_resize_helper( const void *input_pixels , int input_w 
   void * start_ptr;
   void * free_ptr;
 
-  scanline_output_in_bytes = output_w * stbir__type_size[ data_type ] * stbir__pixel_channels[ pixel_layout ];
+  scanline_output_in_bytes = output_w * stbir__type_size[ data_type ] * stbir__pixel_channels[ stbir__pixel_layout_convert_public_to_internal[ pixel_layout ] ];
   if ( scanline_output_in_bytes == 0 )
     return 0;
 
