@@ -373,6 +373,15 @@ RECENT REVISION HISTORY:
 
 #define STBI_VERSION 1
 
+#if defined(__has_attribute)
+#  if __has_attribute(fallthrough)
+#    define STBI_FALLTHROUGH __attribute__((fallthrough));
+#  endif
+#endif
+#if !defined(STBI_FALLTHROUGH)
+#  define STBI_FALLTHROUGH
+#endif
+
 enum
 {
    STBI_default = 0, // only used for desired_channels
@@ -5743,7 +5752,7 @@ static int stbi__tga_get_comp(int bits_per_pixel, int is_grey, int* is_rgb16)
    switch(bits_per_pixel) {
       case 8:  return STBI_grey;
       case 16: if(is_grey) return STBI_grey_alpha;
-               // fallthrough
+               STBI_FALLTHROUGH;
       case 15: if(is_rgb16) *is_rgb16 = 1;
                return STBI_rgb;
       case 24: // fallthrough
@@ -7145,10 +7154,10 @@ static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp)
       if (req_comp == 4) output[3] = 1;
    } else {
       switch (req_comp) {
-         case 4: output[3] = 1; /* fallthrough */
+         case 4: output[3] = 1; STBI_FALLTHROUGH;
          case 3: output[0] = output[1] = output[2] = 0;
                  break;
-         case 2: output[1] = 1; /* fallthrough */
+         case 2: output[1] = 1; STBI_FALLTHROUGH;
          case 1: output[0] = 0;
                  break;
       }
