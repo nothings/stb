@@ -5425,6 +5425,7 @@ static int stbi__bmp_set_mask_defaults(stbi__bmp_data *info, int compress)
    if (compress == 3)
       return 1;
 
+   // BI_RGB stands for RGB format without alpha channel.
    if (compress == 0) {
       if (info->bpp == 16) {
          info->mr = 31u << 10;
@@ -5434,7 +5435,7 @@ static int stbi__bmp_set_mask_defaults(stbi__bmp_data *info, int compress)
          info->mr = 0xffu << 16;
          info->mg = 0xffu <<  8;
          info->mb = 0xffu <<  0;
-         info->ma = 0xffu << 24;
+         info->ma = 0;
          info->all_a = 0; // if all_a is 0 at end, then we loaded alpha channel but it was all 0
       } else {
          // otherwise, use defaults, which is all-0
@@ -5661,10 +5662,10 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
       else /* bpp = 32 and pad = 0 */ width=0;
       pad = (-width) & 3;
       if (info.bpp == 24) {
-         easy = 1;
+         easy = 1; // RGB24
       } else if (info.bpp == 32) {
-         if (mb == 0xff && mg == 0xff00 && mr == 0x00ff0000 && ma == 0xff000000)
-            easy = 2;
+         if (mb == 0xff && mg == 0xff00 && mr == 0x00ff0000)
+            easy = (ma == 0xff000000) ? 3 : 2; // RGBA32 or RGBX32
       }
       if (!easy) {
          if (!mr || !mg || !mb) { STBI_FREE(out); return stbi__errpuc("bad masks", "Corrupt BMP"); }
@@ -5683,7 +5684,8 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
                out[z+1] = stbi__get8(s);
                out[z+0] = stbi__get8(s);
                z += 3;
-               a = (easy == 2 ? stbi__get8(s) : 255);
+               if (easy >= 2) a = stbi__get8(s);
+               if (easy <= 2) a = 255;
                all_a |= a;
                if (target == 4) out[z++] = a;
             }
