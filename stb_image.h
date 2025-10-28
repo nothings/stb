@@ -6956,7 +6956,10 @@ static void *stbi__load_gif_main_outofmem(stbi__gif *g, stbi_uc *out, int **dela
    STBI_FREE(g->background);
 
    if (out) STBI_FREE(out);
-   if (delays && *delays) STBI_FREE(*delays);
+   if (delays && *delays) {
+      STBI_FREE(*delays);
+      *delays = NULL;
+   }
    return stbi__errpuc("outofmem", "Out of memory");
 }
 
@@ -6991,19 +6994,15 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
             stride = g.w * g.h * 4;
 
             if (out) {
-               void *tmp = (stbi_uc*) STBI_REALLOC_SIZED( out, out_size, layers * stride );
-               if (!tmp)
+               out = (stbi_uc*) STBI_REALLOC_SIZED( out, out_size, layers * stride );
+               if (!out)
                   return stbi__load_gif_main_outofmem(&g, out, delays);
-               else {
-                   out = (stbi_uc*) tmp;
-                   out_size = layers * stride;
-               }
+               out_size = layers * stride;
 
                if (delays) {
-                  int *new_delays = (int*) STBI_REALLOC_SIZED( *delays, delays_size, sizeof(int) * layers );
-                  if (!new_delays)
+                  *delays = (int*) STBI_REALLOC_SIZED( *delays, delays_size, sizeof(int) * layers );
+                  if (!*delays)
                      return stbi__load_gif_main_outofmem(&g, out, delays);
-                  *delays = new_delays;
                   delays_size = layers * sizeof(int);
                }
             } else {
