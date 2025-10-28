@@ -1079,8 +1079,8 @@ static size_t stbds_siphash_bytes(void *p, size_t len, size_t seed)
     } while (0)
 
   for (i=0; i+sizeof(size_t) <= len; i += sizeof(size_t), d += sizeof(size_t)) {
-    data = d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24);
-    data |= (size_t) (d[4] | (d[5] << 8) | (d[6] << 16) | (d[7] << 24)) << 16 << 16; // discarded if size_t == 4
+    data = d[0] | (d[1] << 8) | (d[2] << 16) | ((size_t)d[3] << 24);
+    data |= (size_t) (d[4] | (d[5] << 8) | (d[6] << 16) | ((size_t)d[7] << 24)) << 16 << 16; // discarded if size_t == 4
 
     v3 ^= data;
     for (j=0; j < STBDS_SIPHASH_C_ROUNDS; ++j)
@@ -1092,7 +1092,7 @@ static size_t stbds_siphash_bytes(void *p, size_t len, size_t seed)
     case 7: data |= ((size_t) d[6] << 24) << 24; // fall through
     case 6: data |= ((size_t) d[5] << 20) << 20; // fall through
     case 5: data |= ((size_t) d[4] << 16) << 16; // fall through
-    case 4: data |= (d[3] << 24); // fall through
+    case 4: data |= ((size_t) d[3] << 24); // fall through
     case 3: data |= (d[2] << 16); // fall through
     case 2: data |= (d[1] << 8); // fall through
     case 1: data |= d[0]; // fall through
@@ -1121,7 +1121,7 @@ size_t stbds_hash_bytes(void *p, size_t len, size_t seed)
   unsigned char *d = (unsigned char *) p;
 
   if (len == 4) {
-    unsigned int hash = d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24);
+    unsigned int hash = d[0] | (d[1] << 8) | (d[2] << 16) | ((unsigned int)d[3] << 24);
     #if 0
     // HASH32-A  Bob Jenkin's hash function w/o large constants
     hash ^= seed;
@@ -1177,8 +1177,8 @@ size_t stbds_hash_bytes(void *p, size_t len, size_t seed)
 
     return (((size_t) hash << 16 << 16) | hash) ^ seed;
   } else if (len == 8 && sizeof(size_t) == 8) {
-    size_t hash = d[0] | (d[1] << 8) | (d[2] << 16) | (d[3] << 24);
-    hash |= (size_t) (d[4] | (d[5] << 8) | (d[6] << 16) | (d[7] << 24)) << 16 << 16; // avoid warning if size_t == 4
+    size_t hash = d[0] | (d[1] << 8) | (d[2] << 16) | ((size_t)d[3] << 24);
+    hash |= (size_t) (d[4] | (d[5] << 8) | (d[6] << 16) | ((size_t)d[7] << 24)) << 16 << 16; // avoid warning if size_t == 4
     hash ^= seed;
     hash = (~hash) + (hash << 21);
     hash ^= STBDS_ROTATE_RIGHT(hash,24);
