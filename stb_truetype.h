@@ -2609,14 +2609,15 @@ static stbtt_int32 stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, in
 
 STBTT_DEF int  stbtt_GetGlyphKernAdvance(const stbtt_fontinfo *info, int g1, int g2)
 {
-   int xAdvance = 0;
+   if (info->gpos) {
+      int xAdvance = stbtt__GetGlyphGPOSInfoAdvance(info, g1, g2);
+      if (xAdvance) return xAdvance;
+   }
 
-   if (info->gpos)
-      xAdvance += stbtt__GetGlyphGPOSInfoAdvance(info, g1, g2);
-   else if (info->kern)
-      xAdvance += stbtt__GetGlyphKernInfoAdvance(info, g1, g2);
+   if (info->kern)
+      return stbtt__GetGlyphKernInfoAdvance(info, g1, g2);
 
-   return xAdvance;
+   return 0;
 }
 
 STBTT_DEF int  stbtt_GetCodepointKernAdvance(const stbtt_fontinfo *info, int ch1, int ch2)
