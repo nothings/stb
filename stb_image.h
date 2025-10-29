@@ -5479,13 +5479,8 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
       stbi__get32le(s); // discard vres
       stbi__get32le(s); // discard colorsused
       stbi__get32le(s); // discard max important
-      if (hsz == 40 || hsz == 56) {
-         if (hsz == 56) {
-            stbi__get32le(s);
-            stbi__get32le(s);
-            stbi__get32le(s);
-            stbi__get32le(s);
-         }
+      if (hsz == 40) {
+         // INFO header
          if (info->bpp == 16 || info->bpp == 32) {
             if (compress == 0) {
                stbi__bmp_set_mask_defaults(info, compress);
@@ -5502,6 +5497,14 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
             } else
                return stbi__errpuc("bad BMP", "bad BMP");
          }
+      } else if (hsz == 56) {
+         // V3 header
+         info->mr = stbi__get32le(s);
+         info->mg = stbi__get32le(s);
+         info->mb = stbi__get32le(s);
+         stbi__get32le(s); // discard alpha mask, matching the behavior in major web browsers
+         if (compress != 3)
+            stbi__bmp_set_mask_defaults(info, compress);
       } else {
          // V4/V5 header
          int i;
