@@ -13,25 +13,37 @@
  *
  * QUICK EXAMPLE:
  * ──────────────
- *   #define STB_VECTOR_IMPLEMENTATION
- *   #include "stb_vector.h"
- *   #include <stdio.h>
+ * 
+ * #define STB_VECTOR_IMPLEMENTATION
+ * #include "stb_vector.h"
+ * #include <stdio.h>
  *
- *   int main() {
- *       Vector(int) *vec = vector_new(int);
- *       
- *       try(vec) {
- *           $(vec)->push_back(42);
- *           printf("Size: %zu\n", $(vec)->size());
- *       } catch {
- *           printf("Error: %s\n", vec->error.message);
- *       }
- *       
- *       $(vec)->destroy();
- *       free(vec);
- *       return 0;
- *   }
+ * int main(void) {
+ *     Vector(int) *vec = vector_new(int);
  *
+ *     $(vec)->resize(2); // Allocate space for 2 elements
+ *     $(vec)->set(0, 10);
+ *     $(vec)->set(1, 20);
+ *     $(vec)->push_back(30);
+ *
+ *     printf("Initial: ");
+ *     for (size_t index = 0; index < $(vec)->size(); ++index)
+ *         printf("%d ", $(vec)->get(index));
+ *     printf("\n");
+ *
+ *     $(vec)->erase(1); // Remove element at index 1
+ *
+ *     printf("Size: %zu, Capacity: %zu\n", $(vec)->size(), $(vec)->capacity());
+ *
+ *     printf("Remaining: ");
+ *     for (size_t index = 0; index < $(vec)->size(); ++index)
+ *         printf("%d ", $(vec)->get(index));
+ *     printf("\n");
+ *
+ *     $(vec)->destroy();
+ *     return 0;
+ * }
+ * 
  * API REFERENCE:
  * ──────────────
  *
@@ -70,10 +82,10 @@
  *     free(vec);                                   // free struct
  *
  * EXCEPTION HANDLING:
- *   try(vec) {
+ *   stb_try(vec) {
  *       $(vec)->push_back(10);
  *       $(vec)->get(999);  // Throws exception!
- *   } catch {
+ *   } stb_catch {
  *       printf("Error: %s\n", vec->error.message);
  *   }
  *
@@ -233,8 +245,8 @@ extern __thread STB_Vector_long *_stb_vec_ctx_long;
 
 #define $(vec) (_stb_vec_ctx_current = (vec), (vec))
 
-#define try(vec) if (setjmp((vec)->error.env) == STB_VEC_ERR_NONE)
-#define catch else
+#define stb_try(vec) if (setjmp((vec)->error.env) == STB_VEC_ERR_NONE)
+#define stb_catch else
 
 #define RAISE(vec, msg) do { \
     if (!(vec)) break; \
