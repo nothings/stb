@@ -518,39 +518,25 @@ static void stb_textedit_find_charpos(StbFindState *find, STB_TEXTEDIT_STRING *s
    int z = STB_TEXTEDIT_STRINGLEN(str);
    int i=0, first;
 
-   if (n == z) {
-      // if it's at the end, then find the last line -- simpler than trying to
-      // explicitly handle this case in the regular code
-      if (single_line) {
-         STB_TEXTEDIT_LAYOUTROW(&r, str, 0);
-         find->y = 0;
-         find->first_char = 0;
-         find->length = z;
-         find->height = r.ymax - r.ymin;
-         find->x = r.x1;
-      } else {
-         find->y = 0;
-         find->x = 0;
-         find->height = 1;
-         while (i < z) {
-            STB_TEXTEDIT_LAYOUTROW(&r, str, i);
-            prev_start = i;
-            i += r.num_chars;
-         }
-         find->first_char = i;
-         find->length = 0;
-         find->prev_first = prev_start;
-      }
-      return;
-   }
-
    // search rows to find the one that straddles character n
    find->y = 0;
 
    for(;;) {
       STB_TEXTEDIT_LAYOUTROW(&r, str, i);
-      if (n < i + r.num_chars)
-         break;
+
+      // generally, the row that contains n is found if n is less than the next row start.
+      // however, if n is at the end of the text there is no row past n, so another termination criterion is needed:
+      // 1. either the row is empty (this catches z == 0 too)
+      // 2. or the row does not have a trailing newline
+      // neither of these conditions can be true for any row other than the last one.
+      // to avoid checking all three conditions every iterations, the main conditions is loosened such that it includes n == z
+      // the additional single_line check is only needed if someone accidentally pasted a newline character at the end in single line mode
+      if (n <= i + r.num_chars) {
+         if(n < i + r.num_chars || r.num_chars == 0 || STB_TEXTEDIT_GETCHAR(str, i + r.num_chars - 1) != STB_TEXTEDIT_NEWLINE || single_line) {
+            break;
+         }
+      }
+
       prev_start = i;
       i += r.num_chars;
       find->y += r.baseline_y_delta;
