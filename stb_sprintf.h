@@ -1061,14 +1061,14 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             stbsp__int64 i64 = va_arg(va, stbsp__int64);
             n64 = (stbsp__uint64)i64;
             if ((f[0] != 'u') && (i64 < 0)) {
-               n64 = (stbsp__uint64)-i64;
+               n64 = -(stbsp__uint64)i64;
                fl |= STBSP__NEGATIVE;
             }
          } else {
             stbsp__int32 i = va_arg(va, stbsp__int32);
             n64 = (stbsp__uint32)i;
             if ((f[0] != 'u') && (i < 0)) {
-               n64 = (stbsp__uint32)-i;
+               n64 = -(stbsp__uint32)i;
                fl |= STBSP__NEGATIVE;
             }
          }
