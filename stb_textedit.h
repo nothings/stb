@@ -940,9 +940,15 @@ retry:
          for (j = 0; j < row_count; ++j) {
             float  x, goal_x = state->has_preferred_x ? state->preferred_x : find.x;
 
-            // can only go up if there's a previous row
-            if (find.prev_first == find.first_char)
+            // if there's no previous row set cursor to start of the line
+            if (find.prev_first == find.first_char) {
+               state->cursor = find.first_char;
+               stb_textedit_clamp(str, state);
+
+               if (sel)
+                  state->select_end = state->cursor;
                break;
+            }
 
             // now find character position up a row
             state->cursor = find.prev_first;
