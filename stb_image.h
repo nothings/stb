@@ -116,7 +116,7 @@ RECENT REVISION HISTORY:
     Baldur Karlsson         Kevin Schmidt      JR Smith             github:Michaelangel007
                             Brad Weinberger    Matvey Cherevko      github:mosra
     Luca Sas                Alexander Veselov  Zack Middleton       [reserved]
-    Ryan C. Gordon          [reserved]                              [reserved]
+    Ryan C. Gordon          Cocoa Xu                                [reserved]
                      DO NOT ADD YOUR NAME HERE
 
                      Jacko Dirks
@@ -7020,7 +7020,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
             }
             memcpy( out + ((layers - 1) * stride), u, stride );
             if (layers >= 2) {
-               two_back = out - 2 * stride;
+               two_back = out + ((layers - 2) * stride);
             }
 
             if (delays) {
