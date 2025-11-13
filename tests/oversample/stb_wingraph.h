@@ -561,8 +561,10 @@ void *stbwingraph_CreateWindow(int primary, stbwingraph_window_proc func, void *
       #ifdef STB_SIMPLE
       stbwingraph_ChangeResolution(width, height, 32, 1);
       #else
-      if (!stbwingraph_ChangeResolution(width, height, 32, 0))
+      if (!stbwingraph_ChangeResolution(width, height, 32, 0)) {
+         free(z);
          return NULL;
+      }
       #endif
       dwstyle = WS_POPUP | WS_CLIPSIBLINGS;
    } else {
