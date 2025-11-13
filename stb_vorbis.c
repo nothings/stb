@@ -34,6 +34,7 @@
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
 //    AnthoFoxo          github:morlat       Gabriel Ravier
+//    Seb de Graffenried
 //
 // Partial history:
 //    1.22    - 2021-07-11 - various small fixes
@@ -2067,7 +2068,7 @@ static __forceinline void draw_line(float *output, int x0, int y0, int x1, int y
    ady -= abs(base) * adx;
    if (x1 > n) x1 = n;
    if (x < x1) {
-      LINE_OP(output[x], inverse_db_table[y&255]);
+      LINE_OP(output[x], inverse_db_table[(uint32)y&255]);
       for (++x; x < x1; ++x) {
          err += ady;
          if (err >= adx) {
@@ -2075,7 +2076,7 @@ static __forceinline void draw_line(float *output, int x0, int y0, int x1, int y
             y += sy;
          } else
             y += base;
-         LINE_OP(output[x], inverse_db_table[y&255]);
+         LINE_OP(output[x], inverse_db_table[(uint32)y&255]);
       }
    }
 }
