@@ -2839,6 +2839,7 @@ static void stbir_overlapping_memcpy( void * dest, void const * src, size_t byte
   char STBIR_SIMD_STREAMOUT_PTR( * ) s_end = ((char*) src) + bytes;
   ptrdiff_t ofs_to_dest = (char*)dest - (char*)src;
 
+  #ifndef STBIR_MEMCPY_NOUNALIGNED // define this before inclusion to force STB to always use aligned accesses
   if ( ofs_to_dest >= 8 ) // is the overlap more than 8 away?
   {
     char STBIR_SIMD_STREAMOUT_PTR( * ) s_end8 = ((char*) src) + (bytes&~7);
@@ -2853,6 +2854,7 @@ static void stbir_overlapping_memcpy( void * dest, void const * src, size_t byte
     if ( sd == s_end )
       return;
   }
+  #endif
 
   STBIR_NO_UNROLL_LOOP_START
   do
