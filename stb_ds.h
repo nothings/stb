@@ -787,12 +787,12 @@ static void *stbds_realloc_with_allocator(stbds_allocator *alloc, void *ptr, siz
 }
 
 // helper function to call free with allocator
-static void *stbds_free_with_allocator(stbds_allocator *alloc, void* ptr)
+static void stbds_free_with_allocator(stbds_allocator *alloc, void* ptr)
 {
   if (alloc && alloc->free)
     return alloc->free(alloc->context, ptr);
   else
-    return STB_DS_FREE(NULL, ptr);
+    return STBDS_FREE(NULL, ptr);
 }
 
 // thread local storage for pending allocator
