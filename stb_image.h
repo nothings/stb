@@ -7218,7 +7218,6 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
       for (j=0; j < height; ++j) {
          for (i=0; i < width; ++i) {
             stbi_uc rgbe[4];
-           main_decode_loop:
             stbi__getn(s, rgbe, 4);
             stbi__hdr_convert(hdr_data + j * width * req_comp + i * req_comp, rgbe, req_comp);
          }
@@ -7226,8 +7225,9 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    } else {
       // Read RLE-encoded data
       scanline = NULL;
+      int rle = 1;
 
-      for (j = 0; j < height; ++j) {
+      for (j = 0; j < height && rle; ++j) {
          c1 = stbi__get8(s);
          c2 = stbi__get8(s);
          len = stbi__get8(s);
@@ -7240,10 +7240,17 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
             rgbe[2] = (stbi_uc) len;
             rgbe[3] = (stbi_uc) stbi__get8(s);
             stbi__hdr_convert(hdr_data, rgbe, req_comp);
-            i = 1;
-            j = 0;
             STBI_FREE(scanline);
-            goto main_decode_loop; // yes, this makes no sense
+            scanline = NULL;
+            // switch to flat decode for remaining pixels
+            for (j = 0; j < height; ++j) {
+               for (i = (j == 0 ? 1 : 0); i < width; ++i) {
+                  stbi__getn(s, rgbe, 4);
+                  stbi__hdr_convert(hdr_data + j * width * req_comp + i * req_comp, rgbe, req_comp);
+               }
+            }
+            rle = 0;
+            break;
          }
          len <<= 8;
          len |= stbi__get8(s);
