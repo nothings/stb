@@ -7243,10 +7243,10 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
             STBI_FREE(scanline);
             scanline = NULL;
             // switch to flat decode for remaining pixels
-            for (j = 0; j < height; ++j) {
-               for (i = (j == 0 ? 1 : 0); i < width; ++i) {
+            for (int jj = 0; jj < height; ++jj) {
+               for (i = (jj == 0 ? 1 : 0); i < width; ++i) {
                   stbi__getn(s, rgbe, 4);
-                  stbi__hdr_convert(hdr_data + j * width * req_comp + i * req_comp, rgbe, req_comp);
+                  stbi__hdr_convert(hdr_data + jj * width * req_comp + i * req_comp, rgbe, req_comp);
                }
             }
             rle = 0;
