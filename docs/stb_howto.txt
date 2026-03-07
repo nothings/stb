@@ -161,7 +161,7 @@ for my libraries; liability in the face of no explicit
 disclaimer of liability is an open question.)
 
 However, public domain has frictions of its own, because
-public domain declarations aren't necessary recognized
+public domain declarations aren't necessarily recognized
 in the USA and some other locations. For that reason,
 I recommend a declaration along these lines:
 
