@@ -54,7 +54,7 @@ You can't always do this, but when you can, embedded developers
 will appreciate it. I almost never bother avoiding, as it's
 too much work (and in some cases is pretty infeasible;
 see http://nothings.org/gamedev/font_rendering_malloc.txt ).
-But it's definitely something one of the things I've gotten
+But it's definitely one of the things I've gotten
 the most pushback on from potential users.
 
 
