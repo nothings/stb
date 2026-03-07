@@ -8,7 +8,7 @@
 //    ASCII-only,
 //    bitmap font for use in 3D APIs.
 //
-// Intended for when you just want to get some text displaying
+// Intended for when you want to get some text displaying
 // in a 3D app as quickly as possible.
 //
 // Doesn't use any textures, instead builds characters out of quads.

@@ -154,7 +154,7 @@
 //      AlternatingSaw               AlternatingSaw   0       0..1     0..any   0
 //
 //   The last entry is noteworthy because the morph from the halfway point to either
-//   endpoint sounds very different. For example, an LFO sweeping back and forth over
+//   endpoint sounds different. For example, an LFO sweeping back and forth over
 //   the whole range will morph between the middle timbre and the AlternatingSaw
 //   timbre in two different ways, alternating.
 //
@@ -162,7 +162,7 @@
 //   any value you want as the endpoint for half_height.
 //
 //   You can always morph between any two waveforms with the same value of 'reflect'
-//   by just sweeping the parameters simultaneously. There will never be artifacts
+//   by sweeping the parameters simultaneously. There will never be artifacts
 //   and the result will always be useful, if not necessarily what you want.
 //
 //   You can vary the sound of two-parameter morphs by ramping them differently,
@@ -385,7 +385,7 @@ static void hexwave_generate_linesegs(hexvert vert[9], HexWave *hex, float dt)
           // why does this happen if the math is right? i believe if done perfectly,
           // the two BLAMPs on either side of the slope would cancel out, but our
           // BLAMPs have only limited sub-sample precision and limited integration
-          // accuracy. or maybe it's just the math blowing up w/ floating point precision
+          // accuracy. or maybe it's the math blowing up w/ floating point precision
           // limits as we try to make x * (1/x) cancel out
           //
           // min_len verified artifact-free even near nyquist with only oversample=4

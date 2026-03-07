@@ -221,7 +221,7 @@
 //      cut:
 //          call this to delete the current selection; returns true if there was
 //          one. you should FIRST copy the current selection to the system paste buffer.
-//          (To copy, just copy the current selection out of the string yourself.)
+//          (To copy, copy the current selection out of the string yourself.)
 //
 //      paste:
 //          call this to paste text at the current cursor point or over the current
@@ -376,7 +376,7 @@ typedef struct
 
 
 // implementation isn't include-guarded, since it might have indirectly
-// included just the "header" portion
+// included the "header" portion
 #ifdef STB_TEXTEDIT_IMPLEMENTATION
 
 #ifndef STB_TEXTEDIT_memmove
@@ -453,7 +453,7 @@ static int stb_text_locate_coord(STB_TEXTEDIT_STRING *str, float x, float y)
 // API click: on mouse down, move the cursor to the clicked location, and reset the selection
 static void stb_textedit_click(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, float x, float y)
 {
-   // In single-line mode, just always make y = 0. This lets the drag keep working if the mouse
+   // In single-line mode, always make y = 0. This lets the drag keep working if the mouse
    // goes off the top or bottom of the text
    if( state->single_line )
    {
@@ -473,7 +473,7 @@ static void stb_textedit_drag(STB_TEXTEDIT_STRING *str, STB_TexteditState *state
 {
    int p = 0;
 
-   // In single-line mode, just always make y = 0. This lets the drag keep working if the mouse
+   // In single-line mode, always make y = 0. This lets the drag keep working if the mouse
    // goes off the top or bottom of the text
    if( state->single_line )
    {

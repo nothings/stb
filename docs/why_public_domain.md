@@ -9,7 +9,7 @@ in the public domain:
   development of it, and then because it doesn't develop as well it's
   not as good, and then because it's not as good, in the long run
   maybe fewer people will use it. I have total respect for that
-  opinion, but I just don't believe it myself for most software.
+  opinion, but I don't believe it myself for most software.
 
 2. Public domain vs. attribution-required licenses
 
@@ -28,7 +28,7 @@ in the public domain:
 3. Other aspects of BSD-style licenses besides attribution
 
   Permissive licenses like zlib and BSD license are perfectly reasonable
-  in their requirements, but they are very wordy and
+  in their requirements, but they are wordy and
   have only two benefits over public domain: legally-mandated
   attribution and liability-control. I do not believe these
   are worth the excessive verbosity and user-unfriendliness
@@ -80,7 +80,7 @@ at it so why would you care whether your credit
 appeared there?
 
 Permissive licenses like zlib and BSD license are
-perfectly reasonable, but they are very wordy and
+perfectly reasonable, but they are wordy and
 have only two benefits over public domain: legally-mandated
 attribution and liability-control. I do not believe these
 are worth the excessive verbosity and user-unfriendliness
@@ -101,7 +101,7 @@ I recommend a declaration along these lines:
 // publish, and distribute this file as you see fit.
 
 I typically place this declaration at the end of the initial
-comment block of the file and just say 'public domain'
+comment block of the file and say 'public domain'
 at the top.
 
 I have had people say they couldn't use one of my

@@ -112,7 +112,7 @@ extern "C" {
 // this is lame).
 //
 // If you pass in a non-NULL buffer of the type below, allocation
-// will occur from it as described above. Otherwise just pass NULL
+// will occur from it as described above. Otherwise pass NULL
 // to use malloc()/alloca()
 
 typedef struct
@@ -186,7 +186,7 @@ extern stb_vorbis *stb_vorbis_open_pushdata(
          int *error,
          const stb_vorbis_alloc *alloc_buffer);
 // create a vorbis decoder by passing in the initial data block containing
-//    the ogg&vorbis headers (you don't need to do parse them, just provide
+//    the ogg&vorbis headers (you don't need to do parse them, provide
 //    the first N bytes of the file--you're told if it's not enough, see below)
 // on success, returns an stb_vorbis *, does not set error, returns the amount of
 //    data parsed/consumed on this call in *datablock_memory_consumed_in_bytes;
@@ -252,7 +252,7 @@ extern void stb_vorbis_flush_pushdata(stb_vorbis *f);
 // FILE * that you or it create, or possibly some other reading mechanism
 // if you go modify the source to replace the FILE * case with some kind
 // of callback to your code. (But if you don't support seeking, you may
-// just want to go ahead and use pushdata.)
+// want to go ahead and use pushdata.)
 
 #if !defined(STB_VORBIS_NO_STDIO) && !defined(STB_VORBIS_NO_INTEGER_CONVERSION)
 extern int stb_vorbis_decode_filename(const char *filename, int *channels, int *sample_rate, short **output);
@@ -263,7 +263,7 @@ extern int stb_vorbis_decode_memory(const unsigned char *mem, int len, int *chan
 // decode an entire file and output the data interleaved into a malloc()ed
 // buffer stored in *output. The return value is the number of samples
 // decoded, or -1 if the file could not be opened or was not an ogg vorbis file.
-// When you're done with it, just free() the pointer returned in *output.
+// When you're done with it, free() the pointer returned in *output.
 
 extern stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len,
                                   int *error, const stb_vorbis_alloc *alloc_buffer);
@@ -347,7 +347,7 @@ extern int stb_vorbis_get_frame_short            (stb_vorbis *f, int num_c, shor
 //        2    *      stereo L, stereo R
 //        k    l      k > l, the first l channels, then 0s
 //        k    l      k <= l, the first k channels
-//    Note that this is not _good_ surround etc. mixing at all! It's just so
+//    Note that this is not _good_ surround etc. mixing at all! It's so
 //    you get something useful.
 
 extern int stb_vorbis_get_samples_float_interleaved(stb_vorbis *f, int channels, float *buffer, int num_floats);
@@ -420,7 +420,7 @@ enum STBVorbisError
 #ifndef STB_VORBIS_HEADER_ONLY
 
 // global configuration settings (e.g. set these in the project/makefile),
-// or just set them in this file at the top (although ideally the first few
+// or set them in this file at the top (although ideally the first few
 // should be visible when the header file is compiled too, although it's not
 // crucial)
 
@@ -540,7 +540,7 @@ enum STBVorbisError
 // STB_VORBIS_NO_DEFER_FLOOR
 //     Normally we only decode the floor without synthesizing the actual
 //     full curve. We can instead synthesize the curve immediately. This
-//     requires more memory and is very likely slower, so I don't think
+//     requires more memory and is likely slower, so I don't think
 //     you'd ever want to do it except for debugging.
 // #define STB_VORBIS_NO_DEFER_FLOOR
 
@@ -665,7 +665,7 @@ typedef float codetype;
 //
 // Some arrays below are tagged "//varies", which means it's actually
 // a variable-sized piece of data, but rather than malloc I assume it's
-// small enough it's better to just allocate it all together with the
+// small enough it's better to allocate it all together with the
 // main thing
 //
 // Most of the variables are specified with the smallest size I could pack
@@ -1068,7 +1068,7 @@ static float float32_unpack(uint32 x)
 // zlib & jpeg huffman tables assume that the output symbols
 // can either be arbitrarily arranged, or have monotonically
 // increasing frequencies--they rely on the lengths being sorted;
-// this makes for a very simple generation algorithm.
+// this makes for a simple generation algorithm.
 // vorbis allows a huffman table with non-sorted lengths. This
 // requires a more sophisticated construction, since symbols in
 // order do not map to huffman codes "in order".
@@ -2308,7 +2308,7 @@ void inverse_mdct_slow(float *buffer, int n)
    free(x);
 }
 #elif 0
-// same as above, but just barely able to run in real time on modern machines
+// same as above, but barely able to run in real time on modern machines
 void inverse_mdct_slow(float *buffer, int n, vorb *f, int blocktype)
 {
    float mcos[16384];
@@ -3281,7 +3281,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
            error:
             zero_channel[i] = TRUE;
          }
-         // So we just defer everything else to later
+         // So we defer everything else to later
 
          // at this point we've decoded the floor into buffer
       }
@@ -3428,7 +3428,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
             return TRUE;
          }
       }
-      // otherwise, just set our sample loc
+      // otherwise, set our sample loc
       // guess that the ogg granule pos refers to the _middle_ of the
       // last frame?
       // set f->current_loc to the position of left_start
@@ -3554,7 +3554,7 @@ static int is_whole_packet_present(stb_vorbis *f)
          if (f->previous_length)
             if ((p[5] & PAGEFLAG_continued_packet))  return error(f, VORBIS_invalid_stream);
          // if no previous length, we're resynching, so we can come in on a continued-packet,
-         // which we'll just drop
+         // which we'll drop
       } else {
          if (!(p[5] & PAGEFLAG_continued_packet)) return error(f, VORBIS_invalid_stream);
       }
@@ -4483,7 +4483,7 @@ int stb_vorbis_decode_frame_pushdata(
       if (error == VORBIS_continued_packet_flag_invalid) {
          if (f->previous_length == 0) {
             // we may be resynching, in which case it's ok to hit one
-            // of these; just discard the packet
+            // of these; discard the packet
             f->error = VORBIS__no_error;
             while (get8_packet(f) != EOP)
                if (f->eof) break;
@@ -4785,7 +4785,7 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
          assert(mid.page_start < right.page_start);
       }
 
-      // if we've just found the last page again then we're in a tricky file,
+      // if we've found the last page again then we're in a tricky file,
       // and we're close enough (if it wasn't an interpolation probe).
       if (mid.page_start == right.page_start) {
          if (probe >= 2 || delta <= 65536)

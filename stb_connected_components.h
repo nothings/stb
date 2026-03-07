@@ -16,7 +16,7 @@
 //
 // The above creates an implementation that can run on maps up to 1024x1024.
 // Map sizes must be a multiple of (1<<(LOG2/2)) on each axis (e.g. 32 if LOG2=10,
-// 16 if LOG2=8, etc.) (You can just pad your map with untraversable space.)
+// 16 if LOG2=8, etc.) (You can pad your map with untraversable space.)
 //
 // MEMORY USAGE
 //
@@ -49,7 +49,7 @@
 //    - more comments
 //    - try re-integrating naive algorithm & compare performance
 //    - more optimized batching (current approach still recomputes local clumps many times)
-//    - function for setting a grid of squares at once (just use batching)
+//    - function for setting a grid of squares at once (use batching)
 //
 // LICENSE
 //
@@ -96,7 +96,7 @@ extern "C" {
 //  initialization
 //
 
-// you allocate the grid data structure to this size (note that it will be very big!!!)
+// you allocate the grid data structure to this size (note that it will be big)
 extern size_t stbcc_grid_sizeof(void);
 
 // initialize the grid, value of map[] is 0 = traversable, non-0 is solid
@@ -130,7 +130,7 @@ extern void stbcc_update_batch_end(stbcc_grid *g);
 extern int stbcc_query_grid_open(stbcc_grid *g, int x, int y);
 
 // get a unique id for the connected component this is in; it's not necessarily
-// small, you'll need a hash table or something to remap it (or just use
+// small, you'll need a hash table or something to remap it (or use
 extern unsigned int stbcc_get_unique_id(stbcc_grid *g, int x, int y);
 #define STBCC_NULL_UNIQUE_ID 0xffffffff // returned for closed map squares
 
@@ -408,7 +408,7 @@ static void stbcc__build_all_connections_for_cluster(stbcc_grid *g, int cx, int 
 {
    // in this particular case, we are fully non-incremental. that means we
    // can discover the correct sizes for the arrays, but requires we build
-   // the data into temporary data structures, or just count the sizes, so
+   // the data into temporary data structures, or count the sizes, so
    // for simplicity we do the latter
    stbcc__cluster *cluster = &g->cluster[cy][cx];
    unsigned char connected[STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER][STBCC__MAX_EDGE_CLUMPS_PER_CLUSTER/8]; // 64 x 8 => 1KB

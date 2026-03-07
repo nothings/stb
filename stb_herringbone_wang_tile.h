@@ -340,7 +340,7 @@ STBHW_EXTERN int stbhw_make_template(stbhw_config *c, unsigned char *data, int w
 #endif
 
 // global variables for color assignments
-// @MEMORY change these to just store last two/three rows
+// @MEMORY change these to store last two/three rows
 //         and keep them on the stack
 static signed char c_color[STB_HBWANG_MAX_Y+6][STB_HBWANG_MAX_X+6];
 static signed char v_color[STB_HBWANG_MAX_Y+6][STB_HBWANG_MAX_X+5];
@@ -979,7 +979,7 @@ static unsigned char stbhw__black[3] = { 0,0,0 };
 
 // each edge set gets its own unique color variants
 // used http://phrogz.net/css/distinct-colors.html to generate this set,
-// but it's not very good and needs to be revised
+// but it's not good and needs to be revised
 
 static unsigned char stbhw__color[7][8][3] =
 {

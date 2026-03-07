@@ -63,7 +63,7 @@ by your text rendering.)
 
 ## What about gamma?
 
-Gamma-correction for fonts just doesn't work. This doesn't seem to make
+Gamma-correction for fonts doesn't work. This doesn't seem to make
 much sense -- it's physically correct, it simulates what we'd see if you
 shrunk a font down really far, right?
 
@@ -74,12 +74,12 @@ no way to adjust the font's inherent thickness (i.e. by switching to
 bold) to fix this for both; making the font thicker will make white
 text worse, and making the font thinner will make black text worse.
 Obviously you could use different fonts for light and dark cases, but
-this doesn't seem like a very good way for fonts to work.
+this doesn't seem like a good way for fonts to work.
 
 Multiple people who have experimented with this independently (me,
 Fabian Giesen,and Maxim Shemanarev of Anti-Grain Geometry) have all
 concluded that correct gamma-correction does not produce the best
-results for fonts. Font rendering just generally looks better without
+results for fonts. Font rendering generally looks better without
 gamma correction (or possibly with some arbitrary power stuck in
 there, but it's not really correcting for gamma at that point). Maybe
 this is in part a product of how we're used to fonts being on screens

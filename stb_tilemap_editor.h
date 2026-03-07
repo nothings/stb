@@ -50,7 +50,7 @@
 //   A: You have to do this yourself. The editor provides serialization
 //      functions (get & set) for reading and writing the map it holds.
 //      You can choose whatever format you want to store the map to on
-//      disk; you just need to provide functions to convert. (For example,
+//      disk; you need to provide functions to convert. (For example,
 //      I actually store the editor's map representation to disk basically
 //      as-is; then I have a single function that converts from the editor
 //      map representation to the game representation, which is used both
@@ -183,7 +183,7 @@
 //      #include "stb_tilemap_editor.h"
 //
 //   Optionally you can define the following functions before the include;
-//   note these must be macros (but they can just call a function) so
+//   note these must be macros (but they can call a function) so
 //   this library can #ifdef to detect if you've defined them:
 //
 //      #define STBTE_PROP_TYPE(int n, short *tiledata, float *params) ...
@@ -243,7 +243,7 @@
 //      #define STBTE_HITTEST_TILE(x0,y0,id,mx,my)   ...your code here...
 //      // this returns true or false depending on whether the mouse
 //      // pointer at mx,my is over (touching) a tile of type 'id'
-//      // displayed at x0,y0. Normally stb_tilemap_editor just does
+//      // displayed at x0,y0. Normally stb_tilemap_editor does
 //      // this hittest based on the tile geometry, but if you have
 //      // tiles whose images extend out of the tile, you'll need this.
 //
@@ -381,7 +381,7 @@ extern void stbte_define_tile(stbte_tilemap *tm, unsigned short id, unsigned int
 //   id        : unique identifier for each tile, 0 <= id < 32768
 //   layermask : bitmask of which layers tile is allowed on: 1 = layer 0, 255 = layers 0..7
 //               (note that onscreen, the editor numbers the layers from 1 not 0)
-//               layer 0 is the furthest back, layer 1 is just in front of layer 0, etc
+//               layer 0 is the furthest back, layer 1 is in front of layer 0, etc
 //   category  : which category this tile is grouped in
 
 extern void stbte_set_display(int x0, int y0, int x1, int y1);
@@ -3085,7 +3085,7 @@ static void stbte__tile(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy)
             }
             break;
          case STBTE__leftup:
-            // just clear it no matter what, since they might click away to clear it
+            // clear it no matter what, since they might click away to clear it
             stbte__activate(0);
             break;
          case STBTE__rightdown:
@@ -3125,7 +3125,7 @@ static void stbte__tile(stbte_tilemap *tm, int sx, int sy, int mapx, int mapy)
          switch (stbte__ui.event) {
             case STBTE__mousemove:
                if (STBTE__IS_MAP_ACTIVE() && over) {
-                  // don't brush/erase same tile multiple times unless they move away and back @TODO should just be only once, but that needs another data structure
+                  // don't brush/erase same tile multiple times unless they move away and back @TODO should be only once, but that needs another data structure
                   if (!STBTE__IS_ACTIVE(id)) {
                      if (stbte__ui.active_event == STBTE__leftdown)
                         stbte__brush(tm, mapx, mapy);

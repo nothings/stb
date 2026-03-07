@@ -29,7 +29,7 @@ Not very. Many Minecraft blocks are not handled correctly:
 *         Transparent textures have black fringes due to non-premultiplied-alpha
 *         Skylight and block light are combined in a single value
 *         Only blocks at y=1..255 are shown (not y=0)
-*         If a 32x32x256 "quad-chunk" needs more than 800K quads, isn't handled (very unlikely)
+*         If a 32x32x256 "quad-chunk" needs more than 800K quads, isn't handled (unlikely)
 
 Some of these are due to engine limitations, and some of
 these are because I didn't make the effort since my

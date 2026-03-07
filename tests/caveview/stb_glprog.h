@@ -119,7 +119,7 @@ extern void stbgl_find_uniforms(GLuint prog, GLint *locations, char const **unif
 // the locations of each of those uniforms for the specified program.
 // If num_uniforms is -1, then uniforms[] must be NULL-terminated
 
-// the following functions just wrap the difference in naming between GL2+ and ARB,
+// the following functions wrap the difference in naming between GL2+ and ARB,
 // so you don't need them unless you're using both ARB and GL2+ in the same codebase,
 // or you're relying on this lib to provide the extensions
 extern void stbglUseProgram(GLuint program);

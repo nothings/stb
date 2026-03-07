@@ -397,7 +397,7 @@ table pack_for_mode(table *t, int mode, char *table_name)
                else
                   trim = end_trim+1;
 
-               assert(pos < 65536); // @TODO: if this triggers, just bail on this search path
+               assert(pos < 65536); // @TODO: if this triggers, bail on this search path
                pos = pos + (trim << 16);
             }
 
@@ -447,7 +447,7 @@ table pack_for_mode(table *t, int mode, char *table_name)
          else
             trim = end_trim;
 
-         assert(pos < 65536); // @TODO: if this triggers, just bail on this search path
+         assert(pos < 65536); // @TODO: if this triggers, bail on this search path
          pos = pos + (trim << 16);
 
          newval = pos;
@@ -515,7 +515,7 @@ table pack_for_mode(table *t, int mode, char *table_name)
       if (mi.trim_end)
          output_table_with_trims(table_name, "_index", indirect, stb_arr_len(indirect));
       else {
-         assert(0); // this case should only trigger in very extreme circumstances
+         assert(0); // this case should only trigger in extreme circumstances
          output_table(table_name, "_index", indirect, stb_arr_len(indirect), 0, NULL);
       }
       mi.trim_end = mi.special = 0;

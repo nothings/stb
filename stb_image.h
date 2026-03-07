@@ -50,7 +50,7 @@ RECENT REVISION HISTORY:
 
       2.30  (2024-05-31) avoid erroneous gcc warning
       2.29  (2023-05-xx) optimizations
-      2.28  (2023-01-29) many error fixes, security errors, just tons of stuff
+      2.28  (2023-01-29) many error fixes, security errors, tons of stuff
       2.27  (2021-07-11) document stbi_info better, 16-bit PNM support, bug fixes
       2.26  (2020-07-13) many minor fixes
       2.25  (2020-02-02) fix warnings
@@ -194,7 +194,7 @@ RECENT REVISION HISTORY:
 // including sizes of memory buffers. This is now part of the API and thus
 // hard to change without causing breakage. As a result, the various image
 // loaders all have certain limits on image size; these differ somewhat
-// by format but generally boil down to either just under 2GB or just under
+// by format but generally boil down to either under 2GB or under
 // 1GB. When the decoded image would be larger than this, stb_image decoding
 // will fail.
 //
@@ -365,7 +365,7 @@ RECENT REVISION HISTORY:
 //    valid image of gigantic dimensions and force stb_image to allocate a
 //    huge block of memory and spend disproportionate time decoding it. By
 //    default this is set to (1 << 24), which is 16777216, but that's still
-//    very big.
+//    big.
 
 #ifndef STBI_NO_STDIO
 #include <stdio.h>
@@ -483,11 +483,11 @@ STBIDEF int      stbi_is_hdr_from_file(FILE *f);
 #endif // STBI_NO_STDIO
 
 
-// get a VERY brief reason for failure
+// get a brief reason for failure
 // on most compilers (and ALL modern mainstream compilers) this is threadsafe
 STBIDEF const char *stbi_failure_reason  (void);
 
-// free the loaded image -- this is just free()
+// free the loaded image -- this is free()
 STBIDEF void     stbi_image_free      (void *retval_from_stbi_load);
 
 // get image dimensions & components without fully decoding
@@ -506,12 +506,12 @@ STBIDEF int      stbi_is_16_bit_from_file(FILE *f);
 
 
 // for image formats that explicitly notate that they have premultiplied alpha,
-// we just return the colors as stored in the file. set this flag to force
+// we return the colors as stored in the file. set this flag to force
 // unpremultiplication. results are undefined if the unpremultiply overflow.
 STBIDEF void stbi_set_unpremultiply_on_load(int flag_true_if_should_unpremultiply);
 
 // indicate whether we should process iphone images back to canonical format,
-// or just pass them through "as-is"
+// or pass them through "as-is"
 STBIDEF void stbi_convert_iphone_png_to_rgb(int flag_true_if_should_convert);
 
 // flip the image vertically, so the first pixel in the output array is the bottom left
@@ -886,7 +886,7 @@ static void stbi__start_file(stbi__context *s, FILE *f)
 static void stbi__rewind(stbi__context *s)
 {
    // conceptually rewind SHOULD rewind to the beginning of the stream,
-   // but we just rewind to the beginning of the initial buffer, because
+   // but we rewind to the beginning of the initial buffer, because
    // we only use it after doing 'test', which only ever looks at at most 92 bytes
    s->img_buffer = s->img_buffer_original;
    s->img_buffer_end = s->img_buffer_original_end;
@@ -1141,7 +1141,7 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    ri->channel_order = STBI_ORDER_RGB; // all current input & output are this, but this is here so we can add BGR order
    ri->num_channels = 0;
 
-   // test the formats with a very explicit header first (at least a FOURCC
+   // test the formats with a explicit header first (at least a FOURCC
    // or distinctive magic number first)
    #ifndef STBI_NO_PNG
    if (stbi__png_test(s))  return stbi__png_load(s,x,y,comp,req_comp, ri);
@@ -1161,7 +1161,7 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    if (stbi__pic_test(s))  return stbi__pic_load(s,x,y,comp,req_comp, ri);
    #endif
 
-   // then the formats that can end up attempting to load with just 1 or 2
+   // then the formats that can end up attempting to load with 1 or 2
    // bytes matching expectations; these are prone to false positives, so
    // try them later
    #ifndef STBI_NO_JPEG
@@ -1737,7 +1737,7 @@ static stbi__uint32 stbi__get32le(stbi__context *s)
 //  generic converter from built-in img_n to req_comp
 //    individual types do this automatically as much as possible (e.g. jpeg
 //    does all cases internally since it needs to colorspace convert anyway,
-//    and it never has alpha, so very few cases ). png can automatically
+//    and it never has alpha, so few cases ). png can automatically
 //    interleave an alpha=255 channel, but falls back to this for other cases
 //
 //  assume data buffer is malloced, so malloc a new one and free that one
@@ -2374,7 +2374,7 @@ static int stbi__jpeg_decode_block_prog_ac(stbi__jpeg *j, short data[64], stbi__
                      j->eob_run += stbi__jpeg_get_bits(j, r);
                   r = 64; // force end of block
                } else {
-                  // r=15 s=0 should write 16 0s, so we just do
+                  // r=15 s=0 should write 16 0s, so we do
                   // a run of 15 0s and then write s (which is 0),
                   // so we don't have to do anything special here
                }
@@ -2954,9 +2954,9 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
          int i,j;
          STBI_SIMD_ALIGN(short, data[64]);
          int n = z->order[0];
-         // non-interleaved data, we just need to process one block at a time,
+         // non-interleaved data, we need to process one block at a time,
          // in trivial scanline order
-         // number of blocks to do just depends on how many actual "pixels" this
+         // number of blocks to do depends on how many actual "pixels" this
          // component has, independent of interleaved MCU blocking and such
          int w = (z->img_comp[n].x+7) >> 3;
          int h = (z->img_comp[n].y+7) >> 3;
@@ -2968,7 +2968,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                // every data block is an MCU, so countdown the restart interval
                if (--z->todo <= 0) {
                   if (z->code_bits < 24) stbi__grow_buffer_unsafe(z);
-                  // if it's NOT a restart, then just bail, so we get corrupt data
+                  // if it's NOT a restart, then bail, so we get corrupt data
                   // rather than no data
                   if (!STBI__RESTART(z->marker)) return 1;
                   stbi__jpeg_reset(z);
@@ -2984,7 +2984,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                // scan an interleaved mcu... process scan_n components in order
                for (k=0; k < z->scan_n; ++k) {
                   int n = z->order[k];
-                  // scan out an mcu's worth of this component; that's just determined
+                  // scan out an mcu's worth of this component; that's determined
                   // by the basic H and V specified for the component
                   for (y=0; y < z->img_comp[n].v; ++y) {
                      for (x=0; x < z->img_comp[n].h; ++x) {
@@ -3011,9 +3011,9 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
       if (z->scan_n == 1) {
          int i,j;
          int n = z->order[0];
-         // non-interleaved data, we just need to process one block at a time,
+         // non-interleaved data, we need to process one block at a time,
          // in trivial scanline order
-         // number of blocks to do just depends on how many actual "pixels" this
+         // number of blocks to do depends on how many actual "pixels" this
          // component has, independent of interleaved MCU blocking and such
          int w = (z->img_comp[n].x+7) >> 3;
          int h = (z->img_comp[n].y+7) >> 3;
@@ -3044,7 +3044,7 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                // scan an interleaved mcu... process scan_n components in order
                for (k=0; k < z->scan_n; ++k) {
                   int n = z->order[k];
-                  // scan out an mcu's worth of this component; that's just determined
+                  // scan out an mcu's worth of this component; that's determined
                   // by the basic H and V specified for the component
                   for (y=0; y < z->img_comp[n].v; ++y) {
                      for (x=0; x < z->img_comp[n].h; ++x) {
@@ -3269,8 +3269,8 @@ static int stbi__process_frame_header(stbi__jpeg *z, int scan)
    p  = stbi__get8(s);            if (p != 8) return stbi__err("only 8-bit","JPEG format not supported: 8-bit only"); // JPEG baseline
    s->img_y = stbi__get16be(s);   if (s->img_y == 0) return stbi__err("no header height", "JPEG format not supported: delayed height"); // Legal, but we don't handle it--but neither does IJG
    s->img_x = stbi__get16be(s);   if (s->img_x == 0) return stbi__err("0 width","Corrupt JPEG"); // JPEG requires
-   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
-   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
+   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__err("too large","Large image (corrupt?)");
+   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__err("too large","Large image (corrupt?)");
    c = stbi__get8(s);
    if (c != 3 && c != 1 && c != 4) return stbi__err("bad component count","Corrupt JPEG");
    s->img_n = c;
@@ -3690,7 +3690,7 @@ static void stbi__YCbCr_to_RGB_simd(stbi_uc *out, stbi_uc const *y, stbi_uc cons
 #ifdef STBI_SSE2
    // step == 3 is pretty ugly on the final interleave, and i'm not convinced
    // it's useful in practice (you wouldn't use it for textures, for example).
-   // so just accelerate step == 4 case.
+   // so accelerate step == 4 case.
    if (step == 4) {
       // this is a fairly straightforward implementation and not super-optimized.
       __m128i signflip  = _mm_set1_epi8(-0x80);
@@ -4325,7 +4325,7 @@ static int stbi__parse_huffman_block(stbi__zbuf *a)
             a->zout = zout;
             if (a->hit_zeof_once && a->num_bits < 16) {
                // The first time we hit zeof, we inserted 16 extra zero bits into our bit
-               // buffer so the decoder can just do its speculative decoding. But if we
+               // buffer so the decoder can do its speculative decoding. But if we
                // actually consumed any of those bits (which is the case when num_bits < 16),
                // the stream actually read past the end so it is malformed.
                return stbi__err("unexpected end","Corrupt PNG");
@@ -4656,7 +4656,7 @@ static stbi_uc first_row_filter[5] =
 
 static int stbi__paeth(int a, int b, int c)
 {
-   // This formulation looks very different from the reference in the PNG spec, but is
+   // This formulation looks different from the reference in the PNG spec, but is
    // actually equivalent and has favorable data dependencies and admits straightforward
    // generation of branch-free code, which helps performance significantly.
    int thresh = c*3 - (a + b);
@@ -4721,7 +4721,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
 
    // we used to check for exact match between raw_len and img_len on non-interlaced PNGs,
    // but issue #276 reported a PNG in the wild that had extra data at the end (all zeros),
-   // so just check for raw_len < img_len always.
+   // so check for raw_len < img_len always.
    if (raw_len < img_len) return stbi__err("not enough pixels","Corrupt PNG");
 
    // Allocate two scan lines worth of filter workspace buffer.
@@ -5106,8 +5106,8 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             if (c.length != 13) return stbi__err("bad IHDR len","Corrupt PNG");
             s->img_x = stbi__get32be(s);
             s->img_y = stbi__get32be(s);
-            if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
-            if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
+            if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__err("too large","Large image (corrupt?)");
+            if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__err("too large","Large image (corrupt?)");
             z->depth = stbi__get8(s);  if (z->depth != 1 && z->depth != 2 && z->depth != 4 && z->depth != 8 && z->depth != 16)  return stbi__err("1/2/4/8/16-bit only","PNG not supported: 1/2/4/8/16-bit only");
             color = stbi__get8(s);  if (color > 6)         return stbi__err("bad ctype","Corrupt PNG");
             if (color == 3 && z->depth == 16)                  return stbi__err("bad ctype","Corrupt PNG");
@@ -5545,8 +5545,8 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
    flip_vertically = ((int) s->img_y) > 0;
    s->img_y = abs((int) s->img_y);
 
-   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
-   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Large image (corrupt?)");
+   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Large image (corrupt?)");
 
    mr = info.mr;
    mg = info.mg;
@@ -5898,8 +5898,8 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    STBI_NOTUSED(tga_x_origin); // @TODO
    STBI_NOTUSED(tga_y_origin); // @TODO
 
-   if (tga_height > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
-   if (tga_width > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (tga_height > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Large image (corrupt?)");
+   if (tga_width > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Large image (corrupt?)");
 
    //   do a tiny bit of precessing
    if ( tga_image_type >= 8 )
@@ -6153,8 +6153,8 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
    h = stbi__get32be(s);
    w = stbi__get32be(s);
 
-   if (h > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
-   if (w > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (h > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Large image (corrupt?)");
+   if (w > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Large image (corrupt?)");
 
    // Make sure the depth is 8 bits.
    bitdepth = stbi__get16be(s);
@@ -6220,7 +6220,7 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
       // Endloop
 
       // The RLE-compressed data is preceded by a 2-byte data count for each row in the data,
-      // which we're going to just skip.
+      // which we're going to skip.
       stbi__skip(s, h * channelCount * 2 );
 
       // Read the RLE data by channel.
@@ -6511,8 +6511,8 @@ static void *stbi__pic_load(stbi__context *s,int *px,int *py,int *comp,int req_c
    x = stbi__get16be(s);
    y = stbi__get16be(s);
 
-   if (y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
-   if (x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Large image (corrupt?)");
+   if (x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Large image (corrupt?)");
 
    if (stbi__at_eof(s))  return stbi__errpuc("bad file","file too short (pic header)");
    if (!stbi__mad3sizes_valid(x, y, 4, 0)) return stbi__errpuc("too large", "PIC image too large to decode");
@@ -6623,8 +6623,8 @@ static int stbi__gif_header(stbi__context *s, stbi__gif *g, int *comp, int is_in
    g->ratio = stbi__get8(s);
    g->transparent = -1;
 
-   if (g->w > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
-   if (g->h > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
+   if (g->w > STBI_MAX_DIMENSIONS) return stbi__err("too large","Large image (corrupt?)");
+   if (g->h > STBI_MAX_DIMENSIONS) return stbi__err("too large","Large image (corrupt?)");
 
    if (comp != 0) *comp = 4;  // can't actually tell whether it's 3 or 4 until we parse the comments
 
@@ -6774,7 +6774,7 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
 }
 
 // this function is designed to support animated gifs, although stb_image doesn't support it
-// two back is the image from two frames ago, used for a very specific disposal format
+// two back is the image from two frames ago, used for a specific disposal format
 static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, int req_comp, stbi_uc *two_back)
 {
    int dispose;
@@ -6896,7 +6896,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
                // if first frame, any pixel not drawn to gets the background color
                for (pi = 0; pi < pcount; ++pi) {
                   if (g->history[pi] == 0) {
-                     g->pal[g->bgindex][3] = 255; // just in case it was made transparent, undo that; It will be reset next frame if need be;
+                     g->pal[g->bgindex][3] = 255; // in case it was made transparent, undo that; It will be reset next frame if need be;
                      memcpy( &g->out[pi * 4], &g->pal[g->bgindex], 4 );
                   }
                }
@@ -7194,8 +7194,8 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    token += 3;
    width = (int) strtol(token, NULL, 10);
 
-   if (height > STBI_MAX_DIMENSIONS) return stbi__errpf("too large","Very large image (corrupt?)");
-   if (width > STBI_MAX_DIMENSIONS) return stbi__errpf("too large","Very large image (corrupt?)");
+   if (height > STBI_MAX_DIMENSIONS) return stbi__errpf("too large","Large image (corrupt?)");
+   if (width > STBI_MAX_DIMENSIONS) return stbi__errpf("too large","Large image (corrupt?)");
 
    *x = width;
    *y = height;
@@ -7512,8 +7512,8 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
    if (ri->bits_per_channel == 0)
       return 0;
 
-   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
-   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Large image (corrupt?)");
+   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Large image (corrupt?)");
 
    *x = s->img_x;
    *y = s->img_y;

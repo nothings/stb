@@ -12,7 +12,7 @@
       #define STB_LIB_IMPLEMENTATION
       #include "stblib_files.h"
       
-   All other files should just #include "stblib_files.h" without the #define.
+   All other files should #include "stblib_files.h" without the #define.
  ============================================================================
 
 LICENSE
@@ -635,7 +635,7 @@ int stb_suffixi(char *s, char *t)
 // originally I was using this table so that I could create known sentinel
 // values--e.g. change whitetable[0] to be true if I was scanning for whitespace,
 // and false if I was scanning for nonwhite. I don't appear to be using that
-// functionality anymore (I do for tokentable, though), so just replace it
+// functionality anymore (I do for tokentable, though), so replace it
 // with isspace()
 char *stb_skipwhite(char *s)
 {
@@ -793,7 +793,7 @@ static char **stb_tokens_raw(char *src_, char *delimit, int *count,
    // two passes through: the first time, counting how many
    s = (unsigned char *) src;
    while (*s) {
-      // state: just found delimiter
+      // state: found delimiter
       // skip further delimiters
       if (!allow_empty) {
          stb_tokentable[0] = 0;
@@ -851,7 +851,7 @@ static char **stb_tokens_raw(char *src_, char *delimit, int *count,
    nested = 0;
    while (*s) {
       char *last_nonwhite;
-      // state: just found delimiter
+      // state: found delimiter
       // skip further delimiters
       if (!allow_empty) {
          stb_tokentable[0] = 0;
@@ -1089,7 +1089,7 @@ static char *stb__splitpath_raw(char *buffer, char *path, int flag)
    if (!(flag & (STB_PATH | STB_FILE | STB_EXT))) return NULL;
 
    f1 = s == NULL ? 0 : s-path; // start of filename
-   f2 = t == NULL ? n : t-path; // just past end of filename
+   f2 = t == NULL ? n : t-path; // past end of filename
 
    if (flag & STB_PATH) {
       x = 0; if (f1 == 0 && flag == STB_PATH) len=2;
@@ -1466,7 +1466,7 @@ void stb__arr_deleten_(void **pp, int size, int i, int n)
 //
 //      ok, so I've added something that generates _two separate_
 //      32-bit hashes simultaneously which should scale better to
-//      very large tables.
+//      large tables.
 
 #ifndef STB_INCLUDE_STB_LIB_H
 STB_EXTERN unsigned int stb_hash(char *str);
@@ -2248,7 +2248,7 @@ char ** stb_stringfile(char *filename, int *plen)
          list = (char **) malloc(sizeof(*list) * (count+1) + len+1);
          if (!list) return NULL;
          list[count] = 0;
-         // recopy the file so there's just a single allocation to free
+         // recopy the file so there's a single allocation to free
          memcpy(&list[count+1], buffer, len+1);
          free(buffer);
          buffer = (char *) &list[count+1];

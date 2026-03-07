@@ -48,7 +48,7 @@ for 64-bit integers (among other small things), so this lets you use
 the same format strings in cross platform code.
 
 It uses the standard single file trick of being both the header file
-and the source itself. If you just include it normally, you just get
+and the source itself. If you include it normally, you get
 the header file function definitions. To get the code, you include
 it from a C or C++ file and define STB_SPRINTF_IMPLEMENTATION first.
 
@@ -1329,7 +1329,7 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE(vsprintfcb)(STBSP_SPRINTFCB *callback,
             }
          break;
 
-      default: // unknown, just copy code
+      default: // unknown, copy code
          s = num + STBSP__NUMSZ - 1;
          *s = f[0];
          l = 1;
@@ -1747,7 +1747,7 @@ static stbsp__int32 stbsp__real_to_str(char const **start, stbsp__uint32 *len, c
    {
       double ph, pl;
 
-      // log10 estimate - very specifically tweaked to hit or undershoot by no more than 1 of log10 of all expos 1..2046
+      // log10 estimate - specifically tweaked to hit or undershoot by no more than 1 of log10 of all expos 1..2046
       tens = expo - 1023;
       tens = (tens < 0) ? ((tens * 617) / 2048) : (((tens * 1233) / 4096) + 1);
 

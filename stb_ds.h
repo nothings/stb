@@ -340,7 +340,7 @@ NOTES - HASH MAP
     in GCC or clang, or if you're using C++ in GCC. But note that this can make your
     code less portable.
 
-  * To test for presence of a key in a hashmap, just do 'hmgeti(foo,key) >= 0'.
+  * To test for presence of a key in a hashmap, do 'hmgeti(foo,key) >= 0'.
 
   * The iteration order of your data in the hashmap is determined solely by the
     order of insertions and deletions. In particular, if you never delete, new
@@ -355,7 +355,7 @@ NOTES - HASH MAP
     @TODO: make an arena variant that garbage collects the strings with a trivial
     copy collector into a new arena whenever the table shrinks / rebuilds. Since
     current arena recommendation is to only use arena if it never deletes, then
-    this can just replace current arena implementation.
+    this can replace current arena implementation.
 
   * If adversarial input is a serious concern and you're on a 64-bit platform,
     enable STBDS_SIPHASH_2_4 (see the 'Compile-time options' section), and pass
@@ -836,7 +836,7 @@ typedef struct
   size_t seed;
   size_t slot_count_log2;
   stbds_string_arena string;
-  stbds_hash_bucket *storage; // not a separate allocation, just 64-byte aligned storage after this struct
+  stbds_hash_bucket *storage; // not a separate allocation, 64-byte aligned storage after this struct
 } stbds_hash_index;
 
 #define STBDS_INDEX_EMPTY    -1
@@ -1056,7 +1056,7 @@ static size_t stbds_siphash_bytes(void *p, size_t len, size_t seed)
 
   // hash that works on 32- or 64-bit registers without knowing which we have
   // (computes different results on 32-bit and 64-bit platform)
-  // derived from siphash, but on 32-bit platforms very different as it uses 4 32-bit state not 4 64-bit
+  // derived from siphash, but on 32-bit platforms different as it uses 4 32-bit state not 4 64-bit
   v0 = ((((size_t) 0x736f6d65 << 16) << 16) + 0x70736575) ^  seed;
   v1 = ((((size_t) 0x646f7261 << 16) << 16) + 0x6e646f6d) ^ ~seed;
   v2 = ((((size_t) 0x6c796765 << 16) << 16) + 0x6e657261) ^  seed;
@@ -1571,7 +1571,7 @@ char *stbds_stralloc(stbds_string_arena *a, char *str)
       ++a->block;
 
     if (len > blocksize) {
-      // if string is larger than blocksize, then just allocate the full size.
+      // if string is larger than blocksize, then allocate the full size.
       // note that we still advance string_block so block size will continue
       // increasing, so e.g. if somebody only calls this with 1000-long strings,
       // eventually the arena will start doubling and handling those as well

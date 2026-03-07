@@ -736,7 +736,7 @@ void test_filters(void)
 	verify_filter_normalized(STBIR_FILTER_MITCHELL, 1, value);
 
 	{
-		// This test is designed to produce coefficients that are very badly denormalized.
+		// This test is designed to produce coefficients that are badly denormalized.
 		unsigned int v = 556;
 
 		unsigned int input[100 * 100];

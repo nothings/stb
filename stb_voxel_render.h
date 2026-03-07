@@ -7,7 +7,7 @@
 //    Video introduction:
 //       http://www.youtube.com/watch?v=2vnTtiLrV1w
 //
-//    Minecraft-viewer sample app (not very simple though):
+//    Minecraft-viewer sample app (not simple though):
 //       http://github.com/nothings/stb/tree/master/tests/caveview
 //
 // It works by creating triangle meshes. The library includes
@@ -44,7 +44,7 @@
 //   - you can choose textured blocks with the features below,
 //     or colored voxels with 2^24 colors and no textures.
 //
-//   - voxels are mostly just cubes, but there's support for
+//   - voxels are mostly cubes, but there's support for
 //     half-height cubes and diagonal slopes, half-height
 //     diagonals, and even odder shapes especially for doing
 //     more-continuous "ground".
@@ -131,7 +131,7 @@
 //
 //   I am willing to do the work to improve these things if someone is
 //   going to ship a substantial program that would be improved by them.
-//   (It need not be commercial, nor need it be a game.) I just didn't
+//   (It need not be commercial, nor need it be a game.) I didn't
 //   want to do the work up front if it might never be leveraged. So just
 //   submit a bug report as usual (github is preferred), but add a note
 //   that this is for a thing that is really going to ship. (That means
@@ -146,9 +146,9 @@
 //     To understand the API, make sure you first understand the feature set
 //     listed above.
 //
-//     Because the vertices are compact, they have very limited spatial
+//     Because the vertices are compact, they have limited spatial
 //     precision. Thus a single mesh can only contain the data for a limited
-//     area. To make very large voxel maps, you'll need to build multiple
+//     area. To make large voxel maps, you'll need to build multiple
 //     vertex buffers. (But you want this anyway for frustum culling.)
 //
 //     Each generated mesh has three components:
@@ -168,14 +168,14 @@
 //
 //     Because there is so much per-vertex and per-face data possible
 //     in the output, and each voxel can have 6 faces and 8 vertices, it
-//     would require an very large data structure to describe all
+//     would require an large data structure to describe all
 //     of the possibilities, and this would cause the mesh-creation
 //     process to be slow. Instead, the API provides multiple ways
 //     to express each property, some more compact, others less so;
 //     each such way has some limitations on what it can express.
 //
 //     Note that there are so many paths and combinations, not all of them
-//     have been tested. Just report bugs and I'll fix 'em.
+//     have been tested. Report bugs and I'll fix 'em.
 //
 //   Details
 //
@@ -268,7 +268,7 @@ extern "C" {
 //     modes 0,1,20,21, Z in the mesh can extend to 511 instead
 //     of 255. However, half-height blocks cannot be used.
 //
-// All of the following are just #ifdef tested so need no values, and are optional.
+// All of the following are #ifdef tested so need no values, and are optional.
 //
 //    STBVOX_CONFIG_BLOCKTYPE_SHORT
 //        use unsigned 16-bit values for 'blocktype' in the input instead of 8-bit values
@@ -396,7 +396,7 @@ STBVXDEC int stbvox_get_buffer_size_per_quad(stbvox_mesh_maker *mm, int slot);
 STBVXDEC void stbvox_set_default_mesh(stbvox_mesh_maker *mm, int mesh);
 // Selects which mesh the mesher will output to (see previous function)
 // if the input doesn't specify a per-voxel selector. (I doubt this is
-// useful, but it's here just in case.)
+// useful, but it's here in case.)
 
 STBVXDEC stbvox_input_description *stbvox_get_input_description(stbvox_mesh_maker *mm);
 // This function call returns a pointer to the stbvox_input_description part
@@ -482,7 +482,7 @@ STBVXDEC void stbvox_set_mesh_coordinates(stbvox_mesh_maker *mm, int x, int y, i
 
 STBVXDEC void stbvox_get_bounds(stbvox_mesh_maker *mm, float bounds[2][3]);
 // Returns the bounds for the mesh in global coordinates. Use this
-// for e.g. frustum culling the mesh. @BUG: this just uses the
+// for e.g. frustum culling the mesh. @BUG: this uses the
 // values from stbvox_set_input_range(), so if you build by
 // appending multiple values, this will be wrong, and you need to
 // set stbvox_set_input_range() to the full size. Someday this
@@ -1023,7 +1023,7 @@ struct stbvox_input_description
 //  "vheight" is the internal name for the special block types
 //  with sloped tops or bottoms. "vheight" stands for "vertex height".
 //
-//  Note that these blocks are very flexible (there are 256 of them,
+//  Note that these blocks are flexible (there are 256 of them,
 //  although at least 17 of them should never be used), but they
 //  also have a disadvantage that they generate extra invisible
 //  faces; the generator does not currently detect whether adjacent
@@ -1080,17 +1080,17 @@ enum
 // look, choose the edge based on actual vertex heights.
 //
 // The four vertex heights can come from several places. The simplest
-// encoding is to just use the 'vheight' parameter which stores four
+// encoding is to use the 'vheight' parameter which stores four
 // explicit vertex heights for every block. This allows total independence,
 // but at the cost of the largest memory usage, 1 byte per 3D block.
 // Encode this with STBVOX_MAKE_VHEIGHT(vh_sw, vh_se, vh_nw, vh_ne).
 // These coordinates are absolute, not affected by block rotations.
 //
-// An alternative if you just want to encode some very specific block
-// types, not all the possibilities--say you just want half-height slopes,
+// An alternative if you want to encode some specific block
+// types, not all the possibilities--say you want half-height slopes,
 // so you want (0,0,1,1) and (1,1,2,2)--then you can use block_vheight
 // to specify them. The geometry rotation will cause block_vheight values
-// to be rotated (because it's as if you're just defining a type of
+// to be rotated (because it's as if you're defining a type of
 // block). This value is also encoded with STBVOX_MAKE_VHEIGHT.
 //
 // If you want to save memory and you're creating a "continuous ground"
@@ -1177,7 +1177,7 @@ enum
 #define STBVOX_MAX_MESH_SLOTS  3           // one vertex & two faces, or two vertex and one face
 
 
-// don't mess with this directly, it's just here so you can
+// don't mess with this directly, it's here so you can
 // declare stbvox_mesh_maker on the stack or as a global
 struct stbvox_mesh_maker
 {
@@ -3055,7 +3055,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       // Note that this means we don't support any transparentshapes other
       // than solid blocks, since detecting them is too complicated. If
       // you wanted to do something like minecraft water, you probably
-      // should just do that with a separate renderer anyway. (We don't
+      // should do that with a separate renderer anyway. (We don't
       // support transparency sorting so you need to use alpha test
       // anyway)
       int i;
@@ -3121,14 +3121,14 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
       mesh = mm->input.block_selector[bt];
 
    if (geo <= STBVOX_GEOM_ceil_slope_north_is_bottom) {
-      // this is the simple case, we can just use regular block gen with special vmesh calculated with vheight
+      // this is the simple case, we can use regular block gen with special vmesh calculated with vheight
       stbvox_mesh_vertex basevert;
       stbvox_mesh_vertex vmesh[6][4];
       stbvox_rotate rotate = { 0,0,0,0 };
       unsigned char simple_rot = rot;
       int i;
       // we only need to do this for the displayed faces, but it's easier
-      // to just do it up front; @OPTIMIZE check if it's faster to do it
+      // to do it up front; @OPTIMIZE check if it's faster to do it
       // for visible faces only
       for (i=0; i < 6*4; ++i) {
          int vert = stbvox_vertex_selector[0][i];

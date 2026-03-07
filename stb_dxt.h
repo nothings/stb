@@ -68,7 +68,7 @@ STBDDEF void stb_compress_bc5_block(unsigned char *dest, const unsigned char *sr
 
 #ifdef STB_DXT_IMPLEMENTATION
 
-// configuration options for DXT encoder. set them in the project/makefile or just define
+// configuration options for DXT encoder. set them in the project/makefile or define
 // them at the top.
 
 // STB_DXT_USE_ROUNDING_BIAS
@@ -239,7 +239,7 @@ static unsigned int stb__MatchColorsBlock(unsigned char *block, unsigned char *c
    // half"/"best in bottom half" and then the same inside that subinterval.
    //
    // relying on this 1d approximation isn't always optimal in terms of euclidean distance,
-   // but it's very close and a lot faster.
+   // but it's close, and a lot faster.
    // http://cbloomrants.blogspot.com/2008/12/12-08-08-dxtc-summary.html
 
    c0Point   = (stops[1] + stops[3]);

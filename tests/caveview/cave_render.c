@@ -503,7 +503,7 @@ void world_init(void)
    // wait until all the workers are done,
    // (this is only needed if we want to time
    // when the build finishes, or when we want to reset the
-   // cache size; otherwise we could just go ahead and
+   // cache size; otherwise we could go ahead and
    // start rendering whatever we've got)
    for(;;) {
       int i;
@@ -565,7 +565,7 @@ int mesh_worker_handler(void *data)
 
       // when done, free the chunks
 
-      // for efficiency we just take the mutex once around the whole thing,
+      // for efficiency we take the mutex once around the whole thing,
       // though this spreads the mutex logic over two files
       SDL_LockMutex(chunk_cache_mutex);
       for (j=0; j < 4; ++j)
@@ -609,7 +609,7 @@ void prepare_threads(void)
 
 // @TODO
 //   Thread usage is probably pretty terrible; need to make a
-//   separate queue of needed chunks, instead of just generating
+//   separate queue of needed chunks, instead of generating
 //   one request per thread per frame, and a separate queue of
 //   results. (E.g. If it takes 1.5 frames to build mesh, thread
 //   is idle for 0.5 frames.) To fake this for now, I've just
@@ -808,7 +808,7 @@ void render_caves(float campos[3])
                // check if chunk pos actually matches
                if (cm->chunk_x != cx || cm->chunk_y != cy) {
                   // we have a stale chunk we need to recreate
-                  free_chunk(slot_x, slot_y); // it probably will have already gotten freed, but just in case
+                  free_chunk(slot_x, slot_y); // it probably will have already gotten freed, but in case
                }
             }
             if (cm->state == STATE_invalid) {
@@ -919,7 +919,7 @@ void render_caves(float campos[3])
 
       // I couldn't find any straightforward logic that avoids
       // the hysteresis problem of continually creating & freeing
-      // a block on the margin, so I just don't free a block until
+      // a block on the margin, so I don't free a block until
       // it's out of range, but this doesn't actually correctly
       // handle when the cache is too small for the given range
       if (chunk_storage_total >= min_chunk_storage && lowest_i >= 0) {

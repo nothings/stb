@@ -1,4 +1,4 @@
-// I haven't actually tested this yet, this is just to make sure it compiles
+// I haven't actually tested this yet, this is to make sure it compiles
 
 #include <stdlib.h>
 #include <string.h> // memmove

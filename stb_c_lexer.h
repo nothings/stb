@@ -33,7 +33,7 @@
 //     - haven't implemented multiline strings
 //     - haven't implemented octal/hex character constants
 //     - haven't implemented support for unicode CLEX_char
-//     - need to expand error reporting so you don't just get "CLEX_parse_error"
+//     - need to expand error reporting so you don't get "CLEX_parse_error"
 //
 // Contributors:
 //   Arpad Goretity (bugfix)

@@ -19,7 +19,7 @@
 //    // #define C_INTEGER_DIVISION_FLOORS     // see Note 2
 //    #include "stb_divide.h"
 //
-// Other source files should just include stb_divide.h
+// Other source files should include stb_divide.h
 //
 // Note 1: On platforms/compilers that you know signed C division
 // truncates, you can #define C_INTEGER_DIVISION_TRUNCATES.
@@ -168,14 +168,14 @@ int stb_div_floor(int v1, int v2)
    #else
    if (v1 >= 0 && v2 < 0) {
       if (v2 + 1 >= INT_MIN + v1) // check if increasing v1's magnitude overflows
-         return -stb__div((v2+1)-v1,v2); // nope, so just compute it
+         return -stb__div((v2+1)-v1,v2); // nope, so compute it
       else
          return -stb__div(-v1,v2) + ((-v1)%v2 ? -1 : 0);
    }
    if (v1 < 0 && v2 >= 0) {
       if (v1 != INT_MIN) {
          if (v1 + 1 >= INT_MIN + v2) // check if increasing v1's magnitude overflows
-            return -stb__div((v1+1)-v2,-v2); // nope, so just compute it
+            return -stb__div((v1+1)-v2,-v2); // nope, so compute it
          else
             return -stb__div(-v1,v2) + (stb__mod(v1,-v2) ? -1 : 0);
       } else // it must be possible to compute -(v1+v2) without overflowing

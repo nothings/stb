@@ -27,4 +27,4 @@ A clear and concise description of what you expected to happen.
 If applicable, add screenshots to help explain your problem.
 
 **AI BUG REPORTS**  
-Using AI like LLMs just adds unnecessary additional verbiage that maintainers have to read and determine whether there is valuable and useful information. An AI by definition *cannot* add useful detail that was not in the original information you gathered. 
+Using AI like LLMs adds unnecessary additional verbiage that maintainers have to read and determine whether there is valuable and useful information. An AI by definition *cannot* add useful detail that was not in the original information you gathered.

@@ -1226,12 +1226,12 @@ int main(int argc, char **argv)
    fclose(f);
    #endif
    if (!stb_fexists("data/stb.test")) {
-      fprintf(stderr, "Error: couldn't open file just written, or stb_fexists() is broken.\n");
+      fprintf(stderr, "Error: couldn't open file written, or stb_fexists() is broken.\n");
    }
 
    f = fopen("data/stb.test", "rb");
    // f = NULL; // test stb_fatal()
-   if (!f) { stb_fatal("Error: couldn't open file just written\n"); }
+   if (!f) { stb_fatal("Error: couldn't open file written\n"); }
    else {
       char temp[4];
       int len1 = stb_filelen(f), len2;

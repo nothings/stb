@@ -516,7 +516,7 @@ static int getprime( int v )
   for(;;)
   {
     if ( i >= v )
-      return v;  // can't find any, just return orig
+      return v;  // can't find any, return orig
     if (isprime(v - i))
       return v - i;
     if (isprime(v + i))

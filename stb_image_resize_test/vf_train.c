@@ -169,7 +169,7 @@ static void build_bitmap( float weights[STBIR_RESIZE_CLASSIFICATIONS][4], int do
     {
       int ofs, h, hh;
 
-      // just do the type that we're on
+      // do the type that we're on
       if ( chanind != do_channel_count_index )
       {
         ts += 2 * fi[findex].dimensionx * fi[findex].dimensiony;
@@ -247,7 +247,7 @@ static void build_comp_bitmap( float weights[STBIR_RESIZE_CLASSIFICATIONS][4], i
     {
       int ofs, h, hh;
 
-      // just do the type that we're on
+      // do the type that we're on
       if ( chanind != do_channel_count_index )
       {
         ts0 += 2 * fi[0].dimensionx * fi[0].dimensiony;
@@ -334,7 +334,7 @@ static void calc_errors( float weights_table[STBIR_RESIZE_CLASSIFICATIONS][4], i
       {
         int h, hh;
 
-        // just do the type that we're on
+        // do the type that we're on
         if ( chanind != do_channel_count_index )
         {
           ts += 2 * fi[findex].dimensionx * fi[findex].dimensiony;

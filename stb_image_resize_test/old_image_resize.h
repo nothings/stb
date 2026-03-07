@@ -510,10 +510,10 @@ typedef unsigned char stbir__validate_uint32[sizeof(stbir_uint32) == 4 ? 1 : -1]
 // because we store the indices in 16-bit variables
 #endif
 
-// This value is added to alpha just before premultiplication to avoid
+// This value is added to alpha before premultiplication to avoid
 // zeroing out color values. It is equivalent to 2^-80. If you don't want
 // that behavior (it may interfere if you have floating point images with
-// very small alpha values) then you can define STBIR_NO_ALPHA_EPSILON to
+// small alpha values) then you can define STBIR_NO_ALPHA_EPSILON to
 // disable it.
 #ifndef STBIR_ALPHA_EPSILON
 #define STBIR_ALPHA_EPSILON ((float)1 / (1 << 20) / (1 << 20) / (1 << 20) / (1 << 20))
@@ -2176,7 +2176,7 @@ static void stbir__buffer_loop_upsample(ostbir__info* stbir_info)
             {
                 if (stbir_info->ring_buffer_first_scanline == stbir_info->ring_buffer_last_scanline)
                 {
-                    // We just popped the last scanline off the ring buffer.
+                    // We popped the last scanline off the ring buffer.
                     // Reset it to the empty state.
                     stbir_info->ring_buffer_begin_index = -1;
                     stbir_info->ring_buffer_first_scanline = 0;
@@ -2234,7 +2234,7 @@ static void stbir__empty_ring_buffer(ostbir__info* stbir_info, int first_necessa
 
             if (stbir_info->ring_buffer_first_scanline == stbir_info->ring_buffer_last_scanline)
             {
-                // We just popped the last scanline off the ring buffer.
+                // We popped the last scanline off the ring buffer.
                 // Reset it to the empty state.
                 stbir_info->ring_buffer_begin_index = -1;
                 stbir_info->ring_buffer_first_scanline = 0;

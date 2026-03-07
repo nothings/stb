@@ -396,7 +396,7 @@ int main(int arg, char **argv)
   begin(); for (n=0; n <    7; ++n) { churn_skip(100000,300000,10);          } end(); printf("  // %7.2fms :  2,000,000 inserts & deletes in 200K table\n", timer);
   begin(); for (n=0; n <    2; ++n) { churn_skip(1000000,3000000,10);        } end(); printf("  // %7.2fms : 20,000,000 inserts & deletes in 2M table\n", timer);
 
-  // search for bad intervals.. in practice this just seems to measure execution variance
+  // search for bad intervals.. in practice this seems to measure execution variance
   for (s = 2; s < 64; ++s) {
     begin(); for (n=0; n < 50; ++n) { build(200000,0,0,s); } end();
     if (timer > worst) {

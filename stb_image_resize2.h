@@ -161,7 +161,7 @@
 
          The difference between the generic 4 or 2 channel layouts, and the
          specialized _PM versions is with the _PM versions you are telling us that
-         the data *is* alpha, just don't premultiply it. That's important when
+         the data *is* alpha, don't premultiply it. That's important when
          using SRGB pixel formats, we need to know where the alpha is, because
          it is converted linearly (rather than with the SRGB converters).
 
@@ -234,7 +234,7 @@
          buffers).
 
       FLIPPED IMAGES
-         Stride is just the delta from one scanline to the next. This means you can
+         Stride is the delta from one scanline to the next. This means you can
          use a negative stride to handle inverted images (point to the final
          scanline and use a negative stride). You can invert the input or output,
          using negative strides.
@@ -255,13 +255,13 @@
 
       PROGRESS
          For interactive use with slow resize operations, you can use the 
-         scanline callbacks in the extended API. It would have to be a *very* large
-         image resample to need progress though - we're very fast.
+         scanline callbacks in the extended API. It would have to be a large
+         image resample to need progress though - we're fast.
 
       CEIL and FLOOR
          In scalar mode, the only functions we use from math.h are ceilf and floorf,
          but if you have your own versions, you can define the STBIR_CEILF(v) and
-         STBIR_FLOORF(v) macros and we'll use them instead. In SIMD, we just use
+         STBIR_FLOORF(v) macros and we'll use them instead. In SIMD, we use
          our own versions.
 
       ASSERT
@@ -288,7 +288,7 @@
 
           stbir_resize_uint8_srgb_edgemode()
             - switch to the "medium complexity" API
-            - stbir_resize(), very similar API but a few more parameters:
+            - stbir_resize(), similar API but a few more parameters:
               - pixel_layout: cast channel count to `stbir_pixel_layout`
               - data_type:    STBIR_TYPE_UINT8_SRGB
               - edge:         unchanged (STBIR_EDGE_WRAP, etc.)
@@ -296,13 +296,13 @@
             - which channel is alpha is specified in stbir_pixel_layout, see enum for details
 
       FUTURE TODOS
-        *  For polyphase integral filters, we just memcpy the coeffs to dupe
+        *  For polyphase integral filters, we memcpy the coeffs to dupe
            them, but we should indirect and use the same coeff memory.
         *  Add pixel layout conversions for sensible different channel counts
            (maybe, 1->3/4, 3->4, 4->1, 3->1).
          * For SIMD encode and decode scanline routines, do any pre-aligning
            for bad input/output buffer alignments and pitch?
-         * For very wide scanlines, we should we do vertical strips to stay within
+         * For wide scanlines, we should we do vertical strips to stay within
            L2 cache. Maybe do chunks of 1K pixels at a time. There would be
            some pixel reconversion, but probably dwarfed by things falling out
            of cache. Probably also something possible with alternating between
@@ -342,7 +342,7 @@
       2.13 (2025-02-27) fixed a bug when using input callbacks, turned off simd for 
                           tiny-c, fixed some variables that should have been static,
                           fixes a bug when calculating temp memory with resizes that
-                          exceed 2GB of temp memory (very large resizes).
+                          exceed 2GB of temp memory (large resizes).
       2.12 (2024-10-18) fix incorrect use of user_data with STBIR_FREE
       2.11 (2024-09-08) fix harmless asan warnings in 2-channel and 3-channel mode
                           with AVX-2, fix some weird scaling edge conditions with
@@ -354,7 +354,7 @@
       2.08 (2024-06-10) fix for RGB->BGR three channel flips and add SIMD (thanks
                           to Ryan Salsbury), fix for sub-rect resizes, use the
                           pragmas to control unrolling when they are available.
-      2.07 (2024-05-24) fix for slow final split during threaded conversions of very 
+      2.07 (2024-05-24) fix for slow final split during threaded conversions of
                           wide scanlines when downsampling (caused by extra input 
                           converting), fix for wide scanline resamples with many 
                           splits (int overflow), fix GCC warning.
@@ -366,7 +366,7 @@
       2.03 (2023-11-01) ASAN and TSAN warnings fixed, minor tweaks.
       2.00 (2023-10-10) mostly new source: new api, optimizations, simd, vertical-first, etc
                           2x-5x faster without simd, 4x-12x faster with simd,
-                          in some cases, 20x to 40x faster esp resizing large to very small.
+                          in some cases, 20x to 40x faster esp resizing large to small.
       0.96 (2019-03-04) fixed warnings
       0.95 (2017-07-23) fixed warnings
       0.94 (2017-03-18) fixed warnings
@@ -451,8 +451,8 @@ typedef enum
   STBIR_AR_PM   = 16,
 
   STBIR_RGBA_NO_AW = 11,            // alpha formats, where NO alpha weighting is applied at all!
-  STBIR_BGRA_NO_AW = 12,            //   these are just synonyms for the _PM flags (which also do
-  STBIR_ARGB_NO_AW = 13,            //   no alpha weighting). These names just make it more clear
+  STBIR_BGRA_NO_AW = 12,            //   these are synonyms for the _PM flags (which also do
+  STBIR_ARGB_NO_AW = 13,            //   no alpha weighting). These names make it more clear
   STBIR_ABGR_NO_AW = 14,            //   for some folks).
   STBIR_RA_NO_AW   = 15,
   STBIR_AR_NO_AW   = 16,
@@ -512,7 +512,7 @@ typedef enum
 {
   STBIR_TYPE_UINT8            = 0,
   STBIR_TYPE_UINT8_SRGB       = 1,
-  STBIR_TYPE_UINT8_SRGB_ALPHA = 2,  // alpha channel, when present, should also be SRGB (this is very unusual)
+  STBIR_TYPE_UINT8_SRGB_ALPHA = 2,  // alpha channel, when present, should also be SRGB (this is unusual)
   STBIR_TYPE_UINT16           = 3,
   STBIR_TYPE_FLOAT            = 4,
   STBIR_TYPE_HALF_FLOAT       = 5
@@ -692,15 +692,15 @@ STBIRDEF int stbir_resize_extended_split( STBIR_RESIZE * resize, int split_start
 
 //   The input callback is super flexible - it calls you with the input address
 //   (based on the stride and base pointer), it gives you an optional_output
-//   pointer that you can fill, or you can just return your own pointer into
+//   pointer that you can fill, or you can return your own pointer into
 //   your own data.
 //
 //   You can also do conversion from non-supported data types if necessary - in
-//   this case, you ignore the input_ptr and just use the x and y parameters to
+//   this case, you ignore the input_ptr and use the x and y parameters to
 //   calculate your own input_ptr based on the size of each non-supported pixel.
 //   (Something like the third example below.)
 //
-//   You can also install just an input or just an output callback by setting the
+//   You can also install an input or an output callback by setting the
 //   callback that you don't want to zero.
 //
 //     First example, progress: (getting a callback that you can monitor the progress):
@@ -725,7 +725,7 @@ STBIRDEF int stbir_resize_extended_split( STBIR_RESIZE * resize, int split_start
 //        }
 //
 //
-//   The output callback is considerably simpler - it just calls you so that you can dump
+//   The output callback is considerably simpler - it calls you so that you can dump
 //   out each scanline. You could even directly copy out to disk if you have a simple format
 //   like TGA or BMP. You can also convert to other output types here if you want.
 //
@@ -2266,7 +2266,7 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
       {
         // use a magic value to align our 10 mantissa bits at the bottom of
         // the float. as long as FP addition is round-to-nearest-even this
-        // just works.
+        // works.
         f.f += denorm_magic.f;
         // and one integer subtract of the bias later, we have our final float!
         o.u = (unsigned short) ( f.u - denorm_magic.u );
@@ -2711,7 +2711,7 @@ static void stbir_overlapping_memcpy( void * dest, void const * src, size_t byte
 
 #else // no SSE2
 
-// when in scalar mode, we let unrolling happen, so this macro just does the __restrict
+// when in scalar mode, we let unrolling happen, so this macro does the __restrict
 #define STBIR_SIMD_STREAMOUT_PTR( star ) STBIR_STREAMOUT_PTR( star )
 #define STBIR_SIMD_NO_UNROLL(ptr)
 #define STBIR_SIMD_NO_UNROLL_LOOP_START
@@ -3219,7 +3219,7 @@ static void stbir__get_extents( stbir__sampler * samp, stbir__extents * scanline
   STBIR_ASSERT( scanline_extents->conservative.n0 <= min_n );
   STBIR_ASSERT( scanline_extents->conservative.n1 >= max_n );
 
-  // you get two ranges when you have the WRAP edge mode and you are doing just the a piece of the resize
+  // you get two ranges when you have the WRAP edge mode and you are doing the a piece of the resize
   //   so you need to get a second run of pixels from the opposite side of the scanline (which you
   //   wouldn't need except for WRAP)
 
@@ -3329,7 +3329,7 @@ static void stbir__calculate_coefficients_for_gather_upsample( float out_filter_
       // kill denormals
       if ( ( ( coeff < stbir__small_float ) && ( coeff > -stbir__small_float ) ) )
       {
-        if ( i == 0 )  // if we're at the front, just eat zero contributors
+        if ( i == 0 )  // if we're at the front, eat zero contributors
         {
           STBIR_ASSERT ( ( in_last_pixel - in_first_pixel ) != 0 ); // there should be at least one contrib
           ++in_first_pixel;
@@ -3527,7 +3527,7 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
     // rescale
     if ( ( total_filter < stbir__small_float ) && ( total_filter > -stbir__small_float ) )
     {
-      // all coeffs are extremely small, just zero it
+      // all coeffs are extremely small, zero it
       contribs->n1 = contribs->n0;
       coeffs[0] = 0.0f;
     }
@@ -3571,7 +3571,7 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
   {
     int i;
 
-    // in zero edge mode, just remove out of bounds contribs completely (since their weights are accounted for now)
+    // in zero edge mode, remove out of bounds contribs completely (since their weights are accounted for now)
     if ( edge == STBIR_EDGE_ZERO )
     {
       // shrink the right side if necessary
@@ -3597,7 +3597,7 @@ static void stbir__cleanup_gathered_coefficients( stbir_edge edge, stbir__filter
     }
     else if ( ( edge == STBIR_EDGE_CLAMP ) || ( edge == STBIR_EDGE_REFLECT ) )
     {
-      // for clamp and reflect, calculate the true inbounds position (based on edge type) and just add that to the existing weight
+      // for clamp and reflect, calculate the true inbounds position (based on edge type) and add that to the existing weight
 
       // right hand side first
       if ( contribs->n1 > input_last_n1 )
@@ -3938,7 +3938,7 @@ static void stbir__calculate_filters( stbir__sampler * samp, stbir__sampler * ot
       if ( !samp->is_gather )
       {
         // check if we are using the same gather downsample on the horizontal as this vertical,
-        //   if so, then we don't have to generate them, we can just pivot from the horizontal.
+        //   if so, then we don't have to generate them, we can pivot from the horizontal.
         if ( other_axis_for_pivot )
         {
           gather_contributors = other_axis_for_pivot->contributors;
@@ -4617,7 +4617,7 @@ static void stbir__decode_scanline(stbir__info const * stbir_info, int n, float 
     // if we have an input callback, call it to get the input data
     if ( stbir_info->in_pixels_cb )
     {
-      // call the callback with a temp buffer (that they can choose to use or not).  the temp is just right aligned memory in the decode_buffer itself
+      // call the callback with a temp buffer (that they can choose to use or not).  the temp is right aligned memory in the decode_buffer itself
       input_data = stbir_info->in_pixels_cb( ( (char*) end_decode ) - ( width * input_sample_in_bytes ) + ( ( stbir_info->input_type != STBIR_TYPE_FLOAT ) ? ( sizeof(float)*STBIR_INPUT_CALLBACK_PADDING ) : 0 ), input_plane_data, width, spans->pixel_offset_for_input, row, stbir_info->user_data );
     }
 
@@ -4638,7 +4638,7 @@ static void stbir__decode_scanline(stbir__info const * stbir_info, int n, float 
 
   // handle the edge_wrap filter (all other types are handled back out at the calculate_filter stage)
   // basically the idea here is that if we have the whole scanline in memory, we don't redecode the
-  //   wrapped edge pixels, and instead just memcpy them from the scanline into the edge positions
+  //   wrapped edge pixels, and instead memcpy them from the scanline into the edge positions
   if ( ( edge_horizontal == STBIR_EDGE_WRAP ) && ( stbir_info->scanline_extents.edge_sizes[0] | stbir_info->scanline_extents.edge_sizes[1] ) )
   {
     // this code only runs if we're in edge_wrap, and we're doing the entire scanline
@@ -4668,7 +4668,7 @@ static void stbir__decode_scanline(stbir__info const * stbir_info, int n, float 
   last_decoded[0] = 0.0f; 
 
   // we clear this extra float, because the final output pixel filter kernel might have used one less coeff than the max filter width
-  //   when this happens, we do read that pixel from the input, so it too could be Nan, so just zero an extra one.
+  //   when this happens, we do read that pixel from the input, so it too could be Nan, so zero an extra one.
   //   this fits because each scanline is padded by three floats (STBIR_INPUT_CALLBACK_PADDING)
   last_decoded[1] = 0.0f;
 }
@@ -6496,7 +6496,7 @@ static void stbir__vertical_scatter_loop( stbir__info const * stbir_info, stbir_
       if ( out_last_scanline >= end_output_y )
         out_last_scanline = end_output_y - 1;
 
-      // if very first scanline, init the index
+      // first scanline, init the index
       if (split_info->ring_buffer_begin_index < 0)
         split_info->ring_buffer_begin_index = out_first_scanline - start_output_y;
 
@@ -6587,11 +6587,11 @@ static void stbir__set_sampler(stbir__sampler * samp, stbir_filter filter, stbir
 
   // filter_pixel_width is the conservative size in pixels of input that affect an output pixel.
   //   In rare cases (only with 2 pix to 1 pix with the default filters), it's possible that the 
-  //   filter will extend before or after the scanline beyond just one extra entire copy of the 
+  //   filter will extend before or after the scanline beyond one extra entire copy of the 
   //   scanline (we would hit the edge twice). We don't let you do that, so we clamp the total 
   //   width to 3x the total of input pixel (once for the scanline, once for the left side 
   //   overhang, and once for the right side). We only do this for edge mode, since the other 
-  //   modes can just re-edge clamp back in again.
+  //   modes can re-edge clamp back in again.
   if ( edge == STBIR_EDGE_WRAP )
     if ( samp->filter_pixel_width > ( scale_info->input_full_size * 3 ) )
       samp->filter_pixel_width = scale_info->input_full_size * 3;
@@ -6600,7 +6600,7 @@ static void stbir__set_sampler(stbir__sampler * samp, stbir_filter filter, stbir
   // the image boundaries.
   samp->filter_pixel_margin = samp->filter_pixel_width / 2;
   
-  // filter_pixel_margin is the amount that this filter can overhang on just one side of either 
+  // filter_pixel_margin is the amount that this filter can overhang on one side of either 
   //   end of the scanline (left or the right). Since we only allow you to overhang 1 scanline's 
   //   worth of pixels, we clamp this one side of overhang to the input scanline size. Again, 
   //   this clamping only happens in rare cases with the default filters (2 pix to 1 pix). 
@@ -6692,7 +6692,7 @@ static void stbir__get_conservative_extents( stbir__sampler * samp, stbir__contr
 
   if ( samp->edge == STBIR_EDGE_WRAP )
   {
-    // if we are wrapping, and we are very close to the image size (so the edges might merge), just use the scanline up to the edge
+    // if we are wrapping, and we are close to the image size (so the edges might merge), use the scanline up to the edge
     if ( ( range->n0 > 0 ) && ( range->n1 >= input_full_size ) )
     {
       int marg = range->n1 - input_full_size + 1;
@@ -6735,14 +6735,14 @@ static void stbir__get_split_info( stbir__per_split_info* split_info, int splits
     //   resize at exactly the right phase, some of the coefficents can be zero. When they are zero, we
     //   don't process them at all.  But this leads to a tricky thing with the thread splits, where we
     //   might have a set of two coeffs like this for example: (4,4) and (3,6).  The 4,4 means there was
-    //   just one single coeff because things worked out perfectly (normally, they all have 4 coeffs
+    //   one single coeff because things worked out perfectly (normally, they all have 4 coeffs
     //   like the range 3,6.  The problem is that if we start right on the (4,4) on a brand new thread,
     //   then when we get to (3,6), we don't have the "3" sample in memory (because we didn't load
     //   it on the initial (4,4) range because it didn't have a 3 (we only add new samples that are 
-    //   larger than our existing samples - it's just how the eviction works). So, our solution here
+    //   larger than our existing samples - it's how the eviction works). So, our solution here
     //   is pretty simple, if we start right on a range that has samples that start earlier, then we 
     //   simply bump up our previous thread split range to include it, and then start this threads
-    //   range with the smaller sample. It just moves one scanline from one thread split to another,
+    //   range with the smaller sample. It moves one scanline from one thread split to another,
     //   so that we end with the unusual one, instead of start with it. To do this, we check 2-4 
     //   sample at each thread split start and then occassionally move them.
     
@@ -6941,9 +6941,9 @@ static STBIR__V_FIRST_INFO STBIR__V_FIRST_INFO_BUFFER = {0};
 //
 //   In more normal circumstances, this makes a 20-40% differences, so
 //     it's good to get right, but not critical. The normal way that you
-//     decide which direction goes first is just figuring out which
+//     decide which direction goes first is figuring out which
 //     direction does more multiplies. But with modern CPUs with their
-//     fancy caches and SIMD and high IPC abilities, so there's just a lot
+//     fancy caches and SIMD and high IPC abilities, so there's a lot
 //     more that goes into it.
 //
 //   My handwavy sort of solution is to have an app that does a whole
@@ -7071,7 +7071,7 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
   vertical_first = stbir__should_do_vertical_first( stbir__compute_weights[ (int)stbir_channel_count_index[ effective_channels ] ], horizontal->filter_pixel_width, horizontal->scale_info.scale, horizontal->scale_info.output_sub_size, vertical->filter_pixel_width, vertical->scale_info.scale, vertical->scale_info.output_sub_size, vertical->is_gather, STBIR__V_FIRST_INFO_POINTER );
 
   // sometimes read one float off in some of the unrolled loops (with a weight of zero coeff, so it doesn't have an effect)
-  //   we use a few extra floats instead of just 1, so that input callback buffer can overlap with the decode buffer without
+  //   we use a few extra floats instead of 1, so that input callback buffer can overlap with the decode buffer without
   //   the conversion routines overwriting the callback input data.
   decode_buffer_size = ( conservative->n1 - conservative->n0 + 1 ) * effective_channels * sizeof(float) + sizeof(float)*STBIR_INPUT_CALLBACK_PADDING; // extra floats for input callback stagger
 
@@ -7100,7 +7100,7 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
   // The vertical buffer is used differently, depending on whether we are scattering
   //   the vertical scanlines, or gathering them.
   //   If scattering, it's used at the temp buffer to accumulate each output.
-  //   If gathering, it's just the output buffer.
+  //   If gathering, it's the output buffer.
   vertical_buffer_size = (size_t)horizontal->scale_info.output_sub_size * (size_t)effective_channels * sizeof(float) + sizeof(float);  // extra float for padding
 
   // we make two passes through this loop, 1st to add everything up, 2nd to allocate and init
@@ -7225,7 +7225,7 @@ static stbir__info * stbir__alloc_internal_mem_and_build_samplers( stbir__sample
 
       // when in vertical scatter mode, we first build the coefficients in gather mode, and then pivot after,
       //   that means we need two buffers, so we try to use the decode buffer and ring buffer for this. if that
-      //   is too small, we just allocate extra memory to use as this temp.
+      //   is too small, we allocate extra memory to use as this temp.
 
       both = (size_t)vertical->gather_prescatter_contributors_size + (size_t)vertical->gather_prescatter_coefficients_size;
 
@@ -7881,7 +7881,7 @@ static int stbir__perform_build( STBIR_RESIZE * resize, int splits )
   if ( !stbir__calculate_region_transform( &vertical.scale_info, resize->output_h, &new_output_suby, resize->output_subh, resize->input_h, resize->input_t0, resize->input_t1 ) )
     return 0;
 
-  // if nothing to do, just return
+  // if nothing to do, return
   if ( ( horizontal.scale_info.output_sub_size == 0 ) || ( vertical.scale_info.output_sub_size == 0 ) )
     return 0;
 
@@ -7997,7 +7997,7 @@ STBIRDEF int stbir_resize_extended_split( STBIR_RESIZE * resize, int split_start
 {
   STBIR_ASSERT( resize->samplers );
 
-  // if we're just doing the whole thing, call full
+  // if we're doing the whole thing, call full
   if ( ( split_start == -1 ) || ( ( split_start == 0 ) && ( split_count == resize->splits ) ) )
     return stbir_resize_extended( resize );
 
@@ -8036,7 +8036,7 @@ static void * stbir_quick_resize_helper( const void *input_pixels , int input_w 
   if ( positive_output_stride_in_bytes < 0 )
     positive_output_stride_in_bytes = -positive_output_stride_in_bytes;
 
-  // is the requested stride smaller than the scanline output? if so, just fail
+  // is the requested stride smaller than the scanline output? if so, fail
   if ( positive_output_stride_in_bytes < scanline_output_in_bytes )
     return 0;
 

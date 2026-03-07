@@ -722,7 +722,7 @@ int stbwingraph_MainLoop(stbwingraph_update func, float mintime)
          // only force a draw for certain messages...
          // if I don't do this, we peg at 50% for some reason... must
          // be a bug somewhere, because we peg at 100% when rendering...
-         // very weird... looks like NVIDIA is pumping some messages
+         // weird... looks like NVIDIA is pumping some messages
          // through our pipeline? well, ok, I guess if we can get
          // non-user-generated messages we have to do this
          if (!stbwingraph_force_update) {

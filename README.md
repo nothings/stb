@@ -118,7 +118,7 @@ You can use [this URL](https://github.com/nothings/stb#stb_libs) to link directl
 
 #### Why do you list "lines of code"? It's a terrible metric.
 
-Just to give you some idea of the internal complexity of the library,
+To give you some idea of the internal complexity of the library,
 to help you manage your expectations, or to let you know what you're
 getting into. While not all the libraries are written in the same
 style, they're certainly similar styles, and so comparisons between
@@ -137,12 +137,12 @@ realize. (It also makes library dependencies a lot worse in Windows.)
 There's also a common problem in Windows where a library was built
 against a different version of the runtime library, which causes
 link conflicts and confusion. Shipping the libs as headers means
-you normally just compile them straight into your project without
+you normally compile them straight into your project without
 making libraries, thus sidestepping that problem.
 
-Making them a single file makes it very easy to just
-drop them into a project that needs them. (Of course you can
-still put them in a proper shared library tree if you want.)
+Making them a single file makes it easy to drop them into a project
+that needs them. (Of course you can still put them in a proper shared
+library tree if you want.)
 
 Why not two files, one a header and one an implementation?
 The difference between 10 files and 9 files is not a big deal,
@@ -152,7 +152,7 @@ remember to attach *two* files, etc.
 
 #### Why "stb"? Is this something to do with Set-Top Boxes?
 
-No, they are just the initials for my name, Sean T. Barrett.
+No, they are the initials for my name, Sean T. Barrett.
 This was not chosen out of egomania, but as a moderately sane
 way of namespacing the filenames and source function names.
 

@@ -230,7 +230,7 @@
 //
 //    - Use the functions with Subpixel at the end to allow your characters
 //      to have subpixel positioning. Since the font is anti-aliased, not
-//      hinted, this is very import for quality. (This is not possible with
+//      hinted, this is import for quality. (This is not possible with
 //      baked fonts.)
 //
 //    - Kerning is now supported, and if you're supporting subpixel rendering
@@ -253,7 +253,7 @@
 //   on little-endian systems (the data is big-endian), but assuming you're
 //   caching the bitmaps or glyph shapes this shouldn't be a big deal.
 //
-//   It appears to be very hard to programmatically determine what font a
+//   It appears to be hard to programmatically determine what font a
 //   given file is in a general way. I provide an API for this, but I don't
 //   recommend it.
 //
@@ -538,7 +538,7 @@ STBTT_DEF int stbtt_BakeFontBitmap(const unsigned char *data, int offset,  // fo
 // if return is positive, the first unused row of the bitmap
 // if return is negative, returns the negative of the number of characters that fit
 // if return is 0, no characters fit and no rows were used
-// This uses a very crappy packing.
+// This uses a crappy packing.
 
 typedef struct
 {
@@ -992,7 +992,7 @@ STBTT_DEF unsigned char * stbtt_GetCodepointSDF(const stbtt_fontinfo *info, floa
 // and computing from that can allow drop-out prevention).
 //
 // The algorithm has not been optimized at all, so expect it to be slow
-// if computing lots of characters or very large sizes.
+// if computing lots of characters or large sizes.
 
 
 
@@ -1000,7 +1000,7 @@ STBTT_DEF unsigned char * stbtt_GetCodepointSDF(const stbtt_fontinfo *info, floa
 //
 // Finding the right font...
 //
-// You should really just solve this offline, keep your own tables
+// You should really solve this offline, keep your own tables
 // of what font is what, and don't try to get it out of the .ttf file.
 // That's because getting it out of the .ttf file is really hard, because
 // the names in the file can appear in many possible encodings, in many
@@ -1318,7 +1318,7 @@ static stbtt_uint32 stbtt__find_table(stbtt_uint8 *data, stbtt_uint32 fontstart,
 
 static int stbtt_GetFontOffsetForIndex_internal(unsigned char *font_collection, int index)
 {
-   // if it's just a font, there's only one valid index
+   // if it's a font, there's only one valid index
    if (stbtt__isfont(font_collection))
       return index == 0 ? 0 : -1;
 
@@ -1337,7 +1337,7 @@ static int stbtt_GetFontOffsetForIndex_internal(unsigned char *font_collection, 
 
 static int stbtt_GetNumberOfFonts_internal(unsigned char *font_collection)
 {
-   // if it's just a font, there's only one valid font
+   // if it's a font, there's only one valid font
    if (stbtt__isfont(font_collection))
       return 1;
 
@@ -1424,7 +1424,7 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, in
       stbtt__buf_seek(&b, stbtt__buf_get8(&b)); // hdrsize
 
       // @TODO the name INDEX could list multiple fonts,
-      // but we just use the first one.
+      // but we use the first one.
       stbtt__cff_get_index(&b);  // name INDEX
       topdictidx = stbtt__cff_get_index(&b);
       topdict = stbtt__cff_index_get(topdictidx, 0);
@@ -1779,7 +1779,7 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
                   sx = (x + (stbtt_int32) vertices[off+i+1].x) >> 1;
                   sy = (y + (stbtt_int32) vertices[off+i+1].y) >> 1;
                } else {
-                  // otherwise just use the next point as our start point
+                  // otherwise use the next point as our start point
                   sx = (stbtt_int32) vertices[off+i+1].x;
                   sy = (stbtt_int32) vertices[off+i+1].y;
                   ++i; // we're using point i+1 as the starting point, so skip it
@@ -3230,7 +3230,7 @@ static void stbtt__fill_active_edges_new(float *scanline, float *scanline_fill, 
          } else {
             // if edge goes outside of box we're drawing, we require
             // clipping logic. since this does not match the intended use
-            // of this library, we use a different, very slow brute
+            // of this library, we use a different, slow brute
             // force implementation
             // note though that this does happen some of the time because
             // x_top and x_bottom can be extrapolated at the top & bottom of
@@ -3574,7 +3574,7 @@ static int stbtt__tesselate_curve(stbtt__point *points, int *num_points, float x
 
 static void stbtt__tesselate_cubic(stbtt__point *points, int *num_points, float x0, float y0, float x1, float y1, float x2, float y2, float x3, float y3, float objspace_flatness_squared, int n)
 {
-   // @TODO this "flatness" calculation is just made-up nonsense that seems to work well enough
+   // @TODO this "flatness" calculation is made-up nonsense that seems to work well enough
    float dx0 = x1-x0;
    float dy0 = y1-y0;
    float dx1 = x2-x1;
@@ -4642,7 +4642,7 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
             float x_gspace = (sx / scale_x);
             float y_gspace = (sy / scale_y);
 
-            int winding = stbtt__compute_crossings_x(x_gspace, y_gspace, num_verts, verts); // @OPTIMIZE: this could just be a rasterization, but needs to be line vs. non-tesselated curves so a new path
+            int winding = stbtt__compute_crossings_x(x_gspace, y_gspace, num_verts, verts); // @OPTIMIZE: this could be a rasterization, but needs to be line vs. non-tesselated curves so a new path
 
             for (i=0; i < num_verts; ++i) {
                float x0 = verts[i].x*scale_x, y0 = verts[i].y*scale_y;
@@ -4905,7 +4905,7 @@ static int stbtt__matches(stbtt_uint8 *fc, stbtt_uint32 offset, stbtt_uint8 *nam
    if (!nm) return 0;
 
    if (flags) {
-      // if we checked the macStyle flags, then just check the family and ignore the subfamily
+      // if we checked the macStyle flags, then check the family and ignore the subfamily
       if (stbtt__matchpair(fc, nm, name, nlen, 16, -1))  return 1;
       if (stbtt__matchpair(fc, nm, name, nlen,  1, -1))  return 1;
       if (stbtt__matchpair(fc, nm, name, nlen,  3, -1))  return 1;

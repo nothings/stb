@@ -1,7 +1,7 @@
 // stbgl - v0.04 - Sean Barrett 2008 - public domain
 //
 // Note that the gl extensions support requires glext.h. In fact, it works
-// if you just concatenate glext.h onto the end of this file. In that case,
+// if you concatenate glext.h onto the end of this file. In that case,
 // this file is covered by the SGI FreeB license, and is not public domain.
 //
 // Extension usage:
@@ -23,7 +23,7 @@
 //         #define STB_GLEXT_DEFINE "extlist.txt"
 //         #include "stb_gl.h"
 //
-//       If you've already defined STB_GLEXT_DECLARE, you can just do:
+//       If you've already defined STB_GLEXT_DECLARE, you can do:
 //         #define STB_GLEXT_DEFINE_DECLARE
 //         #include "stb_gl.h"
 //
@@ -82,7 +82,7 @@ extern int stbgl_LoadTexture(char *filename, char *props); // only if stb_image 
 
 extern int stbgl_TestTexture(int w);
 extern int stbgl_TestTextureEx(int w, char *scale_table, int checks_log2, int r1,int g1,int b1, int r2, int b2, int g2);
-extern unsigned int stbgl_rand(void); // internal, but exposed just in case; LCG, so use middle bits
+extern unsigned int stbgl_rand(void); // internal, but exposed in case; LCG, so use middle bits
 
 extern int stbgl_TexImage2D(int texid, int w, int h, void *data, char *props);
 extern int stbgl_TexImage2D_Extra(int texid, int w, int h, void *data, int chan, char *props, int preserve_data);
@@ -459,7 +459,7 @@ int stbgl_TestTextureEx(int w, char *scale_table, int checks_log2, int r1,int g1
          }
       }
       scale = scale_table[s-k+1];
-      if (!scale) continue; // just interpolate down the remaining data
+      if (!scale) continue; // interpolate down the remaining data
       for (j=0,i=0; i < 256; i += 2, j == scale ? j=0 : ++j)
          modded[i] = j, modded[i+1] = -j; // precompute i%scale (plus sign)
       for (j=0; j < w; j += step)

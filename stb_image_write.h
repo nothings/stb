@@ -1104,7 +1104,7 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
       return;
    }
 
-   // first loop isn't optimized since it's just one pixel
+   // first loop isn't optimized since it's one pixel
    for (i = 0; i < n; ++i) {
       switch (type) {
          case 1: line_buffer[i] = z[i]; break;

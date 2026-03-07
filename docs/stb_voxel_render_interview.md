@@ -25,7 +25,7 @@ For one thing, it's a terrible idea for the
 developer. Remember before Minecraft was on the Xbox 360,
 there were a ton of "indie" clones (some maybe making
 decent money even), but then the real Minecraft came out
-and just crushed them (as far as I know). It's just not
+and crushed them (as far as I know). It's not
 something you really want to compete with.
 
 The reason I made this library is because I'd like
@@ -35,7 +35,7 @@ necessary its *gameplay*.
 I can understand the urge to clone the gameplay. When
 you have a world made of voxels/blocks, there are a
 few things that become incredibly easy to do that would
-otherwise be very hard (at least for an indie) to do in 3D.
+otherwise be hard (at least for an indie) to do in 3D.
 One thing is that procedural generation becomes much easier.
 Another is that destructible environments are easy. Another
 is that you have a world where your average user can build
@@ -71,22 +71,22 @@ technology that could be used multiple ways.
 One thing I did intentionally was try to make it possible to
 make nicer looking ground terrain, using the half-height
 slopes and "weird slopes". There are Minecraft mods with
-drivable cars and they just go up these blocky slopes and,
+drivable cars and they go up these blocky slopes and,
 like, what? So I wanted you to be able to make smoother
-terrain, either just for the look, or for vehicles etc.
+terrain, either for the look, or for vehicles etc.
 Also, you can spatially cross-fade between two ground textures for
 that classic bad dirt/grass transition that has shipped
 in plenty of professional games. Of course, you could
-just use a separate non-voxel ground renderer for all of
+use a separate non-voxel ground renderer for all of
 this. But this way, you can seamlessly integrate everything
 else with it. E.g. in your authoring tool (or procedural
 generation) you can make smooth ground and then cut a
 sharp-edged hole in it for a building's basement or whatever.
 
-Another thing you can do is work at a very different scale.
-In Minecraft, a person is just under 2 blocks tall. In
-Ace of Spades, a person is just under 3 blocks tall. Why
-not 4 or 6? Well, partly because you just need a lot more
+Another thing you can do is work at a different scale.
+In Minecraft, a person is under 2 blocks tall. In
+Ace of Spades, a person is under 3 blocks tall. Why
+not 4 or 6? Well, partly because you need a lot more
 voxels; if a meter is 2 voxels in Mineraft and 4 voxels in
 your game, and you draw the same number of voxels due to
 hardware limits, then your game has half the view distance
@@ -144,7 +144,7 @@ first Minecraft map in stb_voxel_render release trailer). I'd
 made a bunch of procedural level generators for the game, and
 I started trying to make a city generator inspired by Broville.
 
-But I realized it would be a lot of work, and of very little
+But I realized it would be a lot of work, and of little
 value (most of my maps didn't get much play because people
 preferred to play on maps where they could charge straight
 at the enemies and shoot them as fast as possible). So I
