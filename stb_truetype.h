@@ -45,7 +45,7 @@
 //       Cass Everitt               Martins Mozeiko       github:aloucks
 //       stoiko (Haemimont Games)   Cap Petschulat        github:oyvindjam
 //       Brian Hook                 Omar Cornut           github:vassvik
-//       Walter van Niftrik         Ryan Griege
+//       Walter van Niftrik         Ryan Griege           Isaac "Atridas" Serrano
 //       David Gow                  Peter LaValle
 //       David Given                Sergey Popov
 //       Ivan-Assen Ivanov          Giumo X. Clanjor
