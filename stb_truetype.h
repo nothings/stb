@@ -201,10 +201,10 @@
 //  Baseline:
 //    You need to select a y-coordinate that is the baseline of where
 //    your text will appear. Call GetFontBoundingBox to get the baseline-relative
-//    bounding box for all characters. SF*-y0 will be the distance in pixels
+//    bounding box for all characters. SF*y1 will be the distance in pixels
 //    that the worst-case character could extend above the baseline, so if
 //    you want the top edge of characters to appear at the top of the
-//    screen where y=0, then you would set the baseline to SF*-y0.
+//    screen where y=0, then you would set the baseline to SF*y1.
 //
 //  Current point:
 //    Set the current point where the first character will appear. The
