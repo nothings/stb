@@ -2862,9 +2862,10 @@ static void stbir_overlapping_memcpy( void * dest, void const * src, size_t byte
       STBIR_NO_UNROLL_LOOP_START
       do
       {
+        int a,b;
         STBIR_NO_UNROLL(sd);
-        int a = ((int*)sd)[0];
-        int b = ((int*)sd)[1];
+        a = ((int*)sd)[0];
+        b = ((int*)sd)[1];
         ((int*)( sd + ofs_to_dest ))[0] = a;
         ((int*)( sd + ofs_to_dest ))[1] = b;
         sd += 8;
