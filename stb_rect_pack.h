@@ -68,10 +68,12 @@
 
 #define STB_RECT_PACK_VERSION  1
 
+#ifndef STBRP_DEF
 #ifdef STBRP_STATIC
 #define STBRP_DEF static
 #else
 #define STBRP_DEF extern
+#endif
 #endif
 
 #ifdef __cplusplus
