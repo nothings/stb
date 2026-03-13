@@ -34,8 +34,10 @@
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
 //    AnthoFoxo          github:morlat       Gabriel Ravier
+//    github:lassade
 //
 // Partial history:
+//    1.23    - 2021-07-11 - various small fixes
 //    1.22    - 2021-07-11 - various small fixes
 //    1.21    - 2021-07-02 - fix bug for files with no comments
 //    1.20    - 2020-07-11 - several small fixes
@@ -719,9 +721,9 @@ typedef struct
    uint8 class_subclasses[16]; // varies
    uint8 class_masterbooks[16]; // varies
    int16 subclass_books[16][8]; // varies
-   uint16 Xlist[31*8+2]; // varies
-   uint8 sorted_order[31*8+2];
-   uint8 neighbors[31*8+2][2];
+   uint16 Xlist[65]; // varies
+   uint8 sorted_order[65];
+   uint8 neighbors[65][2];
    uint8 floor1_multiplier;
    uint8 rangebits;
    int values;
@@ -1401,7 +1403,7 @@ static int set_file_offset(stb_vorbis *f, unsigned int loc)
    #endif
    f->eof = 0;
    if (USE_MEMORY(f)) {
-      if (f->stream_start + loc >= f->stream_end || f->stream_start + loc < f->stream_start) {
+      if (f->stream_start + loc >= f->stream_end) {
          f->stream = f->stream_end;
          f->eof = 1;
          return 0;
@@ -3181,8 +3183,8 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
 {
    Mapping *map;
    int i,j,k,n,n2;
-   int zero_channel[256];
-   int really_zero_channel[256];
+   int zero_channel[STB_VORBIS_MAX_CHANNELS];
+   int really_zero_channel[STB_VORBIS_MAX_CHANNELS];
 
 // WINDOWING
 
@@ -3304,7 +3306,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
    for (i=0; i < map->submaps; ++i) {
       float *residue_buffers[STB_VORBIS_MAX_CHANNELS];
       int r;
-      uint8 do_not_decode[256];
+      uint8 do_not_decode[STB_VORBIS_MAX_CHANNELS];
       int ch = 0;
       for (j=0; j < f->channels; ++j) {
          if (map->chan[j].mux == i) {
@@ -3951,7 +3953,7 @@ static int start_decoder(vorb *f)
             g->book_list[j] = get_bits(f,8);
          return error(f, VORBIS_feature_not_supported);
       } else {
-         stbv__floor_ordering p[31*8+2];
+         stbv__floor_ordering p[65];
          Floor1 *g = &f->floor_config[i].floor1;
          int max_class = -1;
          g->partitions = get_bits(f, 5);
@@ -4161,7 +4163,7 @@ static int start_decoder(vorb *f)
       int i,max_part_read=0;
       for (i=0; i < f->residue_count; ++i) {
          Residue *r = f->residue_config + i;
-         unsigned int actual_size = f->blocksize_1 / 2;
+         unsigned int actual_size = f->blocksize_1;
          unsigned int limit_r_begin = r->begin < actual_size ? r->begin : actual_size;
          unsigned int limit_r_end   = r->end   < actual_size ? r->end   : actual_size;
          int n_read = limit_r_end - limit_r_begin;
