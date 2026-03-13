@@ -1,4 +1,4 @@
-/* stb_image_resize2 - v2.17 - public domain image resizing
+/* stb_image_resize2 - v2.18 - public domain image resizing
 
    by Jeff Roberts (v2) and Jorge L Rodriguez
    http://github.com/nothings/stb
@@ -141,13 +141,13 @@
          COLOR+ALPHA buffer types tell the resizer to do.
 
          When you use the pixel layouts STBIR_RGBA, STBIR_BGRA, STBIR_ARGB,
-         STBIR_ABGR, STBIR_RX, or STBIR_XR you are telling us that the pixels are
+         STBIR_ABGR, STBIR_RA, or STBIR_AR you are telling us that the pixels are
          non-premultiplied. In these cases, the resizer will alpha weight the colors
          (effectively creating the premultiplied image), do the filtering, and then
          convert back to non-premult on exit.
 
-         When you use the pixel layouts STBIR_RGBA_PM, STBIR_RGBA_PM, STBIR_RGBA_PM,
-         STBIR_RGBA_PM, STBIR_RX_PM or STBIR_XR_PM, you are telling that the pixels
+         When you use the pixel layouts STBIR_RGBA_PM, STBIR_BGRA_PM, STBIR_ARGB_PM,
+         STBIR_ABGR_PM, STBIR_RA_PM or STBIR_AR_PM, you are telling that the pixels
          ARE premultiplied. In this case, the resizer doesn't have to do the
          premultipling - it can filter directly on the input. This about twice as
          fast as the non-premultiplied case, so it's the right option if your data is
@@ -329,6 +329,10 @@
       Nathan Reed: warning fixes for 1.0
 
    REVISIONS
+      2.18 (2026-03-25) fixed coefficient calculation when skipping a coefficient off 
+                          the left side of the window, added non-aligned access safe 
+                          memcpy mode for scalar path, fixed various typos, and fixed 
+                          define error in the float clamp output mode. 
       2.17 (2025-10-25) silly format bug in easy-to-use APIs.
       2.16 (2025-10-21) fixed the easy-to-use APIs to allow inverted bitmaps (negative
                           strides), fix vertical filter kernel callback, fix threaded
@@ -1197,7 +1201,7 @@ static stbir__inline stbir_uint8 stbir__linear_to_srgb_uchar(float in)
         #define STBIR_AVX2
       #endif
       #if defined( _MSC_VER ) && !defined(__clang__)
-        #ifndef STBIR_FP16C  // FP16C instructions are on all AVX2 cpus, so we can autoselect it here on microsoft - clang needs -m16c
+        #ifndef STBIR_FP16C  // FP16C instructions are on all AVX2 cpus, so we can autoselect it here on microsoft - clang needs -mf16c
           #define STBIR_FP16C
         #endif
       #endif
@@ -2568,7 +2572,7 @@ static const STBIR__SIMDF_CONST(STBIR_simd_point5,   0.5f);
 static const STBIR__SIMDF_CONST(STBIR_ones,          1.0f);
 static const STBIR__SIMDI_CONST(STBIR_almost_zero,   (127 - 13) << 23);
 static const STBIR__SIMDI_CONST(STBIR_almost_one,    0x3f7fffff);
-static const STBIR__SIMDI_CONST(STBIR_mastissa_mask, 0xff);
+static const STBIR__SIMDI_CONST(STBIR_mantissa_mask, 0xff);
 static const STBIR__SIMDI_CONST(STBIR_topscale,      0x02000000);
 
 //   Basically, in simd mode, we unroll the proper amount, and we don't want
@@ -2839,16 +2843,33 @@ static void stbir_overlapping_memcpy( void * dest, void const * src, size_t byte
   char STBIR_SIMD_STREAMOUT_PTR( * ) s_end = ((char*) src) + bytes;
   ptrdiff_t ofs_to_dest = (char*)dest - (char*)src;
 
-  if ( ofs_to_dest >= 8 ) // is the overlap more than 8 away?
+  if ( ofs_to_dest >= 8 ) // is the overlap more than 8 away
   {
     char STBIR_SIMD_STREAMOUT_PTR( * ) s_end8 = ((char*) src) + (bytes&~7);
-    STBIR_NO_UNROLL_LOOP_START
-    do
+
+    if ( ( ( ((ptrdiff_t)dest)|((ptrdiff_t)src) ) & 7 ) == 0 ) // is it 8byte aligned?
     {
-      STBIR_NO_UNROLL(sd);
-      *(stbir_uint64*)( sd + ofs_to_dest ) = *(stbir_uint64*) sd;
-      sd += 8;
-    } while ( sd < s_end8 );
+      STBIR_NO_UNROLL_LOOP_START
+      do
+      {
+        STBIR_NO_UNROLL(sd);
+        *(stbir_uint64*)( sd + ofs_to_dest ) = *(stbir_uint64*) sd;
+        sd += 8;
+      } while ( sd < s_end8 );
+    }
+    else
+    {
+      STBIR_NO_UNROLL_LOOP_START
+      do
+      {
+        STBIR_NO_UNROLL(sd);
+        int a = ((int*)sd)[0];
+        int b = ((int*)sd)[1];
+        ((int*)( sd + ofs_to_dest ))[0] = a;
+        ((int*)( sd + ofs_to_dest ))[1] = b;
+        sd += 8;
+      } while ( sd < s_end8 );
+    }
 
     if ( sd == s_end )
       return;
@@ -3241,7 +3262,7 @@ static void stbir__get_extents( stbir__sampler * samp, stbir__extents * scanline
     newspan->n1 = ( max_left - min_left ) - left_margin;
     scanline_extents->edge_sizes[0] = 0;  // don't need to copy the left margin, since we are directly decoding into the margin
   }
-  // if we can't merge the min_left range, add it as a second range
+  // if we can't merge the min_right range, add it as a second range
   else  
   if ( ( right_margin ) && ( min_right != 0x7fffffff ) )
   {
@@ -3357,23 +3378,29 @@ static void stbir__calculate_coefficients_for_gather_upsample( float out_filter_
 
 static void stbir__insert_coeff( stbir__contributors * contribs, float * coeffs, int new_pixel, float new_coeff, int max_width )
 {
-  if ( new_pixel <= contribs->n1 )  // before the end
+  if ( contribs->n1 < contribs->n0 ) // this first clause should never happen, but handle in case
+  {
+    contribs->n0 = contribs->n1 = new_pixel;
+    coeffs[0] = new_coeff;
+  }
+  else if ( new_pixel <= contribs->n1 )  // before the end
   {
     if ( new_pixel < contribs->n0 ) // before the front?
     {
       if ( ( contribs->n1 - new_pixel + 1 ) <= max_width )
       { 
         int j, o = contribs->n0 - new_pixel;
-        for ( j = contribs->n1 - contribs->n0 ; j <= 0 ; j-- )
+        for ( j = contribs->n1 - contribs->n0 ; j >= 0 ; j-- )
           coeffs[ j + o ] = coeffs[ j ];
-        for ( j = 1 ; j < o ; j-- )
-          coeffs[ j ] = coeffs[ 0 ];
+        for ( j = 1 ; j < o ; j++ )
+          coeffs[ j ] = 0;
         coeffs[ 0 ] = new_coeff;
         contribs->n0 = new_pixel;
       }
     }
     else
     {
+      // add new weight to existing coeff if already there
       coeffs[ new_pixel - contribs->n0 ] += new_coeff;
     }
   }
@@ -3820,7 +3847,7 @@ static int stbir__pack_coefficients( int num_contributors, stbir__contributors* 
     }
   }
 
-  // some horizontal routines read one float off the end (which is then masked off), so put in a sentinal so we don't read an snan or denormal
+  // some horizontal routines read one float off the end (which is then masked off), so put in a sentinel so we don't read an snan or denormal
   coefficents[ widest * num_contributors ] = 8888.0f;
 
   // the minimum we might read for unrolled filters widths is 12. So, we need to
@@ -6872,45 +6899,45 @@ static float stbir__compute_weights[5][STBIR_RESIZE_CLASSIFICATIONS][4]=  // 5 =
     { 0.56250f, 0.59375f, 0.00000f, 0.96875f },
     { 1.00000f, 0.06250f, 0.00000f, 1.00000f },
     { 0.00000f, 0.09375f, 1.00000f, 1.00000f },
-    { 1.00000f, 1.00000f, 1.00000f, 1.00000f },
+    { 1.00000f, 1.00000f, 0.31250f, 1.00000f },
     { 0.03125f, 0.12500f, 1.00000f, 1.00000f },
-    { 0.06250f, 0.12500f, 0.00000f, 1.00000f },
+    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },
     { 0.00000f, 1.00000f, 0.00000f, 0.03125f },
   }, {
     { 0.00000f, 0.84375f, 0.00000f, 0.03125f },
     { 0.09375f, 0.93750f, 0.00000f, 0.78125f },
     { 0.87500f, 0.21875f, 0.00000f, 0.96875f },
     { 0.09375f, 0.09375f, 1.00000f, 1.00000f },
-    { 1.00000f, 1.00000f, 1.00000f, 1.00000f },
+    { 0.00000f, 0.84375f, 0.00000f, 0.03125f },
     { 0.03125f, 0.12500f, 1.00000f, 1.00000f },
-    { 0.06250f, 0.12500f, 0.00000f, 1.00000f },
+    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },
     { 0.00000f, 1.00000f, 0.00000f, 0.53125f },
   }, {
     { 0.00000f, 0.53125f, 0.00000f, 0.03125f },
     { 0.06250f, 0.96875f, 0.00000f, 0.53125f },
     { 0.87500f, 0.18750f, 0.00000f, 0.93750f },
     { 0.00000f, 0.09375f, 1.00000f, 1.00000f },
-    { 1.00000f, 1.00000f, 1.00000f, 1.00000f },
+    { 0.00000f, 0.53125f, 0.00000f, 0.03125f },
     { 0.03125f, 0.12500f, 1.00000f, 1.00000f },
-    { 0.06250f, 0.12500f, 0.00000f, 1.00000f },
+    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },
     { 0.00000f, 1.00000f, 0.00000f, 0.56250f },
   }, {
     { 0.00000f, 0.50000f, 0.00000f, 0.71875f },
     { 0.06250f, 0.84375f, 0.00000f, 0.87500f },
     { 1.00000f, 0.50000f, 0.50000f, 0.96875f },
     { 1.00000f, 0.09375f, 0.31250f, 0.50000f },
-    { 1.00000f, 1.00000f, 1.00000f, 1.00000f },
+    { 0.00000f, 0.50000f, 0.00000f, 0.71875f },
     { 1.00000f, 0.03125f, 0.03125f, 0.53125f },
-    { 0.18750f, 0.12500f, 0.00000f, 1.00000f },
+    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },
     { 0.00000f, 1.00000f, 0.03125f, 0.18750f },
   }, {
     { 0.00000f, 0.59375f, 0.00000f, 0.96875f },
     { 0.06250f, 0.81250f, 0.06250f, 0.59375f },
     { 0.75000f, 0.43750f, 0.12500f, 0.96875f },
     { 0.87500f, 0.06250f, 0.18750f, 0.43750f },
-    { 1.00000f, 1.00000f, 1.00000f, 1.00000f },
+    { 0.00000f, 0.59375f, 0.00000f, 0.96875f },
     { 0.15625f, 0.12500f, 1.00000f, 1.00000f },
-    { 0.06250f, 0.12500f, 0.00000f, 1.00000f },
+    { 1.00000f, 1.00000f, 0.06250f, 1.00000f },
     { 0.00000f, 1.00000f, 0.03125f, 0.34375f },
   }
 };
@@ -6964,16 +6991,16 @@ static int stbir__should_do_vertical_first( float weights_table[STBIR_RESIZE_CLA
   // categorize the resize into buckets
   if ( ( vertical_output_size <= 4 ) || ( horizontal_output_size <= 4 ) )
     v_classification = ( vertical_output_size < horizontal_output_size ) ? 6 : 7;
+  else if ( ( !is_gather ) && ( ( vertical_output_size <= 16 ) || ( horizontal_output_size <= 16 ) ) )
+    v_classification = 4;
   else if ( vertical_scale <= 1.0f )
     v_classification = ( is_gather ) ? 1 : 0;
   else if ( vertical_scale <= 2.0f)
     v_classification = 2;
   else if ( vertical_scale <= 3.0f)
     v_classification = 3;
-  else if ( vertical_scale <= 4.0f)
-    v_classification = 5;
-  else
-    v_classification = 6;
+  else 
+    v_classification = 5; // everything bigger than 3x
 
   // use the right weights
   weights = weights_table[ v_classification ];
@@ -7597,7 +7624,7 @@ static int stbir__double_to_rational(double f, stbir_uint32 limit, stbir_uint32 
     numer_estimate = temp;
   }
 
-  // we didn't fine anything good enough for float, use a full range estimate
+  // we didn't find anything good enough for float, use a full range estimate
   if ( limit_denom )
   {
     numer_estimate= (stbir_uint64)( f * (double)limit + 0.5 );
@@ -7918,7 +7945,7 @@ static int stbir__perform_build( STBIR_RESIZE * resize, int splits )
   return 0;
 }
 
-void stbir_free_samplers( STBIR_RESIZE * resize )
+STBIRDEF void stbir_free_samplers( STBIR_RESIZE * resize )
 {
   if ( resize->samplers )
   {
@@ -8132,7 +8159,7 @@ STBIRDEF void * stbir_resize( const void *input_pixels , int input_w , int input
 
 STBIRDEF void stbir_resize_build_profile_info( STBIR_PROFILE_INFO * info, STBIR_RESIZE const * resize )
 {
-  static char const * bdescriptions[6] = { "Building", "Allocating", "Horizontal sampler", "Vertical sampler", "Coefficient cleanup", "Coefficient piovot" } ;
+  static char const * bdescriptions[6] = { "Building", "Allocating", "Horizontal sampler", "Vertical sampler", "Coefficient cleanup", "Coefficient pivot" } ;
   stbir__info* samp = resize->samplers;
   int i;
 
@@ -8183,7 +8210,7 @@ STBIRDEF void stbir_resize_split_profile_info( STBIR_PROFILE_INFO * info, STBIR_
     info->clocks[i] = sum;
   }
 
-  info->total_clocks = split_info->profile.named.total;
+  info->total_clocks = split_info->profile.named.total; 
   info->descriptions = descriptions;
   info->count = STBIR__ARRAY_SIZE( descriptions );
 }
@@ -8731,7 +8758,7 @@ static float * STBIR__CODER_NAME(stbir__decode_uint8_srgb)( float * decodep, int
 { \
     stbir__simdi temp;  \
     stbir__simdi_32shr( temp, stbir_simdi_castf( f ), 12 ) ; \
-    stbir__simdi_and( temp, temp, STBIR__CONSTI(STBIR_mastissa_mask) ); \
+    stbir__simdi_and( temp, temp, STBIR__CONSTI(STBIR_mantissa_mask) ); \
     stbir__simdi_or( temp, temp, STBIR__CONSTI(STBIR_topscale) ); \
     stbir__simdi_16madd( i, i, temp ); \
     stbir__simdi_32shr( i, i, 16 ); \
@@ -8972,7 +8999,7 @@ static float * STBIR__CODER_NAME(stbir__decode_uint8_srgb2_linearalpha)( float *
   decode -= 4;
   if( decode < decode_end )
   {
-    decode[0] = stbir__srgb_uchar_to_linear_float[ stbir__decode_order0 ];
+    decode[0] = stbir__srgb_uchar_to_linear_float[ input[stbir__decode_order0] ];
     decode[1] = ( (float) input[stbir__decode_order1] ) * stbir__max_uint8_as_float_inverted;
   }
   return decode_end;
@@ -9708,7 +9735,7 @@ static float * STBIR__CODER_NAME(stbir__decode_float_linear)( float * decodep, i
 
 static void STBIR__CODER_NAME( stbir__encode_float_linear )( void * outputp, int width_times_channels, float const * encode )
 {
-  #if !defined( STBIR_FLOAT_HIGH_CLAMP ) && !defined(STBIR_FLOAT_LO_CLAMP) && !defined(stbir__decode_swizzle)
+  #if !defined( STBIR_FLOAT_HIGH_CLAMP ) && !defined(STBIR_FLOAT_LOW_CLAMP) && !defined(stbir__decode_swizzle)
 
   if ( (void*)outputp != (void*) encode )
     STBIR_MEMCPY( outputp, encode, width_times_channels * sizeof( float ) );
@@ -9763,7 +9790,7 @@ static void STBIR__CODER_NAME( stbir__encode_float_linear )( void * outputp, int
       stbir__simdfX_store( output+stbir__simdfX_float_count, e1 );
       encode += stbir__simdfX_float_count * 2;
       output += stbir__simdfX_float_count * 2;
-      if ( output < end_output )
+      if ( output <= end_output )
         continue;
       if ( output == ( end_output + ( stbir__simdfX_float_count * 2 ) ) )
         break;
