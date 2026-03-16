@@ -8,7 +8,7 @@ assignees: ''
 ---
 
 **DO NOT USE AI TO WRITE THE BUG REPORT FOR YOU**  
-Such issues will be deleted. See bottom for explanation.
+Such issues will be closed. See bottom for explanation.
 
 **Describe the bug**  
 A clear and concise description of what the bug is.
