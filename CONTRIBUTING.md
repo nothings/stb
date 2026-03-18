@@ -2,7 +2,7 @@ AI AND LLM ARE FORBIDDEN
 ========================
 
 This project doesn't accept code or documentation generated
-by LLMs or any otherforms of generative AI.
+by LLMs or any other forms of generative AI.
 
 Please don't submit pull requests based on generative AI
 output, and don't use AI auto completion when you write
