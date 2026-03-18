@@ -1,14 +1,15 @@
+AI AND LLM ARE FORBIDDEN
+========================
 
-LLM Ban Notice
-==============
+This project doesn't accept code or documentation generated
+by LLMs or any otherforms of generative AI.
 
-For various reasons, this project doesn't accept LLM code.
 Please don't submit pull requests based on generative AI
 output, and don't use AI auto completion when you write
-pull requests. If you make a pull request, please confirm
-that you've adhered to this notice or it may be closed.
-Please don't use LLMs to file issues either.
-Thank you.
+pull requests.
+
+Additionally, don't use LLMs to create pull requests or issues.
+Write them yourself, in English, even if your English is bad.
 
 
 Contributions Welcome
