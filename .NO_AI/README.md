@@ -1,4 +1,3 @@
 
-[Please note that we ban the use of AI, see here.](
-CONTRIBUTING.md#llm-ban-notice
-)
+[Use of AI is forbidden, see CONTRIBUTING.md for details.](../CONTRIBUTING.md)
+
