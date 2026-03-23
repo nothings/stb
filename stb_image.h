@@ -688,10 +688,8 @@ typedef unsigned char validate_uint32[sizeof(stbi__uint32)==4 ? 1 : -1];
 #define STBI_REALLOC_SIZED(p,oldsz,newsz) STBI_REALLOC(p,newsz)
 #endif
 
-// x86/x64/ARM64/AArch64 detection
-#if defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__aarch64__) || defined(__arm64__)
-#define STBI__ARM64_TARGET
-#elif defined(__x86_64__) || defined(_M_X64)
+// x86/x64 detection
+#if (defined(__x86_64__) || defined(_M_X64)) && !defined(_M_ARM64EC)
 #define STBI__X64_TARGET
 #elif defined(__i386) || defined(_M_IX86)
 #define STBI__X86_TARGET
@@ -777,17 +775,15 @@ static int stbi__sse2_available(void)
 #endif
 
 // ARM NEON
-#if !defined(STBI_NO_SIMD) && defined(STBI__ARM64_TARGET)
-#define STBI_NEON
+#if defined(STBI_NO_SIMD) && defined(STBI_NEON)
+#undef STBI_NEON
 #endif
 
 #ifdef STBI_NEON
+#include <arm_neon.h>
 #ifdef _MSC_VER
-#include <intrin.h>
-#include <arm64_neon.h>
 #define STBI_SIMD_ALIGN(type, name) __declspec(align(16)) type name
 #else
-#include <arm_neon.h>	
 #define STBI_SIMD_ALIGN(type, name) type name __attribute__((aligned(16)))
 #endif
 #endif

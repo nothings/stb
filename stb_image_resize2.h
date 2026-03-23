@@ -2729,7 +2729,7 @@ static void stbir_overlapping_memcpy( void * dest, void const * src, size_t byte
 
 #ifndef STBIR_PROFILE_FUNC
 
-#if defined(_x86_64) || defined( __x86_64__ ) || defined( _M_X64 ) || defined(__x86_64) || defined(__SSE2__) || defined(STBIR_SSE) || defined( _M_IX86_FP ) || defined(__i386) || defined( __i386__ ) || defined( _M_IX86 ) || defined( _X86_ )
+#if (defined(_x86_64) || defined( __x86_64__ ) || defined( _M_X64 ) || defined(__x86_64) || defined(__SSE2__) || defined(STBIR_SSE) || defined( _M_IX86_FP ) || defined(__i386) || defined( __i386__ ) || defined( _M_IX86 ) || defined( _X86_ )) && !defined(_M_ARM64EC)
 
 #ifdef _MSC_VER
 
