@@ -48,6 +48,8 @@ int main(int argc, char **argv)
     (void)LLVMFuzzerTestOneInput((uint8_t*)buf, (size_t)siz_buf);
 
 err:
+    if (f)
+        fclose(f);
     free(buf);
 
     return 0;
