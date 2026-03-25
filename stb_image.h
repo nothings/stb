@@ -108,7 +108,7 @@ RECENT REVISION HISTORY:
     Jonathan Blow           Ken Hamada         Tero Hanninen        github:svdijk
     Eugene Golushkov        Laurent Gomila     Cort Stratton        github:snagar
     Aruelien Pocheville     Sergio Gonzalez    Thibault Reuille     github:Zelex
-    Cass Everitt            Ryamond Barbiero                        github:grim210
+    Cass Everitt            Ryamond Barbiero   Philip Abbet         github:grim210
     Paul Du Bois            Engin Manap        Aldo Culquicondor    github:sammyhw
     Philipp Wiesemann       Dale Weiler        Oriol Ferrer Mesia   github:phprus
     Josh Tobin              Neil Bickford      Matthew Gregan       github:poppolopoppo
@@ -7527,6 +7527,21 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
    if (!stbi__getn(s, out, s->img_n * s->img_x * s->img_y * (ri->bits_per_channel / 8))) {
       STBI_FREE(out);
       return stbi__errpuc("bad PNM", "PNM file truncated");
+   }
+
+   // convert the image data from big-endian to platform-native
+   if (ri->bits_per_channel == 16) {
+      int i;
+      int img_len = s->img_n * s->img_x * s->img_y;
+      stbi_uc* src = (stbi_uc *) out;
+      stbi_us* dst = (stbi_us *) out;
+
+      for (i = 0; i < img_len; ++i)
+      {
+         *dst = (src[0] << 8) | src[1];
+         src += 2;
+         ++dst;
+      }
    }
 
    if (req_comp && req_comp != s->img_n) {
