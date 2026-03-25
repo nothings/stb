@@ -477,6 +477,8 @@ int main(int arg, char **argv)
    #define STBTT_assert(x)    assert(x)
    #endif
 
+   #include <limits.h>
+
    #ifndef STBTT_strlen
    #include <string.h>
    #define STBTT_strlen(x)    strlen(x)
@@ -3739,6 +3741,10 @@ STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info
    if (yoff  ) *yoff   = iy0;
 
    if (gbm.w && gbm.h) {
+      if (gbm.w > INT_MAX / gbm.h) {
+         STBTT_free(vertices, info->userdata);
+         return NULL;
+      }
       gbm.pixels = (unsigned char *) STBTT_malloc(gbm.w * gbm.h, info->userdata);
       if (gbm.pixels) {
          gbm.stride = gbm.w;
@@ -4610,6 +4616,10 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
       float *precompute;
       stbtt_vertex *verts;
       int num_verts = stbtt_GetGlyphShape(info, glyph, &verts);
+      if (w > 0 && h > 0 && w > INT_MAX / h) {
+         if (verts) STBTT_free(verts, info->userdata);
+         return NULL;
+      }
       data = (unsigned char *) STBTT_malloc(w * h, info->userdata);
       precompute = (float *) STBTT_malloc(num_verts * sizeof(float), info->userdata);
 
