@@ -66,7 +66,10 @@ static char *stb_include_load_file(char *filename, size_t *plen)
    len = (size_t) ftell(f);
    if (plen) *plen = len;
    text = (char *) malloc(len+1);
-   if (text == 0) return 0;
+   if (text == 0) {
+      fclose(f);
+      return 0;
+   }
    fseek(f, 0, SEEK_SET);
    fread(text, 1, len, f);
    fclose(f);
