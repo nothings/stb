@@ -382,6 +382,7 @@ CREDITS
     Macoy Madson
     Andreas Vennstrom
     Tobias Mansfield-Williams
+    Ben Fradella
 */
 
 #ifdef STBDS_UNIT_TESTS
@@ -974,21 +975,15 @@ static stbds_hash_index *stbds_make_hash_index(size_t slot_count, stbds_hash_ind
           size_t step = STBDS_BUCKET_LENGTH;
           STBDS_STATS(++stbds_rehash_items);
           for (;;) {
-            size_t limit,z;
+            size_t iter,z;
             stbds_hash_bucket *bucket;
             bucket = &t->storage[pos >> STBDS_BUCKET_SHIFT];
             STBDS_STATS(++stbds_rehash_probes);
 
-            for (z=pos & STBDS_BUCKET_MASK; z < STBDS_BUCKET_LENGTH; ++z) {
-              if (bucket->hash[z] == 0) {
-                bucket->hash[z] = hash;
-                bucket->index[z] = ob->index[j];
-                goto done;
-              }
-            }
-
-            limit = pos & STBDS_BUCKET_MASK;
-            for (z = 0; z < limit; ++z) {
+            for (iter=0,                     z = pos & STBDS_BUCKET_MASK;
+                 iter < STBDS_BUCKET_LENGTH;
+                 ++iter,                     z = (z + 1) & STBDS_BUCKET_MASK)
+            {
               if (bucket->hash[z] == 0) {
                 bucket->hash[z] = hash;
                 bucket->index[z] = ob->index[j];
@@ -1235,7 +1230,7 @@ static ptrdiff_t stbds_hm_find_slot(void *a, size_t elemsize, void *key, size_t 
   stbds_hash_index *table = stbds_hash_table(raw_a);
   size_t hash = mode >= STBDS_HM_STRING ? stbds_hash_string((char*)key,table->seed) : stbds_hash_bytes(key, keysize,table->seed);
   size_t step = STBDS_BUCKET_LENGTH;
-  size_t limit,i;
+  size_t iter,i;
   size_t pos;
   stbds_hash_bucket *bucket;
 
@@ -1247,20 +1242,12 @@ static ptrdiff_t stbds_hm_find_slot(void *a, size_t elemsize, void *key, size_t 
     STBDS_STATS(++stbds_hash_probes);
     bucket = &table->storage[pos >> STBDS_BUCKET_SHIFT];
 
-    // start searching from pos to end of bucket, this should help performance on small hash tables that fit in cache
-    for (i=pos & STBDS_BUCKET_MASK; i < STBDS_BUCKET_LENGTH; ++i) {
-      if (bucket->hash[i] == hash) {
-        if (stbds_is_key_equal(a, elemsize, key, keysize, keyoffset, mode, bucket->index[i])) {
-          return (pos & ~STBDS_BUCKET_MASK)+i;
-        }
-      } else if (bucket->hash[i] == STBDS_HASH_EMPTY) {
-        return -1;
-      }
-    }
-
-    // search from beginning of bucket to pos
-    limit = pos & STBDS_BUCKET_MASK;
-    for (i = 0; i < limit; ++i) {
+    // start searching from pos to end of bucket, and then from beginning to pos. This should help
+    // performance on small hash tables that fit in cache
+    for (iter=0,                     i = pos & STBDS_BUCKET_MASK;
+         iter < STBDS_BUCKET_LENGTH;
+         ++iter,                     i = (i + 1) & STBDS_BUCKET_MASK)
+    {
       if (bucket->hash[i] == hash) {
         if (stbds_is_key_equal(a, elemsize, key, keysize, keyoffset, mode, bucket->index[i])) {
           return (pos & ~STBDS_BUCKET_MASK)+i;
@@ -1382,34 +1369,20 @@ void *stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int m
     pos = stbds_probe_position(hash, table->slot_count, table->slot_count_log2);
 
     for (;;) {
-      size_t limit, i;
+      size_t iter, i;
       STBDS_STATS(++stbds_hash_probes);
       bucket = &table->storage[pos >> STBDS_BUCKET_SHIFT];
 
-      // start searching from pos to end of bucket
-      for (i=pos & STBDS_BUCKET_MASK; i < STBDS_BUCKET_LENGTH; ++i) {
+      // start searching from pos to end of bucket, and then from beginning of bucket to pos
+      for (iter=0,                     i = pos & STBDS_BUCKET_MASK;
+           iter < STBDS_BUCKET_LENGTH;
+           ++iter,                     i = (i + 1) & STBDS_BUCKET_MASK)
+      {
         if (bucket->hash[i] == hash) {
           if (stbds_is_key_equal(raw_a, elemsize, key, keysize, keyoffset, mode, bucket->index[i])) {
             stbds_temp(a) = bucket->index[i];
             if (mode >= STBDS_HM_STRING)
               stbds_temp_key(a) = * (char **) ((char *) raw_a + elemsize*bucket->index[i] + keyoffset);
-            return STBDS_ARR_TO_HASH(a,elemsize);
-          }
-        } else if (bucket->hash[i] == 0) {
-          pos = (pos & ~STBDS_BUCKET_MASK) + i;
-          goto found_empty_slot;
-        } else if (tombstone < 0) {
-          if (bucket->index[i] == STBDS_INDEX_DELETED)
-            tombstone = (ptrdiff_t) ((pos & ~STBDS_BUCKET_MASK) + i);
-        }
-      }
-
-      // search from beginning of bucket to pos
-      limit = pos & STBDS_BUCKET_MASK;
-      for (i = 0; i < limit; ++i) {
-        if (bucket->hash[i] == hash) {
-          if (stbds_is_key_equal(raw_a, elemsize, key, keysize, keyoffset, mode, bucket->index[i])) {
-            stbds_temp(a) = bucket->index[i];
             return STBDS_ARR_TO_HASH(a,elemsize);
           }
         } else if (bucket->hash[i] == 0) {
