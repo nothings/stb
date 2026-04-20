@@ -1041,6 +1041,12 @@ STBTT_DEF const char *stbtt_GetFontNameString(const stbtt_fontinfo *font, int *l
 //     http://developer.apple.com/textfonts/TTRefMan/RM06/Chap6name.html
 //     http://www.microsoft.com/typography/otspec/name.htm
 
+STBTT_DEF const char *stbtt_GetFontNameDefault(const stbtt_fontinfo *font, int *length);
+// return the default english full name of the font as utf-8
+
+STBTT_DEF const char* stbtt__ConvertUTF16BEtoUTF8(const char* wideSrc, stbtt_int32 srcLen, stbtt_int32* newLen);
+// performs a basic conversion of a big endian utf-16 string to a utf-8 string
+
 enum { // platformID
    STBTT_PLATFORM_ID_UNICODE   =0,
    STBTT_PLATFORM_ID_MAC       =1,
@@ -4838,6 +4844,51 @@ STBTT_DEF const char *stbtt_GetFontNameString(const stbtt_fontinfo *font, int *l
          *length = ttUSHORT(fc+loc+8);
          return (const char *) (fc+stringOffset+ttUSHORT(fc+loc+10));
       }
+   }
+   return NULL;
+}
+
+STBTT_DEF const char* stbtt__ConvertUTF16BEtoUTF8(const char* wideSrc, stbtt_int32 srcLen, stbtt_int32* newLen)
+{
+   char* convStr = (char*) STBTT_malloc(srcLen / 2, NULL);
+   stbtt_int32 i=0;
+
+   while (srcLen) {
+      stbtt_uint16 ch = wideSrc[0]*256 + wideSrc[1];
+      if (ch < 0x80) convStr[i++] = ch;
+      wideSrc += 2;
+      srcLen -= 2;
+   }
+   *newLen = i;
+   return convStr;
+}
+
+// Returns the english full name of the font as UTF-8
+STBTT_DEF const char *stbtt_GetFontNameDefault(const stbtt_fontinfo *font, int *length)
+{
+   stbtt_int32 i,count,stringOffset;
+   stbtt_uint8 *fc = font->data;
+   stbtt_uint32 offset = font->fontstart;
+   stbtt_uint32 nm = stbtt__find_table(fc, offset, "name");
+   if (!nm) return NULL;
+
+   count = ttUSHORT(fc+nm+2);
+   stringOffset = nm + ttUSHORT(fc+nm+4);
+   for (i=0; i < count; ++i) {
+      stbtt_uint32 loc = nm + 6 + 12 * i;
+      if (ttUSHORT(fc+loc+6) != 4) continue;
+      stbtt_uint16 platformId = ttUSHORT(fc+loc+0);
+      stbtt_uint16 encodingId = ttUSHORT(fc+loc+2);
+      stbtt_uint16 languageId = ttUSHORT(fc+loc+4);
+      if (!(platformId == STBTT_PLATFORM_ID_MAC && languageId == STBTT_MAC_LANG_ENGLISH) && !(platformId == STBTT_PLATFORM_ID_MICROSOFT && languageId == STBTT_MS_LANG_ENGLISH))
+          continue;
+
+      *length = ttUSHORT(fc+loc+8);
+      const char* str = (const char *) (fc+stringOffset+ttUSHORT(fc+loc+10));
+      if (platformId == STBTT_PLATFORM_ID_UNICODE || (platformId == STBTT_PLATFORM_ID_MICROSOFT && (encodingId == 1 || encodingId == 10)))
+          return stbtt__ConvertUTF16BEtoUTF8(str, *length, length);
+      else
+          return str;
    }
    return NULL;
 }
