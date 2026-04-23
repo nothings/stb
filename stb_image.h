@@ -1190,8 +1190,16 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
 static stbi_uc *stbi__convert_16_to_8(stbi__uint16 *orig, int w, int h, int channels)
 {
    int i;
-   int img_len = w * h * channels;
+   int img_len;
    stbi_uc *reduced;
+
+   // safe-size validation
+   if (!stbi__mad3sizes_valid(w, h, channels, 0)) {
+      STBI_FREE(orig);
+      return stbi__errpuc("outofmem", "Out of memory (size too large)");
+   }
+
+   img_len = w * h * channels;
 
    reduced = (stbi_uc *) stbi__malloc(img_len);
    if (reduced == NULL) return stbi__errpuc("outofmem", "Out of memory");
@@ -1206,14 +1214,25 @@ static stbi_uc *stbi__convert_16_to_8(stbi__uint16 *orig, int w, int h, int chan
 static stbi__uint16 *stbi__convert_8_to_16(stbi_uc *orig, int w, int h, int channels)
 {
    int i;
-   int img_len = w * h * channels;
+   int img_len;
    stbi__uint16 *enlarged;
 
-   enlarged = (stbi__uint16 *) stbi__malloc(img_len*2);
-   if (enlarged == NULL) return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory");
+   // safe-size validation
+   if (!stbi__mad3sizes_valid(w, h, channels * 2, 0)) {
+      STBI_FREE(orig);
+      return (stbi__uint16 *) stbi__errpuc("outofmem", "Image dimensions too large (would cause integer overflow)");
+   }
+
+   img_len = w * h * channels;
+
+   enlarged = (stbi__uint16 *) stbi__malloc(img_len * 2);
+   if (enlarged == NULL) {
+      // malloc failed for non-overflow reasons (actual out of memory)
+      return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory");
+   }
 
    for (i = 0; i < img_len; ++i)
-      enlarged[i] = (stbi__uint16)((orig[i] << 8) + orig[i]); // replicate to high and low byte, maps 0->0, 255->0xffff
+      enlarged[i] = (stbi__uint16)((orig[i] << 8) + orig[i]); // replicate to high and low byte
 
    STBI_FREE(orig);
    return enlarged;
@@ -1816,6 +1835,12 @@ static stbi__uint16 *stbi__convert_format16(stbi__uint16 *data, int img_n, int r
 
    if (req_comp == img_n) return data;
    STBI_ASSERT(req_comp >= 1 && req_comp <= 4);
+
+   // safe_size validate
+   if (!stbi__mad3sizes_valid(req_comp*2, x, y, 0)) {
+      STBI_FREE(data);
+      return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory (size too large)");
+   }
 
    good = (stbi__uint16 *) stbi__malloc(req_comp * x * y * 2);
    if (good == NULL) {
