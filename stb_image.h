@@ -1220,7 +1220,7 @@ static stbi__uint16 *stbi__convert_8_to_16(stbi_uc *orig, int w, int h, int chan
    // safe-size validation
    if (!stbi__mad3sizes_valid(w, h, channels * 2, 0)) {
       STBI_FREE(orig);
-      return (stbi__uint16 *) stbi__errpuc("outofmem", "Image dimensions too large (would cause integer overflow)");
+      return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory (size too large)");
    }
 
    img_len = w * h * channels;
