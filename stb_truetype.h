@@ -1119,6 +1119,10 @@ typedef int stbtt__test_oversample_pow2[(STBTT_MAX_OVERSAMPLE & (STBTT_MAX_OVERS
 #define STBTT_RASTERIZER_VERSION 2
 #endif
 
+#ifndef STBTT_MAX_RECURSION_DEPTH
+#define STBTT_MAX_RECURSION_DEPTH 20
+#endif
+
 #ifdef _MSC_VER
 #define STBTT__NOTUSED(v)  (void)(v)
 #else
@@ -1671,7 +1675,7 @@ static int stbtt__close_shape(stbtt_vertex *vertices, int num_vertices, int was_
    return num_vertices;
 }
 
-static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, stbtt_vertex **pvertices)
+static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, stbtt_vertex **pvertices, int depth)
 {
    stbtt_int16 numberOfContours;
    stbtt_uint8 *endPtsOfContours;
@@ -1681,6 +1685,8 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
    int g = stbtt__GetGlyfOffset(info, glyph_index);
 
    *pvertices = NULL;
+
+   if (depth > STBTT_MAX_RECURSION_DEPTH) return 0;
 
    if (g < 0) return 0;
 
@@ -1856,7 +1862,7 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
          n = (float) STBTT_sqrt(mtx[2]*mtx[2] + mtx[3]*mtx[3]);
 
          // Get indexed glyph.
-         comp_num_verts = stbtt_GetGlyphShape(info, gidx, &comp_verts);
+         comp_num_verts = stbtt__GetGlyphShapeTT(info, gidx, &comp_verts, depth+1);
          if (comp_num_verts > 0) {
             // Transform vertices.
             for (i = 0; i < comp_num_verts; ++i) {
@@ -2297,7 +2303,7 @@ static int stbtt__GetGlyphInfoT2(const stbtt_fontinfo *info, int glyph_index, in
 STBTT_DEF int stbtt_GetGlyphShape(const stbtt_fontinfo *info, int glyph_index, stbtt_vertex **pvertices)
 {
    if (!info->cff.size)
-      return stbtt__GetGlyphShapeTT(info, glyph_index, pvertices);
+      return stbtt__GetGlyphShapeTT(info, glyph_index, pvertices, 0);
    else
       return stbtt__GetGlyphShapeT2(info, glyph_index, pvertices);
 }
