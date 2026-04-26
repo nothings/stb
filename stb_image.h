@@ -1190,8 +1190,16 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
 static stbi_uc *stbi__convert_16_to_8(stbi__uint16 *orig, int w, int h, int channels)
 {
    int i;
-   int img_len = w * h * channels;
+   int img_len;
    stbi_uc *reduced;
+
+   // safe-size validation
+   if (!stbi__mad3sizes_valid(w, h, channels, 0)) {
+      STBI_FREE(orig);
+      return stbi__errpuc("outofmem", "Out of memory (size too large)");
+   }
+
+   img_len = w * h * channels;
 
    reduced = (stbi_uc *) stbi__malloc(img_len);
    if (reduced == NULL) return stbi__errpuc("outofmem", "Out of memory");
@@ -1206,14 +1214,25 @@ static stbi_uc *stbi__convert_16_to_8(stbi__uint16 *orig, int w, int h, int chan
 static stbi__uint16 *stbi__convert_8_to_16(stbi_uc *orig, int w, int h, int channels)
 {
    int i;
-   int img_len = w * h * channels;
+   int img_len;
    stbi__uint16 *enlarged;
 
-   enlarged = (stbi__uint16 *) stbi__malloc(img_len*2);
-   if (enlarged == NULL) return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory");
+   // safe-size validation
+   if (!stbi__mad3sizes_valid(w, h, channels * 2, 0)) {
+      STBI_FREE(orig);
+      return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory (size too large)");
+   }
+
+   img_len = w * h * channels;
+
+   enlarged = (stbi__uint16 *) stbi__malloc(img_len * 2);
+   if (enlarged == NULL) {
+      // malloc failed for non-overflow reasons (actual out of memory)
+      return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory");
+   }
 
    for (i = 0; i < img_len; ++i)
-      enlarged[i] = (stbi__uint16)((orig[i] << 8) + orig[i]); // replicate to high and low byte, maps 0->0, 255->0xffff
+      enlarged[i] = (stbi__uint16)((orig[i] << 8) + orig[i]); // replicate to high and low byte
 
    STBI_FREE(orig);
    return enlarged;
@@ -1816,6 +1835,12 @@ static stbi__uint16 *stbi__convert_format16(stbi__uint16 *data, int img_n, int r
 
    if (req_comp == img_n) return data;
    STBI_ASSERT(req_comp >= 1 && req_comp <= 4);
+
+   // safe_size validate
+   if (!stbi__mad3sizes_valid(req_comp*2, x, y, 0)) {
+      STBI_FREE(data);
+      return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory (size too large)");
+   }
 
    good = (stbi__uint16 *) stbi__malloc(req_comp * x * y * 2);
    if (good == NULL) {
@@ -6653,39 +6678,48 @@ static int stbi__gif_info_raw(stbi__context *s, int *x, int *y, int *comp)
 
 static void stbi__out_gif_code(stbi__gif *g, stbi__uint16 code)
 {
-   stbi_uc *p, *c;
-   int idx;
+    stbi_uc buffer[4096];  // max LZW codes per gif spec
+    int depth = 0;
 
-   // recurse to decode the prefixes, since the linked-list is backwards,
-   // and working backwards through an interleaved image would be nasty
-   if (g->codes[code].prefix >= 0)
-      stbi__out_gif_code(g, g->codes[code].prefix);
+    // collect all suffixes
+    while (g->codes[code].prefix >= 0 && depth < 4096) {
+        buffer[depth++] = g->codes[code].suffix; 
+        code = (stbi__uint16)g->codes[code].prefix;
+    }
 
-   if (g->cur_y >= g->max_y) return;
+    if (depth < 4096)
+        buffer[depth++] = g->codes[code].suffix;
 
-   idx = g->cur_x + g->cur_y;
-   p = &g->out[idx];
-   g->history[idx / 4] = 1;
+    while (depth > 0) {
+        int idx;
+        stbi_uc *p, *c;
 
-   c = &g->color_table[g->codes[code].suffix * 4];
-   if (c[3] > 128) { // don't render transparent pixels;
-      p[0] = c[2];
-      p[1] = c[1];
-      p[2] = c[0];
-      p[3] = c[3];
-   }
-   g->cur_x += 4;
+        if (g->cur_y >= g->max_y) return;
 
-   if (g->cur_x >= g->max_x) {
-      g->cur_x = g->start_x;
-      g->cur_y += g->step;
+        idx = g->cur_x + g->cur_y;
+        p = &g->out[idx];
+        g->history[idx / 4] = 1;
 
-      while (g->cur_y >= g->max_y && g->parse > 0) {
-         g->step = (1 << g->parse) * g->line_size;
-         g->cur_y = g->start_y + (g->step >> 1);
-         --g->parse;
-      }
-   }
+        c = &g->color_table[buffer[--depth] * 4];
+        if (c[3] > 128) { // don't render transparent pixels
+            p[0] = c[2];
+            p[1] = c[1];
+            p[2] = c[0];
+            p[3] = c[3];
+        }
+        g->cur_x += 4;
+
+        if (g->cur_x >= g->max_x) {
+            g->cur_x = g->start_x;
+            g->cur_y += g->step;
+
+            while (g->cur_y >= g->max_y && g->parse > 0) {
+                g->step = (1 << g->parse) * g->line_size;
+                g->cur_y = g->start_y + (g->step >> 1);
+                --g->parse;
+            }
+        }
+    }
 }
 
 static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
