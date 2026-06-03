@@ -34,6 +34,7 @@
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
 //    AnthoFoxo          github:morlat       Gabriel Ravier
+//    github:AliceLR
 //
 // Partial history:
 //    1.22    - 2021-07-11 - various small fixes
@@ -949,15 +950,16 @@ static void *make_block_array(void *mem, int count, int size)
 
 static void *setup_malloc(vorb *f, int sz)
 {
+   if (sz <= 0 || sz > INT_MAX - 7) return NULL;
    sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
    f->setup_memory_required += sz;
    if (f->alloc.alloc_buffer) {
       void *p = (char *) f->alloc.alloc_buffer + f->setup_offset;
-      if (f->setup_offset + sz > f->temp_offset) return NULL;
+      if (f->temp_offset < sz || f->temp_offset - sz < f->setup_offset) return NULL;
       f->setup_offset += sz;
       return p;
    }
-   return sz ? malloc(sz) : NULL;
+   return malloc(sz);
 }
 
 static void setup_free(vorb *f, void *p)
@@ -968,9 +970,10 @@ static void setup_free(vorb *f, void *p)
 
 static void *setup_temp_malloc(vorb *f, int sz)
 {
+   if (sz <= 0 || sz > INT_MAX - 7) return NULL;
    sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
    if (f->alloc.alloc_buffer) {
-      if (f->temp_offset - sz < f->setup_offset) return NULL;
+      if (f->temp_offset < sz || f->temp_offset - sz < f->setup_offset) return NULL;
       f->temp_offset -= sz;
       return (char *) f->alloc.alloc_buffer + f->temp_offset;
    }
@@ -3577,6 +3580,8 @@ static int is_whole_packet_present(stb_vorbis *f)
 }
 #endif // !STB_VORBIS_NO_PUSHDATA_API
 
+#define CODEBOOK_LIMIT (1 << 18)
+
 static int start_decoder(vorb *f)
 {
    uint8 header[6], x,y;
@@ -3650,6 +3655,7 @@ static int start_decoder(vorb *f)
    if (!vorbis_validate(header))                    return error(f, VORBIS_invalid_setup);
    //file vendor
    len = get32_packet(f);
+   if (len < 0 || len == INT_MAX)                   return error(f, VORBIS_invalid_setup);
    f->vendor = (char*)setup_malloc(f, sizeof(char) * (len+1));
    if (f->vendor == NULL)                           return error(f, VORBIS_outofmem);
    for(i=0; i < len; ++i) {
@@ -3661,12 +3667,15 @@ static int start_decoder(vorb *f)
    f->comment_list = NULL;
    if (f->comment_list_length > 0)
    {
+      if (f->comment_list_length > INT_MAX / (int)sizeof(char*)) return error(f, VORBIS_invalid_setup);
       f->comment_list = (char**) setup_malloc(f, sizeof(char*) * (f->comment_list_length));
       if (f->comment_list == NULL)                  return error(f, VORBIS_outofmem);
+      memset(f->comment_list, 0, sizeof(char*) * f->comment_list_length);
    }
 
    for(i=0; i < f->comment_list_length; ++i) {
       len = get32_packet(f);
+      if (len < 0 || len == INT_MAX)                return error(f, VORBIS_invalid_setup);
       f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * (len+1));
       if (f->comment_list[i] == NULL)               return error(f, VORBIS_outofmem);
 
@@ -3848,6 +3857,7 @@ static int start_decoder(vorb *f)
       if (c->lookup_type > 2) return error(f, VORBIS_invalid_setup);
       if (c->lookup_type > 0) {
          uint16 *mults;
+         if (c->entries && CODEBOOK_LIMIT / c->entries < c->dimensions) return error(f, VORBIS_invalid_setup);
          c->minimum_value = float32_unpack(get_bits(f, 32));
          c->delta_value = float32_unpack(get_bits(f, 32));
          c->value_bits = get_bits(f, 4)+1;
@@ -4210,8 +4220,10 @@ static void vorbis_deinit(stb_vorbis *p)
    int i,j;
 
    setup_free(p, p->vendor);
-   for (i=0; i < p->comment_list_length; ++i) {
-      setup_free(p, p->comment_list[i]);
+   if (p->comment_list) {
+      for (i=0; i < p->comment_list_length; ++i) {
+         setup_free(p, p->comment_list[i]);
+      }
    }
    setup_free(p, p->comment_list);
 
