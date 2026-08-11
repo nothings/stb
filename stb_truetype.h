@@ -1819,7 +1819,7 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
          stbtt_uint16 flags, gidx;
          int comp_num_verts = 0, i;
          stbtt_vertex *comp_verts = 0, *tmp = 0;
-         float mtx[6] = {1,0,0,1,0,0}, m, n;
+         float mtx[6] = {1,0,0,1,0,0};
 
          flags = ttSHORT(comp); comp+=2;
          gidx = ttSHORT(comp); comp+=2;
@@ -1851,23 +1851,50 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
             mtx[3] = ttSHORT(comp)/16384.0f; comp+=2;
          }
 
-         // Find transformation scales.
-         m = (float) STBTT_sqrt(mtx[0]*mtx[0] + mtx[1]*mtx[1]);
-         n = (float) STBTT_sqrt(mtx[2]*mtx[2] + mtx[3]*mtx[3]);
-
          // Get indexed glyph.
          comp_num_verts = stbtt_GetGlyphShape(info, gidx, &comp_verts);
          if (comp_num_verts > 0) {
             // Transform vertices.
-            for (i = 0; i < comp_num_verts; ++i) {
-               stbtt_vertex* v = &comp_verts[i];
-               stbtt_vertex_type x,y;
-               x=v->x; y=v->y;
-               v->x = (stbtt_vertex_type)(m * (mtx[0]*x + mtx[2]*y + mtx[4]));
-               v->y = (stbtt_vertex_type)(n * (mtx[1]*x + mtx[3]*y + mtx[5]));
-               x=v->cx; y=v->cy;
-               v->cx = (stbtt_vertex_type)(m * (mtx[0]*x + mtx[2]*y + mtx[4]));
-               v->cy = (stbtt_vertex_type)(n * (mtx[1]*x + mtx[3]*y + mtx[5]));
+            if (stbtt_tag(info->data, "true")) { // Follow Apple specification
+               float abs[4];
+               abs[0] = STBTT_fabs(mtx[0]);
+               abs[1] = STBTT_fabs(mtx[1]);
+               abs[2] = STBTT_fabs(mtx[2]);
+               abs[3] = STBTT_fabs(mtx[3]);
+               float m = abs[0] < abs[1] ? abs[1] : abs[0];
+               float n = abs[2] < abs[3] ? abs[3] : abs[2];
+               if (STBTT_fabs(abs[0] - abs[2]) <= 33.f / 65536)
+                  m = m * 2;
+               if (STBTT_fabs(abs[1] - abs[3]) <= 33.f / 65536)
+                  n = n * 2;
+               for (i = 0; i < comp_num_verts; ++i) {
+                  stbtt_vertex* v = &comp_verts[i];
+                  stbtt_vertex_type x, y;
+                  x = v->x; y = v->y;
+                  v->x = (stbtt_vertex_type)(mtx[0] * x + mtx[2] * y + m * mtx[4]);
+                  v->y = (stbtt_vertex_type)(mtx[1] * x + mtx[3] * y + n * mtx[5]);
+                  x = v->cx; y = v->cy;
+                  v->cx = (stbtt_vertex_type)(mtx[0] * x + mtx[2] * y + m * mtx[4]);
+                  v->cy = (stbtt_vertex_type)(mtx[1] * x + mtx[3] * y + n * mtx[5]);
+               }
+            }
+            else { // Follow Microsoft specification
+               float xoff = mtx[4];
+               float yoff = mtx[5];
+               if (flags & (1 << 11)) { // SCALED_COMPONENT_OFFSET
+                  xoff = mtx[0] * mtx[4] + mtx[2] * mtx[5];
+                  yoff = mtx[1] * mtx[4] + mtx[3] * mtx[5];
+               }
+               for (i = 0; i < comp_num_verts; ++i) {
+                  stbtt_vertex* v = &comp_verts[i];
+                  stbtt_vertex_type x, y;
+                  x = v->x; y = v->y;
+                  v->x = (stbtt_vertex_type)(mtx[0] * x + mtx[2] * y + xoff);
+                  v->y = (stbtt_vertex_type)(mtx[1] * x + mtx[3] * y + yoff);
+                  x = v->cx; y = v->cy;
+                  v->cx = (stbtt_vertex_type)(mtx[0] * x + mtx[2] * y + xoff);
+                  v->cy = (stbtt_vertex_type)(mtx[1] * x + mtx[3] * y + yoff);
+               }
             }
             // Append vertices.
             tmp = (stbtt_vertex*)STBTT_malloc((num_vertices+comp_num_verts)*sizeof(stbtt_vertex), info->userdata);
