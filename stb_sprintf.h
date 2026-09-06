@@ -1431,8 +1431,12 @@ STBSP__PUBLICDEF int STB_SPRINTF_DECORATE( vsnprintf )( char * buf, int count, c
 {
    stbsp__context c;
 
-   if ( (count == 0) && !buf )
+   if ( count <= 0 )
    {
+      // C standard: snprintf(buf, 0, ...) writes nothing, returns the count
+      // the full output would have taken. Handle this whether or not the
+      // caller passed a valid buffer -- writing buf[count - 1] with count == 0
+      // is an out-of-bounds write before the caller's buffer.
       c.length = 0;
 
       STB_SPRINTF_DECORATE( vsprintfcb )( stbsp__count_clamp_callback, &c, c.tmp, fmt, va );
