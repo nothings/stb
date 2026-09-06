@@ -6990,6 +6990,16 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
             ++layers;
             stride = g.w * g.h * 4;
 
+            /* Unbounded frame count + raw int math = heap overflow on wrap
+               (layers*stride) and uncontrolled allocation (DoS). Gate like
+               w/h paths do with mad helpers. */
+            if (!stbi__mul2sizes_valid(layers, stride))
+               return stbi__load_gif_main_outofmem(&g, out, delays);
+            if (delays && !stbi__mul2sizes_valid(layers, (int)sizeof(int)))
+               return stbi__load_gif_main_outofmem(&g, out, delays);
+            if (!stbi__mul2sizes_valid(layers, g.w))
+               return stbi__load_gif_main_outofmem(&g, out, delays);
+
             if (out) {
                void *tmp = (stbi_uc*) STBI_REALLOC_SIZED( out, out_size, layers * stride );
                if (!tmp)
