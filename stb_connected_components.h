@@ -927,7 +927,7 @@ static void stbcc__build_clumps_for_cluster(stbcc_grid *g, int cx, int cy)
       }
    }
 
-   for (i=1; i < STBCC__CLUSTER_SIZE_Y-1; ++i) {
+   for (i=1; i < STBCC__CLUSTER_SIZE_X-1; ++i) {
       j = 0;
       if (STBCC__MAP_OPEN(g, x+i, y+j)) {
          stbcc__tinypoint p = stbcc__incluster_find(&cbi, i,j);
