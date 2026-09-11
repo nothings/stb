@@ -6789,6 +6789,10 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
       if (!stbi__gif_header(s, g, comp,0)) return 0; // stbi__g_failure_reason set by stbi__gif_header
       if (!stbi__mad3sizes_valid(4, g->w, g->h, 0))
          return stbi__errpuc("too large", "GIF image is too large");
+      // Also check that the aggregate of all three allocations (out + background + history = 9*pcount)
+      // won't exhaust memory. A single mad3sizes_valid only guards the first allocation.
+      if ((size_t)g->w * g->h > (1u << 26))
+         return stbi__errpuc("too large", "GIF image is too large");
       pcount = g->w * g->h;
       g->out = (stbi_uc *) stbi__malloc(4 * pcount);
       g->background = (stbi_uc *) stbi__malloc(4 * pcount);
