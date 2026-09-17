@@ -40,15 +40,18 @@
 #ifndef STB_INCLUDE_STB_INCLUDE_H
 #define STB_INCLUDE_STB_INCLUDE_H
 
-// Do include-processing on the string 'str'. To free the return value, pass it to STB_INCLUDE_FREE()
+// Do include-processing on the string 'str'. To free the return value, pass it to stb_include_free()
 char *stb_include_string(char *str, char *inject, char *path_to_includes, char *filename_for_line_directive, char error[256]);
 
-// Concatenate the strings 'strs' and do include-processing on the result. To free the return value, pass it to STB_INCLUDE_FREE()
+// Concatenate the strings 'strs' and do include-processing on the result. To free the return value, pass it to stb_include_free()
 char *stb_include_strings(char **strs, int count, char *inject, char *path_to_includes, char *filename_for_line_directive, char error[256]);
 
 // Load the file 'filename' and do include-processing on the string therein. note that
-// 'filename' is opened directly; 'path_to_includes' is not used. To free the return value, pass it to STB_INCLUDE_FREE()
+// 'filename' is opened directly; 'path_to_includes' is not used. To free the return value, pass it to stb_include_free()
 char *stb_include_file(char *filename, char *inject, char *path_to_includes, char error[256]);
+
+// Free return values of stb_include_xxx
+void stb_include_free(char *p);
 
 #endif
 
@@ -64,6 +67,11 @@ char *stb_include_file(char *filename, char *inject, char *path_to_includes, cha
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+void stb_include_free(char *p)
+{
+   STB_INCLUDE_FREE(p);
+}
 
 static char *stb_include_load_file(char *filename, size_t *plen)
 {
