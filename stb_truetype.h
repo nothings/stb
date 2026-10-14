@@ -1851,23 +1851,35 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
             mtx[3] = ttSHORT(comp)/16384.0f; comp+=2;
          }
 
-         // Find transformation scales.
+         // Find transformation scales. Per TrueType spec, these are used
+         // ONLY to rescale the offsets (mtx[4], mtx[5]) when
+         // SCALED_COMPONENT_OFFSET (flag bit 11, 0x800) is set. They must
+         // NOT scale the linear part of the transform — doing so squares
+         // the scale factor and is the cause of composite sub-components
+         // rendering at wrong sizes in COLR emoji fonts (OpenMoji, Noto
+         // Color Emoji, Microsoft Fluent Emoji).
          m = (float) STBTT_sqrt(mtx[0]*mtx[0] + mtx[1]*mtx[1]);
          n = (float) STBTT_sqrt(mtx[2]*mtx[2] + mtx[3]*mtx[3]);
+         // Default: UNSCALED offsets (Microsoft convention; matches modern
+         // font tooling). Only SCALED_COMPONENT_OFFSET (bit 11) set without
+         // UNSCALED_COMPONENT_OFFSET (bit 12) triggers the offset rescale.
+         if ((flags & (1<<11)) && !(flags & (1<<12))) {
+            mtx[4] *= m; mtx[5] *= n;
+         }
 
          // Get indexed glyph.
          comp_num_verts = stbtt_GetGlyphShape(info, gidx, &comp_verts);
          if (comp_num_verts > 0) {
-            // Transform vertices.
+            // Transform vertices: v' = M·v + t. No double-scaling.
             for (i = 0; i < comp_num_verts; ++i) {
                stbtt_vertex* v = &comp_verts[i];
                stbtt_vertex_type x,y;
                x=v->x; y=v->y;
-               v->x = (stbtt_vertex_type)(m * (mtx[0]*x + mtx[2]*y + mtx[4]));
-               v->y = (stbtt_vertex_type)(n * (mtx[1]*x + mtx[3]*y + mtx[5]));
+               v->x = (stbtt_vertex_type)(mtx[0]*x + mtx[2]*y + mtx[4]);
+               v->y = (stbtt_vertex_type)(mtx[1]*x + mtx[3]*y + mtx[5]);
                x=v->cx; y=v->cy;
-               v->cx = (stbtt_vertex_type)(m * (mtx[0]*x + mtx[2]*y + mtx[4]));
-               v->cy = (stbtt_vertex_type)(n * (mtx[1]*x + mtx[3]*y + mtx[5]));
+               v->cx = (stbtt_vertex_type)(mtx[0]*x + mtx[2]*y + mtx[4]);
+               v->cy = (stbtt_vertex_type)(mtx[1]*x + mtx[3]*y + mtx[5]);
             }
             // Append vertices.
             tmp = (stbtt_vertex*)STBTT_malloc((num_vertices+comp_num_verts)*sizeof(stbtt_vertex), info->userdata);
