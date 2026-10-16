@@ -1,999 +1,451 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+// vf_train - evaluates and fits the vertical-first / horizontal-first predictor of stb_image_resize2 from dotimings'
+//   .timings files (see vf_common.h for the reader and the cost model). Portable (no GUI); vf_view is the visualizer.
+#include "vf_common.h"
 
-#define stop() __debugbreak()
-#include <windows.h>
-#define int64 __int64
-
-#pragma warning(disable:4127)
-
-#define STBIR__WEIGHT_TABLES  
-#define STBIR_PROFILE
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize2.h"  
-
-static int * file_read( char const * filename )
+// the same ( file, SIMD level ) group? the fits and the weighted totals are per group
+static int same_group( int a, int b )
 {
-  size_t s;
-  int * m;
-  FILE * f = fopen( filename, "rb" );
-  if ( f == 0 ) return 0;
-  
-  fseek( f, 0, SEEK_END);
-  s = ftell( f );
-  fseek( f, 0, SEEK_SET);
-  m = malloc( s + 4 );
-  m[0] = (int)s;
-  fread( m+1, 1, s, f);
-  fclose(f);
-
-  return( m );
+  return ( strcmp( fi[a].filename, fi[b].filename ) == 0 ) && ( fi[a].simd == fi[b].simd );
 }
 
-typedef struct fileinfo
+// is this the first set of its group?
+static int first_of_group( int i )
 {
-  int * timings;
-  int timing_count;
-  int dimensionx, dimensiony;
-  int numtypes;
-  int * types;
-  int * effective;
-  int cpu;
-  int simd;
-  int numinputrects;
-  int * inputrects;
-  int outputscalex, outputscaley;
-  int milliseconds;
-  int64 cycles;
-  double scale_time;
-  int bitmapx, bitmapy;
-  char const * filename;
-} fileinfo;
-
-int numfileinfo;
-fileinfo fi[256];
-unsigned char * bitmap;
-int bitmapw, bitmaph, bitmapp;
-
-static int use_timing_file( char const * filename, int index )
-{
-  int * base = file_read( filename );
-  int * file = base;
-
-  if ( base == 0 ) return 0;
-
-  ++file; // skip file image size;
-  if ( *file++ != 'VFT1' ) return 0;
-  fi[index].cpu = *file++;
-  fi[index].simd = *file++;
-  fi[index].dimensionx = *file++;
-  fi[index].dimensiony = *file++;
-  fi[index].numtypes = *file++;
-  fi[index].types = file; file += fi[index].numtypes;
-  fi[index].effective = file; file += fi[index].numtypes;
-  fi[index].numinputrects = *file++;
-  fi[index].inputrects = file; file += fi[index].numinputrects * 2;
-  fi[index].outputscalex = *file++;
-  fi[index].outputscaley = *file++;
-  fi[index].milliseconds = *file++;
-  fi[index].cycles = ((int64*)file)[0]; file += 2;
-  fi[index].filename = filename;
-
-  fi[index].timings = file;
-  fi[index].timing_count = (int) ( ( base[0] - ( ((char*)file - (char*)base - sizeof(int) ) ) ) / (sizeof(int)*2) );
-
-  fi[index].scale_time = (double)fi[index].milliseconds / (double)fi[index].cycles;
-
+  int j;
+  for( j = 0 ; j < i ; j++ )
+  {
+    if ( same_group( i, j ) )
+    {
+      return 0;
+    }
+  }
   return 1;
 }
 
-static int vert_first( float weights_table[STBIR_RESIZE_CLASSIFICATIONS][4], int ox, int oy, int ix, int iy, int filter, STBIR__V_FIRST_INFO * v_info )
+//=============================================================================
+// eval: how much time the header's predictor loses against the best order per cell, per set and per channel count
+
+typedef struct model_stats
 {
-  float h_scale=(float)ox/(float)(ix);
-  float v_scale=(float)oy/(float)(iy);
-  stbir__support_callback * support = stbir__builtin_supports[filter];
-  int vertical_filter_width = stbir__get_filter_pixel_width(support,v_scale,0);
-  int vertical_gather = ( v_scale >= ( 1.0f - stbir__small_float ) ) || ( vertical_filter_width <= STBIR_FORCE_GATHER_FILTER_SCANLINES_AMOUNT );
+  double best_ms, lost_ms;   // per file [findex], plus per channel [5] in the second set
+  double best_w, lost_w;     // the same, each cell weighted by cell_weight (for the normalized weighted total)
+  int cells, wrong;
+} model_stats;
 
-  return stbir__should_do_vertical_first( weights_table, stbir__get_filter_pixel_width(support,h_scale,0), h_scale, ox, vertical_filter_width, v_scale, oy, vertical_gather, v_info );
-} 
+static model_stats file_stats[VF_MAX_SETS], chan_stats[5];
 
-#define STB_IMAGE_WRITE_IMPLEMENTATION
-#include "stb_image_write.h"
-
-static void alloc_bitmap()
+static void eval_cell( int findex, int chanind, int ix, int iy, int ox, int oy, int VF, int HF, void * user )
 {
-  int findex;
-  int x = 0, y = 0;
-  int w = 0, h = 0;
+  double scale = fi[findex].scale_time;   // clocks -> ms
+  int best = ( VF < HF ) ? VF : HF;
+  int v = vert_first( chanind, ox, oy, ix, iy, fi[findex].filter, fi[findex].edge );
+  double lost = ( ( v ? VF : HF ) - best ) * scale;
+  double w = cell_weight( ox, oy, ix, iy );
+  model_stats * s[2];
+  int i;
+  (void) user;
 
-  for( findex = 0 ; findex < numfileinfo ; findex++ )
+  s[0] = &file_stats[findex];
+  s[1] = &chan_stats[chanind];
+  for( i = 0 ; i < 2 ; i++ )
   {
-    int nx, ny;
-    int thisw, thish;
-
-    thisw = ( fi[findex].dimensionx * fi[findex].numtypes ) + ( fi[findex].numtypes - 1 );
-    thish = ( fi[findex].dimensiony * fi[findex].numinputrects ) + ( fi[findex].numinputrects - 1 );
-
-    for(;;)
-    {
-      nx = x + ((x)?4:0) + thisw;
-      ny = y + ((y)?4:0) + thish;
-      if ( ( nx <= 3600 ) || ( x == 0 ) )
-      { 
-        fi[findex].bitmapx = x + ((x)?4:0);
-        fi[findex].bitmapy = y + ((y)?4:0);
-        x = nx;
-        if ( x > w ) w = x;
-        if ( ny > h ) h = ny;
-        break;
-      }
-      else
-      {
-        x = 0;
-        y = h;
-      }
-    }
-  }
-
-  w = (w+3) & ~3;
-  bitmapw = w;
-  bitmaph = h;
-  bitmapp = w * 3; // RGB
-  bitmap = malloc( bitmapp * bitmaph );
-
-  memset( bitmap, 0, bitmapp * bitmaph );
-}
-
-static void build_bitmap( float weights[STBIR_RESIZE_CLASSIFICATIONS][4], int do_channel_count_index, int findex )
-{
-  static int colors[STBIR_RESIZE_CLASSIFICATIONS];
-  STBIR__V_FIRST_INFO v_info = {0};
-
-  int * ts;
-  int ir;
-  unsigned char * bitm = bitmap + ( fi[findex].bitmapx*3 ) + ( fi[findex].bitmapy*bitmapp) ;
-
-  for( ir = 0; ir < STBIR_RESIZE_CLASSIFICATIONS ; ir++ ) colors[ ir ] = 127*ir/STBIR_RESIZE_CLASSIFICATIONS+128;
-
-  ts = fi[findex].timings;
-
-  for( ir = 0 ; ir < fi[findex].numinputrects ; ir++ )
-  {
-    int ix, iy, chanind;
-    ix = fi[findex].inputrects[ir*2];
-    iy = fi[findex].inputrects[ir*2+1];
-
-    for( chanind = 0 ; chanind < fi[findex].numtypes ; chanind++ )
-    {
-      int ofs, h, hh;
-
-      // just do the type that we're on
-      if ( chanind != do_channel_count_index )
-      {
-        ts += 2 * fi[findex].dimensionx * fi[findex].dimensiony;
-        continue;
-      }
-
-      // bitmap offset
-      ofs=chanind*(fi[findex].dimensionx+1)*3+ir*(fi[findex].dimensiony+1)*bitmapp;
-
-      h = 1;
-      for( hh = 0 ; hh < fi[findex].dimensiony; hh++ )
-      {
-        int ww, w = 1;
-        for( ww = 0 ; ww < fi[findex].dimensionx; ww++ )
-        {
-          int good, v_first, VF, HF;
-
-          VF = ts[0];
-          HF = ts[1];
-
-          v_first = vert_first( weights, w, h, ix, iy, STBIR_FILTER_MITCHELL, &v_info );
-
-          good = ( ((HF<=VF) && (!v_first)) || ((VF<=HF) && (v_first)));
-
-          if ( good )
-          {
-            bitm[ofs+2] = 0;
-            bitm[ofs+1] = (unsigned char)colors[v_info.v_resize_classification];
-          }
-          else
-          {
-            double r;
-
-            if ( HF < VF )
-              r = (double)(VF-HF)/(double)HF;
-            else
-              r = (double)(HF-VF)/(double)VF;
-            
-            if ( r > 0.4f) r = 0.4;
-            r *= 1.0f/0.4f;   
-
-            bitm[ofs+2] = (char)(255.0f*r);
-            bitm[ofs+1] = (char)(((float)colors[v_info.v_resize_classification])*(1.0f-r));
-          }
-          bitm[ofs] = 0;
-
-          ofs += 3;
-          ts += 2;
-          w += fi[findex].outputscalex;
-        }
-        ofs += bitmapp - fi[findex].dimensionx*3;
-        h += fi[findex].outputscaley;
-      }
-    }
+    s[i]->cells++;
+    s[i]->best_ms += best * scale;
+    s[i]->lost_ms += lost;
+    s[i]->wrong += ( lost > 0 );
+    s[i]->best_w += best * scale * w;
+    s[i]->lost_w += lost * w;
   }
 }
 
-static void build_comp_bitmap( float weights[STBIR_RESIZE_CLASSIFICATIONS][4], int do_channel_count_index )
+static void print_model_stats( char const * name, model_stats const * s )
 {
-  int * ts0;
-  int * ts1;
-  int ir;
-  unsigned char * bitm = bitmap + ( fi[0].bitmapx*3 ) + ( fi[0].bitmapy*bitmapp) ;
+  printf( "  %-52s %6d cells  best %9.1f ms | wrong %5d (%4.1f%%)  lost %8.1f ms (%5.2f%%)\n",
+    name, s->cells, s->best_ms, s->wrong, 100.0 * s->wrong / s->cells, s->lost_ms, 100.0 * s->lost_ms / s->best_ms );
+}
 
-  ts0 = fi[0].timings;
-  ts1 = fi[1].timings;
+static void eval( void )
+{
+  model_stats total = {0};
+  double w_lost = 0, w_sum = 0;
+  char buf[128];
+  int i, j;
 
-  for( ir = 0 ; ir < fi[0].numinputrects ; ir++ )
+  memset( file_stats, 0, sizeof( file_stats ) );
+  memset( chan_stats, 0, sizeof( chan_stats ) );
+  for_each_cell( eval_cell, 0 );
+
+  printf( "time lost against the best order per cell (ms are the file's own clock):\n" );
+  for( i = 0 ; i < numfileinfo ; i++ )
   {
-    int ix, iy, chanind;
-    ix = fi[0].inputrects[ir*2];
-    iy = fi[0].inputrects[ir*2+1];
-
-    for( chanind = 0 ; chanind < fi[0].numtypes ; chanind++ )
-    {
-      int ofs, h, hh;
-
-      // just do the type that we're on
-      if ( chanind != do_channel_count_index )
-      {
-        ts0 += 2 * fi[0].dimensionx * fi[0].dimensiony;
-        ts1 += 2 * fi[0].dimensionx * fi[0].dimensiony;
-        continue;
-      }
-
-      // bitmap offset
-      ofs=chanind*(fi[0].dimensionx+1)*3+ir*(fi[0].dimensiony+1)*bitmapp;
-
-      h = 1;
-      for( hh = 0 ; hh < fi[0].dimensiony; hh++ )
-      {
-        int ww, w = 1;
-        for( ww = 0 ; ww < fi[0].dimensionx; ww++ )
-        {
-          int v_first, time0, time1;
-
-          v_first = vert_first( weights, w, h, ix, iy, STBIR_FILTER_MITCHELL, 0 );
-
-          time0 = ( v_first ) ? ts0[0] : ts0[1];
-          time1 = ( v_first ) ? ts1[0] : ts1[1];
-
-          if ( time0 < time1 )
-          {
-            double r = (double)(time1-time0)/(double)time0;
-            if ( r > 0.4f) r = 0.4;
-            r *= 1.0f/0.4f;   
-            bitm[ofs+2] = 0;
-            bitm[ofs+1] = (char)(255.0f*r);
-            bitm[ofs] = (char)(64.0f*(1.0f-r));
-          }
-          else
-          {
-            double r = (double)(time0-time1)/(double)time1;
-            if ( r > 0.4f) r = 0.4;
-            r *= 1.0f/0.4f;   
-            bitm[ofs+2] = (char)(255.0f*r);
-            bitm[ofs+1] = 0;
-            bitm[ofs] = (char)(64.0f*(1.0f-r));
-          }
-          ofs += 3;
-          ts0 += 2;
-          ts1 += 2;
-          w += fi[0].outputscalex;
-        }
-        ofs += bitmapp - fi[0].dimensionx*3;
-        h += fi[0].outputscaley;
-      }
-    }
+    sprintf( buf, "%.40s %s", short_name( fi[i].filename ), fi[i].setname );
+    print_model_stats( buf, &file_stats[i] );
+    total.cells += file_stats[i].cells;
+    total.best_ms += file_stats[i].best_ms;
+    total.wrong += file_stats[i].wrong;
+    total.lost_ms += file_stats[i].lost_ms;
   }
-}
-
-static void write_bitmap()
-{
-  stbi_write_png( "results.png", bitmapp / 3, bitmaph, 3|STB_IMAGE_BGR, bitmap, bitmapp );
-}
-
-
-static void calc_errors( float weights_table[STBIR_RESIZE_CLASSIFICATIONS][4], int * curtot, double * curerr, int do_channel_count_index )
-{
-  int th, findex;
-  STBIR__V_FIRST_INFO v_info = {0};
-
-  for(th=0;th<STBIR_RESIZE_CLASSIFICATIONS;th++)
-  {
-    curerr[th]=0;
-    curtot[th]=0;
-  }
-
-  for( findex = 0 ; findex < numfileinfo ; findex++ )
-  {
-    int * ts;
-    int ir;
-    ts = fi[findex].timings;
-
-    for( ir = 0 ; ir < fi[findex].numinputrects ; ir++ )
-    {
-      int ix, iy, chanind;
-      ix = fi[findex].inputrects[ir*2];
-      iy = fi[findex].inputrects[ir*2+1];
-
-      for( chanind = 0 ; chanind < fi[findex].numtypes ; chanind++ )
-      {
-        int h, hh;
-
-        // just do the type that we're on
-        if ( chanind != do_channel_count_index )
-        {
-          ts += 2 * fi[findex].dimensionx * fi[findex].dimensiony;
-          continue;
-        }
-
-        h = 1;
-        for( hh = 0 ; hh < fi[findex].dimensiony; hh++ )
-        {
-          int ww, w = 1;
-          for( ww = 0 ; ww < fi[findex].dimensionx; ww++ )
-          {
-            int good, v_first, VF, HF;
-
-            VF = ts[0];
-            HF = ts[1];
-
-            v_first = vert_first( weights_table, w, h, ix, iy, STBIR_FILTER_MITCHELL, &v_info );
-
-            good = ( ((HF<=VF) && (!v_first)) || ((VF<=HF) && (v_first)));
-
-            if ( !good )
-            {
-              double diff;
-              if ( VF < HF )
-                diff = ((double)HF-(double)VF) * fi[findex].scale_time;
-              else
-                diff = ((double)VF-(double)HF) * fi[findex].scale_time;
-
-              curtot[v_info.v_resize_classification] += 1;
-              curerr[v_info.v_resize_classification] += diff;
-            }
-
-            ts += 2;
-            w += fi[findex].outputscalex;
-          }
-          h += fi[findex].outputscaley;
-        }
-      }
-    }
-  }
-}
-
-#define TRIESPERWEIGHT 32
-#define MAXRANGE ((TRIESPERWEIGHT+1) * (TRIESPERWEIGHT+1) * (TRIESPERWEIGHT+1) * (TRIESPERWEIGHT+1) - 1)
-
-static void expand_to_floats( float * weights, int range )
-{
-  weights[0] = (float)( range % (TRIESPERWEIGHT+1) ) / (float)TRIESPERWEIGHT;
-  weights[1] = (float)( range/(TRIESPERWEIGHT+1) % (TRIESPERWEIGHT+1) ) / (float)TRIESPERWEIGHT;
-  weights[2] = (float)( range/(TRIESPERWEIGHT+1)/(TRIESPERWEIGHT+1) % (TRIESPERWEIGHT+1) ) / (float)TRIESPERWEIGHT;
-  weights[3] = (float)( range/(TRIESPERWEIGHT+1)/(TRIESPERWEIGHT+1)/(TRIESPERWEIGHT+1) % (TRIESPERWEIGHT+1) ) / (float)TRIESPERWEIGHT;
-}
-
-static char const * expand_to_string( int range )
-{
-  static char str[128];
-  int w0,w1,w2,w3;
-  w0 = range % (TRIESPERWEIGHT+1);
-  w1 = range/(TRIESPERWEIGHT+1) % (TRIESPERWEIGHT+1);
-  w2 = range/(TRIESPERWEIGHT+1)/(TRIESPERWEIGHT+1) % (TRIESPERWEIGHT+1);
-  w3 = range/(TRIESPERWEIGHT+1)/(TRIESPERWEIGHT+1)/(TRIESPERWEIGHT+1) % (TRIESPERWEIGHT+1);
-  sprintf( str, "[ %2d/%d %2d/%d %2d/%d %2d/%d ]",w0,TRIESPERWEIGHT,w1,TRIESPERWEIGHT,w2,TRIESPERWEIGHT,w3,TRIESPERWEIGHT );
-  return str;
-}
-
-static void print_weights( float weights[STBIR_RESIZE_CLASSIFICATIONS][4], int channel_count_index, int * tots, double * errs )
-{
-  int th;
-  printf("ChInd: %d  Weights:\n",channel_count_index);
-  for(th=0;th<STBIR_RESIZE_CLASSIFICATIONS;th++)
-  {
-    float * w = weights[th];
-    printf("  %d: [%1.5f %1.5f %1.5f %1.5f] (%d %.4f)\n",th, w[0], w[1], w[2], w[3], tots[th], errs[th] );
-  }
-  printf("\n");
-}
-
-static int windowranges[ 16 ];
-static int windowstatus = 0;
-static DWORD trainstart = 0;
-
-static void opt_channel( float best_output_weights[STBIR_RESIZE_CLASSIFICATIONS][4], int channel_count_index )
-{
-  int newbest = 0;
-  float weights[STBIR_RESIZE_CLASSIFICATIONS][4] = {0};
-  double besterr[STBIR_RESIZE_CLASSIFICATIONS];
-  int besttot[STBIR_RESIZE_CLASSIFICATIONS];
-  int best[STBIR_RESIZE_CLASSIFICATIONS]={0};
-
-  double curerr[STBIR_RESIZE_CLASSIFICATIONS];
-  int curtot[STBIR_RESIZE_CLASSIFICATIONS];
-  int th, range;
-  DWORD lasttick = 0;
-
-  for(th=0;th<STBIR_RESIZE_CLASSIFICATIONS;th++) 
-  {
-    besterr[th]=1000000000000.0;
-    besttot[th]=0x7fffffff;
-  }
-
-  newbest = 0;
-
-  // try the whole range  
-  range = MAXRANGE;
-  do
-  {
-    for(th=0;th<STBIR_RESIZE_CLASSIFICATIONS;th++)
-      expand_to_floats( weights[th], range );
-
-    calc_errors( weights, curtot, curerr, channel_count_index );
-
-    for(th=0;th<STBIR_RESIZE_CLASSIFICATIONS;th++)
-    {
-      if ( curerr[th] < besterr[th] )
-      {
-        besterr[th] = curerr[th];
-        besttot[th] = curtot[th];
-        best[th] = range;
-        expand_to_floats( best_output_weights[th], best[th] );
-        newbest = 1;
-      }
-    }
-
-    {
-      DWORD t = GetTickCount();
-      if ( range == 0 )
-        goto do_bitmap;
-
-      if ( newbest )
-      {
-        if ( ( GetTickCount() - lasttick ) > 200 )
-        {
-          int findex;
-        
-         do_bitmap:
-          lasttick = t;
-          newbest = 0;
-
-          for( findex = 0 ; findex < numfileinfo ; findex++ )
-            build_bitmap( best_output_weights, channel_count_index, findex );
-
-          lasttick = GetTickCount();
-        }
-      }
-    }
-   
-    windowranges[ channel_count_index ] = range;
-
-    // advance all the weights and loop
-    --range;
-  } while( ( range >= 0 ) && ( !windowstatus ) );
-
-  // if we hit here, then we tried all weights for this opt, so save them 
-}
-
-static void print_struct( float weight[5][STBIR_RESIZE_CLASSIFICATIONS][4], char const * name )
-{
-  printf("\n\nstatic float %s[5][STBIR_RESIZE_CLASSIFICATIONS][4]=\n{", name );
-  {
-    int i;
-    for(i=0;i<5;i++) 
-    { 
-      int th;
-      for(th=0;th<STBIR_RESIZE_CLASSIFICATIONS;th++)
-      {
-        int j;
-        printf("\n  "); 
-        for(j=0;j<4;j++) 
-          printf("%1.5ff, ", weight[i][th][j] ); 
-      }
-      printf("\n");
-    }
-    printf("\n};\n");
-  }
-}
-
-static float retrain_weights[5][STBIR_RESIZE_CLASSIFICATIONS][4];
-
-static DWORD __stdcall retrain_shim( LPVOID p )
-{
-  int chanind = (int) (size_t)p;
-  opt_channel( retrain_weights[chanind], chanind );
-  return 0;
-}
-
-static char const * gettime( int ms )
-{
-  static char time[32];
-  if (ms > 60000)
-    sprintf( time, "%dm %ds",ms/60000, (ms/1000)%60 );
-  else  
-    sprintf( time, "%ds",ms/1000 );
-  return time;
-}
-
-static BITMAPINFOHEADER bmiHeader;
-static DWORD extrawindoww, extrawindowh;
-static HINSTANCE instance;
-static int curzoom = 1;
-
-static LRESULT WINAPI WindowProc( HWND   window,
-                                  UINT   message,
-                                  WPARAM wparam,
-                                  LPARAM lparam )
-{
-  switch( message )
-  {
-    case WM_CHAR:
-      if ( wparam != 27 )
-        break;
-      // falls through
-
-    case WM_CLOSE:
-    {
-      int i;
-      int max = 0;
-      
-      for( i = 0 ; i < fi[0].numtypes ; i++ )
-        if( windowranges[i] > max ) max = windowranges[i];
-   
-      if ( ( max == 0 ) || ( MessageBox( window, "Cancel before training is finished?", "Vertical First Training", MB_OKCANCEL|MB_ICONSTOP ) == IDOK ) )
-      {
-        for( i = 0 ; i < fi[0].numtypes ; i++ )
-          if( windowranges[i] > max ) max = windowranges[i];
-        if ( max )
-          windowstatus = 1;
-        DestroyWindow( window );
-      }
-    }
-    return 0;
-       
-    case WM_PAINT:
-    {
-      PAINTSTRUCT ps;
-      HDC dc;
-
-      dc = BeginPaint( window, &ps );
-      StretchDIBits( dc, 
-        0, 0, bitmapw*curzoom, bitmaph*curzoom,
-        0, 0, bitmapw, bitmaph,
-        bitmap, (BITMAPINFO*)&bmiHeader, DIB_RGB_COLORS, SRCCOPY );
-
-      PatBlt( dc, bitmapw*curzoom, 0, 4096, 4096, WHITENESS );
-      PatBlt( dc, 0, bitmaph*curzoom, 4096, 4096, WHITENESS );
-
-      SetTextColor( dc, RGB(0,0,0)  );
-      SetBkColor( dc, RGB(255,255,255) );
-      SetBkMode( dc, OPAQUE );
-
-      {
-        int i, l = 0, max = 0;
-        char buf[1024];
-        RECT rc;
-        POINT p;
-
-        for( i = 0 ; i < fi[0].numtypes ; i++ )
-        {
-          l += sprintf( buf + l, "channels: %d %s\n", fi[0].effective[i], windowranges[i] ? expand_to_string( windowranges[i] ) : "Done." );
-          if ( windowranges[i] > max ) max = windowranges[i];
-        }
-
-        rc.left = 32; rc.top = bitmaph*curzoom+10;
-        rc.right = 512; rc.bottom = rc.top + 512;
-        DrawText( dc, buf, -1, &rc, DT_TOP );
-
-        l = 0;
-        if ( max == 0 )
-        {
-          static DWORD traindone = 0;
-          if ( traindone == 0 ) traindone = GetTickCount();
-          l = sprintf( buf, "Finished in %s.", gettime( traindone - trainstart ) );
-        }
-        else if ( max != MAXRANGE )
-          l = sprintf( buf, "Done in %s...", gettime( (int) ( ( ( (int64)max * ( (int64)GetTickCount() - (int64)trainstart ) ) ) / (int64) ( MAXRANGE - max ) ) ) );
-
-        GetCursorPos( &p );
-        ScreenToClient( window, &p );
-
-        if ( ( p.x >= 0 ) && ( p.y >= 0 ) && ( p.x < (bitmapw*curzoom) ) && ( p.y < (bitmaph*curzoom) ) )
-        {
-          int findex;
-          int x, y, w, h, sx, sy, ix, iy, ox, oy;
-          int ir, chanind;
-          int * ts;
-          char badstr[64];
-          STBIR__V_FIRST_INFO v_info={0};
-
-          p.x /= curzoom;
-          p.y /= curzoom;
-
-          for( findex = 0 ; findex < numfileinfo ; findex++ )
-          {
-            x = fi[findex].bitmapx;
-            y = fi[findex].bitmapy;
-            w = x + ( fi[findex].dimensionx + 1 ) * fi[findex].numtypes;
-            h = y + ( fi[findex].dimensiony + 1 ) * fi[findex].numinputrects;
-
-            if ( ( p.x >= x ) && ( p.y >= y ) && ( p.x < w ) && ( p.y < h ) )
-              goto found;
-          }
-          goto nope;
-         
-         found:
-            
-          ir = ( p.y - y ) / ( fi[findex].dimensiony + 1 );
-          sy = ( p.y - y ) % ( fi[findex].dimensiony + 1 );
-          if ( sy >= fi[findex].dimensiony ) goto nope;
-
-          chanind = ( p.x - x ) / ( fi[findex].dimensionx + 1 );
-          sx = ( p.x - x ) % ( fi[findex].dimensionx + 1 );
-          if ( sx >= fi[findex].dimensionx ) goto nope;
-
-          ix = fi[findex].inputrects[ir*2];
-          iy = fi[findex].inputrects[ir*2+1];
-
-          ts = fi[findex].timings + ( ( fi[findex].dimensionx * fi[findex].dimensiony * fi[findex].numtypes * ir ) + ( fi[findex].dimensionx * fi[findex].dimensiony * chanind ) + ( fi[findex].dimensionx * sy ) + sx ) * 2;
-
-          ox = 1+fi[findex].outputscalex*sx;
-          oy = 1+fi[findex].outputscaley*sy;
-
-          if ( windowstatus != 2 )
-          {
-            int VF, HF, v_first, good;
-            VF = ts[0];
-            HF = ts[1];
-
-            v_first = vert_first( retrain_weights[chanind], ox, oy, ix, iy, STBIR_FILTER_MITCHELL, &v_info );
-
-            good = ( ((HF<=VF) && (!v_first)) || ((VF<=HF) && (v_first)));
-
-            if ( good )
-              badstr[0] = 0;
-            else
-            {
-              double r;
-
-              if ( HF < VF )
-                r = (double)(VF-HF)/(double)HF;
-              else
-                r = (double)(HF-VF)/(double)VF;
-              sprintf( badstr, " %.1f%% off", r*100 );
-            }
-            sprintf( buf + l, "\n\n%s\nCh: %d Resize: %dx%d to %dx%d\nV: %d H: %d  Order: %c (%s%s)\nClass: %d Scale: %.2f %s", fi[findex].filename,fi[findex].effective[chanind], ix,iy,ox,oy, VF, HF, v_first?'V':'H', good?"Good":"Wrong", badstr, v_info.v_resize_classification, (double)oy/(double)iy, v_info.is_gather ? "Gather" : "Scatter" );
-          }
-          else
-          {
-            int v_first, time0, time1;
-            float (* weights)[4] = stbir__compute_weights[chanind];
-            int * ts1;
-            char b0[32], b1[32];
-
-            ts1 = fi[1].timings + ( ts - fi[0].timings );
-
-            v_first = vert_first( weights, ox, oy, ix, iy, STBIR_FILTER_MITCHELL, &v_info );
-
-            time0 = ( v_first ) ? ts[0] : ts[1];
-            time1 = ( v_first ) ? ts1[0] : ts1[1];
-            
-            b0[0] = b1[0] = 0;
-            if ( time0 < time1 )
-              sprintf( b0," (%.f%% better)", ((double)time1-(double)time0)*100.0f/(double)time0);
-            else
-              sprintf( b1," (%.f%% better)", ((double)time0-(double)time1)*100.0f/(double)time1);
-
-            sprintf( buf + l, "\n\n0: %s\n1: %s\nCh: %d Resize: %dx%d to %dx%d\nClass: %d Scale: %.2f %s\nTime0: %d%s\nTime1: %d%s", fi[0].filename, fi[1].filename, fi[0].effective[chanind], ix,iy,ox,oy, v_info.v_resize_classification, (double)oy/(double)iy, v_info.is_gather ? "Gather" : "Scatter", time0, b0, time1, b1 );
-          }
-        }
-       nope:
-
-        rc.left = 32+320; rc.right = 512+320; 
-        SetTextColor( dc, RGB(0,0,128) );
-        DrawText( dc, buf, -1, &rc, DT_TOP );
-
-      }
-      EndPaint( window, &ps );
-      return 0;
-    }
-
-    case WM_TIMER:
-      InvalidateRect( window, 0, 0 );
-      return 0;
-
-    case WM_DESTROY:
-      PostQuitMessage( 0 );
-      return 0;
-  }
-   
-
-  return DefWindowProc( window, message, wparam, lparam );
-}
-
-static void SetHighDPI(void)
-{
-  typedef HRESULT WINAPI setdpitype(int v);
-  HMODULE h=LoadLibrary("Shcore.dll");
-  if (h)
-  {
-    setdpitype * sd = (setdpitype*)GetProcAddress(h,"SetProcessDpiAwareness");
-    if (sd )
-      sd(1);
-  }
-} 
-
-static void draw_window()
-{
-  WNDCLASS wc;
-  HWND w;
-  MSG msg;
-  
-  instance = GetModuleHandle(NULL);
-
-  wc.style = 0;
-  wc.lpfnWndProc = WindowProc;
-  wc.cbClsExtra = 0;
-  wc.cbWndExtra = 0;
-  wc.hInstance = instance;
-  wc.hIcon = 0;
-  wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-  wc.hbrBackground = 0;
-  wc.lpszMenuName = 0;
-  wc.lpszClassName = "WHTrain";
-
-  if ( !RegisterClass( &wc ) )
-    exit(1);
-
-  SetHighDPI();
-
-  bmiHeader.biSize          =  sizeof(BITMAPINFOHEADER);
-  bmiHeader.biWidth         =  bitmapp/3;
-  bmiHeader.biHeight        =  -bitmaph;
-  bmiHeader.biPlanes        =  1;
-  bmiHeader.biBitCount      =  24;
-  bmiHeader.biCompression   =  BI_RGB;
-
-  w = CreateWindow( "WHTrain",
-                    "Vertical First Training",
-                    WS_CAPTION | WS_POPUP| WS_CLIPCHILDREN |
-                    WS_SYSMENU | WS_MINIMIZEBOX | WS_SIZEBOX,
-                    CW_USEDEFAULT,CW_USEDEFAULT,
-                    CW_USEDEFAULT,CW_USEDEFAULT,
-                    0, 0, instance, 0 );
-
-  {
-    RECT r, c;
-    GetWindowRect( w, &r );
-    GetClientRect( w, &c );
-    extrawindoww = ( r.right - r.left ) - ( c.right - c.left );
-    extrawindowh = ( r.bottom - r.top ) - ( c.bottom - c.top );
-    SetWindowPos( w, 0, 0, 0, bitmapw * curzoom + extrawindoww, bitmaph * curzoom + extrawindowh + 164, SWP_NOMOVE );
-  }
-
-  ShowWindow( w, SW_SHOWNORMAL );
-  SetTimer( w, 1, 250, 0 );
-
-  {
-    BOOL ret;
-    while( ( ret = GetMessage( &msg, w, 0, 0 ) ) != 0 )
-    { 
-      if ( ret == -1 )
-        break;
-      TranslateMessage( &msg ); 
-      DispatchMessage( &msg ); 
-    }
-  }
-}
-
-static void retrain()
-{
-  HANDLE threads[ 16 ];
-  int chanind;
-
-  trainstart = GetTickCount();
-  for( chanind = 0 ; chanind < fi[0].numtypes ; chanind++ )
-    threads[ chanind ] = CreateThread( 0, 2048*1024, retrain_shim, (LPVOID)(size_t)chanind, 0, 0 );
-
-  draw_window();
-
-  for( chanind = 0 ; chanind < fi[0].numtypes ; chanind++ )
-  {
-    WaitForSingleObject( threads[ chanind ], INFINITE );
-    CloseHandle( threads[ chanind ] );
-  }
-
-  write_bitmap();
-
-  print_struct( retrain_weights, "retained_weights" );
-  if ( windowstatus ) printf( "CANCELLED!\n" );
-}
-
-static void info()
-{
-  int findex;
-
-  // display info about each input file
-  for( findex = 0 ; findex < numfileinfo ; findex++ )
-  {
-    int i, h,m,s;
-    if ( findex ) printf( "\n" );
-    printf( "Timing file: %s\n", fi[findex].filename );
-    printf( "CPU type: %d  %s\n", fi[findex].cpu, fi[findex].simd?(fi[findex].simd==2?"SIMD8":"SIMD4"):"Scalar" );
-    h = fi[findex].milliseconds/3600000;
-    m = (fi[findex].milliseconds-h*3600000)/60000;
-    s = (fi[findex].milliseconds-h*3600000-m*60000)/1000;
-    printf( "Total time in test: %dh %dm %ds  Cycles/sec: %.f\n", h,m,s, 1000.0/fi[findex].scale_time );
-    printf( "Each tile of samples is %dx%d, and is scaled by %dx%d.\n", fi[findex].dimensionx,fi[findex].dimensiony, fi[findex].outputscalex,fi[findex].outputscaley );
-    printf( "So the x coords are: " );
-    for( i=0; i < fi[findex].dimensionx ; i++ ) printf( "%d ",1+i*fi[findex].outputscalex );
-    printf( "\n" );
-    printf( "And the y coords are: " );
-    for( i=0; i < fi[findex].dimensiony ; i++ ) printf( "%d ",1+i*fi[findex].outputscaley );
-    printf( "\n" );
-    printf( "There are %d channel counts and they are: ", fi[findex].numtypes );
-    for( i=0; i < fi[findex].numtypes ; i++ ) printf( "%d ",fi[findex].effective[i] );
-    printf( "\n" );
-    printf( "There are %d input rect sizes and they are: ", fi[findex].numinputrects );
-    for( i=0; i < fi[findex].numtypes ; i++ ) printf( "%dx%d ",fi[findex].inputrects[i*2],fi[findex].inputrects[i*2+1] );
-    printf( "\n" );
-  }
-}
-
-static void current( int do_win, int do_bitmap )
-{
-  int i, findex;
-
-  trainstart = GetTickCount();
-
-  // clear progress
-  memset( windowranges, 0, sizeof( windowranges ) );
-  // copy in appropriate weights
-  memcpy( retrain_weights, stbir__compute_weights, sizeof( retrain_weights ) );
-
-  // build and print current errors and build current bitmap
+  printf( "\n" );
   for( i = 0 ; i < fi[0].numtypes ; i++ )
   {
-    double curerr[STBIR_RESIZE_CLASSIFICATIONS];
-    int curtot[STBIR_RESIZE_CLASSIFICATIONS];
-    float (* weights)[4] = retrain_weights[i];
- 
-    calc_errors( weights, curtot, curerr, i );
-    if ( !do_bitmap )
-      print_weights( weights, i, curtot, curerr );
-
-    for( findex = 0 ; findex < numfileinfo ; findex++ )
-      build_bitmap( weights, i, findex );
+    sprintf( buf, "%d channels (all files)", fi[0].effective[i] );
+    print_model_stats( buf, &chan_stats[i] );
   }
+  printf( "\n" );
+  print_model_stats( "TOTAL", &total );
 
-  if ( do_win )
-    draw_window();
-
-  if ( do_bitmap )
-    write_bitmap();
-}
-
-static void compare()
-{
-  int i;
-
-  trainstart = GetTickCount();
-  windowstatus = 2; // comp mode
-
-  // clear progress
-  memset( windowranges, 0, sizeof( windowranges ) );
-
-  if ( ( fi[0].numtypes != fi[1].numtypes ) || ( fi[0].numinputrects != fi[1].numinputrects ) ||
-       ( fi[0].dimensionx != fi[1].dimensionx ) || ( fi[0].dimensiony != fi[1].dimensiony ) || 
-       ( fi[0].outputscalex != fi[1].outputscalex ) || ( fi[0].outputscaley != fi[1].outputscaley ) )
+  // the measure fit optimizes: per group, the loss as a fraction of the group's best time, weighted
+  for( i = 0 ; i < numfileinfo ; i++ )
   {
-   err:
-    printf( "Timing files don't match.\n" );
-    exit(5);
-  }
-
-  for( i=0; i < fi[0].numtypes ; i++ )
-  {
-    if ( fi[0].effective[i]      != fi[1].effective[i] ) goto err;
-    if ( fi[0].inputrects[i*2]   != fi[1].inputrects[i*2] ) goto err;
-    if ( fi[0].inputrects[i*2+1] != fi[1].inputrects[i*2+1] ) goto err;
-  }
-    
-  alloc_bitmap( 1 );
-  
-  for( i = 0 ; i < fi[0].numtypes ; i++ )
-  {
-    float (* weights)[4] = stbir__compute_weights[i];
-    build_comp_bitmap( weights, i );
-  }
-
-  draw_window();
-}
-
-static void load_files( char ** args, int count )
-{
-  int i;
-
-  if ( count == 0 )
-  {
-    printf( "No timing files listed!" );
-    exit(3);
-  }
-
-  for ( i = 0 ; i < count ; i++ )
-  {
-    if ( !use_timing_file( args[i], i ) )
+    double best = 0, lost = 0;
+    if ( !first_of_group( i ) )
     {
-      printf( "Bad timing file %s\n", args[i] );
-      exit(2);
+      continue;
+    }
+    for( j = i ; j < numfileinfo ; j++ )
+    {
+      if ( same_group( i, j ) )
+      {
+        best += file_stats[j].best_w;
+        lost += file_stats[j].lost_w;
+      }
+    }
+    if ( best > 0 )
+    {
+      w_lost += simd_weight( fi[i].simd ) * lost / best;
+      w_sum += simd_weight( fi[i].simd );
     }
   }
-  numfileinfo = count;
-}  
+  if ( w_sum > 0 )
+  {
+    printf( "\n  normalized per (file, SIMD level), weighted scalar 1.0 / SIMD4 2.0 / SIMD8 0.8 / SIMD16 0.5 and by scale (0.5x..2x double, below 1/8 half): %.3f%%\n", 100.0 * w_lost / w_sum );
+  }
+}
+
+//=============================================================================
+// worst: per set, the cells where the predictor loses the most time
+
+#define WORST_N 6
+
+typedef struct worst_cell
+{
+  double lost_ms, pct;
+  int ch, ix, iy, ox, oy, taps_h, taps_v, picked_v;
+  int VF, HF;   // microseconds
+} worst_cell;
+
+typedef struct worst_set
+{
+  worst_cell list[WORST_N];
+  double total;
+} worst_set;
+
+static worst_set worst[VF_MAX_SETS];
+
+static void worst_insert( worst_cell * list, worst_cell const * c )
+{
+  int i, j;
+  for( i = 0 ; i < WORST_N ; i++ )
+  {
+    if ( c->lost_ms > list[i].lost_ms )
+    {
+      for( j = WORST_N - 1 ; j > i ; j-- )
+      {
+        list[j] = list[j-1];
+      }
+      list[i] = *c;
+      return;
+    }
+  }
+}
+
+static void worst_cell_cb( int findex, int chanind, int ix, int iy, int ox, int oy, int VF, int HF, void * user )
+{
+  cell_geom g;
+  double scale = fi[findex].scale_time;
+  int best = ( VF < HF ) ? VF : HF;
+  int v = vert_first( chanind, ox, oy, ix, iy, fi[findex].filter, fi[findex].edge );
+  worst_cell c;
+  (void) user;
+
+  cell_geometry( &g, ox, oy, ix, iy, fi[findex].filter, fi[findex].edge );
+  c.ch = fi[findex].effective[chanind];
+  c.ix = ix;
+  c.iy = iy;
+  c.ox = ox;
+  c.oy = oy;
+  c.taps_h = g.taps_h;
+  c.taps_v = g.taps_v;
+  c.VF = (int)( VF * scale * 1000 );
+  c.HF = (int)( HF * scale * 1000 );
+  c.picked_v = v;
+  c.lost_ms = ( ( v ? VF : HF ) - best ) * scale;
+  c.pct = 100.0 * ( ( v ? VF : HF ) - best ) / (double) best;
+
+  worst[findex].total += c.lost_ms;
+  if ( c.lost_ms > 0 )
+  {
+    worst_insert( worst[findex].list, &c );
+  }
+}
+
+static void worst_mode( void )
+{
+  int i, j;
+
+  memset( worst, 0, sizeof( worst ) );
+  for_each_cell( worst_cell_cb, 0 );
+
+  for( i = 0 ; i < numfileinfo ; i++ )
+  {
+    printf( "\n%s  %s  (%.1f ms lost in this set)\n", short_name( fi[i].filename ), fi[i].setname, worst[i].total );
+    for( j = 0 ; ( j < WORST_N ) && ( worst[i].list[j].lost_ms > 0 ) ; j++ )
+    {
+      worst_cell const * c = worst[i].list + j;
+      printf( "  %dch %4dx%-4d -> %4dx%-4d  taps %2dx%-2d  picked %s: v %.2f ms  h %.2f ms  lost %.2f ms (%.0f%%)\n",
+        c->ch, c->ix, c->iy, c->ox, c->oy, c->taps_h, c->taps_v, c->picked_v ? "v" : "h", c->VF / 1000.0, c->HF / 1000.0, c->lost_ms, c->pct );
+    }
+  }
+}
+
+//=============================================================================
+// fit: fit the R tables to the timings. A cell only depends on R[chan][bucket][period1], so each table entry is a
+//   one dimensional search over its own cells: pick the R with the least time lost.
+//
+//   A cell's loss is a fraction of the total best time of its group - the sets from one file at one SIMD level - so a
+//   slow scalar millisecond is not worth 3-5 AVX ones and a slow machine does not outweigh a fast one. The groups are
+//   then weighted by simd_weight. group_weight[findex] = level weight / ( that group's total best ms ).
+
+static double group_weight[VF_MAX_SETS];
+
+static void group_best_cell( int findex, int chanind, int ix, int iy, int ox, int oy, int VF, int HF, void * user )
+{
+  double * best = (double*) user;
+  (void) chanind;
+  best[findex] += ( ( VF < HF ) ? VF : HF ) * fi[findex].scale_time * cell_weight( ox, oy, ix, iy );
+}
+
+static void compute_group_weights( void )
+{
+  static double best[VF_MAX_SETS];
+  int i, j;
+
+  memset( best, 0, sizeof( best ) );
+  for_each_cell( group_best_cell, best );
+
+  for( i = 0 ; i < numfileinfo ; i++ )
+  {
+    double group = 0;
+    for( j = 0 ; j < numfileinfo ; j++ )
+    {
+      if ( same_group( i, j ) )
+      {
+        group += best[j];
+      }
+    }
+    group_weight[i] = ( group > 0 ) ? simd_weight( fi[i].simd ) / group : 0;
+  }
+}
+
+#define FIT_STEPS 400
+
+static double fit_lost[5][9][2][FIT_STEPS];   // [chan][bucket][period1][R step] loss (a fraction of the group's time)
+static double fit_cur_lost[5][9][2];
+static int fit_cells[5][9][2];
+
+// the R values tried: 0.5 .. 20, log spaced
+static double fit_R( int step )
+{
+  return 0.5 * pow( 40.0, (double) step / (double)( FIT_STEPS - 1 ) );
+}
+
+static void fit_cell( int findex, int chanind, int ix, int iy, int ox, int oy, int VF, int HF, void * user )
+{
+  cell_geom g;
+  int best = ( VF < HF ) ? VF : HF, step;
+  double scale = fi[findex].scale_time * group_weight[findex] * cell_weight( ox, oy, ix, iy );
+  double lost_if_v = ( VF - best ) * scale, lost_if_h = ( HF - best ) * scale;
+  (void) user;
+
+  cell_geometry( &g, ox, oy, ix, iy, fi[findex].filter, fi[findex].edge );
+  fit_cells[chanind][g.bucket][g.period1]++;
+  fit_cur_lost[chanind][g.bucket][g.period1] += cost_model_vfirst( &g, current_R( &g, chanind ) ) ? lost_if_v : lost_if_h;
+  for( step = 0 ; step < FIT_STEPS ; step++ )
+  {
+    fit_lost[chanind][g.bucket][g.period1][step] += cost_model_vfirst( &g, fit_R( step ) ) ? lost_if_v : lost_if_h;
+  }
+}
+
+static void print_table( char const * name, double fitted[5][9][2], int p1 )
+{
+  int c, b;
+  printf( "static float %s[5][9] =\n{\n", name );
+  for( c = 0 ; c < 5 ; c++ )
+  {
+    printf( "  {" );
+    for( b = 0 ; b < 9 ; b++ )
+    {
+      printf( " %6.3ff%s", fitted[c][b][p1], ( b < 8 ) ? "," : "" );
+    }
+    printf( " },\n" );
+  }
+  printf( "};\n" );
+}
+
+static void fit( void )
+{
+  double fitted[5][9][2];
+  double total_cur = 0, total_fit = 0, weight_sum = 0;
+  int groups = 0;
+  int c, b, p1, i;
+
+  memset( fit_lost, 0, sizeof( fit_lost ) );
+  memset( fit_cur_lost, 0, sizeof( fit_cur_lost ) );
+  memset( fit_cells, 0, sizeof( fit_cells ) );
+  compute_group_weights();
+  for( i = 0 ; i < numfileinfo ; i++ )
+  {
+    if ( first_of_group( i ) )
+    {
+      groups++;
+      weight_sum += simd_weight( fi[i].simd );
+    }
+  }
+  for_each_cell( fit_cell, 0 );
+
+  printf( "losses are fractions of each (file, SIMD level) group's best time, weighted scalar 1.0 / SIMD4 2.0 / SIMD8 0.8 / SIMD16 0.5 and by scale\n  (both axes 0.5x..2x double, an axis below 1/8 half), over %d groups\n", groups );
+  printf( "per table entry: cells, loss with the current R, with the fitted R\n" );
+  for( p1 = 0 ; p1 < 2 ; p1++ )
+  {
+    printf( "\n%s\n", p1 ? "period 1 (integer horizontal downsample)" : "general" );
+    for( c = 0 ; c < 5 ; c++ )
+    {
+      for( b = 0 ; b < 9 ; b++ )
+      {
+        double cur = ( p1 ? stbir__horizontal_cost_period1 : stbir__horizontal_cost )[c][b];
+        double best_lost = 1e300, best_dist = 1e300;
+        int step, best_step = 0;
+
+        for( step = 0 ; step < FIT_STEPS ; step++ )
+        {
+          if ( fit_lost[c][b][p1][step] < best_lost )
+          {
+            best_lost = fit_lost[c][b][p1][step];
+          }
+        }
+
+        // several R values usually tie (the bucket's cells don't separate them): keep the one nearest the current
+        //   table value, so an entry the data doesn't constrain isn't moved further than it has to be
+        for( step = 0 ; step < FIT_STEPS ; step++ )
+        {
+          if ( fit_lost[c][b][p1][step] <= best_lost + 1e-12 )
+          {
+            double dist = fabs( log( fit_R( step ) ) - log( cur ) );
+            if ( dist < best_dist )
+            {
+              best_dist = dist;
+              best_step = step;
+            }
+          }
+        }
+
+        fitted[c][b][p1] = fit_cells[c][b][p1] ? fit_R( best_step ) : cur;   // nothing measured - keep the current value
+        total_cur += fit_cur_lost[c][b][p1];
+        if ( fit_cells[c][b][p1] )
+        {
+          total_fit += best_lost;
+          printf( "  ch %d bucket %d: %6d cells  current R %6.3f lost %7.3f%%   fitted R %6.3f lost %7.3f%%\n",
+            fi[0].effective[c], b, fit_cells[c][b][p1], cur, 100.0 * fit_cur_lost[c][b][p1], fitted[c][b][p1], 100.0 * best_lost );
+        }
+      }
+    }
+  }
+  printf( "\ntotal loss: current tables %.3f%%, fitted %.3f%%  (weighted average over the groups, 0%% = always the faster order)\n", 100.0 * total_cur / weight_sum, 100.0 * total_fit / weight_sum );
+
+  printf( "\n// fitted to the sampling zone timings of test/vfirst/timings (vf_train fit)\n" );
+  print_table( "stbir__horizontal_cost", fitted, 0 );
+  print_table( "stbir__horizontal_cost_period1", fitted, 1 );
+}
+
+//=============================================================================
+
+static void info( void )
+{
+  int findex;
+  for( findex = 0 ; findex < numfileinfo ; findex++ )
+  {
+    fileinfo const * f = fi + findex;
+    int i, h, m, s;
+
+    if ( findex )
+    {
+      printf( "\n" );
+    }
+    printf( "Timing file: %s   set: %s\n", f->filename, f->setname );
+    h = f->milliseconds / 3600000;
+    m = ( f->milliseconds - h * 3600000 ) / 60000;
+    s = ( f->milliseconds - h * 3600000 - m * 60000 ) / 1000;
+    printf( "cpu type %d, whole run %dh %dm %ds, %.0f clocks/sec\n", f->cpu, h, m, s, 1000.0 / f->scale_time );
+    printf( "%d x %d output sizes per input size; input sizes: ", f->dimensionx, f->dimensiony );
+    for( i = 0 ; i < f->numinputrects ; i++ )
+    {
+      printf( "%dx%d ", f->inputrects[i*2], f->inputrects[i*2+1] );
+    }
+    printf( "\noutput widths (first input): " );
+    for( i = 0 ; i < f->dimensionx ; i++ )
+    {
+      printf( "%d ", OX( *f, 0, i ) );
+    }
+    printf( "\noutput heights (first input): " );
+    for( i = 0 ; i < f->dimensiony ; i++ )
+    {
+      printf( "%d ", OY( *f, 0, i ) );
+    }
+    printf( "\nchannel counts: " );
+    for( i = 0 ; i < f->numtypes ; i++ )
+    {
+      printf( "%d ", f->effective[i] );
+    }
+    printf( "\n" );
+  }
+}
 
 int main( int argc, char ** argv )
 {
-  int check;
   if ( argc < 3 )
   {
    err:
-    printf( "vf_train retrain [timing_filenames....] - recalcs weights for all the files on the command line.\n");
-    printf( "vf_train info [timing_filenames....] - shows info about each timing file.\n");
-    printf( "vf_train check [timing_filenames...] - show results for the current weights for all files listed.\n");
-    printf( "vf_train compare <timing file1> <timing file2> - compare two timing files (must only be two files and same resolution).\n");
-    printf( "vf_train bitmap [timing_filenames...] - write out results.png, comparing against the current weights for all files listed.\n");
-    exit(1);
+    printf( "vf_train info  [timing files...]  - what is in each file\n" );
+    printf( "vf_train eval  [timing files...]  - time lost by the header's predictor against the best order, per set and channel count\n" );
+    printf( "vf_train fit   [timing files...]  - fit the predictor's R tables to the timings, print them as C for the header\n" );
+    printf( "vf_train worst [timing files...]  - per set, the cells where the predictor loses the most\n" );
+    printf( "(vf_view shows the right / wrong picture of a file)\n" );
+    return 1;
   }
-  
-  check = ( strcmp( argv[1], "check" ) == 0 );
-  if ( ( check ) || ( strcmp( argv[1], "bitmap" ) == 0 ) )
+
+  load_files( argv + 2, argc - 2 );
+
+  if ( !strcmp( argv[1], "info" ) )
   {
-    load_files( argv + 2, argc - 2 );
-    alloc_bitmap( numfileinfo );
-    current( check, !check );
-  }
-  else if ( strcmp( argv[1], "info" ) == 0 ) 
-  {
-    load_files( argv + 2, argc - 2 );
     info();
   }
-  else if ( strcmp( argv[1], "compare" ) == 0 ) 
+  else if ( !strcmp( argv[1], "eval" ) )
   {
-    if ( argc != 4 )
-    {
-      printf( "You must specify two files to compare.\n" );
-      exit(4);
-    }
-
-    load_files( argv + 2, argc - 2 );
-    compare();
+    eval();
   }
-  else if ( strcmp( argv[1], "retrain" ) == 0 ) 
+  else if ( !strcmp( argv[1], "fit" ) )
   {
-    load_files( argv + 2, argc - 2 );
-    alloc_bitmap( numfileinfo );
-    retrain();  
+    fit();
+  }
+  else if ( !strcmp( argv[1], "worst" ) )
+  {
+    worst_mode();
   }
   else
   {
     goto err;
   }
 
+  print_ignored();
   return 0;
 }

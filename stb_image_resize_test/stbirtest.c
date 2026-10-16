@@ -12,6 +12,18 @@ tm_api * g_tm_api;
 
 #include <math.h>
 
+// the "other" resizer to compare against is a separate translation unit providing oresize():
+//   oldir.c     the v1 header - an approximate comparison (the default before the reference existed)
+//   scalarir.c  this header built scalar - exact (COMPARE_SAME)
+//   refir.c     the frozen reference header in ../refcheck - exact (COMPARE_REF, which implies COMPARE_SAME), and much
+//               faster than the v1 comparison. the default stbirtest.
+#ifdef COMPARE_REF
+#ifndef COMPARE_SAME
+#define COMPARE_SAME
+#endif
+extern int compare_force_order;                        // 1 horizontal first, 2 vertical first - set by refir.c's oresize
+#endif
+
 #ifdef _MSC_VER
 #define stop() __debugbreak()
 #include <windows.h>
@@ -69,12 +81,22 @@ tm_api * g_tm_api;
 
 #endif
 
+#elif defined( _MSC_VER )  // microsoft on arm32
+
+  static inline uint64 __cycles()
+  {
+    LARGE_INTEGER ret;
+    QueryPerformanceCounter(&ret);
+    return ret.QuadPart;
+  }
+
 #else // x64, arm
 
 #error Unknown platform for timing.
 
-#endif  //x64 and   
+#endif  //x64, arm   
 
+#define STBIR_PROFILE_FUNC() __cycles()
 
 #ifdef PROFILE_MODE
 
@@ -297,10 +319,10 @@ int64 vert;
 static STBIR_RESIZE * thread_resize;
 static LONG which;
 static int threads_started = 0;
-static HANDLE threads[32];
+static HANDLE threads[256];
 static HANDLE starts,stops;
   
-static DWORD resize_shim( LPVOID p )
+static DWORD __stdcall resize_shim( LPVOID p )
 {
   for(;;)
   {
@@ -311,7 +333,7 @@ static DWORD resize_shim( LPVOID p )
     wh = InterlockedAdd( &which, 1 ) - 1;
 
     ENTER( "Split %d", wh );
-    stbir_resize_split( thread_resize, wh, 1 );
+    stbir_resize_extended_split( thread_resize, wh, 1 );
   #ifdef STBIR_PROFILE
     { STBIR_PROFILE_INFO profile; stbir_resize_split_profile_info( &profile, thread_resize, wh, 1 ); do_acc_zones( &profile ); vert = profile.clocks[1]; }
   #endif
@@ -337,6 +359,10 @@ void nresize( void * o, int ox, int oy, int op, void * i, int ix, int iy, int ip
   
   ENTER( "Resize" );
  
+  #ifdef COMPARE_REF
+  stbir__force_vertical_first = compare_force_order;   // the same pass order as the reference just used (the orders aren't bit-identical)
+  #endif
+
   #ifndef WINTHREADTEST
 
   ENTER( "Filters" );
@@ -359,7 +385,7 @@ void nresize( void * o, int ox, int oy, int op, void * i, int ix, int iy, int ip
     int c, cnt;
  
     ENTER( "Filters" );
-    cnt =  stbir_build_samplers_with_splits( &resize, 4 );
+    cnt =  stbir_build_samplers_with_splits( &resize, 256 );
     #ifdef STBIR_PROFILE
       { STBIR_PROFILE_INFO profile; stbir_resize_build_profile_info( &profile, &resize ); do_acc_zones( &profile ); }
     #endif
@@ -368,8 +394,8 @@ void nresize( void * o, int ox, int oy, int op, void * i, int ix, int iy, int ip
     ENTER( "Thread start" );
     if ( threads_started == 0 )
     {
-      starts = CreateSemaphore( 0, 0, 32, 0 );
-      stops = CreateSemaphore( 0, 0, 32, 0 );
+      starts = CreateSemaphore( 0, 0, 256, 0 );
+      stops = CreateSemaphore( 0, 0, 256, 0 );
     }
     for( c = threads_started ; c < cnt ; c++ )
       threads[ c ] = CreateThread( 0, 2048*1024, resize_shim, 0, 0, 0 );
@@ -609,14 +635,14 @@ int main( int argc, char ** argv )
 
           ENTER( "Test width: %d %s %d",ix, (w<ix)?"Down":((w>ix)?"Up":"Same"), w);
 
-          #if 0
+          #if 1
           for( edges = EDGESTART ; edges <= EDGEEND ; edges++ )
           #else
           for( edges = 0 ; edges <= 0 ; edges++ )
           #endif
           {
             ENTER( "Test edge: %s",edgestrs[edges]);
-            #if 0
+            #if 1
             for( filters = FILTERSTART ; filters <= FILTEREND ; filters++ )
             #else
             for( filters = 3 ; filters <= 3 ; filters++ )
