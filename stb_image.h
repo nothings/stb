@@ -94,7 +94,7 @@ RECENT REVISION HISTORY:
  Optimizations & bugfixes                  Mikhail Morozov (1-bit BMP)
     Fabian "ryg" Giesen                    Anael Seghezzi (is-16-bit query)
     Arseny Kapoulkine                      Simon Breuss (16-bit PNM)
-    John-Mark Allen
+    John-Mark Allen                        hikari_no_yume (stbi_info2, is_iphone_png)
     Carmelo J Fdez-Aguera
 
  Bug & warning fixes
@@ -189,6 +189,9 @@ RECENT REVISION HISTORY:
 //   ok = stbi_info(filename, &x, &y, &n);
 //   // returns ok=1 and sets x, y, n if image is a supported format,
 //   // 0 otherwise.
+//
+// The stbi_info2 family provides the same information in struct format, plus
+// some additional flags.
 //
 // Note that stb_image pervasively uses ints in its public API for sizes,
 // including sizes of memory buffers. This is now part of the API and thus
@@ -309,19 +312,30 @@ RECENT REVISION HISTORY:
 //
 //     stbi_is_hdr(char *filename);
 //
+// If you also want to query other image details at the same time:
+//
+//     stbi_info_res r = stbi_info2(filename);
+//     if (r.supported && r.is_hdr) {
+//        // ...
+//     }
+//
 // ===========================================================================
 //
 // iPhone PNG support:
 //
-// We optionally support converting iPhone-formatted PNGs (which store
-// premultiplied BGRA) back to RGB, even though they're internally encoded
-// differently. To enable this conversion, call
-// stbi_convert_iphone_png_to_rgb(1).
+// iPhone-formatted PNGs, also known as CgBI PNGs, are supported. Unlike
+// standard PNGs, these store colors in BGR/BGRA order with premultiplied alpha.
 //
-// Call stbi_set_unpremultiply_on_load(1) as well to force a divide per
-// pixel to remove any premultiplied alpha *only* if the image file explicitly
-// says there's premultiplied data (currently only happens in iPhone images,
-// and only if iPhone convert-to-rgb processing is on).
+// By default, stb_image will load the colors in the same format they were
+// stored in. If you need to know which kind of PNG was loaded, and thus the
+// color format, call one of the stbi_info2 functions and check is_iphone_png.
+//
+// Alternatively, if you want stb_image to convert the color order to RGB/RGBA,
+// call stbi_convert_iphone_png_to_rgb(1).
+//
+// Call stbi_set_unpremultiply_on_load(1) as well to force a divide per pixel
+// pixel to remove any premultiplied alpha. Note that this currently only works
+// when color order conversion is also in use.
 //
 // ===========================================================================
 //
@@ -490,7 +504,29 @@ STBIDEF const char *stbi_failure_reason  (void);
 // free the loaded image -- this is just free()
 STBIDEF void     stbi_image_free      (void *retval_from_stbi_load);
 
-// get image dimensions & components without fully decoding
+// get image dimensions, components, etc without fully decoding (new api)
+typedef struct
+{
+   int supported; // if this is 0, the other fields are meaningless
+
+   int x;
+   int y;
+   int comp;
+
+   int is_16_bit;
+   int is_hdr;
+   int is_iphone_png;
+} stbi_info_res;
+
+STBIDEF stbi_info_res stbi_info2_from_memory(stbi_uc const *buffer, int len);
+STBIDEF stbi_info_res stbi_info2_from_callbacks(stbi_io_callbacks const *clbk, void *user);
+
+#ifndef STBI_NO_STDIO
+STBIDEF stbi_info_res stbi_info2          (char const *filename);
+STBIDEF stbi_info_res stbi_info2_from_file(FILE *f);
+#endif
+
+// get image dimensions & components without fully decoding (old api)
 STBIDEF int      stbi_info_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp);
 STBIDEF int      stbi_info_from_callbacks(stbi_io_callbacks const *clbk, void *user, int *x, int *y, int *comp);
 STBIDEF int      stbi_is_16_bit_from_memory(stbi_uc const *buffer, int len);
@@ -914,8 +950,7 @@ static int      stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp);
 #ifndef STBI_NO_PNG
 static int      stbi__png_test(stbi__context *s);
 static void    *stbi__png_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
-static int      stbi__png_info(stbi__context *s, int *x, int *y, int *comp);
-static int      stbi__png_is16(stbi__context *s);
+static int      stbi__png_info(stbi__context *s, int *x, int *y, int *comp, int *is16, int *iphone);
 #endif
 
 #ifndef STBI_NO_BMP
@@ -933,8 +968,7 @@ static int      stbi__tga_info(stbi__context *s, int *x, int *y, int *comp);
 #ifndef STBI_NO_PSD
 static int      stbi__psd_test(stbi__context *s);
 static void    *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc);
-static int      stbi__psd_info(stbi__context *s, int *x, int *y, int *comp);
-static int      stbi__psd_is16(stbi__context *s);
+static int      stbi__psd_info(stbi__context *s, int *x, int *y, int *comp, int *is16);
 #endif
 
 #ifndef STBI_NO_HDR
@@ -960,7 +994,6 @@ static int      stbi__gif_info(stbi__context *s, int *x, int *y, int *comp);
 static int      stbi__pnm_test(stbi__context *s);
 static void    *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
 static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp);
-static int      stbi__pnm_is16(stbi__context *s);
 #endif
 
 static
@@ -4632,6 +4665,7 @@ typedef struct
    stbi__context *s;
    stbi_uc *idata, *expanded, *out;
    int depth;
+   int is_iphone;
 } stbi__png;
 
 
@@ -5081,12 +5115,13 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
    stbi_uc has_trans=0, tc[3]={0};
    stbi__uint16 tc16[3];
    stbi__uint32 ioff=0, idata_limit=0, i, pal_len=0;
-   int first=1,k,interlace=0, color=0, is_iphone=0;
+   int first=1,k,interlace=0, color=0;
    stbi__context *s = z->s;
 
    z->expanded = NULL;
    z->idata = NULL;
    z->out = NULL;
+   z->is_iphone = 0;
 
    if (!stbi__check_png_header(s)) return 0;
 
@@ -5096,7 +5131,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
       stbi__pngchunk c = stbi__get_chunk_header(s);
       switch (c.type) {
          case STBI__PNG_TYPE('C','g','B','I'):
-            is_iphone = 1;
+            z->is_iphone = 1;
             stbi__skip(s, c.length);
             break;
          case STBI__PNG_TYPE('I','H','D','R'): {
@@ -5204,7 +5239,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
             // initial guess for decoded data size to avoid unnecessary reallocs
             bpl = (s->img_x * z->depth + 7) / 8; // bytes per line, per component
             raw_len = bpl * s->img_y * s->img_n /* pixels */ + s->img_y /* filter mode per row */;
-            z->expanded = (stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag((char *) z->idata, ioff, raw_len, (int *) &raw_len, !is_iphone);
+            z->expanded = (stbi_uc *) stbi_zlib_decode_malloc_guesssize_headerflag((char *) z->idata, ioff, raw_len, (int *) &raw_len, !z->is_iphone);
             if (z->expanded == NULL) return 0; // zlib should set error
             STBI_FREE(z->idata); z->idata = NULL;
             if ((req_comp == s->img_n+1 && req_comp != 3 && !pal_img_n) || has_trans)
@@ -5219,7 +5254,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
                   if (!stbi__compute_transparency(z, tc, s->img_out_n)) return 0;
                }
             }
-            if (is_iphone && stbi__de_iphone_flag && s->img_out_n > 2)
+            if (z->is_iphone && stbi__de_iphone_flag && s->img_out_n > 2)
                stbi__de_iphone(z);
             if (pal_img_n) {
                // pal_img_n == 3 or 4
@@ -5307,35 +5342,19 @@ static int stbi__png_test(stbi__context *s)
    return r;
 }
 
-static int stbi__png_info_raw(stbi__png *p, int *x, int *y, int *comp)
-{
-   if (!stbi__parse_png_file(p, STBI__SCAN_header, 0)) {
-      stbi__rewind( p->s );
-      return 0;
-   }
-   if (x) *x = p->s->img_x;
-   if (y) *y = p->s->img_y;
-   if (comp) *comp = p->s->img_n;
-   return 1;
-}
-
-static int stbi__png_info(stbi__context *s, int *x, int *y, int *comp)
+static int stbi__png_info(stbi__context *s, int *x, int *y, int *comp, int *is16, int *iphone)
 {
    stbi__png p;
    p.s = s;
-   return stbi__png_info_raw(&p, x, y, comp);
-}
-
-static int stbi__png_is16(stbi__context *s)
-{
-   stbi__png p;
-   p.s = s;
-   if (!stbi__png_info_raw(&p, NULL, NULL, NULL))
-	   return 0;
-   if (p.depth != 16) {
-      stbi__rewind(p.s);
+   if (!stbi__parse_png_file(&p, STBI__SCAN_header, 0)) {
+      stbi__rewind( p.s );
       return 0;
    }
+   *x = p.s->img_x;
+   *y = p.s->img_y;
+   *comp = p.s->img_n;
+   *is16 = p.depth == 16;
+   *iphone = p.is_iphone;
    return 1;
 }
 #endif
@@ -7356,7 +7375,7 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
 #endif
 
 #ifndef STBI_NO_PSD
-static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
+static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp, int *is16)
 {
    int channelCount, dummy, depth;
    if (!x) x = &dummy;
@@ -7383,38 +7402,12 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp)
        stbi__rewind( s );
        return 0;
    }
+   *is16 = depth == 16;
    if (stbi__get16be(s) != 3) {
        stbi__rewind( s );
        return 0;
    }
    *comp = 4;
-   return 1;
-}
-
-static int stbi__psd_is16(stbi__context *s)
-{
-   int channelCount, depth;
-   if (stbi__get32be(s) != 0x38425053) {
-       stbi__rewind( s );
-       return 0;
-   }
-   if (stbi__get16be(s) != 1) {
-       stbi__rewind( s );
-       return 0;
-   }
-   stbi__skip(s, 6);
-   channelCount = stbi__get16be(s);
-   if (channelCount < 0 || channelCount > 16) {
-       stbi__rewind( s );
-       return 0;
-   }
-   STBI_NOTUSED(stbi__get32be(s));
-   STBI_NOTUSED(stbi__get32be(s));
-   depth = stbi__get16be(s);
-   if (depth != 16) {
-       stbi__rewind( s );
-       return 0;
-   }
    return 1;
 }
 #endif
@@ -7620,71 +7613,74 @@ static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
    else
       return 8;
 }
-
-static int stbi__pnm_is16(stbi__context *s)
-{
-   if (stbi__pnm_info(s, NULL, NULL, NULL) == 16)
-	   return 1;
-   return 0;
-}
 #endif
 
-static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
+static stbi_info_res stbi__info2_main(stbi__context *s)
 {
+   stbi_info_res res = {0};
+   #ifndef STBI_NO_PNM
+   int pnm_bits_per_channel;
+   #endif
+
+   res.supported = 1;
+
    #ifndef STBI_NO_JPEG
-   if (stbi__jpeg_info(s, x, y, comp)) return 1;
+   if (stbi__jpeg_info(s, &res.x, &res.y, &res.comp)) return res;
    #endif
 
    #ifndef STBI_NO_PNG
-   if (stbi__png_info(s, x, y, comp))  return 1;
+   if (stbi__png_info(s, &res.x, &res.y, &res.comp, &res.is_16_bit, &res.is_iphone_png)) return res;
    #endif
 
    #ifndef STBI_NO_GIF
-   if (stbi__gif_info(s, x, y, comp))  return 1;
+   if (stbi__gif_info(s, &res.x, &res.y, &res.comp)) return res;
    #endif
 
    #ifndef STBI_NO_BMP
-   if (stbi__bmp_info(s, x, y, comp))  return 1;
+   if (stbi__bmp_info(s, &res.x, &res.y, &res.comp)) return res;
    #endif
 
    #ifndef STBI_NO_PSD
-   if (stbi__psd_info(s, x, y, comp))  return 1;
+   if (stbi__psd_info(s, &res.x, &res.y, &res.comp, &res.is_16_bit)) return res;
    #endif
 
    #ifndef STBI_NO_PIC
-   if (stbi__pic_info(s, x, y, comp))  return 1;
+   if (stbi__pic_info(s, &res.x, &res.y, &res.comp)) return res;
    #endif
 
    #ifndef STBI_NO_PNM
-   if (stbi__pnm_info(s, x, y, comp))  return 1;
+   pnm_bits_per_channel = stbi__pnm_info(s, &res.x, &res.y, &res.comp);
+   if (pnm_bits_per_channel) {
+      res.is_16_bit = pnm_bits_per_channel == 16;
+      return res;
+   }
    #endif
 
    #ifndef STBI_NO_HDR
-   if (stbi__hdr_info(s, x, y, comp))  return 1;
+   if (stbi__hdr_info(s, &res.x, &res.y, &res.comp)) {
+      res.is_hdr = 1;
+      return res;
+   }
    #endif
 
    // test tga last because it's a crappy test!
    #ifndef STBI_NO_TGA
-   if (stbi__tga_info(s, x, y, comp))
-       return 1;
+   if (stbi__tga_info(s, &res.x, &res.y, &res.comp)) return res;
    #endif
-   return stbi__err("unknown image type", "Image not of any known type, or corrupt");
+
+   res.supported = 0;
+   stbi__err("unknown image type", "Image not of any known type, or corrupt");
+   return res;
 }
 
-static int stbi__is_16_main(stbi__context *s)
+static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
 {
-   #ifndef STBI_NO_PNG
-   if (stbi__png_is16(s))  return 1;
-   #endif
-
-   #ifndef STBI_NO_PSD
-   if (stbi__psd_is16(s))  return 1;
-   #endif
-
-   #ifndef STBI_NO_PNM
-   if (stbi__pnm_is16(s))  return 1;
-   #endif
-   return 0;
+   stbi_info_res res = stbi__info2_main(s);
+   if (!res.supported) return 0;
+   if (x) *x = res.x;
+   if (y) *y = res.y;
+   if (comp) *comp = res.comp;
+   return res.supported;
 }
 
 #ifndef STBI_NO_STDIO
@@ -7709,6 +7705,30 @@ STBIDEF int stbi_info_from_file(FILE *f, int *x, int *y, int *comp)
    return r;
 }
 
+STBIDEF stbi_info_res stbi_info2(char const *filename)
+{
+   stbi_info_res res = {0};
+   FILE *f = stbi__fopen(filename, "rb");
+   if (!f) {
+      stbi__err("can't fopen", "Unable to open file");
+      return res;
+   }
+   res = stbi_info2_from_file(f);
+   fclose(f);
+   return res;
+}
+
+STBIDEF stbi_info_res stbi_info2_from_file(FILE *f)
+{
+   stbi_info_res res = {0};
+   stbi__context s;
+   long pos = ftell(f);
+   stbi__start_file(&s, f);
+   res = stbi__info2_main(&s);
+   fseek(f,pos,SEEK_SET);
+   return res;
+}
+
 STBIDEF int stbi_is_16_bit(char const *filename)
 {
     FILE *f = stbi__fopen(filename, "rb");
@@ -7721,13 +7741,13 @@ STBIDEF int stbi_is_16_bit(char const *filename)
 
 STBIDEF int stbi_is_16_bit_from_file(FILE *f)
 {
-   int r;
+   stbi_info_res r;
    stbi__context s;
    long pos = ftell(f);
    stbi__start_file(&s, f);
-   r = stbi__is_16_main(&s);
+   r = stbi__info2_main(&s);
    fseek(f,pos,SEEK_SET);
-   return r;
+   return r.supported && r.is_16_bit;
 }
 #endif // !STBI_NO_STDIO
 
@@ -7745,18 +7765,36 @@ STBIDEF int stbi_info_from_callbacks(stbi_io_callbacks const *c, void *user, int
    return stbi__info_main(&s,x,y,comp);
 }
 
-STBIDEF int stbi_is_16_bit_from_memory(stbi_uc const *buffer, int len)
+STBIDEF stbi_info_res stbi_info2_from_memory(stbi_uc const *buffer, int len)
 {
    stbi__context s;
    stbi__start_mem(&s,buffer,len);
-   return stbi__is_16_main(&s);
+   return stbi__info2_main(&s);
+}
+
+STBIDEF stbi_info_res stbi_info2_from_callbacks(stbi_io_callbacks const *c, void *user)
+{
+   stbi__context s;
+   stbi__start_callbacks(&s, (stbi_io_callbacks *) c, user);
+   return stbi__info2_main(&s);
+}
+
+STBIDEF int stbi_is_16_bit_from_memory(stbi_uc const *buffer, int len)
+{
+   stbi__context s;
+   stbi_info_res r;
+   stbi__start_mem(&s,buffer,len);
+   r = stbi__info2_main(&s);
+   return r.supported && r.is_16_bit;
 }
 
 STBIDEF int stbi_is_16_bit_from_callbacks(stbi_io_callbacks const *c, void *user)
 {
    stbi__context s;
+   stbi_info_res r;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) c, user);
-   return stbi__is_16_main(&s);
+   r = stbi__info2_main(&s);
+   return r.supported && r.is_16_bit;
 }
 
 #endif // STB_IMAGE_IMPLEMENTATION
