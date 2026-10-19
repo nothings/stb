@@ -1817,7 +1817,7 @@ static stbi__uint16 *stbi__convert_format16(stbi__uint16 *data, int img_n, int r
    if (req_comp == img_n) return data;
    STBI_ASSERT(req_comp >= 1 && req_comp <= 4);
 
-   good = (stbi__uint16 *) stbi__malloc(req_comp * x * y * 2);
+   good = (stbi__uint16 *) stbi__malloc((size_t)req_comp * x * y * 2);
    if (good == NULL) {
       STBI_FREE(data);
       return (stbi__uint16 *) stbi__errpuc("outofmem", "Out of memory");
@@ -4821,7 +4821,7 @@ static int stbi__create_png_image_raw(stbi__png *a, stbi_uc *raw, stbi__uint32 r
             stbi__create_png_alpha_expand8(dest, dest, x, img_n);
       } else if (depth == 8) {
          if (img_n == out_n)
-            memcpy(dest, cur, x*img_n);
+            memcpy(dest, cur, (size_t)x * (size_t)img_n);
          else
             stbi__create_png_alpha_expand8(dest, cur, x, img_n);
       } else if (depth == 16) {
@@ -6201,7 +6201,7 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
       out = (stbi_uc *) stbi__malloc_mad3(8, w, h, 0);
       ri->bits_per_channel = 16;
    } else
-      out = (stbi_uc *) stbi__malloc(4 * w*h);
+      out = (stbi_uc *) stbi__malloc(4 * (size_t)w * (size_t)h);
 
    if (!out) return stbi__errpuc("outofmem", "Out of memory");
    pixelCount = w*h;
@@ -6524,7 +6524,7 @@ static void *stbi__pic_load(stbi__context *s,int *px,int *py,int *comp,int req_c
    // intermediate buffer is RGBA
    result = (stbi_uc *) stbi__malloc_mad3(x, y, 4, 0);
    if (!result) return stbi__errpuc("outofmem", "Out of memory");
-   memset(result, 0xff, x*y*4);
+   memset(result, 0xff, (size_t)x * (size_t)y * 4);
 
    if (!stbi__pic_load_core(s,x,y,comp, result)) {
       STBI_FREE(result);
@@ -6833,11 +6833,11 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
       }
 
       // background is what out is after the undoing of the previou frame;
-      memcpy( g->background, g->out, 4 * g->w * g->h );
+      memcpy( g->background, g->out, 4 * (size_t)g->w * (size_t)g->h );
    }
 
    // clear my history;
-   memset( g->history, 0x00, g->w * g->h );        // pixels that were affected previous frame
+   memset( g->history, 0x00, (size_t)g->w * (size_t)g->h );        // pixels that were affected previous frame
 
    for (;;) {
       int tag = stbi__get8(s);
@@ -6991,7 +6991,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
             stride = g.w * g.h * 4;
 
             if (out) {
-               void *tmp = (stbi_uc*) STBI_REALLOC_SIZED( out, out_size, layers * stride );
+               void *tmp = (stbi_uc*) STBI_REALLOC_SIZED( out, out_size, (size_t)layers * (size_t)stride );
                if (!tmp)
                   return stbi__load_gif_main_outofmem(&g, out, delays);
                else {
@@ -7007,7 +7007,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
                   delays_size = layers * sizeof(int);
                }
             } else {
-               out = (stbi_uc*)stbi__malloc( layers * stride );
+               out = (stbi_uc*)stbi__malloc( (size_t)layers * (size_t)stride );
                if (!out)
                   return stbi__load_gif_main_outofmem(&g, out, delays);
                out_size = layers * stride;
