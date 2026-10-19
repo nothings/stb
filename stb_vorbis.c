@@ -1401,7 +1401,7 @@ static int set_file_offset(stb_vorbis *f, unsigned int loc)
    #endif
    f->eof = 0;
    if (USE_MEMORY(f)) {
-      if (f->stream_start + loc >= f->stream_end || f->stream_start + loc < f->stream_start) {
+      if (loc >= f->stream_end - f->stream_start) {
          f->stream = f->stream_end;
          f->eof = 1;
          return 0;
@@ -4704,6 +4704,9 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
    uint32 delta, stream_length, padding, last_sample_limit;
    double offset = 0.0, bytes_per_sample = 0.0;
    int probe = 0;
+   mid.last_decoded_sample =-1;
+   mid.page_end =-1;
+   mid.page_start =-1;
 
    // find the last page and validate the target sample
    stream_length = stb_vorbis_stream_length_in_samples(f);
