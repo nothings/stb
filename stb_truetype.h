@@ -1499,6 +1499,7 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
    stbtt_uint32 index_map = info->index_map;
 
    stbtt_uint16 format = ttUSHORT(data + index_map + 0);
+
    if (format == 0) { // apple byte encoding
       stbtt_int32 bytes = ttUSHORT(data + index_map + 2);
       if (unicode_codepoint < bytes-6)
@@ -1544,7 +1545,8 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
       search += 2;
 
       {
-         stbtt_uint16 offset, start, last;
+         stbtt_uint16 offset, start, last, index;
+         stbtt_int16 delta;
          stbtt_uint16 item = (stbtt_uint16) ((search - endCount) >> 1);
 
          start = ttUSHORT(data + index_map + 14 + segcount*2 + 2 + 2*item);
@@ -1552,11 +1554,17 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
          if (unicode_codepoint < start || unicode_codepoint > last)
             return 0;
 
+         delta = ttSHORT(data + index_map + 14 + segcount*4 + 2 + 2*item);
          offset = ttUSHORT(data + index_map + 14 + segcount*6 + 2 + 2*item);
          if (offset == 0)
-            return (stbtt_uint16) (unicode_codepoint + ttSHORT(data + index_map + 14 + segcount*4 + 2 + 2*item));
+            return (stbtt_uint16) (unicode_codepoint + delta);
 
-         return ttUSHORT(data + offset + (unicode_codepoint-start)*2 + index_map + 14 + segcount*6 + 2 + 2*item);
+         index = ttUSHORT(data + offset + (unicode_codepoint-start)*2 + index_map + 14 + segcount*6 + 2 + 2*item);
+         if (index != 0) {
+            index = (stbtt_uint16) (index + delta);
+         }
+
+         return index;
       }
    } else if (format == 12 || format == 13) {
       stbtt_uint32 ngroups = ttULONG(data+index_map+12);
