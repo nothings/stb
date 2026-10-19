@@ -62,6 +62,19 @@ void dummy_write(void *context, void *data, int len)
    memcpy(dummy, data, len);
 }
 
+typedef struct {
+   unsigned char data[64*1024];
+   int len;
+} data_t;
+
+void write_data(void *context, void *data, int len)
+{
+   data_t *d = (data_t *)context;
+   assert(d->len + len <= sizeof(d->data));
+   memcpy(&d->data[d->len], data, len);
+   d->len += len;
+}
+
 extern void image_write_test(void);
 
 int main(int argc, char **argv)
@@ -169,5 +182,45 @@ int main(int argc, char **argv)
       }
       printf("Tested %d files.\n", i);
    }
+
+   // test 16-bit png
+   {
+      int i;
+      char **files = stb_readdir_files("pngsuite/16bit");
+      for (i=0; i < stb_arr_len(files); ++i) {
+         int n;
+         int w2,h2,n2;
+         char **failed = NULL;
+         stbi_us *data;
+         stbi_us *data2;
+         data_t compressed_png;
+         compressed_png.len = 0;
+         printf(".");
+         //printf("%s\n", files[i]);
+         data = stbi_load_16(files[i], &w, &h, &n, 0); if (data) ; else stb_arr_push(failed, "&n");
+         if (data) {
+            stbi_write_png_16_to_func(write_data,&compressed_png, w, h, n, data, w*n*2);
+            data2 = stbi_load_16_from_memory(compressed_png.data, compressed_png.len, &w2, &h2, &n2, 0);
+            if (data2) ; else stb_arr_push(failed, "Couldn't load");
+
+            if (memcmp(data, data2, w*h*n*2) != 0) printf("FAILED: %s data differs\n", files[i]);
+            if (w != w2) printf("FAILED: %s w differs: %d vs %d\n", files[i], w, w2);
+            if (h != h2) printf("FAILED: %s h differs: %d vs %d\n", files[i], h, h2);
+            if (n != n2) printf("FAILED: %s n differs: %d vs %d\n", files[i], n, n2);
+
+            free(data2);
+         }
+         if (failed) {
+            int j;
+            printf("FAILED: ");
+            for (j=0; j < stb_arr_len(failed); ++j)
+               printf("%s ", failed[j]);
+            printf(" -- %s\n", files[i]);
+         }
+         free(data);
+      }
+      printf("Tested %d 16-bit PNG files.\n", i);
+   }
+
    return 0;
 }
