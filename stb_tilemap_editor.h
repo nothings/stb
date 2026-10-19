@@ -1066,14 +1066,15 @@ stbte_tilemap *stbte_create_map(int map_x, int map_y, int map_layers, int spacin
 
 void stbte_set_background_tile(stbte_tilemap *tm, short id)
 {
-   int i;
+   int i, j;
    STBTE_ASSERT(id >= -1);
    // STBTE_ASSERT(id < 32768);
    if (id < -1)
       return;
-   for (i=0; i < STBTE_MAX_TILEMAP_X * STBTE_MAX_TILEMAP_Y; ++i)
-      if (tm->data[0][i][0] == -1)
-         tm->data[0][i][0] = id;
+   for (i=0; i < STBTE_MAX_TILEMAP_X; ++i)
+      for (j=0; j < STBTE_MAX_TILEMAP_Y; ++j)
+        if (tm->data[i][j][0] == -1)
+           tm->data[i][j][0] = id;
    tm->background_tile = id;
 }
 
@@ -1212,18 +1213,20 @@ void stbte_set_dimensions(stbte_tilemap *tm, int map_x, int map_y)
 
 void stbte_clear_map(stbte_tilemap *tm)
 {
-   int i,j;
-   for (i=0; i < STBTE_MAX_TILEMAP_X * STBTE_MAX_TILEMAP_Y; ++i) {
-      tm->data[0][i][0] = tm->background_tile;
-      for (j=1; j < tm->num_layers; ++j)
-         tm->data[0][i][j] = STBTE__NO_TILE;
-      for (j=0; j < STBTE_MAX_PROPERTIES; ++j)
-         tm->props[0][i][j] = 0;
-      #ifdef STBTE_ALLOW_LINK
-      tm->link[0][i].x = -1;
-      tm->link[0][i].y = -1;
-      tm->linkcount[0][i] = 0;
-      #endif
+   int i,j,k;
+   for (i=0; i < STBTE_MAX_TILEMAP_X; ++i) {
+      for (j=0; j < STBTE_MAX_TILEMAP_Y; ++j) {
+         tm->data[i][j][0] = tm->background_tile;
+         for (k=1; k < tm->num_layers; ++k)
+            tm->data[i][j][k] = STBTE__NO_TILE;
+         for (k=0; k < STBTE_MAX_PROPERTIES; ++k)
+            tm->props[i][j][k] = 0;
+         #ifdef STBTE_ALLOW_LINK
+         tm->link[i][j].x = -1;
+         tm->link[i][j].y = -1;
+         tm->linkcount[i][j] = 0;
+         #endif
+      }
    }
 }
 
