@@ -1,3 +1,57 @@
+/*
+
+This file is deprecated. New versions are available
+in the stb_sprintf repository
+
+Currently:
+   https://github.com/nothings/stb_sprintf
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+*/
+
+
 // stb_sprintf - v1.10 - public domain snprintf() implementation
 // originally by Jeff Roberts / RAD Game Tools, 2015/10/20
 // http://github.com/nothings/stb

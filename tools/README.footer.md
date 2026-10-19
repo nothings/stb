@@ -30,10 +30,6 @@ include stb_image.h regularly, but instead does
 
 The right macro to define is pointed out right at the top of each of these libraries.
 
-#### <a name="other_libs"></a> Are there other single-file public-domain/open source libraries with minimal dependencies out there?
-
-[Yes.](https://github.com/nothings/single_file_libs)
-
 #### If I wrap an stb library in a new library, does the new library have to be public domain/MIT?
 
 No, because it's public domain you can freely relicense it to whatever license your new

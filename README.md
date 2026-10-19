@@ -5,6 +5,10 @@ stb
 
 single-file public domain (or MIT licensed) libraries for C/C++
 
+Several projects have been moved to their own repositories:
+* image resize: [stb_image_resize](https://github.com/nothings/stb_image_resize2)
+* sprintf: [stb_sprintf](https://github.com/nothings/stb_sprintf)
+
 # This project discusses security-relevant bugs in public in Github Issues and Pull Requests, and it may take significant time for security fixes to be implemented or merged. If this poses an unreasonable risk to your project, do not use stb libraries.
 
 Noteworthy:
@@ -27,11 +31,9 @@ library    | latest version | category | LoC | description
 **[stb_image.h](stb_image.h)** | 2.30 | graphics | 7988 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
 **[stb_truetype.h](stb_truetype.h)** | 1.26 | graphics | 5079 | parse, decode, and rasterize characters from truetype fonts
 **[stb_image_write.h](stb_image_write.h)** | 1.16 | graphics | 1724 | image writing to disk: PNG, TGA, BMP
-**[stb_image_resize2.h](stb_image_resize2.h)** | 2.18b | graphics | 10679 | resize images larger/smaller with good quality
 **[stb_rect_pack.h](stb_rect_pack.h)** | 1.01 | graphics | 623 | simple 2D rectangle packer with decent quality
 **[stb_perlin.h](stb_perlin.h)** | 0.5 | graphics | 428 | perlin's revised simplex noise w/ different seeds
 **[stb_ds.h](stb_ds.h)** | 0.67 | utility | 1895 | typesafe dynamic array and hash tables for C, will compile in C++
-**[stb_sprintf.h](stb_sprintf.h)** | 1.10 | utility | 1906 | fast sprintf, snprintf for C/C++
 **[stb_textedit.h](stb_textedit.h)** | 1.14 | user&nbsp;interface | 1429 | guts of a text editor for games etc implementing them from scratch
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.89 | 3D&nbsp;graphics | 3807 | Minecraft-esque voxel rendering "engine" with many more features
 **[stb_dxt.h](stb_dxt.h)** | 1.12 | 3D&nbsp;graphics | 719 | Fabian "ryg" Giesen's real-time DXT compressor
@@ -44,8 +46,8 @@ library    | latest version | category | LoC | description
 **[stb_leakcheck.h](stb_leakcheck.h)** | 0.6 | misc | 194 | quick-and-dirty malloc/free leak-checking
 **[stb_include.h](stb_include.h)** | 0.02 | misc | 295 | implement recursive #include support, particularly for GLSL
 
-Total libraries: 21
-Total lines of C code: 51166
+Total libraries: 19
+Total lines of C code: 38581
 
 
 FAQ
@@ -78,10 +80,6 @@ include stb_image.h regularly, but instead does
     #include "stb_image.h"
 
 The right macro to define is pointed out right at the top of each of these libraries.
-
-#### <a name="other_libs"></a> Are there other single-file public-domain/open source libraries with minimal dependencies out there?
-
-[Yes.](https://github.com/nothings/single_file_libs)
 
 #### If I wrap an stb library in a new library, does the new library have to be public domain/MIT?
 
