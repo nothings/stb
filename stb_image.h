@@ -101,20 +101,20 @@ RECENT REVISION HISTORY:
     Marc LeBlanc            David Woo          Guillaume George     Martins Mozeiko
     Christpher Lloyd        Jerry Jansson      Joseph Thomson       Blazej Dariusz Roszkowski
     Phil Jordan                                Dave Moore           Roy Eltham
-    Hayaki Saito            Nathan Reed        Won Chun
-    Luke Graham             Johan Duparc       Nick Verigakis       the Horde3D community
-    Thomas Ruf              Ronny Chevalier                         github:rlyeh
-    Janez Zemva             John Bartholomew   Michal Cichon        github:romigrou
-    Jonathan Blow           Ken Hamada         Tero Hanninen        github:svdijk
-    Eugene Golushkov        Laurent Gomila     Cort Stratton        github:snagar
-    Aruelien Pocheville     Sergio Gonzalez    Thibault Reuille     github:Zelex
-    Cass Everitt            Ryamond Barbiero                        github:grim210
-    Paul Du Bois            Engin Manap        Aldo Culquicondor    github:sammyhw
-    Philipp Wiesemann       Dale Weiler        Oriol Ferrer Mesia   github:phprus
-    Josh Tobin              Neil Bickford      Matthew Gregan       github:poppolopoppo
-    Julian Raschke          Gregory Mullen     Christian Floisand   github:darealshinji
-    Baldur Karlsson         Kevin Schmidt      JR Smith             github:Michaelangel007
-                            Brad Weinberger    Matvey Cherevko      github:mosra
+    Hayaki Saito            Nathan Reed        Won Chun             the Horde3D community
+    Luke Graham             Johan Duparc       Nick Verigakis       github:rlyeh
+    Thomas Ruf              Ronny Chevalier                         github:romigrou
+    Janez Zemva             John Bartholomew   Michal Cichon        github:svdijk
+    Jonathan Blow           Ken Hamada         Tero Hanninen        github:snagar
+    Eugene Golushkov        Laurent Gomila     Cort Stratton        github:Zelex
+    Aruelien Pocheville     Sergio Gonzalez    Thibault Reuille     github:grim210
+    Cass Everitt            Ryamond Barbiero                        github:sammyhw
+    Paul Du Bois            Engin Manap        Aldo Culquicondor    github:phprus
+    Philipp Wiesemann       Dale Weiler        Oriol Ferrer Mesia   github:poppolopoppo
+    Josh Tobin              Neil Bickford      Matthew Gregan       github:darealshinji
+    Julian Raschke          Gregory Mullen     Christian Floisand   github:Michaelangel007
+    Baldur Karlsson         Kevin Schmidt      JR Smith             github:mosra
+                            Brad Weinberger    Matvey Cherevko      github:jackson-57
     Luca Sas                Alexander Veselov  Zack Middleton       [reserved]
     Ryan C. Gordon          [reserved]                              [reserved]
                      DO NOT ADD YOUR NAME HERE
@@ -7048,29 +7048,31 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
 static void *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
 {
    stbi_uc *u = 0;
-   stbi__gif g;
-   memset(&g, 0, sizeof(g));
+   stbi__gif* g = (stbi__gif*) stbi__malloc(sizeof(stbi__gif));
+   if (!g) return stbi__errpuc("outofmem", "Out of memory");
+   memset(g, 0, sizeof(*g));
    STBI_NOTUSED(ri);
 
-   u = stbi__gif_load_next(s, &g, comp, req_comp, 0);
+   u = stbi__gif_load_next(s, g, comp, req_comp, 0);
    if (u == (stbi_uc *) s) u = 0;  // end of animated gif marker
    if (u) {
-      *x = g.w;
-      *y = g.h;
+      *x = g->w;
+      *y = g->h;
 
       // moved conversion to after successful load so that the same
       // can be done for multiple frames.
       if (req_comp && req_comp != 4)
-         u = stbi__convert_format(u, 4, req_comp, g.w, g.h);
-   } else if (g.out) {
+         u = stbi__convert_format(u, 4, req_comp, g->w, g->h);
+   } else if (g->out) {
       // if there was an error and we allocated an image buffer, free it!
-      STBI_FREE(g.out);
+      STBI_FREE(g->out);
    }
 
    // free buffers needed for multiple frame loading;
-   STBI_FREE(g.history);
-   STBI_FREE(g.background);
+   STBI_FREE(g->history);
+   STBI_FREE(g->background);
 
+   STBI_FREE(g);
    return u;
 }
 
