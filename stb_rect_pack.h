@@ -38,6 +38,7 @@
 //  Bugfixes / warning fixes
 //    Jeremy Jaussaud
 //    Fabian Giesen
+//    Joshua Simmons
 //
 // Version history:
 //
@@ -529,7 +530,11 @@ static int STBRP__CDECL rect_height_compare(const void *a, const void *b)
       return -1;
    if (p->h < q->h)
       return  1;
-   return (p->w > q->w) ? -1 : (p->w < q->w);
+   if (p->w > q->w)
+      return -1;
+   if (p->w < q->w)
+      return  1;
+   return (p->was_packed < q->was_packed) ? -1 : (p->was_packed > q->was_packed);
 }
 
 static int STBRP__CDECL rect_original_order(const void *a, const void *b)
