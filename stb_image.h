@@ -5884,8 +5884,8 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    int tga_height = stbi__get16le(s);
    int tga_bits_per_pixel = stbi__get8(s);
    int tga_comp, tga_rgb16=0;
-   int tga_inverted = stbi__get8(s);
-   // int tga_alpha_bits = tga_inverted & 15; // the 4 lowest bits - unused (useless?)
+   int tga_descriptor = stbi__get8(s);
+   // int tga_alpha_bits = tga_descriptor & 15; // the 4 lowest bits - unused (useless?)
    //   image data
    unsigned char *tga_data;
    unsigned char *tga_palette = NULL;
@@ -5907,7 +5907,8 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
       tga_image_type -= 8;
       tga_is_RLE = 1;
    }
-   tga_inverted = 1 - ((tga_inverted >> 5) & 1);
+   int tga_x_inverted = ((tga_descriptor >> 4) & 1);
+   int tga_y_inverted = 1 - ((tga_descriptor >> 5) & 1);
 
    //   If I'm paletted, then I'll use the number of bits from the palette
    if ( tga_indexed ) tga_comp = stbi__tga_get_comp(tga_palette_bits, 0, &tga_rgb16);
@@ -5932,9 +5933,16 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
 
    if ( !tga_indexed && !tga_is_RLE && !tga_rgb16 ) {
       for (i=0; i < tga_height; ++i) {
-         int row = tga_inverted ? tga_height -i - 1 : i;
+         int row = tga_y_inverted ? tga_height - i - 1 : i;
          stbi_uc *tga_row = tga_data + row*tga_width*tga_comp;
-         stbi__getn(s, tga_row, tga_width * tga_comp);
+         if (tga_x_inverted) {
+            for (j = 0; j < tga_width; j++) {
+               int index = (tga_width - j - 1) * tga_comp;
+               stbi__getn(s, tga_row + index, tga_comp);
+            }
+         } else {
+            stbi__getn(s, tga_row, tga_width * tga_comp);
+         }
       }
    } else  {
       //   do I need to load a palette?
@@ -6024,7 +6032,22 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
          --RLE_count;
       }
       //   do I need to invert the image?
-      if ( tga_inverted )
+      if (tga_x_inverted)
+      {
+         for (j = 0; j < tga_height; j++) {
+            stbi_uc *row = tga_data + (j * tga_width * tga_comp);
+            for (int s = 0, d = tga_width - 1; s * 2 < tga_width; s++, d--) {
+               stbi_uc *src = row + (s * tga_comp);
+               stbi_uc *dest = row + (d * tga_comp);
+               for (i = 0; i < tga_comp; i++) {
+                  stbi_uc temp = src[i];
+                  src[i] = dest[i];
+                  dest[i] = temp;
+               }
+            }
+         }
+      }
+      if (tga_y_inverted)
       {
          for (j = 0; j*2 < tga_height; ++j)
          {
