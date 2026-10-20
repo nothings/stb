@@ -10,3 +10,8 @@ all:
 	$(CC) $(INCLUDES) $(CPPFLAGS) -std=c++0x test_cpp_compilation.cpp -lm -lstdc++
 	$(CC) $(INCLUDES) $(CFLAGS) -DIWT_TEST image_write_test.c -lm -o image_write_test
 	$(CC) $(INCLUDES) $(CFLAGS) fuzz_main.c stbi_read_fuzzer.c -lm -o image_fuzzer
+
+# Isolated stb_vorbis oversized-allocation regression (no sample files required).
+vorbis-alloc:
+	$(CC) $(INCLUDES) $(CFLAGS) test_vorbis_alloc.c -lm -o vorbis_alloc_test
+	./vorbis_alloc_test
