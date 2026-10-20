@@ -34,6 +34,7 @@
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
 //    AnthoFoxo          github:morlat       Gabriel Ravier
+//    Chern Stepanov
 //
 // Partial history:
 //    1.22    - 2021-07-11 - various small fixes
@@ -3650,7 +3651,8 @@ static int start_decoder(vorb *f)
    if (!vorbis_validate(header))                    return error(f, VORBIS_invalid_setup);
    //file vendor
    len = get32_packet(f);
-   f->vendor = (char*)setup_malloc(f, sizeof(char) * (len+1));
+   if (len < 0)                                     return error(f, VORBIS_invalid_setup);
+   f->vendor = (char*)setup_malloc(f, sizeof(char) * ((unsigned) len + 1));
    if (f->vendor == NULL)                           return error(f, VORBIS_outofmem);
    for(i=0; i < len; ++i) {
       f->vendor[i] = get8_packet(f);
@@ -3661,13 +3663,24 @@ static int start_decoder(vorb *f)
    f->comment_list = NULL;
    if (f->comment_list_length > 0)
    {
+      // the comment count comes straight from the file, so make sure that
+      // sizeof(char*) * comment_list_length can't overflow: the product is
+      // computed in size_t and then truncated to the int that setup_malloc()
+      // takes, which would allocate a buffer that is too small for the
+      // comment_list_length pointers written below
+      if (f->comment_list_length > INT_MAX / (int) sizeof(char*))
+         return error(f, VORBIS_invalid_setup);
       f->comment_list = (char**) setup_malloc(f, sizeof(char*) * (f->comment_list_length));
       if (f->comment_list == NULL)                  return error(f, VORBIS_outofmem);
+      // zero the entries so that vorbis_deinit() can't free uninitialized
+      // pointers if we bail out while parsing the comments below
+      memset(f->comment_list, 0, sizeof(char*) * (f->comment_list_length));
    }
 
    for(i=0; i < f->comment_list_length; ++i) {
       len = get32_packet(f);
-      f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * (len+1));
+      if (len < 0)                                  return error(f, VORBIS_invalid_setup);
+      f->comment_list[i] = (char*)setup_malloc(f, sizeof(char) * ((unsigned) len + 1));
       if (f->comment_list[i] == NULL)               return error(f, VORBIS_outofmem);
 
       for(j=0; j < len; ++j) {
@@ -3848,6 +3861,12 @@ static int start_decoder(vorb *f)
       if (c->lookup_type > 2) return error(f, VORBIS_invalid_setup);
       if (c->lookup_type > 0) {
          uint16 *mults;
+         // entries and dimensions come straight from the file; make sure the
+         // size computations below (entries*dimensions) can't overflow the int
+         // that setup_malloc() takes, otherwise the multiplicands buffer would
+         // be allocated too small for the data written into it
+         if (c->dimensions && c->entries > INT_MAX / (int) sizeof(codetype) / c->dimensions)
+            return error(f, VORBIS_invalid_setup);
          c->minimum_value = float32_unpack(get_bits(f, 32));
          c->delta_value = float32_unpack(get_bits(f, 32));
          c->value_bits = get_bits(f, 4)+1;
@@ -4210,8 +4229,10 @@ static void vorbis_deinit(stb_vorbis *p)
    int i,j;
 
    setup_free(p, p->vendor);
-   for (i=0; i < p->comment_list_length; ++i) {
-      setup_free(p, p->comment_list[i]);
+   if (p->comment_list) {
+      for (i=0; i < p->comment_list_length; ++i) {
+         setup_free(p, p->comment_list[i]);
+      }
    }
    setup_free(p, p->comment_list);
 
