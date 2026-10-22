@@ -10,3 +10,9 @@ all:
 	$(CC) $(INCLUDES) $(CPPFLAGS) -std=c++0x test_cpp_compilation.cpp -lm -lstdc++
 	$(CC) $(INCLUDES) $(CFLAGS) -DIWT_TEST image_write_test.c -lm -o image_write_test
 	$(CC) $(INCLUDES) $(CFLAGS) fuzz_main.c stbi_read_fuzzer.c -lm -o image_fuzzer
+
+# Synthetic streams; no external audio fixtures or encoder required.
+.PHONY: test_vorbis_multichannel
+test_vorbis_multichannel:
+	$(CC) $(INCLUDES) $(CFLAGS) -std=c99 vorbis_multichannel.c -lm -o vorbis_multichannel
+	./vorbis_multichannel
