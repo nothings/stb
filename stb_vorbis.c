@@ -4209,12 +4209,12 @@ static void vorbis_deinit(stb_vorbis *p)
 {
    int i,j;
 
-   setup_free(p, p->vendor);
-   for (i=0; i < p->comment_list_length; ++i) {
-      setup_free(p, p->comment_list[i]);
-   }
-   setup_free(p, p->comment_list);
-
+    setup_free(p, p->vendor);
+    if (!p->comment_list) return;
+    for (i=0; i < p->comment_list_length; ++i) {
+       setup_free(p, p->comment_list[i]);
+    }
+    
    if (p->residue_config) {
       for (i=0; i < p->residue_count; ++i) {
          Residue *r = p->residue_config+i;
