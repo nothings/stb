@@ -23,7 +23,7 @@
 //    Dougall Johnson (sample-exact seeking)
 //
 // Bugfix/warning contributors:
-//    Terje Mathisen     Niklas Frykholm     Andy Hill
+//    Terje Mathisen     Niklas Frykholm     Andy Hill 
 //    Casey Muratori     John Bolton         Gargaj
 //    Laurent Gomila     Marc LeBlanc        Ronny Chevalier
 //    Bernhard Wodo      Evan Balster        github:alxprd
@@ -34,6 +34,7 @@
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
 //    AnthoFoxo          github:morlat       Gabriel Ravier
+//    github:meta-legend  
 //
 // Partial history:
 //    1.22    - 2021-07-11 - various small fixes
@@ -3100,7 +3101,7 @@ static int do_floor(vorb *f, Mapping *map, int i, int n, float *target, YTYPE *f
       if (lx < n2) {
          // optimization of: draw_line(target, lx,ly, n,ly, n2);
          for (j=lx; j < n2; ++j)
-            LINE_OP(target[j], inverse_db_table[ly]);
+            LINE_OP(target[j], inverse_db_table[ly&255]);
          CHECK(f);
       }
    }
