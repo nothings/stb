@@ -640,13 +640,28 @@ enum STBVorbisError
 #define MAX_BLOCKSIZE_LOG  13   // from specification
 #define MAX_BLOCKSIZE      (1 << MAX_BLOCKSIZE_LOG)
 
-
+#if defined B_BEOS_VERSION
+   #include <SupportDefs.h>
+#elif defined __amigaos4__
+   #include <exec/types.h>
+#elif defined _arch_dreamcast /* KallistiOS */
+   #include <arch/types.h>
+#else
 typedef unsigned char  uint8;
 typedef   signed char   int8;
 typedef unsigned short uint16;
 typedef   signed short  int16;
 typedef unsigned int   uint32;
 typedef   signed int    int32;
+
+#ifdef _MSC_VER /* MSVC6 has no long long */
+typedef unsigned __int64 uint64;
+#elif defined(_LP64) || defined(__LP64__)
+typedef unsigned long uint64;
+#else
+typedef unsigned long long uint64;
+#endif /* uint64 */
+#endif /* !BeOS && !AmigaOS4 && !KallistiOS */
 
 #ifndef TRUE
 #define TRUE 1
@@ -687,7 +702,7 @@ typedef struct
    uint8  lookup_type;
    uint8  sequence_p;
    uint8  sparse;
-   uint32 lookup_values;
+   uint64 lookup_values; /* entries (24 bits) * dimensions (16 bits) */
    codetype *multiplicands;
    uint32 *codewords;
    #ifdef STB_VORBIS_FAST_HUFFMAN_SHORT
@@ -947,13 +962,14 @@ static void *make_block_array(void *mem, int count, int size)
    return p;
 }
 
-static void *setup_malloc(vorb *f, int sz)
+static void *setup_malloc(vorb *f, uint64 sz)
 {
+   if (sz > INT_MAX - 7u) return NULL; /* TODO: memory fields are 32-bit signed. */
    sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
    f->setup_memory_required += sz;
    if (f->alloc.alloc_buffer) {
       void *p = (char *) f->alloc.alloc_buffer + f->setup_offset;
-      if (f->setup_offset + sz > f->temp_offset) return NULL;
+      if (f->temp_offset < (int)sz || f->temp_offset - (int)sz < f->setup_offset) return NULL;
       f->setup_offset += sz;
       return p;
    }
@@ -966,18 +982,19 @@ static void setup_free(vorb *f, void *p)
    free(p);
 }
 
-static void *setup_temp_malloc(vorb *f, int sz)
+static void *setup_temp_malloc(vorb *f, uint64 sz)
 {
+   if (sz > INT_MAX - 7u) return NULL; /* TODO: memory fields are 32-bit signed. */
    sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
    if (f->alloc.alloc_buffer) {
-      if (f->temp_offset - sz < f->setup_offset) return NULL;
+      if (f->temp_offset < (int)sz || f->temp_offset - (int)sz < f->setup_offset) return NULL;
       f->temp_offset -= sz;
       return (char *) f->alloc.alloc_buffer + f->temp_offset;
    }
    return malloc(sz);
 }
 
-static void setup_temp_free(vorb *f, void *p, int sz)
+static void setup_temp_free(vorb *f, void *p, uint64 sz)
 {
    if (f->alloc.alloc_buffer) {
       f->temp_offset += (sz+7)&~7;
@@ -3857,7 +3874,7 @@ static int start_decoder(vorb *f)
             if (values < 0) return error(f, VORBIS_invalid_setup);
             c->lookup_values = (uint32) values;
          } else {
-            c->lookup_values = c->entries * c->dimensions;
+            c->lookup_values = (uint64)c->entries * (uint64)c->dimensions;
          }
          if (c->lookup_values == 0) return error(f, VORBIS_invalid_setup);
          mults = (uint16 *) setup_temp_malloc(f, sizeof(mults[0]) * c->lookup_values);
@@ -3875,9 +3892,10 @@ static int start_decoder(vorb *f)
             // pre-expand the lookup1-style multiplicands, to avoid a divide in the inner loop
             if (sparse) {
                if (c->sorted_entries == 0) goto skip;
-               c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->sorted_entries * c->dimensions);
+               c->multiplicands = (codetype *) setup_malloc(f, (uint64) sizeof(c->multiplicands[0]) * c->sorted_entries * c->dimensions);
             } else
-               c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->entries        * c->dimensions);
+               c->multiplicands = (codetype *) setup_malloc(f, (uint64) sizeof(c->multiplicands[0]) * c->entries        * c->dimensions);
+
             if (c->multiplicands == NULL) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
             len = sparse ? c->sorted_entries : c->entries;
             for (j=0; j < len; ++j) {
