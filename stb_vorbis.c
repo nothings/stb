@@ -34,6 +34,7 @@
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
 //    AnthoFoxo          github:morlat       Gabriel Ravier
+//    Alejandro González
 //
 // Partial history:
 //    1.22    - 2021-07-11 - various small fixes
@@ -974,7 +975,7 @@ static void *setup_temp_malloc(vorb *f, int sz)
       f->temp_offset -= sz;
       return (char *) f->alloc.alloc_buffer + f->temp_offset;
    }
-   return malloc(sz);
+   return sz ? malloc(sz) : NULL;
 }
 
 static void setup_temp_free(vorb *f, void *p, int sz)
@@ -3720,7 +3721,7 @@ static int start_decoder(vorb *f)
       uint32 *values;
       int ordered, sorted_count;
       int total=0;
-      uint8 *lengths;
+      uint8 *lengths=NULL;
       Codebook *c = f->codebooks+i;
       CHECK(f);
       x = get_bits(f, 8); if (x != 0x42)            return error(f, VORBIS_invalid_setup);
@@ -3736,12 +3737,14 @@ static int start_decoder(vorb *f)
 
       if (c->dimensions == 0 && c->entries != 0)    return error(f, VORBIS_invalid_setup);
 
-      if (c->sparse)
-         lengths = (uint8 *) setup_temp_malloc(f, c->entries);
-      else
-         lengths = c->codeword_lengths = (uint8 *) setup_malloc(f, c->entries);
+      if (c->entries > 0) {
+        if (c->sparse)
+           lengths = (uint8 *) setup_temp_malloc(f, c->entries);
+        else
+           lengths = c->codeword_lengths = (uint8 *) setup_malloc(f, c->entries);
 
-      if (!lengths) return error(f, VORBIS_outofmem);
+        if (!lengths) return error(f, VORBIS_outofmem);
+      }
 
       if (ordered) {
          int current_entry = 0;
@@ -3774,11 +3777,13 @@ static int start_decoder(vorb *f)
          if (c->entries > (int) f->setup_temp_memory_required)
             f->setup_temp_memory_required = c->entries;
 
-         c->codeword_lengths = (uint8 *) setup_malloc(f, c->entries);
-         if (c->codeword_lengths == NULL) return error(f, VORBIS_outofmem);
-         memcpy(c->codeword_lengths, lengths, c->entries);
-         setup_temp_free(f, lengths, c->entries); // note this is only safe if there have been no intervening temp mallocs!
-         lengths = c->codeword_lengths;
+         if (c->entries > 0) {
+           c->codeword_lengths = (uint8 *) setup_malloc(f, c->entries);
+           if (c->codeword_lengths == NULL) return error(f, VORBIS_outofmem);
+           memcpy(c->codeword_lengths, lengths, c->entries);
+           setup_temp_free(f, lengths, c->entries); // note this is only safe if there have been no intervening temp mallocs!
+           lengths = c->codeword_lengths;
+         }
          c->sparse = 0;
       }
 
@@ -3798,7 +3803,7 @@ static int start_decoder(vorb *f)
       values = NULL;
 
       CHECK(f);
-      if (!c->sparse) {
+      if (!c->sparse && c->entries > 0) {
          c->codewords = (uint32 *) setup_malloc(f, sizeof(c->codewords[0]) * c->entries);
          if (!c->codewords)                  return error(f, VORBIS_outofmem);
       } else {
