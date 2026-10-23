@@ -4,6 +4,8 @@ AI AND LLM ARE FORBIDDEN
 This project doesn't accept code or documentation generated
 by LLMs or any other forms of generative AI. We don't accept
 code or bug reports which has been reviewed or analyzed by AI.
+Do not use AI in any way, shape, or form when submitting to
+this repository.
 
 Please don't submit pull requests based on generative AI
 output, and don't use AI auto completion when you write
