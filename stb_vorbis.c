@@ -34,6 +34,7 @@
 //    github:audinowho   Dougall Johnson     David Reid
 //    github:Clownacy    Pedro J. Estebanez  Remi Verschelde
 //    AnthoFoxo          github:morlat       Gabriel Ravier
+//    Daniel Collier
 //
 // Partial history:
 //    1.22    - 2021-07-11 - various small fixes
@@ -4210,10 +4211,13 @@ static void vorbis_deinit(stb_vorbis *p)
    int i,j;
 
    setup_free(p, p->vendor);
-   for (i=0; i < p->comment_list_length; ++i) {
-      setup_free(p, p->comment_list[i]);
+
+   if (p->comment_list) {
+      for (i=0; i < p->comment_list_length; ++i) {
+         if (p->comment_list[i]) setup_free(p, p->comment_list[i]);
+      }
+      setup_free(p, p->comment_list);
    }
-   setup_free(p, p->comment_list);
 
    if (p->residue_config) {
       for (i=0; i < p->residue_count; ++i) {
