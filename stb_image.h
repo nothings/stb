@@ -4265,6 +4265,7 @@ static int stbi__zexpand(stbi__zbuf *z, char *zout, int n)  // need to make room
    if (!z->z_expandable) return stbi__err("output buffer limit","Corrupt PNG");
    cur   = (unsigned int) (z->zout - z->zout_start);
    limit = old_limit = (unsigned) (z->zout_end - z->zout_start);
+   if (limit == 0) limit = 1;
    if (UINT_MAX - cur < (unsigned) n) return stbi__err("outofmem", "Out of memory");
    while (cur + n > limit) {
       if(limit > UINT_MAX / 2) return stbi__err("outofmem", "Out of memory");
