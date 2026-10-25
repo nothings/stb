@@ -131,6 +131,10 @@ DOCUMENTATION
           Deletes the element at a[p], replacing it with the element from
           the end of the array. O(1) performance.
 
+      arrclear:
+        void arrclear(T* a);
+          Sets the length of the array to 0. Does not change allocated storage.
+
       arrsetlen:
         void arrsetlen(T* a, int n);
           Changes the length of the array to n. Allocates uninitialized
@@ -371,6 +375,7 @@ CREDITS
   Per Vognsen  -- idea for hash table API/implementation
   Rafael Sachetto -- arrpop()
   github:HeroicKatora -- arraddn() reworking
+  Caleb Marshall -- arrclear()
 
   Bugfixes:
     Andy Durdin
@@ -413,6 +418,7 @@ CREDITS
 #define arrdelswap  stbds_arrdelswap
 #define arrcap      stbds_arrcap
 #define arrsetcap   stbds_arrsetcap
+#define arrclear    stbds_arrclear
 
 #define hmput       stbds_hmput
 #define hmputs      stbds_hmputs
@@ -536,7 +542,8 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_temp_key(t) (*(char **) stbds_header(t)->hash_table)
 
 #define stbds_arrsetcap(a,n)   (stbds_arrgrow(a,0,n))
-#define stbds_arrsetlen(a,n)   ((stbds_arrcap(a) < (size_t) (n) ? stbds_arrsetcap((a),(size_t)(n)),0 : 0), (a) ? stbds_header(a)->length = (size_t) (n) : 0)
+#define stbds_arrsetlen(a,n)   (((ptrdiff_t) stbds_arrcap(a) < (ptrdiff_t) (n) ? stbds_arrsetcap((a),(size_t)(n)),0 : 0), (a) ? stbds_header(a)->length = (size_t) (n) : 0)
+#define stbds_arrclear(a)      ((a) ? stbds_header(a)->length = 0 : 0)
 #define stbds_arrcap(a)        ((a) ? stbds_header(a)->capacity : 0)
 #define stbds_arrlen(a)        ((a) ? (ptrdiff_t) stbds_header(a)->length : 0)
 #define stbds_arrlenu(a)       ((a) ?             stbds_header(a)->length : 0)
