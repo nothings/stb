@@ -233,10 +233,12 @@
 typedef struct stbvox_mesh_maker stbvox_mesh_maker;
 typedef struct stbvox_input_description stbvox_input_description;
 
+#ifndef STBVXDEC
 #ifdef STB_VOXEL_RENDER_STATIC
 #define STBVXDEC static
 #else
 #define STBVXDEC extern
+#endif
 #endif
 
 #ifdef __cplusplus
