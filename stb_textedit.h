@@ -1059,7 +1059,7 @@ retry:
       case STB_TEXTEDIT_K_LINEEND: {
          int n = STB_TEXTEDIT_STRINGLEN(str);
          stb_textedit_clamp(str, state);
-         stb_textedit_move_to_first(state);
+         stb_textedit_move_to_last(str, state);
          if (state->single_line)
              state->cursor = n;
          else while (state->cursor < n && STB_TEXTEDIT_GETCHAR(str, state->cursor) != STB_TEXTEDIT_NEWLINE)
