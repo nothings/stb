@@ -802,7 +802,7 @@ void remap_in_place(int bt, int rm)
 
 void mesh_init(void)
 {
-   int i;
+   int i, j;
 
    chunk_cache_mutex = SDL_CreateMutex();
    chunk_get_mutex   = SDL_CreateMutex();
@@ -814,17 +814,19 @@ void mesh_init(void)
    }
    //effective_blocktype[50] = 0; // delete torches
 
-   for (i=0; i < 6*256; ++i) {
-      if (minecraft_tex1_for_blocktype[0][i] == 40)
-         minecraft_color_for_blocktype[0][i] = 38 | 64; // apply to tex1
-      if (minecraft_tex1_for_blocktype[0][i] == 39)
-         minecraft_color_for_blocktype[0][i] = 39 | 64; // apply to tex1
-      if (minecraft_tex1_for_blocktype[0][i] == 105)
-         minecraft_color_for_blocktype[0][i] = 63; // emissive
-      if (minecraft_tex1_for_blocktype[0][i] == 212)
-         minecraft_color_for_blocktype[0][i] = 63; // emissive
-      if (minecraft_tex1_for_blocktype[0][i] == 80)
-         minecraft_color_for_blocktype[0][i] = 63; // emissive
+   for (i=0; i < 6; ++i) {
+      for (j=0; j < 256; ++j) {
+         if (minecraft_tex1_for_blocktype[i][j] == 40)
+            minecraft_color_for_blocktype[i][j] = 38 | 64; // apply to tex1
+         if (minecraft_tex1_for_blocktype[i][j] == 39)
+            minecraft_color_for_blocktype[i][j] = 39 | 64; // apply to tex1
+         if (minecraft_tex1_for_blocktype[i][j] == 105)
+            minecraft_color_for_blocktype[i][j] = 63; // emissive
+         if (minecraft_tex1_for_blocktype[i][j] == 212)
+            minecraft_color_for_blocktype[i][j] = 63; // emissive
+         if (minecraft_tex1_for_blocktype[i][j] == 80)
+            minecraft_color_for_blocktype[i][j] = 63; // emissive
+      }
    }
 
    for (i=0; i < 6; ++i) {
