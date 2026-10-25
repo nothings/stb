@@ -1,0 +1,7 @@
+# https://editorconfig.org
+
+root = true
+
+[*.{c,h}]
+indent_style = space
+indent_size = 4
