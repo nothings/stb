@@ -149,8 +149,10 @@ typedef struct
 // get general information about the file
 extern stb_vorbis_info stb_vorbis_get_info(stb_vorbis *f);
 
+#ifndef STB_VORBIS_NO_COMMENTS
 // get ogg comments
 extern stb_vorbis_comment stb_vorbis_get_comment(stb_vorbis *f);
+#endif
 
 // get the last error detected (clears it, too)
 extern int stb_vorbis_get_error(stb_vorbis *f);
@@ -544,6 +546,10 @@ enum STBVorbisError
 //     you'd ever want to do it except for debugging.
 // #define STB_VORBIS_NO_DEFER_FLOOR
 
+// STB_VORBIS_NO_COMMENTS
+//     Disables reading and storing user comments.
+// #define STB_VORBIS_NO_COMMENTS
+
 
 
 
@@ -792,9 +798,11 @@ struct stb_vorbis
    unsigned int temp_memory_required;
    unsigned int setup_temp_memory_required;
 
+#ifndef STB_VORBIS_NO_COMMENTS
    char *vendor;
    int comment_list_length;
    char **comment_list;
+#endif
 
   // input config
 #ifndef STB_VORBIS_NO_STDIO
@@ -1579,6 +1587,7 @@ static int get8_packet(vorb *f)
    return x;
 }
 
+#ifndef STB_VORBIS_NO_COMMENTS
 static int get32_packet(vorb *f)
 {
    uint32 x;
@@ -1588,6 +1597,7 @@ static int get32_packet(vorb *f)
    x += (uint32) get8_packet(f) << 24;
    return x;
 }
+#endif
 
 static void flush_packet(vorb *f)
 {
@@ -3643,6 +3653,7 @@ static int start_decoder(vorb *f)
 
    if (!start_packet(f))                            return FALSE;
 
+#ifndef STB_VORBIS_NO_COMMENTS
    if (!next_segment(f))                            return FALSE;
 
    if (get8_packet(f) != VORBIS_packet_comment)            return error(f, VORBIS_invalid_setup);
@@ -3683,6 +3694,7 @@ static int start_decoder(vorb *f)
 
    skip(f, f->bytes_in_seg);
    f->bytes_in_seg = 0;
+#endif // STB_VORBIS_NO_COMMENTS
 
    do {
       len = next_segment(f);
@@ -4209,11 +4221,13 @@ static void vorbis_deinit(stb_vorbis *p)
 {
    int i,j;
 
+#ifndef STB_VORBIS_NO_COMMENTS
    setup_free(p, p->vendor);
    for (i=0; i < p->comment_list_length; ++i) {
       setup_free(p, p->comment_list[i]);
    }
    setup_free(p, p->comment_list);
+#endif
 
    if (p->residue_config) {
       for (i=0; i < p->residue_count; ++i) {
@@ -4314,6 +4328,7 @@ stb_vorbis_info stb_vorbis_get_info(stb_vorbis *f)
    return d;
 }
 
+#ifndef STB_VORBIS_NO_COMMENTS
 stb_vorbis_comment stb_vorbis_get_comment(stb_vorbis *f)
 {
    stb_vorbis_comment d;
@@ -4322,6 +4337,7 @@ stb_vorbis_comment stb_vorbis_get_comment(stb_vorbis *f)
    d.comment_list = f->comment_list;
    return d;
 }
+#endif
 
 int stb_vorbis_get_error(stb_vorbis *f)
 {
