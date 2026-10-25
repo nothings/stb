@@ -41,8 +41,9 @@ COMPILE-TIME OPTIONS
      hash table insertion about 20% slower on 4- and 8-byte keys, 5% slower on
      64-byte keys, and 10% slower on 256-byte keys on my test computer.
 
-  #define STBDS_REALLOC(context,ptr,size) better_realloc
-  #define STBDS_FREE(context,ptr)         better_free
+  #define STBDS_FREE(context,ptr)                          better_free
+  #define STBDS_REALLOC(context,ptr,size)                  better_realloc
+  #define STBDS_REALLOC_SIZED(context,ptr,oldsize,newsize) better_realloc_requiring_old_size
 
      These defines only need to be set in the file containing #define STB_DS_IMPLEMENTATION.
 
@@ -371,6 +372,7 @@ CREDITS
   Per Vognsen  -- idea for hash table API/implementation
   Rafael Sachetto -- arrpop()
   github:HeroicKatora -- arraddn() reworking
+  Jonathan Wilson -- STBDS_REALLOC_SIZED
 
   Bugfixes:
     Andy Durdin
@@ -452,13 +454,22 @@ CREDITS
 #define strreset    stbds_strreset
 #endif
 
-#if defined(STBDS_REALLOC) && !defined(STBDS_FREE) || !defined(STBDS_REALLOC) && defined(STBDS_FREE)
-#error "You must define both STBDS_REALLOC and STBDS_FREE, or neither."
+#if defined(STBDS_FREE) && (defined(STBDS_REALLOC) || defined(STBDS_REALLOC_SIZED))
+// ok
+#elif !defined(STBDS_FREE) && !defined(STBDS_REALLOC) && !defined(STBDS_REALLOC_SIZED)
+// ok
+#else
+#error "Must define all or none of STBDS_FREE, and STBDS_REALLOC (or STBDS_REALLOC_SIZED)."
 #endif
-#if !defined(STBDS_REALLOC) && !defined(STBDS_FREE)
+
+#ifndef STBDS_FREE
 #include <stdlib.h>
-#define STBDS_REALLOC(c,p,s) realloc(p,s)
-#define STBDS_FREE(c,p)      free(p)
+#define STBDS_REALLOC(c,p,newsz) realloc(p,newsz)
+#define STBDS_FREE(c,p)          free(p)
+#endif
+
+#ifndef STBDS_REALLOC_SIZED
+#define STBDS_REALLOC_SIZED(c,p,oldsz,newsz) STBDS_REALLOC(c,p,newsz)
 #endif
 
 #ifdef _MSC_VER
@@ -782,7 +793,7 @@ void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
   //if (num_prev < 65536) if (a) prev_allocs[num_prev++] = (int *) ((char *) a+1);
   //if (num_prev == 2201)
   //  num_prev = num_prev;
-  b = STBDS_REALLOC(NULL, (a) ? stbds_header(a) : 0, elemsize * min_cap + sizeof(stbds_array_header));
+  b = STBDS_REALLOC_SIZED(NULL, (a) ? stbds_header(a) : 0, elemsize * stbds_arrcap(a), elemsize * min_cap + sizeof(stbds_array_header));
   //if (num_prev < 65536) prev_allocs[num_prev++] = (int *) (char *) b;
   b = (char *) b + sizeof(stbds_array_header);
   if (a == NULL) {
@@ -884,7 +895,7 @@ static size_t stbds_log2(size_t slot_count)
 static stbds_hash_index *stbds_make_hash_index(size_t slot_count, stbds_hash_index *ot)
 {
   stbds_hash_index *t;
-  t = (stbds_hash_index *) STBDS_REALLOC(NULL,0,(slot_count >> STBDS_BUCKET_SHIFT) * sizeof(stbds_hash_bucket) + sizeof(stbds_hash_index) + STBDS_CACHE_LINE_SIZE-1);
+  t = (stbds_hash_index *) STBDS_REALLOC_SIZED(NULL, 0, 0, (slot_count >> STBDS_BUCKET_SHIFT) * sizeof(stbds_hash_bucket) + sizeof(stbds_hash_index) + STBDS_CACHE_LINE_SIZE-1);
   t->storage = (stbds_hash_bucket *) STBDS_ALIGN_FWD((size_t) (t+1), STBDS_CACHE_LINE_SIZE);
   t->slot_count = slot_count;
   t->slot_count_log2 = stbds_log2(slot_count);
@@ -1542,7 +1553,7 @@ static char *stbds_strdup(char *str)
   // to keep replaceable allocator simple, we don't want to use strdup.
   // rolling our own also avoids problem of strdup vs _strdup
   size_t len = strlen(str)+1;
-  char *p = (char*) STBDS_REALLOC(NULL, 0, len);
+  char *p = (char*) STBDS_REALLOC_SIZED(NULL, 0, 0, len);
   memmove(p, str, len);
   return p;
 }
@@ -1575,7 +1586,7 @@ char *stbds_stralloc(stbds_string_arena *a, char *str)
       // note that we still advance string_block so block size will continue
       // increasing, so e.g. if somebody only calls this with 1000-long strings,
       // eventually the arena will start doubling and handling those as well
-      stbds_string_block *sb = (stbds_string_block *) STBDS_REALLOC(NULL, 0, sizeof(*sb)-8 + len);
+      stbds_string_block *sb = (stbds_string_block *) STBDS_REALLOC_SIZED(NULL, 0, 0, sizeof(*sb)-8 + len);
       memmove(sb->storage, str, len);
       if (a->storage) {
         // insert it after the first element, so that we don't waste the space there
@@ -1588,7 +1599,7 @@ char *stbds_stralloc(stbds_string_arena *a, char *str)
       }
       return sb->storage;
     } else {
-      stbds_string_block *sb = (stbds_string_block *) STBDS_REALLOC(NULL, 0, sizeof(*sb)-8 + blocksize);
+      stbds_string_block *sb = (stbds_string_block *) STBDS_REALLOC_SIZED(NULL, 0, 0, sizeof(*sb)-8 + blocksize);
       sb->next = a->storage;
       a->storage = sb;
       a->remaining = blocksize;
