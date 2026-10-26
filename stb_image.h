@@ -5885,7 +5885,8 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
       for (i=0; i < tga_height; ++i) {
          int row = tga_inverted ? tga_height -i - 1 : i;
          stbi_uc *tga_row = tga_data + row*tga_width*tga_comp;
-         stbi__getn(s, tga_row, tga_width * tga_comp);
+         if (!stbi__getn(s, tga_row, tga_width * tga_comp))
+            return stbi__errpuc("premature EOF", "Corrupt TGA");
       }
    } else  {
       //   do I need to load a palette?
@@ -6885,17 +6886,74 @@ static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp)
    }
 }
 
+static int stbi__hdr_load_pixels(stbi__context *s, float *hdr_data, int width, int height, int req_comp, int isrle, stbi_uc *scanline)
+{
+   int x,y,k;
+   stbi_uc rgbe[4];
+   stbi_uc count,value;
+
+   // image data is stored as some number of scanlines
+   for (y = 0; y < height; ++y) {
+      rgbe[0] = stbi__get8(s);
+      rgbe[1] = stbi__get8(s);
+      rgbe[2] = stbi__get8(s);
+      rgbe[3] = stbi__get8(s);
+      if (!isrle || rgbe[0] != 2 || rgbe[1] != 2 || (rgbe[2] & 0x80)) {
+         // data is not RLE, this was the first pixel
+         isrle = 0;
+         x = 0;
+         for (;;) {
+            stbi__hdr_convert(hdr_data+(y*width + x)*req_comp, rgbe, req_comp);
+            ++x;
+            if (x >= width) break;
+            rgbe[0] = stbi__get8(s);
+            rgbe[1] = stbi__get8(s);
+            rgbe[2] = stbi__get8(s);
+            rgbe[3] = stbi__get8(s);
+         }
+         continue;
+      }
+      if (((rgbe[2] << 8) | rgbe[3]) != width) return stbi__err("invalid decoded scanline length", "corrupt HDR");
+
+      for (k = 0; k < 4; ++k) {
+         x = 0;
+         while (x < width) {
+            count = stbi__get8(s);
+            if (count > 128) {
+               // Run
+               value = stbi__get8(s);
+               count -= 128;
+               if (count == 0 || width - x < count) return stbi__err("corrupt", "bad RLE data in HDR");
+               while (count--) {
+                  scanline[x*4 + k] = value;
+                  ++x;
+               }
+            } else {
+               // Dump
+               if (count == 0 || width - x < count) return stbi__err("corrupt", "bad RLE data in HDR");
+               while (count--) {
+                  scanline[x*4 + k] = stbi__get8(s);
+                  ++x;
+               }
+            }
+         }
+      }
+      for (x=0; x < width; ++x)
+         stbi__hdr_convert(hdr_data+(y*width + x)*req_comp, scanline + x*4, req_comp);
+   }
+
+   return 1;
+}
+
 static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
 {
    char buffer[STBI__HDR_BUFLEN];
    char *token;
    int valid = 0;
    int width, height;
-   stbi_uc *scanline;
+   stbi_uc *scanline = NULL;
    float *hdr_data;
-   int len;
-   unsigned char count, value;
-   int i, j, k, c1,c2, z;
+   int isrle;
    const char *headerToken;
    STBI_NOTUSED(ri);
 
@@ -6924,8 +6982,9 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    token += 3;
    width = (int) strtol(token, NULL, 10);
 
-   if (height > STBI_MAX_DIMENSIONS) return stbi__errpf("too large","Very large image (corrupt?)");
-   if (width > STBI_MAX_DIMENSIONS) return stbi__errpf("too large","Very large image (corrupt?)");
+   if (width <= 0 || width > STBI_MAX_DIMENSIONS || height <= 0 || height > STBI_MAX_DIMENSIONS) {
+      return stbi__errpf("invalid size","Invalid image size (corrupt?)");
+   }
 
    *x = width;
    *y = height;
@@ -6941,77 +7000,24 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    if (!hdr_data)
       return stbi__errpf("outofmem", "Out of memory");
 
-   // Load image data
-   // image data is stored as some number of sca
-   if ( width < 8 || width >= 32768) {
-      // Read flat data
-      for (j=0; j < height; ++j) {
-         for (i=0; i < width; ++i) {
-            stbi_uc rgbe[4];
-           main_decode_loop:
-            stbi__getn(s, rgbe, 4);
-            stbi__hdr_convert(hdr_data + j * width * req_comp + i * req_comp, rgbe, req_comp);
-         }
+   // for sizes where it's legal, assume RLE unless proven otherwise
+   isrle = (width >= 8 && width < 32768);
+   if (isrle) {
+      scanline = (stbi_uc *) stbi__malloc_mad2(width, 4, 0);
+      if (!scanline) {
+         STBI_FREE(hdr_data);
+         return stbi__errpf("outofmem", "Out of memory");
       }
-   } else {
-      // Read RLE-encoded data
-      scanline = NULL;
-
-      for (j = 0; j < height; ++j) {
-         c1 = stbi__get8(s);
-         c2 = stbi__get8(s);
-         len = stbi__get8(s);
-         if (c1 != 2 || c2 != 2 || (len & 0x80)) {
-            // not run-length encoded, so we have to actually use THIS data as a decoded
-            // pixel (note this can't be a valid pixel--one of RGB must be >= 128)
-            stbi_uc rgbe[4];
-            rgbe[0] = (stbi_uc) c1;
-            rgbe[1] = (stbi_uc) c2;
-            rgbe[2] = (stbi_uc) len;
-            rgbe[3] = (stbi_uc) stbi__get8(s);
-            stbi__hdr_convert(hdr_data, rgbe, req_comp);
-            i = 1;
-            j = 0;
-            STBI_FREE(scanline);
-            goto main_decode_loop; // yes, this makes no sense
-         }
-         len <<= 8;
-         len |= stbi__get8(s);
-         if (len != width) { STBI_FREE(hdr_data); STBI_FREE(scanline); return stbi__errpf("invalid decoded scanline length", "corrupt HDR"); }
-         if (scanline == NULL) {
-            scanline = (stbi_uc *) stbi__malloc_mad2(width, 4, 0);
-            if (!scanline) {
-               STBI_FREE(hdr_data);
-               return stbi__errpf("outofmem", "Out of memory");
-            }
-         }
-
-         for (k = 0; k < 4; ++k) {
-            int nleft;
-            i = 0;
-            while ((nleft = width - i) > 0) {
-               count = stbi__get8(s);
-               if (count > 128) {
-                  // Run
-                  value = stbi__get8(s);
-                  count -= 128;
-                  if ((count == 0) || (count > nleft)) { STBI_FREE(hdr_data); STBI_FREE(scanline); return stbi__errpf("corrupt", "bad RLE data in HDR"); }
-                  for (z = 0; z < count; ++z)
-                     scanline[i++ * 4 + k] = value;
-               } else {
-                  // Dump
-                  if ((count == 0) || (count > nleft)) { STBI_FREE(hdr_data); STBI_FREE(scanline); return stbi__errpf("corrupt", "bad RLE data in HDR"); }
-                  for (z = 0; z < count; ++z)
-                     scanline[i++ * 4 + k] = stbi__get8(s);
-               }
-            }
-         }
-         for (i=0; i < width; ++i)
-            stbi__hdr_convert(hdr_data+(j*width + i)*req_comp, scanline + i*4, req_comp);
-      }
-      if (scanline)
-         STBI_FREE(scanline);
    }
+
+   if (!stbi__hdr_load_pixels(s, hdr_data, width, height, req_comp, isrle, scanline))
+   {
+      STBI_FREE(hdr_data);
+      hdr_data = NULL;
+   }
+
+   if (scanline)
+      STBI_FREE(scanline);
 
    return hdr_data;
 }
