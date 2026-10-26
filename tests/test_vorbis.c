@@ -1,18 +1,25 @@
-#define STB_VORBIS_HEADER_ONLY
+#include <stdio.h>
 #include "stb_vorbis.c"
-#include "stb.h"
 
-extern void stb_vorbis_dumpmem(void);
-
-#ifdef VORBIS_TEST
 int main(int argc, char **argv)
 {
-   size_t memlen;
-   unsigned char *mem = stb_fileu("../../lib/vorbis/sample/sketch008.ogg", &memlen);
    int chan, samplerate;
    short *output;
-   int samples = stb_vorbis_decode_memory(mem, memlen, &chan, &samplerate, &output);
-   stb_filewrite("c:/x/sketch008.raw", output, samples*4);
+   int samples;
+   FILE *f;
+
+   if (argc < 2)
+       return 1;
+
+   samples = stb_vorbis_decode_filename(argv[1], &chan, &samplerate, &output);
+   if (output) {
+      printf("chan=%d samplerate=%d\n", chan, samplerate);
+      f = fopen("decoded.raw", "wb");
+      if (f) {
+         fwrite(output, chan * sizeof(short), samples, f);
+         fclose(f);
+      }
+      free(output);
+   }
    return 0;
 }
-#endif
