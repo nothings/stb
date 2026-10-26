@@ -3634,8 +3634,9 @@ static int start_decoder(vorb *f)
       log1 = x >> 4;
       f->blocksize_0 = 1 << log0;
       f->blocksize_1 = 1 << log1;
-      if (log0 < 6 || log0 > 13)                       return error(f, VORBIS_invalid_setup);
-      if (log1 < 6 || log1 > 13)                       return error(f, VORBIS_invalid_setup);
+      // actual min is 6, but libvorbis never seems to emit below 8 and this path appears buggy; just bail on those
+      if (log0 < 8 || log0 > 13)                       return error(f, VORBIS_invalid_setup);
+      if (log1 < 8 || log1 > 13)                       return error(f, VORBIS_invalid_setup);
       if (log0 > log1)                                 return error(f, VORBIS_invalid_setup);
    }
 
