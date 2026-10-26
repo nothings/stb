@@ -640,28 +640,13 @@ enum STBVorbisError
 #define MAX_BLOCKSIZE_LOG  13   // from specification
 #define MAX_BLOCKSIZE      (1 << MAX_BLOCKSIZE_LOG)
 
-#if defined B_BEOS_VERSION
-   #include <SupportDefs.h>
-#elif defined __amigaos4__
-   #include <exec/types.h>
-#elif defined _arch_dreamcast /* KallistiOS */
-   #include <arch/types.h>
-#else
+
 typedef unsigned char  uint8;
 typedef   signed char   int8;
 typedef unsigned short uint16;
 typedef   signed short  int16;
 typedef unsigned int   uint32;
 typedef   signed int    int32;
-
-#ifdef _MSC_VER /* MSVC6 has no long long */
-typedef unsigned __int64 uint64;
-#elif defined(_LP64) || defined(__LP64__)
-typedef unsigned long uint64;
-#else
-typedef unsigned long long uint64;
-#endif /* uint64 */
-#endif /* !BeOS && !AmigaOS4 && !KallistiOS */
 
 #ifndef TRUE
 #define TRUE 1
@@ -3594,6 +3579,8 @@ static int is_whole_packet_present(stb_vorbis *f)
 }
 #endif // !STB_VORBIS_NO_PUSHDATA_API
 
+#define CODEBOOK_LIMIT (1 << 18)
+
 static int start_decoder(vorb *f)
 {
    uint8 header[6], x,y;
@@ -3679,7 +3666,7 @@ static int start_decoder(vorb *f)
    f->comment_list = NULL;
    if (f->comment_list_length > 0)
    {
-      if ((uint64) sizeof(char*) * f->comment_list_length > INT_MAX) return error(f, VORBIS_invalid_setup);
+      if (f->comment_list_length > INT_MAX / (int)sizeof(char*)) return error(f, VORBIS_invalid_setup);
       f->comment_list = (char**) setup_malloc(f, sizeof(char*) * (f->comment_list_length));
       if (f->comment_list == NULL)                  return error(f, VORBIS_outofmem);
       memset(f->comment_list, 0, sizeof(char*) * f->comment_list_length);
@@ -3869,10 +3856,7 @@ static int start_decoder(vorb *f)
       if (c->lookup_type > 2) return error(f, VORBIS_invalid_setup);
       if (c->lookup_type > 0) {
          uint16 *mults;
-         /* Allocations are currently limited to INT_MAX. lookup_values is
-          * a 40-bit product, so verify that the largest array of this size
-          * will not overflow. */
-         if ((uint64) c->entries * c->dimensions * sizeof(c->multiplicands[0]) > INT_MAX) return error(f, VORBIS_invalid_setup);
+         if (c->entries && CODEBOOK_LIMIT / c->entries < c->dimensions) return error(f, VORBIS_invalid_setup);
          c->minimum_value = float32_unpack(get_bits(f, 32));
          c->delta_value = float32_unpack(get_bits(f, 32));
          c->value_bits = get_bits(f, 4)+1;
