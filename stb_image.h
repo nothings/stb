@@ -5742,98 +5742,59 @@ static int stbi__tga_get_comp(int bits_per_pixel, int is_grey, int* is_rgb16)
    }
 }
 
+static int stbi__tga_info_impl(stbi__context *s, int *x, int *y, int *comp)
+{
+   int tga_w, tga_h, tga_comp, tga_image_type, tga_bits_per_pixel, tga_colormap_bpp;
+   int sz, tga_colormap_type;
+   stbi__get8(s);                   // discard Offset
+   tga_colormap_type = stbi__get8(s); // colormap type
+   if (tga_colormap_type > 1) return 0; // only RGB/indexed allowed
+   tga_image_type = stbi__get8(s); // image type
+   if (tga_colormap_type == 1) { // colormapped (paletted) image
+      if (tga_image_type != 1 && tga_image_type != 9) return 0;
+      stbi__skip(s,4);       // skip index of first colormap entry and number of entries
+      sz = stbi__get8(s);    //   check bits per palette color entry
+      if ((sz != 8) && (sz != 15) && (sz != 16) && (sz != 24) && (sz != 32)) return 0;
+      stbi__skip(s,4);       // skip image x and y origin
+      tga_colormap_bpp = sz;
+   } else { // "normal" image w/o colormap - only RGB or grey allowed, +/- RLE
+      if ((tga_image_type != 2) && (tga_image_type != 3) && (tga_image_type != 10) && (tga_image_type != 11)) {
+         return 0; // only RGB or grey allowed, +/- RLE
+      }
+      stbi__skip(s,9); // skip colormap specification and image x/y origin
+      tga_colormap_bpp = 0;
+   }
+   tga_w = stbi__get16le(s);
+   tga_h = stbi__get16le(s);
+   if (tga_w < 1 || tga_h < 1) return 0;
+   tga_bits_per_pixel = stbi__get8(s); // bits per pixel
+   stbi__get8(s); // ignore alpha bits
+   if (tga_colormap_bpp != 0) {
+      // only support 8- and 16-bit indexes for colormaps
+      if((tga_bits_per_pixel != 8) && (tga_bits_per_pixel != 16)) return 0;
+      tga_comp = stbi__tga_get_comp(tga_colormap_bpp, 0, NULL);
+   } else {
+      tga_comp = stbi__tga_get_comp(tga_bits_per_pixel, (tga_image_type == 3) || (tga_image_type == 11), NULL);
+   }
+   if (!tga_comp) return 0;
+   if (x) *x = tga_w;
+   if (y) *y = tga_h;
+   if (comp) *comp = tga_comp;
+   return 1;                   // seems to have passed everything
+}
+
 static int stbi__tga_info(stbi__context *s, int *x, int *y, int *comp)
 {
-    int tga_w, tga_h, tga_comp, tga_image_type, tga_bits_per_pixel, tga_colormap_bpp;
-    int sz, tga_colormap_type;
-    stbi__get8(s);                   // discard Offset
-    tga_colormap_type = stbi__get8(s); // colormap type
-    if( tga_colormap_type > 1 ) {
-        stbi__rewind(s);
-        return 0;      // only RGB or indexed allowed
-    }
-    tga_image_type = stbi__get8(s); // image type
-    if ( tga_colormap_type == 1 ) { // colormapped (paletted) image
-        if (tga_image_type != 1 && tga_image_type != 9) {
-            stbi__rewind(s);
-            return 0;
-        }
-        stbi__skip(s,4);       // skip index of first colormap entry and number of entries
-        sz = stbi__get8(s);    //   check bits per palette color entry
-        if ( (sz != 8) && (sz != 15) && (sz != 16) && (sz != 24) && (sz != 32) ) {
-            stbi__rewind(s);
-            return 0;
-        }
-        stbi__skip(s,4);       // skip image x and y origin
-        tga_colormap_bpp = sz;
-    } else { // "normal" image w/o colormap - only RGB or grey allowed, +/- RLE
-        if ( (tga_image_type != 2) && (tga_image_type != 3) && (tga_image_type != 10) && (tga_image_type != 11) ) {
-            stbi__rewind(s);
-            return 0; // only RGB or grey allowed, +/- RLE
-        }
-        stbi__skip(s,9); // skip colormap specification and image x/y origin
-        tga_colormap_bpp = 0;
-    }
-    tga_w = stbi__get16le(s);
-    if( tga_w < 1 ) {
-        stbi__rewind(s);
-        return 0;   // test width
-    }
-    tga_h = stbi__get16le(s);
-    if( tga_h < 1 ) {
-        stbi__rewind(s);
-        return 0;   // test height
-    }
-    tga_bits_per_pixel = stbi__get8(s); // bits per pixel
-    stbi__get8(s); // ignore alpha bits
-    if (tga_colormap_bpp != 0) {
-        if((tga_bits_per_pixel != 8) && (tga_bits_per_pixel != 16)) {
-            // when using a colormap, tga_bits_per_pixel is the size of the indexes
-            // I don't think anything but 8 or 16bit indexes makes sense
-            stbi__rewind(s);
-            return 0;
-        }
-        tga_comp = stbi__tga_get_comp(tga_colormap_bpp, 0, NULL);
-    } else {
-        tga_comp = stbi__tga_get_comp(tga_bits_per_pixel, (tga_image_type == 3) || (tga_image_type == 11), NULL);
-    }
-    if(!tga_comp) {
+   if (!stbi__tga_info_impl(s, x, y, comp)) {
       stbi__rewind(s);
       return 0;
-    }
-    if (x) *x = tga_w;
-    if (y) *y = tga_h;
-    if (comp) *comp = tga_comp;
-    return 1;                   // seems to have passed everything
+   }
+   return 1;
 }
 
 static int stbi__tga_test(stbi__context *s)
 {
-   int res = 0;
-   int sz, tga_color_type;
-   stbi__get8(s);      //   discard Offset
-   tga_color_type = stbi__get8(s);   //   color type
-   if ( tga_color_type > 1 ) goto errorEnd;   //   only RGB or indexed allowed
-   sz = stbi__get8(s);   //   image type
-   if ( tga_color_type == 1 ) { // colormapped (paletted) image
-      if (sz != 1 && sz != 9) goto errorEnd; // colortype 1 demands image type 1 or 9
-      stbi__skip(s,4);       // skip index of first colormap entry and number of entries
-      sz = stbi__get8(s);    //   check bits per palette color entry
-      if ( (sz != 8) && (sz != 15) && (sz != 16) && (sz != 24) && (sz != 32) ) goto errorEnd;
-      stbi__skip(s,4);       // skip image x and y origin
-   } else { // "normal" image w/o colormap
-      if ( (sz != 2) && (sz != 3) && (sz != 10) && (sz != 11) ) goto errorEnd; // only RGB or grey allowed, +/- RLE
-      stbi__skip(s,9); // skip colormap specification and image x/y origin
-   }
-   if ( stbi__get16le(s) < 1 ) goto errorEnd;      //   test width
-   if ( stbi__get16le(s) < 1 ) goto errorEnd;      //   test height
-   sz = stbi__get8(s);   //   bits per pixel
-   if ( (tga_color_type == 1) && (sz != 8) && (sz != 16) ) goto errorEnd; // for colormapped images, bpp is size of an index
-   if ( (sz != 8) && (sz != 15) && (sz != 16) && (sz != 24) && (sz != 32) ) goto errorEnd;
-
-   res = 1; // if we got this far, everything's good and we can return 1 instead of 0
-
-errorEnd:
+   int res = stbi__tga_info_impl(s, NULL, NULL, NULL);
    stbi__rewind(s);
    return res;
 }
@@ -5918,7 +5879,7 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    if (!tga_data) return stbi__errpuc("outofmem", "Out of memory");
 
    // skip to the data's starting position (offset usually = 0)
-   stbi__skip(s, tga_offset );
+   stbi__skip(s, tga_offset);
 
    if ( !tga_indexed && !tga_is_RLE && !tga_rgb16 ) {
       for (i=0; i < tga_height; ++i) {
@@ -5951,9 +5912,9 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
                pal_entry += tga_comp;
             }
          } else if (!stbi__getn(s, tga_palette, tga_palette_len * tga_comp)) {
-               STBI_FREE(tga_data);
-               STBI_FREE(tga_palette);
-               return stbi__errpuc("bad palette", "Corrupt TGA");
+            STBI_FREE(tga_data);
+            STBI_FREE(tga_palette);
+            return stbi__errpuc("bad palette", "Corrupt TGA");
          }
       }
       //   load the data
