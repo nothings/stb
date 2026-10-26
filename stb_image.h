@@ -7185,8 +7185,7 @@ static int stbi__psd_is16(stbi__context *s)
        stbi__rewind( s );
        return 0;
    }
-   STBI_NOTUSED(stbi__get32be(s));
-   STBI_NOTUSED(stbi__get32be(s));
+   stbi__skip(s, 8);
    depth = stbi__get16be(s);
    if (depth != 16) {
        stbi__rewind( s );
