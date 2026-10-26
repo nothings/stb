@@ -7179,49 +7179,12 @@ static int      stbi__pnm_test(stbi__context *s)
    return 1;
 }
 
-static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
-{
-   stbi_uc *out;
-   STBI_NOTUSED(ri);
-
-   ri->bits_per_channel = stbi__pnm_info(s, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n);
-   if (ri->bits_per_channel == 0)
-      return 0;
-
-   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
-   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
-
-   *x = s->img_x;
-   *y = s->img_y;
-   if (comp) *comp = s->img_n;
-
-   if (!stbi__mad4sizes_valid(s->img_n, s->img_x, s->img_y, ri->bits_per_channel / 8, 0))
-      return stbi__errpuc("too large", "PNM too large");
-
-   out = (stbi_uc *) stbi__malloc_mad4(s->img_n, s->img_x, s->img_y, ri->bits_per_channel / 8, 0);
-   if (!out) return stbi__errpuc("outofmem", "Out of memory");
-   if (!stbi__getn(s, out, s->img_n * s->img_x * s->img_y * (ri->bits_per_channel / 8))) {
-      STBI_FREE(out);
-      return stbi__errpuc("bad PNM", "PNM file truncated");
-   }
-
-   if (req_comp && req_comp != s->img_n) {
-      if (ri->bits_per_channel == 16) {
-         out = (stbi_uc *) stbi__convert_format16((stbi__uint16 *) out, s->img_n, req_comp, s->img_x, s->img_y);
-      } else {
-         out = stbi__convert_format(out, s->img_n, req_comp, s->img_x, s->img_y);
-      }
-      if (out == NULL) return out; // stbi__convert_format frees input on failure
-   }
-   return out;
-}
-
-static int      stbi__pnm_isspace(char c)
+static int stbi__pnm_isspace(char c)
 {
    return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
 }
 
-static void     stbi__pnm_skip_whitespace(stbi__context *s, char *c)
+static void stbi__pnm_skip_whitespace(stbi__context *s, char *c)
 {
    for (;;) {
       while (!stbi__at_eof(s) && stbi__pnm_isspace(*c))
@@ -7235,16 +7198,11 @@ static void     stbi__pnm_skip_whitespace(stbi__context *s, char *c)
    }
 }
 
-static int      stbi__pnm_isdigit(char c)
-{
-   return c >= '0' && c <= '9';
-}
-
-static int      stbi__pnm_getinteger(stbi__context *s, char *c)
+static int stbi__pnm_getinteger(stbi__context *s, char *c)
 {
    int value = 0;
 
-   while (!stbi__at_eof(s) && stbi__pnm_isdigit(*c)) {
+   while (!stbi__at_eof(s) && *c >= '0' && *c <= '9') {
       value = value*10 + (*c - '0');
       *c = (char) stbi__get8(s);
       if((value > 214748364) || (value == 214748364 && *c > '7'))
@@ -7254,9 +7212,9 @@ static int      stbi__pnm_getinteger(stbi__context *s, char *c)
    return value;
 }
 
-static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
+static int stbi__pnm_info_internal(stbi__context *s, int *x, int *y, int *comp, int *maxv)
 {
-   int maxv, dummy;
+   int dummy;
    char c, p, t;
 
    if (!x) x = &dummy;
@@ -7288,13 +7246,78 @@ static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
        return stbi__err("invalid width", "PPM image header had zero or overflowing width");
    stbi__pnm_skip_whitespace(s, &c);
 
-   maxv = stbi__pnm_getinteger(s, &c);  // read max value
-   if (maxv > 65535)
+   *maxv = stbi__pnm_getinteger(s, &c);  // read max value
+   if (*maxv == 0)
+       return stbi__err("invalid maxv", "PPM image header had zero maxv");
+   else if (*maxv > 65535)
       return stbi__err("max value > 65535", "PPM image supports only 8-bit and 16-bit images");
-   else if (maxv > 255)
+   else if (*maxv > 255)
       return 16;
    else
       return 8;
+}
+
+static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
+{
+   stbi_uc *out;
+   int i, maxv, expected_maxv, nvals;
+
+   ri->bits_per_channel = stbi__pnm_info_internal(s, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n, &maxv);
+   if (ri->bits_per_channel == 0)
+      return 0;
+
+   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+
+   *x = s->img_x;
+   *y = s->img_y;
+   if (comp) *comp = s->img_n;
+
+   if (!stbi__mad4sizes_valid(s->img_n, s->img_x, s->img_y, ri->bits_per_channel / 8, 0))
+      return stbi__errpuc("too large", "PNM too large");
+
+   out = (stbi_uc *) stbi__malloc_mad4(s->img_n, s->img_x, s->img_y, ri->bits_per_channel / 8, 0);
+   if (!out) return stbi__errpuc("outofmem", "Out of memory");
+   nvals = s->img_n * s->img_x * s->img_y;
+   if (!stbi__getn(s, out, nvals * (ri->bits_per_channel / 8))) {
+      STBI_FREE(out);
+      return stbi__errpuc("bad PNM", "PNM file truncated");
+   }
+
+   expected_maxv = (ri->bits_per_channel == 8) ? 255 : 65535;
+   if (maxv != expected_maxv) {
+       if (ri->bits_per_channel == 16) {
+           for (i = 0; i < nvals; ++i) {
+               stbi__uint32 val = (out[i*2 + 0] << 8) + out[i*2 + 1]; // BE
+               if (val >= (stbi__uint32)maxv) val = maxv - 1;
+               val = (val * expected_maxv) / maxv;
+               out[i*2 + 0] = (stbi_uc)(val >> 8);
+               out[i*2 + 1] = (stbi_uc)(val & 0xff);
+           }
+       } else {
+           for (i = 0; i < nvals; ++i) {
+               int val = out[i];
+               if (val >= maxv) val = maxv - 1;
+               out[i] = (stbi_uc)((val * expected_maxv) / maxv);
+           }
+       }
+   }
+
+   if (req_comp && req_comp != s->img_n) {
+      if (ri->bits_per_channel == 16) {
+         out = (stbi_uc *) stbi__convert_format16((stbi__uint16 *) out, s->img_n, req_comp, s->img_x, s->img_y);
+      } else {
+         out = stbi__convert_format(out, s->img_n, req_comp, s->img_x, s->img_y);
+      }
+      if (out == NULL) return out; // stbi__convert_format frees input on failure
+   }
+   return out;
+}
+
+static int stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
+{
+    int maxv;
+    return stbi__pnm_info_internal(s, x, y, comp, &maxv);
 }
 
 static int stbi__pnm_is16(stbi__context *s)
