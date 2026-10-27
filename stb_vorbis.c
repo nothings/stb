@@ -3113,7 +3113,7 @@ static int do_floor(vorb *f, Mapping *map, int i, int n, float *target, YTYPE *f
       if (lx < n2) {
          // optimization of: draw_line(target, lx,ly, n,ly, n2);
          for (j=lx; j < n2; ++j)
-            LINE_OP(target[j], inverse_db_table[ly]);
+            LINE_OP(target[j], inverse_db_table[ly & 255]);
          CHECK(f);
       }
    }
