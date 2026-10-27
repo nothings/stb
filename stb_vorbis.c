@@ -88,13 +88,22 @@
 extern "C" {
 #endif
 
+#if defined B_BEOS_VERSION
+   #include <SupportDefs.h>
+#elif defined __amigaos4__
+   #include <exec/types.h>
+#elif defined _arch_dreamcast /* KallistiOS */
+   #include <arch/types.h>
+#else
 typedef unsigned char  uint8;
 typedef   signed char   int8;
 typedef unsigned short uint16;
 typedef   signed short  int16;
 typedef unsigned int   uint32;
 typedef   signed int    int32;
-#if defined(_LP64) || defined(__LP64__) /* On 64-bit architectures */
+#ifdef _MSC_VER /* MSVC6 has no long long */
+typedef unsigned __int64 uint64;
+#elif defined(_LP64) || defined(__LP64__) /* On 64-bit architectures */
 typedef unsigned long  uint64;
 typedef   signed long   int64;
 #elif defined(_WIN32)
@@ -103,7 +112,8 @@ typedef   signed __int64     int64;
 #else /* On 32-bit architectures */
 typedef unsigned long long  uint64;
 typedef   signed long long   int64;
-#endif
+#endif /* uint64 */
+#endif /* !BeOS && !AmigaOS4 && !KallistiOS */
 
 ///////////   THREAD SAFETY
 
