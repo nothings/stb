@@ -5648,6 +5648,7 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
       int rshift=0,gshift=0,bshift=0,ashift=0,rcount=0,gcount=0,bcount=0,acount=0;
       int z = 0;
       int easy=0;
+      stbi_uc alpha_override=0;
       // psize is 0, already skipped to line data above
       if (info.bpp == 24) width = 3 * s->img_x;
       else if (info.bpp == 16) width = 2*s->img_x;
@@ -5656,8 +5657,12 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
       if (info.bpp == 24) {
          easy = 1;
       } else if (info.bpp == 32) {
-         if (mb == 0xff && mg == 0xff00 && mr == 0x00ff0000 && ma == 0xff000000)
+         if (info.hsz < 56) // before v3 header, no real alpha support, so treat alpha as not present
+            ma = 0;
+         if (mb == 0xff && mg == 0xff00 && mr == 0x00ff0000 && (ma == 0xff000000 || ma == 0)) {
             easy = 2;
+            alpha_override = ma ? 0 : 255;
+         }
       }
       if (!easy) {
          if (!mr || !mg || !mb) { STBI_FREE(out); return stbi__errpuc("bad masks", "Corrupt BMP"); }
@@ -5676,7 +5681,7 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
                out[z+1] = stbi__get8(s);
                out[z+0] = stbi__get8(s);
                z += 3;
-               a = (easy == 2 ? stbi__get8(s) : 255);
+               a = (easy == 2 ? (stbi__get8(s) | alpha_override) : 255);
                all_a |= a;
                if (target == 4) out[z++] = a;
             }
