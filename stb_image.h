@@ -1237,10 +1237,13 @@ static void stbi__vertical_flip(void *image, int w, int h, int bytes_per_pixel)
 #ifndef STBI_NO_GIF
 static void stbi__vertical_flip_slices(void *image, int w, int h, int z, int bytes_per_pixel)
 {
-   int slice;
-   int slice_size = w * h * bytes_per_pixel;
-
+   int slice, slice_size;
    stbi_uc *bytes = (stbi_uc *)image;
+
+   if (!stbi__mad3sizes_valid(w, h, bytes_per_pixel, 0))
+      return;
+
+   slice_size = w * h * bytes_per_pixel;
    for (slice = 0; slice < z; ++slice) {
       stbi__vertical_flip(bytes, w, h, bytes_per_pixel);
       bytes += slice_size;
@@ -6351,8 +6354,10 @@ static int stbi__gif_header(stbi__context *s, stbi__gif *g, int *comp, int is_in
    g->ratio = stbi__get8(s);
    g->transparent = -1;
 
-   if (g->w > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
-   if (g->h > STBI_MAX_DIMENSIONS) return stbi__err("too large","Very large image (corrupt?)");
+   if (g->w > STBI_MAX_DIMENSIONS || g->h > STBI_MAX_DIMENSIONS)
+      return stbi__err("too large","Very large image (corrupt?)");
+   if (!g->w || !g->h)
+      return stbi__err("zero pixels","Zero-pixel image");
 
    if (comp != 0) *comp = 4;  // can't actually tell whether it's 3 or 4 until we parse the comments
 
@@ -6538,7 +6543,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
          for (y = g->start_y; y < g->max_y; y += g->line_size) {
             stbi_uc bg[4] = { 0, 0, 0, 0 };
 
-            if (g->bgindex >= 0) { // if bg color set, use it; else just use transparent black (gotta do _something_)
+            if (g->bgindex >= 0 && g->transparent < 0) {
                memcpy(bg, g->pal[g->bgindex], 3);
                bg[3] = 255;
             }
@@ -6644,93 +6649,115 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
    }
 }
 
-static void *stbi__load_gif_main_outofmem(stbi__gif *g, stbi_uc *out, int **delays)
-{
-   STBI_FREE(g->out);
-
-   if (out) STBI_FREE(out);
-   if (delays && *delays) STBI_FREE(*delays);
-   return stbi__errpuc("outofmem", "Out of memory");
-}
+typedef struct stbi__gif_frame_hdr {
+   struct stbi__gif_frame_hdr *prev; // pointer to previous frame
+   int delay;
+   // pixel data follows after hdr in same allocation
+} stbi__gif_frame_hdr;
 
 static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y, int *z, int *comp, int req_comp)
 {
-   if (!stbi__gif_test(s))
-      return stbi__errpuc("not GIF", "Image was not as a gif type.");
-
+   int ok = 1;
    int layers = 0;
-   stbi_uc *u = 0;
-   stbi_uc *out = 0;
-   stbi_uc *two_back = 0;
-   stbi__gif g;
-   int stride;
-   int out_size = 0;
-   int delays_size = 0;
+   int stride = 0;
+   int totalbytes = 0;
+   int i;
+   stbi_uc *out = NULL;
+   stbi__gif_frame_hdr *frames = NULL, *frame;
+   stbi__gif *g;
 
-   STBI_NOTUSED(out_size);
-   STBI_NOTUSED(delays_size);
+   // make sure we initialize delays
+   if (delays)
+      *delays = NULL;
 
-   memset(&g, 0, sizeof(g));
-   if (delays) {
-      *delays = 0;
+   if (!stbi__gif_test(s))
+      return stbi__errpuc("not GIF", "Image is not a GIF.");
+
+   g = stbi__malloc(sizeof(*g));
+   if (!g)
+      return stbi__errpuc("outofmem", "Out of memory");
+   memset(g, 0, sizeof(*g));
+
+   for (;;) {
+      stbi_uc *pixels = stbi__gif_load_next(s, g, comp, req_comp, (layers >= 2) ? (stbi_uc *)(frames->prev + 1) : NULL);
+      if (!pixels) {
+         ok = 0;
+         break;
+      }
+      if (pixels == (stbi_uc*)s) // end of animated gif marker
+         break;
+
+      *x = g->w;
+      *y = g->h;
+      stride = g->w * g->h * 4;
+
+      // we ensure g.w > 0, g.h > 0; that means totalbytes > 0 and this check
+      // also guarantees that layers doesn't overflow
+      if (!stbi__addints_valid(totalbytes, stride)) {
+         ok = stbi__err("toobig", "Too many bytes in decoded GIF");
+         break;
+      }
+      totalbytes += stride;
+      
+      // allocate this frame
+      frame = (stbi__gif_frame_hdr *)stbi__malloc_mad3(g->w, g->h, 4, sizeof(*frame));
+      if (!frame) {
+         ok = stbi__err("outofmem", "Out of memory");
+         break;
+      }
+
+      frame->prev = frames;
+      frame->delay = g->delay;
+      memcpy(frame + 1, pixels, stride); // pixels go right after frame data
+      frames = frame;
+      ++layers;
    }
 
-   do {
-      u = stbi__gif_load_next(s, &g, comp, req_comp, two_back);
-      if (u == (stbi_uc *) s) u = 0;  // end of animated gif marker
+   // free temp decode buffer
+   STBI_FREE(g->out);
 
-      if (u) {
-         *x = g.w;
-         *y = g.h;
-         ++layers;
-         stride = g.w * g.h * 4;
+   // allocate output space
+   if (ok) {
+      if (delays) {
+         *delays = stbi__malloc_mad2(layers, sizeof(int), 0);
+         ok &= *delays != NULL;
+      }
 
-         if (out) {
-            void *tmp = (stbi_uc*) STBI_REALLOC_SIZED( out, out_size, layers * stride );
-            if (!tmp)
-               return stbi__load_gif_main_outofmem(&g, out, delays);
-            else {
-                out = (stbi_uc*) tmp;
-                out_size = layers * stride;
-            }
-
+      if (ok) {
+         out = stbi__malloc_mad2(layers, stride, 0);
+         if (!out) {
             if (delays) {
-               int *new_delays = (int*) STBI_REALLOC_SIZED( *delays, delays_size, sizeof(int) * layers );
-               if (!new_delays)
-                  return stbi__load_gif_main_outofmem(&g, out, delays);
-               *delays = new_delays;
-               delays_size = layers * sizeof(int);
+               STBI_FREE(*delays);
+               *delays = NULL;
             }
-         } else {
-            out = (stbi_uc*)stbi__malloc( layers * stride );
-            if (!out)
-               return stbi__load_gif_main_outofmem(&g, out, delays);
-            out_size = layers * stride;
-            if (delays) {
-               *delays = (int*) stbi__malloc( layers * sizeof(int) );
-               if (!*delays)
-                  return stbi__load_gif_main_outofmem(&g, out, delays);
-               delays_size = layers * sizeof(int);
-            }
-         }
-         memcpy( out + ((layers - 1) * stride), u, stride );
-         if (layers >= 2) {
-            two_back = out - 2 * stride;
-         }
-
-         if (delays) {
-            (*delays)[layers - 1U] = g.delay;
+            ok = 0;
          }
       }
-   } while (u != 0);
+   }
 
-   // free temp buffer;
-   STBI_FREE(g.out);
+   // move all frames over, then free them
+   for (i = layers - 1; i >= 0; --i) {
+      if (delays && *delays)
+         (*delays)[i] = frames->delay;
+      if (out)
+         memcpy(out + i*stride, frames + 1, stride);
 
-   // do the final conversion after loading everything;
+      frame = frames->prev;
+      STBI_FREE(frames); // free current frame
+      frames = frame;
+   }
+
+   // do the final conversion after loading everything
    if (req_comp && req_comp != 4)
-      out = stbi__convert_format(out, 4, req_comp, layers * g.w, g.h);
+      out = stbi__convert_format(out, 4, req_comp, layers * g->w, g->h);
 
+   // if conversion failed, also free delays
+   if (!out && delays && *delays) {
+      STBI_FREE(*delays);
+      *delays = NULL;
+   }
+
+   STBI_FREE(g);
    *z = layers;
    return out;
 }
@@ -6738,24 +6765,29 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
 static void *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
 {
    stbi_uc *u = 0;
-   stbi__gif g;
-   memset(&g, 0, sizeof(g));
+   stbi__gif *g = stbi__malloc(sizeof(*g));
+   if (!g)
+      return stbi__errpuc("outofmem", "Out of memory");
+
+   memset(g, 0, sizeof(*g));
+
    STBI_NOTUSED(ri);
 
-   u = stbi__gif_load_next(s, &g, comp, req_comp, 0);
+   u = stbi__gif_load_next(s, g, comp, req_comp, 0);
    if (u == (stbi_uc *) s) u = 0;  // end of animated gif marker
    if (u) {
-      *x = g.w;
-      *y = g.h;
+      *x = g->w;
+      *y = g->h;
 
       // moved conversion to after successful load so that the same
       // can be done for multiple frames.
       if (req_comp && req_comp != 4)
-         u = stbi__convert_format(u, 4, req_comp, g.w, g.h);
-   } else if (g.out) {
+         u = stbi__convert_format(u, 4, req_comp, g->w, g->h);
+   } else if (g->out) {
       // if there was an error and we allocated an image buffer, free it!
-      STBI_FREE(g.out);
+      STBI_FREE(g->out);
    }
+   STBI_FREE(g);
 
    return u;
 }
