@@ -6292,11 +6292,9 @@ typedef struct
 {
    int w,h;
    stbi_uc *out;                 // output buffer (always 4 components)
-   stbi_uc *background;          // The current "background" as far as a gif is concerned
-   stbi_uc *history;
    int flags, bgindex, ratio, transparent, eflags;
-   stbi_uc  pal[256][4];
-   stbi_uc lpal[256][4];
+   stbi_uc  pal[256][3];
+   stbi_uc lpal[256][3];
    stbi__gif_lzw codes[8192];
    stbi_uc *color_table;
    int parse, step;
@@ -6325,14 +6323,13 @@ static int stbi__gif_test(stbi__context *s)
    return r;
 }
 
-static void stbi__gif_parse_colortable(stbi__context *s, stbi_uc pal[256][4], int num_entries, int transp)
+static void stbi__gif_parse_colortable(stbi__context *s, stbi_uc pal[256][3], int num_entries)
 {
    int i;
    for (i=0; i < num_entries; ++i) {
-      pal[i][2] = stbi__get8(s);
-      pal[i][1] = stbi__get8(s);
       pal[i][0] = stbi__get8(s);
-      pal[i][3] = transp == i ? 0 : 255;
+      pal[i][1] = stbi__get8(s);
+      pal[i][2] = stbi__get8(s);
    }
 }
 
@@ -6362,7 +6359,9 @@ static int stbi__gif_header(stbi__context *s, stbi__gif *g, int *comp, int is_in
    if (is_info) return 1;
 
    if (g->flags & 0x80)
-      stbi__gif_parse_colortable(s,g->pal, 2 << (g->flags & 7), -1);
+      stbi__gif_parse_colortable(s,g->pal, 2 << (g->flags & 7));
+   else
+      g->bgindex = -1; // no global color table -> bg color ignored
 
    return 1;
 }
@@ -6384,8 +6383,7 @@ static int stbi__gif_info_raw(stbi__context *s, int *x, int *y, int *comp)
 
 static void stbi__out_gif_code(stbi__gif *g, stbi__uint16 code)
 {
-   stbi_uc *p, *c;
-   int idx;
+   int col;
 
    // recurse to decode the prefixes, since the linked-list is backwards,
    // and working backwards through an interleaved image would be nasty
@@ -6394,16 +6392,14 @@ static void stbi__out_gif_code(stbi__gif *g, stbi__uint16 code)
 
    if (g->cur_y >= g->max_y) return;
 
-   idx = g->cur_x + g->cur_y;
-   p = &g->out[idx];
-   g->history[idx / 4] = 1;
-
-   c = &g->color_table[g->codes[code].suffix * 4];
-   if (c[3] > 128) { // don't render transparent pixels;
-      p[0] = c[2];
+   col = g->codes[code].suffix;
+   if (col != g->transparent) {
+      stbi_uc *c = &g->color_table[col * 3];
+      stbi_uc *p = &g->out[g->cur_x + g->cur_y];
+      p[0] = c[0];
       p[1] = c[1];
-      p[2] = c[0];
-      p[3] = c[3];
+      p[2] = c[2];
+      p[3] = 255;
    }
    g->cur_x += 4;
 
@@ -6510,8 +6506,6 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
 {
    int dispose;
    int first_frame;
-   int pi;
-   int pcount;
    STBI_NOTUSED(req_comp);
 
    // on first frame, any non-written pixels get the background colour (non-transparent)
@@ -6520,55 +6514,41 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
       if (!stbi__gif_header(s, g, comp,0)) return 0; // stbi__g_failure_reason set by stbi__gif_header
       if (!stbi__mad3sizes_valid(4, g->w, g->h, 0))
          return stbi__errpuc("too large", "GIF image is too large");
-      pcount = g->w * g->h;
-      g->out = (stbi_uc *) stbi__malloc(4 * pcount);
-      g->background = (stbi_uc *) stbi__malloc(4 * pcount);
-      g->history = (stbi_uc *) stbi__malloc(pcount);
-      if (!g->out || !g->background || !g->history)
+      g->out = (stbi_uc *) stbi__malloc(4 * g->w * g->h);
+      if (!g->out)
          return stbi__errpuc("outofmem", "Out of memory");
 
-      // image is treated as "transparent" at the start - ie, nothing overwrites the current background;
-      // background colour is only used for pixels that are not rendered first frame, after that "background"
-      // color refers to the color that was there the previous frame.
-      memset(g->out, 0x00, 4 * pcount);
-      memset(g->background, 0x00, 4 * pcount); // state of the background (starts transparent)
-      memset(g->history, 0x00, pcount);        // pixels that were affected previous frame
       first_frame = 1;
+      memset(g->out, 0, 4 * g->w * g->h); // clear to transparent
    } else {
       // second frame - how do we dispose of the previous one?
       dispose = (g->eflags & 0x1C) >> 2;
-      pcount = g->w * g->h;
 
       if ((dispose == 3) && (two_back == 0)) {
          dispose = 2; // if I don't have an image to revert back to, default to the old background
       }
 
       if (dispose == 3) { // use previous graphic
-         for (pi = 0; pi < pcount; ++pi) {
-            if (g->history[pi]) {
-               memcpy( &g->out[pi * 4], &two_back[pi * 4], 4 );
-            }
+         int y;
+         for (y = g->start_y; y < g->max_y; y += g->line_size) {
+            memcpy(&g->out[y + g->start_x], &two_back[y + g->start_x], g->max_x - g->start_x);
          }
-      } else if (dispose == 2) {
-         // restore what was changed last frame to background before that frame;
-         for (pi = 0; pi < pcount; ++pi) {
-            if (g->history[pi]) {
-               memcpy( &g->out[pi * 4], &g->background[pi * 4], 4 );
+      } else if (dispose == 2) { // use background color
+         int x, y;
+         for (y = g->start_y; y < g->max_y; y += g->line_size) {
+            stbi_uc bg[4] = { 0, 0, 0, 0 };
+
+            if (g->bgindex >= 0) { // if bg color set, use it; else just use transparent black (gotta do _something_)
+               memcpy(bg, g->pal[g->bgindex], 3);
+               bg[3] = 255;
             }
+            for (x = g->start_x; x < g->max_x; ++x)
+               g->out[y + x] = bg[x & 3];
          }
       } else {
-         // This is a non-disposal case eithe way, so just
-         // leave the pixels as is, and they will become the new background
-         // 1: do not dispose
-         // 0:  not specified.
+         // This is a non-disposal case either way, just leave the pixels as they are.
       }
-
-      // background is what out is after the undoing of the previou frame;
-      memcpy( g->background, g->out, 4 * g->w * g->h );
    }
-
-   // clear my history;
-   memset( g->history, 0x00, g->w * g->h );        // pixels that were affected previous frame
 
    for (;;) {
       int tag = stbi__get8(s);
@@ -6611,29 +6591,24 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
             }
 
             if (g->lflags & 0x80) {
-               stbi__gif_parse_colortable(s,g->lpal, 2 << (g->lflags & 7), g->eflags & 0x01 ? g->transparent : -1);
+               stbi__gif_parse_colortable(s,g->lpal, 2 << (g->lflags & 7));
                g->color_table = (stbi_uc *) g->lpal;
             } else if (g->flags & 0x80) {
                g->color_table = (stbi_uc *) g->pal;
             } else
                return stbi__errpuc("missing color table", "Corrupt GIF");
 
-            o = stbi__process_gif_raster(s, g);
-            if (!o) return NULL;
-
-            // if this was the first frame,
-            pcount = g->w * g->h;
-            if (first_frame && (g->bgindex > 0)) {
-               // if first frame, any pixel not drawn to gets the background color
-               for (pi = 0; pi < pcount; ++pi) {
-                  if (g->history[pi] == 0) {
-                     g->pal[g->bgindex][3] = 255; // just in case it was made transparent, undo that; It will be reset next frame if need be;
-                     memcpy( &g->out[pi * 4], &g->pal[g->bgindex], 4 );
-                  }
-               }
+            // if we have a background color set and no transparent color, first frame should clear to background
+            // first frame needs to initialize the image
+            if (first_frame && g->bgindex >= 0 && g->transparent < 0) {
+               stbi_uc bg[4] = { 0, 0, 0, 255 };
+               for (x = 0; x < 3; ++x)
+                  bg[x] = g->pal[g->bgindex][x];
+               for (x = 0; x < g->h * g->line_size; ++x)
+                  g->out[x] = bg[x & 3];
             }
 
-            return o;
+            return stbi__process_gif_raster(s, g);
          }
 
          case 0x21: // Comment Extension.
@@ -6646,20 +6621,9 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
                   g->eflags = stbi__get8(s);
                   g->delay = 10 * stbi__get16le(s); // delay - 1/100th of a second, saving as 1/1000ths.
 
-                  // unset old transparent
-                  if (g->transparent >= 0) {
-                     g->pal[g->transparent][3] = 255;
-                  }
-                  if (g->eflags & 0x01) {
-                     g->transparent = stbi__get8(s);
-                     if (g->transparent >= 0) {
-                        g->pal[g->transparent][3] = 0;
-                     }
-                  } else {
-                     // don't need transparent
-                     stbi__skip(s, 1);
+                  g->transparent = stbi__get8(s);
+                  if ((g->eflags & 0x01) == 0)
                      g->transparent = -1;
-                  }
                } else {
                   stbi__skip(s, len);
                   break;
@@ -6683,8 +6647,6 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
 static void *stbi__load_gif_main_outofmem(stbi__gif *g, stbi_uc *out, int **delays)
 {
    STBI_FREE(g->out);
-   STBI_FREE(g->history);
-   STBI_FREE(g->background);
 
    if (out) STBI_FREE(out);
    if (delays && *delays) STBI_FREE(*delays);
@@ -6693,87 +6655,84 @@ static void *stbi__load_gif_main_outofmem(stbi__gif *g, stbi_uc *out, int **dela
 
 static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y, int *z, int *comp, int req_comp)
 {
-   if (stbi__gif_test(s)) {
-      int layers = 0;
-      stbi_uc *u = 0;
-      stbi_uc *out = 0;
-      stbi_uc *two_back = 0;
-      stbi__gif g;
-      int stride;
-      int out_size = 0;
-      int delays_size = 0;
+   if (!stbi__gif_test(s))
+      return stbi__errpuc("not GIF", "Image was not as a gif type.");
 
-      STBI_NOTUSED(out_size);
-      STBI_NOTUSED(delays_size);
+   int layers = 0;
+   stbi_uc *u = 0;
+   stbi_uc *out = 0;
+   stbi_uc *two_back = 0;
+   stbi__gif g;
+   int stride;
+   int out_size = 0;
+   int delays_size = 0;
 
-      memset(&g, 0, sizeof(g));
-      if (delays) {
-         *delays = 0;
-      }
+   STBI_NOTUSED(out_size);
+   STBI_NOTUSED(delays_size);
 
-      do {
-         u = stbi__gif_load_next(s, &g, comp, req_comp, two_back);
-         if (u == (stbi_uc *) s) u = 0;  // end of animated gif marker
+   memset(&g, 0, sizeof(g));
+   if (delays) {
+      *delays = 0;
+   }
 
-         if (u) {
-            *x = g.w;
-            *y = g.h;
-            ++layers;
-            stride = g.w * g.h * 4;
+   do {
+      u = stbi__gif_load_next(s, &g, comp, req_comp, two_back);
+      if (u == (stbi_uc *) s) u = 0;  // end of animated gif marker
 
-            if (out) {
-               void *tmp = (stbi_uc*) STBI_REALLOC_SIZED( out, out_size, layers * stride );
-               if (!tmp)
-                  return stbi__load_gif_main_outofmem(&g, out, delays);
-               else {
-                   out = (stbi_uc*) tmp;
-                   out_size = layers * stride;
-               }
+      if (u) {
+         *x = g.w;
+         *y = g.h;
+         ++layers;
+         stride = g.w * g.h * 4;
 
-               if (delays) {
-                  int *new_delays = (int*) STBI_REALLOC_SIZED( *delays, delays_size, sizeof(int) * layers );
-                  if (!new_delays)
-                     return stbi__load_gif_main_outofmem(&g, out, delays);
-                  *delays = new_delays;
-                  delays_size = layers * sizeof(int);
-               }
-            } else {
-               out = (stbi_uc*)stbi__malloc( layers * stride );
-               if (!out)
-                  return stbi__load_gif_main_outofmem(&g, out, delays);
-               out_size = layers * stride;
-               if (delays) {
-                  *delays = (int*) stbi__malloc( layers * sizeof(int) );
-                  if (!*delays)
-                     return stbi__load_gif_main_outofmem(&g, out, delays);
-                  delays_size = layers * sizeof(int);
-               }
-            }
-            memcpy( out + ((layers - 1) * stride), u, stride );
-            if (layers >= 2) {
-               two_back = out - 2 * stride;
+         if (out) {
+            void *tmp = (stbi_uc*) STBI_REALLOC_SIZED( out, out_size, layers * stride );
+            if (!tmp)
+               return stbi__load_gif_main_outofmem(&g, out, delays);
+            else {
+                out = (stbi_uc*) tmp;
+                out_size = layers * stride;
             }
 
             if (delays) {
-               (*delays)[layers - 1U] = g.delay;
+               int *new_delays = (int*) STBI_REALLOC_SIZED( *delays, delays_size, sizeof(int) * layers );
+               if (!new_delays)
+                  return stbi__load_gif_main_outofmem(&g, out, delays);
+               *delays = new_delays;
+               delays_size = layers * sizeof(int);
+            }
+         } else {
+            out = (stbi_uc*)stbi__malloc( layers * stride );
+            if (!out)
+               return stbi__load_gif_main_outofmem(&g, out, delays);
+            out_size = layers * stride;
+            if (delays) {
+               *delays = (int*) stbi__malloc( layers * sizeof(int) );
+               if (!*delays)
+                  return stbi__load_gif_main_outofmem(&g, out, delays);
+               delays_size = layers * sizeof(int);
             }
          }
-      } while (u != 0);
+         memcpy( out + ((layers - 1) * stride), u, stride );
+         if (layers >= 2) {
+            two_back = out - 2 * stride;
+         }
 
-      // free temp buffer;
-      STBI_FREE(g.out);
-      STBI_FREE(g.history);
-      STBI_FREE(g.background);
+         if (delays) {
+            (*delays)[layers - 1U] = g.delay;
+         }
+      }
+   } while (u != 0);
 
-      // do the final conversion after loading everything;
-      if (req_comp && req_comp != 4)
-         out = stbi__convert_format(out, 4, req_comp, layers * g.w, g.h);
+   // free temp buffer;
+   STBI_FREE(g.out);
 
-      *z = layers;
-      return out;
-   } else {
-      return stbi__errpuc("not GIF", "Image was not as a gif type.");
-   }
+   // do the final conversion after loading everything;
+   if (req_comp && req_comp != 4)
+      out = stbi__convert_format(out, 4, req_comp, layers * g.w, g.h);
+
+   *z = layers;
+   return out;
 }
 
 static void *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
@@ -6797,10 +6756,6 @@ static void *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req
       // if there was an error and we allocated an image buffer, free it!
       STBI_FREE(g.out);
    }
-
-   // free buffers needed for multiple frame loading;
-   STBI_FREE(g.history);
-   STBI_FREE(g.background);
 
    return u;
 }
