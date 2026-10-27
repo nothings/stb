@@ -4773,7 +4773,8 @@ static int seek_to_sample_coarse(stb_vorbis *f, uint32 sample_number)
    }
 
    while (left.page_end != right.page_start) {
-      assert(left.page_end < right.page_start);
+      if (left.page_end >= right.page_start)
+         return error(f, VORBIS_seek_failed);
       // search range in bytes
       delta = right.page_start - left.page_end;
       if (delta <= 65536) {
