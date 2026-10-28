@@ -772,6 +772,11 @@ static int stbi__sse2_available(void)
 #endif
 #endif
 
+// 64-bit ARM targets always support AdvSIMD
+#if (defined(__aarch64__) || defined(_M_ARM64)) && !defined(STBI_NEON)
+#define STBI_NEON
+#endif
+
 // ARM NEON
 #if defined(STBI_NO_SIMD) && defined(STBI_NEON)
 #undef STBI_NEON
