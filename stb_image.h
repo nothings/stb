@@ -1131,6 +1131,8 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    ri->channel_order = STBI_ORDER_RGB; // all current input & output are this, but this is here so we can add BGR order
    ri->num_channels = 0;
 
+   if (req_comp < 1 || req_comp > 4) return stbi__errpuc("bad req_comp", "Invalid value for required components");
+
    // test the formats with a very explicit header first (at least a FOURCC
    // or distinctive magic number first)
    #ifndef STBI_NO_PNG
@@ -1422,6 +1424,9 @@ STBIDEF stbi_uc *stbi_load_gif_from_memory(stbi_uc const *buffer, int len, int *
 {
    stbi__context s;
    stbi__start_mem(&s,buffer,len);
+
+   if (req_comp < 1 || req_comp > 4)
+      return stbi__errpuc("bad req_comp", "Invalid number of required components");
 
    return (unsigned char*) stbi__load_gif_main(&s, delays, x, y, z, comp, req_comp);
 }
@@ -6892,6 +6897,9 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    int isrle;
    const char *headerToken;
    STBI_NOTUSED(ri);
+
+   if (req_comp < 1 || req_comp > 4)
+      return stbi__errpf("bad req_comp", "Invalid number of required components");
 
    // Check identifier
    headerToken = stbi__hdr_gettoken(s,buffer);
