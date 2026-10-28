@@ -7230,22 +7230,22 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
    }
 
    expected_maxv = (ri->bits_per_channel == 8) ? 255 : 65535;
-   if (maxv != expected_maxv) {
-       if (ri->bits_per_channel == 16) {
-           for (i = 0; i < nvals; ++i) {
-               stbi__uint32 val = (out[i*2 + 0] << 8) + out[i*2 + 1]; // BE
-               if (val >= (stbi__uint32)maxv) val = maxv - 1;
-               val = (val * expected_maxv) / maxv;
-               out[i*2 + 0] = (stbi_uc)(val >> 8);
-               out[i*2 + 1] = (stbi_uc)(val & 0xff);
-           }
-       } else {
-           for (i = 0; i < nvals; ++i) {
-               int val = out[i];
-               if (val >= maxv) val = maxv - 1;
-               out[i] = (stbi_uc)((val * expected_maxv) / maxv);
-           }
-       }
+   if (ri->bits_per_channel == 16) {
+      stbi__uint16* out16 = (stbi__uint16 *) out;
+      for (i = 0; i < nvals; ++i) {
+         stbi__uint32 val = (out[i*2 + 0] << 8) + out[i*2 + 1]; // BE
+         if (maxv != expected_maxv) {
+            if (val >= (stbi__uint32)maxv) val = maxv - 1;
+            val = (val * expected_maxv) / maxv;
+         }
+         out16[i] = (stbi__uint16)val;
+      }
+   } else if (maxv != expected_maxv) {
+      for (i = 0; i < nvals; ++i) {
+         int val = out[i];
+         if (val >= maxv) val = maxv - 1;
+         out[i] = (stbi_uc)((val * expected_maxv) / maxv);
+      }
    }
 
    if (req_comp && req_comp != s->img_n) {
