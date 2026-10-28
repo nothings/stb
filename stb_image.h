@@ -1751,7 +1751,7 @@ static unsigned char *stbi__convert_format(unsigned char *data, int img_n, int r
    int i,j;
    unsigned char *good;
 
-   if (req_comp == img_n) return data;
+   if (req_comp == img_n || !data) return data;
    STBI_ASSERT(req_comp >= 1 && req_comp <= 4);
 
    good = (unsigned char *) stbi__malloc_mad3(req_comp, x, y, 0);
@@ -1808,7 +1808,7 @@ static stbi__uint16 *stbi__convert_format16(stbi__uint16 *data, int img_n, int r
    int i,j;
    stbi__uint16 *good;
 
-   if (req_comp == img_n) return data;
+   if (req_comp == img_n || !data) return data;
    STBI_ASSERT(req_comp >= 1 && req_comp <= 4);
 
    good = (stbi__uint16 *) stbi__malloc_mad4(req_comp, x, y, 2, 0);
@@ -5707,16 +5707,8 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
       for (i=4*s->img_x*s->img_y-1; i >= 0; i -= 4)
          out[i] = 255;
 
-   if (flip_vertically) {
-      stbi_uc t;
-      for (j=0; j < (int) s->img_y>>1; ++j) {
-         stbi_uc *p1 = out +      j     *s->img_x*target;
-         stbi_uc *p2 = out + (s->img_y-1-j)*s->img_x*target;
-         for (i=0; i < (int) s->img_x*target; ++i) {
-            t = p1[i]; p1[i] = p2[i]; p2[i] = t;
-         }
-      }
-   }
+   if (flip_vertically)
+      stbi__vertical_flip(out, s->img_x, s->img_y, target);
 
    if (req_comp && req_comp != target) {
       out = stbi__convert_format(out, target, req_comp, s->img_x, s->img_y);
@@ -6733,13 +6725,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
 
       if (ok) {
          out = stbi__malloc_mad2(layers, stride, 0);
-         if (!out) {
-            if (delays) {
-               STBI_FREE(*delays);
-               *delays = NULL;
-            }
-            ok = 0;
-         }
+         ok &= out != NULL;
       }
    }
 
@@ -6756,7 +6742,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
    }
 
    // do the final conversion after loading everything
-   if (req_comp && req_comp != 4)
+   if (out && req_comp && req_comp != 4)
       out = stbi__convert_format(out, 4, req_comp, layers * g->w, g->h);
 
    // if conversion failed, also free delays
