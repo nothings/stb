@@ -1234,23 +1234,6 @@ static void stbi__vertical_flip(void *image, int w, int h, int bytes_per_pixel)
    }
 }
 
-#ifndef STBI_NO_GIF
-static void stbi__vertical_flip_slices(void *image, int w, int h, int z, int bytes_per_pixel)
-{
-   int slice, slice_size;
-   stbi_uc *bytes = (stbi_uc *)image;
-
-   if (!stbi__mad3sizes_valid(w, h, bytes_per_pixel, 0))
-      return;
-
-   slice_size = w * h * bytes_per_pixel;
-   for (slice = 0; slice < z; ++slice) {
-      stbi__vertical_flip(bytes, w, h, bytes_per_pixel);
-      bytes += slice_size;
-   }
-}
-#endif
-
 static unsigned char *stbi__load_and_postprocess_8bit(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
    stbi__result_info ri;
@@ -1437,16 +1420,10 @@ STBIDEF stbi_uc *stbi_load_from_callbacks(stbi_io_callbacks const *clbk, void *u
 #ifndef STBI_NO_GIF
 STBIDEF stbi_uc *stbi_load_gif_from_memory(stbi_uc const *buffer, int len, int **delays, int *x, int *y, int *z, int *comp, int req_comp)
 {
-   unsigned char *result;
    stbi__context s;
    stbi__start_mem(&s,buffer,len);
 
-   result = (unsigned char*) stbi__load_gif_main(&s, delays, x, y, z, comp, req_comp);
-   if (result && stbi__vertically_flip_on_load) {
-      stbi__vertical_flip_slices( result, *x, *y, *z, *comp );
-   }
-
-   return result;
+   return (unsigned char*) stbi__load_gif_main(&s, delays, x, y, z, comp, req_comp);
 }
 #endif
 
@@ -6682,6 +6659,9 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
       frame->prev = frames;
       frame->delay = g->delay;
       memcpy(frame + 1, pixels, stride); // pixels go right after frame data
+      if (stbi__vertically_flip_on_load) {
+         stbi__vertical_flip(frame + 1, g->w, g->h, 4);
+      }
       frames = frame;
       ++layers;
    }
