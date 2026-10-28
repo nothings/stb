@@ -6291,19 +6291,9 @@ static void *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req
 #ifndef STBI_NO_GIF
 typedef struct
 {
-   stbi__int16 prefix;
-   stbi_uc first;
-   stbi_uc suffix;
-} stbi__gif_lzw;
-
-typedef struct
-{
    int w,h;
    stbi_uc *out;                 // output buffer (always 4 components)
    int flags, bgindex, ratio, transparent, eflags;
-   stbi_uc  pal[256][3];
-   stbi_uc lpal[256][3];
-   stbi__gif_lzw codes[8192];
    stbi_uc *color_table;
    int parse, step;
    int lflags;
@@ -6312,6 +6302,10 @@ typedef struct
    int cur_x, cur_y;
    int line_size;
    int delay;
+   stbi_uc suffix[4096 + 1]; // one extra slot as sentinel
+   stbi__uint16 prefix[4096 + 1]; // one extra slot as sentinel
+   stbi_uc  pal[256][3];
+   stbi_uc lpal[256][3];
 } stbi__gif;
 
 static int stbi__gif_test_raw(stbi__context *s)
@@ -6391,47 +6385,14 @@ static int stbi__gif_info_raw(stbi__context *s, int *x, int *y, int *comp)
    return 1;
 }
 
-static void stbi__out_gif_code(stbi__gif *g, stbi__uint16 code)
-{
-   int col;
-
-   // recurse to decode the prefixes, since the linked-list is backwards,
-   // and working backwards through an interleaved image would be nasty
-   if (g->codes[code].prefix >= 0)
-      stbi__out_gif_code(g, g->codes[code].prefix);
-
-   if (g->cur_y >= g->max_y) return;
-
-   col = g->codes[code].suffix;
-   if (col != g->transparent) {
-      stbi_uc *c = &g->color_table[col * 3];
-      stbi_uc *p = &g->out[g->cur_x + g->cur_y];
-      p[0] = c[0];
-      p[1] = c[1];
-      p[2] = c[2];
-      p[3] = 255;
-   }
-   g->cur_x += 4;
-
-   if (g->cur_x >= g->max_x) {
-      g->cur_x = g->start_x;
-      g->cur_y += g->step;
-
-      while (g->cur_y >= g->max_y && g->parse > 0) {
-         g->step = (1 << g->parse) * g->line_size;
-         g->cur_y = g->start_y + (g->step >> 1);
-         --g->parse;
-      }
-   }
-}
-
 static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
 {
    stbi_uc lzw_cs;
    stbi__int32 len, init_code;
    stbi__uint32 first;
-   stbi__int32 codesize, codemask, avail, oldcode, bits, valid_bits, clear;
-   stbi__gif_lzw *p;
+   stbi__int32 codesize, codemask, avail, oldcode, bits, valid_bits, clear, cur;
+   stbi_uc revbuf[4096];
+   int revind;
 
    lzw_cs = stbi__get8(s);
    if (lzw_cs > 12) return NULL;
@@ -6442,9 +6403,8 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
    bits = 0;
    valid_bits = 0;
    for (init_code = 0; init_code < clear; init_code++) {
-      g->codes[init_code].prefix = -1;
-      g->codes[init_code].first = (stbi_uc) init_code;
-      g->codes[init_code].suffix = (stbi_uc) init_code;
+      g->prefix[init_code] = 0;
+      g->suffix[init_code] = (stbi_uc)init_code;
    }
 
    // support no starting clear code
@@ -6453,59 +6413,98 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
 
    len = 0;
    for(;;) {
-      if (valid_bits < codesize) {
+      while (valid_bits < codesize) {
          if (len == 0) {
             len = stbi__get8(s); // start new block
             if (len == 0)
                return g->out;
          }
          --len;
-         bits |= (stbi__int32) stbi__get8(s) << valid_bits;
+         bits |= (stbi__int32)stbi__get8(s) << valid_bits;
          valid_bits += 8;
-      } else {
-         stbi__int32 code = bits & codemask;
-         bits >>= codesize;
-         valid_bits -= codesize;
-         // @OPTIMIZE: is there some way we can accelerate the non-clear path?
-         if (code == clear) {  // clear code
-            codesize = lzw_cs + 1;
-            codemask = (1 << codesize) - 1;
-            avail = clear + 2;
-            oldcode = -1;
-            first = 0;
-         } else if (code == clear + 1) { // end of stream code
-            stbi__skip(s, len);
-            while ((len = stbi__get8(s)) > 0)
-               stbi__skip(s,len);
-            return g->out;
-         } else if (code <= avail) {
-            if (first) {
-               return stbi__errpuc("no clear code", "Corrupt GIF");
-            }
+      }
 
-            if (oldcode >= 0) {
-               p = &g->codes[avail++];
-               if (avail > 8192) {
-                  return stbi__errpuc("too many codes", "Corrupt GIF");
-               }
-
-               p->prefix = (stbi__int16) oldcode;
-               p->first = g->codes[oldcode].first;
-               p->suffix = (code == avail) ? p->first : g->codes[code].first;
-            } else if (code == avail)
-               return stbi__errpuc("illegal code in raster", "Corrupt GIF");
-
-            stbi__out_gif_code(g, (stbi__uint16) code);
-
-            if ((avail & codemask) == 0 && avail <= 0x0FFF) {
-               codesize++;
-               codemask = (1 << codesize) - 1;
-            }
-
-            oldcode = code;
-         } else {
-            return stbi__errpuc("illegal code in raster", "Corrupt GIF");
+      stbi__int32 code = bits & codemask;
+      bits >>= codesize;
+      valid_bits -= codesize;
+      // @OPTIMIZE: is there some way we can accelerate the non-clear path?
+      if (code == clear) {  // clear code
+         codesize = lzw_cs + 1;
+         codemask = (1 << codesize) - 1;
+         avail = clear + 2;
+         oldcode = -1;
+         first = 0;
+      } else if (code == clear + 1) { // end of stream code
+         stbi__skip(s, len);
+         while ((len = stbi__get8(s)) > 0)
+            stbi__skip(s,len);
+         return g->out;
+      } else if (code <= avail) {
+         if (first) {
+            return stbi__errpuc("no clear code", "Corrupt GIF");
          }
+
+         revind = 4096;
+         cur = code;
+         if (code == avail) { // self-reference case
+            if (oldcode < 0)
+               return stbi__errpuc("illegal code in raster", "Corrupt GIF");
+            // chase oldcode to find its first character
+            cur = oldcode;
+            while (cur >= clear)
+               cur = g->prefix[cur];
+            // add the first character at the end of revbuf; consumes 1 slot
+            revbuf[--revind] = (stbi_uc)cur;
+            cur = oldcode;
+         }
+         // walk linked list of prefixes to emit bytes in reverse order to revbuf
+         // safe: longest chain possible can't contain more than 4096 - (clear + 2) <= 4094 bytes,
+         // since every code below clear+2 terminates the chain and any code above has a
+         // "prefix" link to a lower-numbered code
+         for (; cur >= clear; cur = g->prefix[cur])
+            revbuf[--revind] = g->suffix[cur];
+
+         // one final slot in revbuf: still guaranteed to be <=4096 bytes, so revind >= 0 at the end
+         revbuf[--revind] = (stbi_uc)cur;
+         if (oldcode >= 0) {
+            g->prefix[avail] = (stbi__uint16)oldcode;
+            g->suffix[avail] = (stbi_uc)cur;
+            if (avail < 4096) { // increment avail unless dict is already full
+               ++avail;
+               if (avail > codemask && avail < 4096) {
+                  codesize++;
+                  codemask = (1 << codesize) - 1;
+               }
+            }
+         }
+         oldcode = code;
+
+         // turn decoded bytes into pixels
+         for (; revind < 4096 && g->cur_y < g->max_y; ++revind) {
+            stbi_uc col = revbuf[revind];
+            if (col != g->transparent) {
+               stbi_uc *c = &g->color_table[col * 3];
+               stbi_uc *p = &g->out[g->cur_x + g->cur_y];
+               p[0] = c[0];
+               p[1] = c[1];
+               p[2] = c[2];
+               p[3] = 255;
+            }
+            g->cur_x += 4;
+
+            if (g->cur_x >= g->max_x) {
+               g->cur_x = g->start_x;
+               g->cur_y += g->step;
+
+               while (g->cur_y >= g->max_y && g->parse > 0) {
+                  g->step = (1 << g->parse) * g->line_size;
+                  g->cur_y = g->start_y + (g->step >> 1);
+                  --g->parse;
+               }
+            }
+         }
+      } else {
+         return stbi__errpuc("illegal code in raster", "Corrupt GIF");
       }
    }
 }
