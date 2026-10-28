@@ -7,6 +7,18 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+static unsigned int fnv1a_hash32(const stbi_uc *bytes, size_t len)
+{
+   unsigned int hash = 0x811c9dc5;
+   unsigned int mul = 0x01000193;
+   size_t i;
+
+   for (i = 0; i < len; ++i)
+      hash = (hash ^ bytes[i]) * mul;
+
+   return hash;
+}
+
 int main(int argc, char **argv)
 {
     int x,y,n,nframes;
@@ -37,7 +49,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
-    printf("loaded %d frames\n", nframes);
+    printf("loaded %d frames, hash=0x%08x\n", nframes, fnv1a_hash32(data, x * y * 4 * nframes));
 
     for (n = 0; n < nframes; n++) {
         char buffer[128];
