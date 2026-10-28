@@ -5409,11 +5409,12 @@ static int stbi__bmp_set_mask_defaults(stbi__bmp_data *info, int compress)
          info->mr = 31u << 10;
          info->mg = 31u <<  5;
          info->mb = 31u <<  0;
+         info->ma = 0;
       } else if (info->bpp == 32) {
          info->mr = 0xffu << 16;
          info->mg = 0xffu <<  8;
          info->mb = 0xffu <<  0;
-         info->ma = 0xffu << 24;
+         info->ma = 0; // BI_BITFIELDS BMPs can have alpha, but BI_RGB ones never do
          info->all_a = 0; // if all_a is 0 at end, then we loaded alpha channel but it was all 0
       } else {
          // otherwise, use defaults, which is all-0
