@@ -5821,7 +5821,7 @@ static void stbi__tga_read_rgb16(stbi__context *s, stbi_uc* out)
 
 static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
 {
-   //   read in the TGA header stuff
+   // read in the TGA header
    int tga_offset = stbi__get8(s);
    int tga_indexed = stbi__get8(s);
    int tga_image_type = stbi__get8(s);
@@ -5846,23 +5846,24 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    int RLE_repeating = 0;
    int read_next_pixel = 1;
    STBI_NOTUSED(ri);
-   STBI_NOTUSED(tga_x_origin); // @TODO
-   STBI_NOTUSED(tga_y_origin); // @TODO
 
-   if (tga_height > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
-   if (tga_width > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (tga_width > STBI_MAX_DIMENSIONS || tga_height > STBI_MAX_DIMENSIONS)
+      return stbi__errpuc("too large","Very large image (corrupt?)");
+   if (!tga_width || !tga_height)
+      return stbi__errpuc("zero size","Zero-size image");
 
    //   do a tiny bit of precessing
-   if ( tga_image_type >= 8 )
-   {
+   if (tga_image_type >= 8) {
       tga_image_type -= 8;
       tga_is_RLE = 1;
    }
    tga_inverted = 1 - ((tga_inverted >> 5) & 1);
 
    //   If I'm paletted, then I'll use the number of bits from the palette
-   if ( tga_indexed ) tga_comp = stbi__tga_get_comp(tga_palette_bits, 0, &tga_rgb16);
-   else tga_comp = stbi__tga_get_comp(tga_bits_per_pixel, (tga_image_type == 3), &tga_rgb16);
+   if (tga_indexed)
+      tga_comp = stbi__tga_get_comp(tga_palette_bits, 0, &tga_rgb16);
+   else
+      tga_comp = stbi__tga_get_comp(tga_bits_per_pixel, (tga_image_type == 3), &tga_rgb16);
 
    if(!tga_comp) // shouldn't really happen, stbi__tga_test() should have ensured basic consistency
       return stbi__errpuc("bad format", "Can't find out TGA pixelformat");
@@ -5881,25 +5882,22 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    // skip to the data's starting position (offset usually = 0)
    stbi__skip(s, tga_offset);
 
-   if ( !tga_indexed && !tga_is_RLE && !tga_rgb16 ) {
+   if (!tga_indexed && !tga_is_RLE && !tga_rgb16) {
       for (i=0; i < tga_height; ++i) {
          int row = tga_inverted ? tga_height -i - 1 : i;
          stbi_uc *tga_row = tga_data + row*tga_width*tga_comp;
          if (!stbi__getn(s, tga_row, tga_width * tga_comp))
             return stbi__errpuc("premature EOF", "Corrupt TGA");
       }
-   } else  {
+   } else {
       //   do I need to load a palette?
-      if ( tga_indexed)
-      {
+      if (tga_indexed) {
          if (tga_palette_len == 0) {  /* you have to have at least one entry! */
             STBI_FREE(tga_data);
             return stbi__errpuc("bad palette", "Corrupt TGA");
          }
 
-         //   any data to skip? (offset usually = 0)
-         stbi__skip(s, tga_palette_start );
-         //   load the palette
+         stbi__skip(s, tga_palette_start);
          tga_palette = (unsigned char*)stbi__malloc_mad2(tga_palette_len, tga_comp, 0);
          if (!tga_palette) {
             STBI_FREE(tga_data);
@@ -5919,35 +5917,28 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
          }
       }
       //   load the data
-      for (i=0; i < tga_width * tga_height; ++i)
-      {
+      for (i=0; i < tga_width * tga_height; ++i) {
          //   if I'm in RLE mode, do I need to get a RLE stbi__pngchunk?
-         if ( tga_is_RLE )
-         {
-            if ( RLE_count == 0 )
-            {
+         if (tga_is_RLE) {
+            if (RLE_count == 0) {
                //   yep, get the next byte as a RLE command
                int RLE_cmd = stbi__get8(s);
                RLE_count = 1 + (RLE_cmd & 127);
                RLE_repeating = RLE_cmd >> 7;
                read_next_pixel = 1;
-            } else if ( !RLE_repeating )
-            {
+            } else if (!RLE_repeating) {
                read_next_pixel = 1;
             }
-         } else
-         {
+         } else {
             read_next_pixel = 1;
          }
          //   OK, if I need to read a pixel, do it now
-         if ( read_next_pixel )
-         {
+         if (read_next_pixel) {
             //   load however much data we did have
-            if ( tga_indexed )
-            {
+            if (tga_indexed) {
                // read in index, then perform the lookup
                int pal_idx = (tga_bits_per_pixel == 8) ? stbi__get8(s) : stbi__get16le(s);
-               if ( pal_idx >= tga_palette_len ) {
+               if (pal_idx >= tga_palette_len) {
                   // invalid index
                   pal_idx = 0;
                }
@@ -5975,36 +5966,19 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
          //   in case we're in RLE mode, keep counting down
          --RLE_count;
       }
-      //   do I need to invert the image?
-      if ( tga_inverted )
-      {
-         for (j = 0; j*2 < tga_height; ++j)
-         {
-            int index1 = j * tga_width * tga_comp;
-            int index2 = (tga_height - 1 - j) * tga_width * tga_comp;
-            for (i = tga_width * tga_comp; i > 0; --i)
-            {
-               unsigned char temp = tga_data[index1];
-               tga_data[index1] = tga_data[index2];
-               tga_data[index2] = temp;
-               ++index1;
-               ++index2;
-            }
-         }
-      }
+      // flip image if required
+      if (tga_inverted)
+         stbi__vertical_flip(tga_data, tga_width, tga_height, tga_comp);
       //   clear my palette, if I had one
-      if ( tga_palette != NULL )
-      {
-         STBI_FREE( tga_palette );
+      if (tga_palette != NULL) {
+         STBI_FREE(tga_palette);
       }
    }
 
    // swap RGB - if the source data was RGB16, it already is in the right order
-   if (tga_comp >= 3 && !tga_rgb16)
-   {
+   if (tga_comp >= 3 && !tga_rgb16) {
       unsigned char* tga_pixel = tga_data;
-      for (i=0; i < tga_width * tga_height; ++i)
-      {
+      for (i=0; i < tga_width * tga_height; ++i) {
          unsigned char temp = tga_pixel[0];
          tga_pixel[0] = tga_pixel[2];
          tga_pixel[2] = temp;
@@ -6016,11 +5990,11 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    if (req_comp && req_comp != tga_comp)
       tga_data = stbi__convert_format(tga_data, tga_comp, req_comp, tga_width, tga_height);
 
-   //   the things I do to get rid of an error message, and yet keep
-   //   Microsoft's C compilers happy... [8^(
-   tga_palette_start = tga_palette_len = tga_palette_bits =
-         tga_x_origin = tga_y_origin = 0;
-   STBI_NOTUSED(tga_palette_start);
+   // these were just read for the side effect
+   STBI_NOTUSED(tga_palette_bits);
+   STBI_NOTUSED(tga_x_origin);
+   STBI_NOTUSED(tga_y_origin);
+
    //   OK, done
    return tga_data;
 }
@@ -6557,7 +6531,6 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
          case 0x2C: /* Image Descriptor */
          {
             stbi__int32 x, y, w, h;
-            stbi_uc *o;
 
             x = stbi__get16le(s);
             y = stbi__get16le(s);
