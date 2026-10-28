@@ -6454,10 +6454,10 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
 
 // this function is designed to support animated gifs, although stb_image doesn't support it
 // two back is the image from two frames ago, used for a very specific disposal format
-static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, int req_comp, stbi_uc *two_back)
+static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, int req_comp, stbi_uc *saved)
 {
-   int dispose;
-   int first_frame;
+   int dispose, first_frame;
+   int x, y, w, h;
    STBI_NOTUSED(req_comp);
 
    // on first frame, any non-written pixels get the background colour (non-transparent)
@@ -6475,18 +6475,15 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
    } else {
       // second frame - how do we dispose of the previous one?
       dispose = (g->eflags & 0x1C) >> 2;
-
-      if ((dispose == 3) && (two_back == 0)) {
+      if ((dispose == 3) && !saved) {
          dispose = 2; // if I don't have an image to revert back to, default to the old background
       }
 
       if (dispose == 3) { // use previous graphic
-         int y;
          for (y = g->start_y; y < g->max_y; y += g->line_size) {
-            memcpy(&g->out[y + g->start_x], &two_back[y + g->start_x], g->max_x - g->start_x);
+            memcpy(&g->out[y + g->start_x], &saved[y + g->start_x], g->max_x - g->start_x);
          }
       } else if (dispose == 2) { // use background color
-         int x, y;
          for (y = g->start_y; y < g->max_y; y += g->line_size) {
             stbi_uc bg[4] = { 0, 0, 0, 0 };
 
@@ -6507,8 +6504,6 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
       switch (tag) {
          case 0x2C: /* Image Descriptor */
          {
-            stbi__int32 x, y, w, h;
-
             x = stbi__get16le(s);
             y = stbi__get16le(s);
             w = stbi__get16le(s);
@@ -6609,6 +6604,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
    int totalbytes = 0;
    int i;
    stbi_uc *out = NULL;
+   stbi_uc *saved_pixels = NULL;
    stbi__gif_frame_hdr *frames = NULL, *frame;
    stbi__gif *g;
 
@@ -6629,7 +6625,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
    memset(g, 0, sizeof(*g));
 
    for (;;) {
-      stbi_uc *pixels = stbi__gif_load_next(s, g, comp, req_comp, (layers >= 2) ? (stbi_uc *)(frames->prev + 1) : NULL);
+      stbi_uc *pixels = stbi__gif_load_next(s, g, comp, req_comp, saved_pixels);
       if (!pixels) {
          ok = 0;
          break;
@@ -6659,11 +6655,13 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
       frame->prev = frames;
       frame->delay = g->delay;
       memcpy(frame + 1, pixels, stride); // pixels go right after frame data
-      if (stbi__vertically_flip_on_load) {
-         stbi__vertical_flip(frame + 1, g->w, g->h, 4);
-      }
       frames = frame;
       ++layers;
+
+      // if this frame is not in "restore to previous" disposal mode (which "un-paints" it),
+      // it becomes the next reference frame
+      if ((g->eflags & 0x1c) != 0x0c)
+         saved_pixels = (stbi_uc *) (frame + 1);
    }
 
    // free temp decode buffer
@@ -6686,8 +6684,12 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
    for (i = layers - 1; i >= 0; --i) {
       if (delays && *delays)
          (*delays)[i] = frames->delay;
-      if (out)
+      if (out) {
          memcpy(out + i*stride, frames + 1, stride);
+         if (stbi__vertically_flip_on_load) {
+            stbi__vertical_flip(out + i*stride, g->w, g->h, 4);
+         }
+      }
 
       frame = frames->prev;
       STBI_FREE(frames); // free current frame
@@ -6696,7 +6698,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
 
    // do the final conversion after loading everything
    if (out && req_comp && req_comp != 4)
-      out = stbi__convert_format(out, 4, req_comp, layers * g->w, g->h);
+      out = stbi__convert_format(out, 4, req_comp, g->w, layers * g->h);
 
    // if conversion failed, also free delays
    if (!out && delays && *delays) {
