@@ -90,10 +90,16 @@ extern "C" {
 
 #if defined B_BEOS_VERSION
    #include <SupportDefs.h>
+typedef uint64 stb_vorbis_uint64;
+typedef  int64  stb_vorbis_int64;
 #elif defined __amigaos4__
    #include <exec/types.h>
+typedef uint64 stb_vorbis_uint64;
+typedef  int64  stb_vorbis_int64;
 #elif defined _arch_dreamcast /* KallistiOS */
    #include <arch/types.h>
+typedef uint64 stb_vorbis_uint64;
+typedef  int64  stb_vorbis_int64;
 #else
 typedef unsigned char  uint8;
 typedef   signed char   int8;
