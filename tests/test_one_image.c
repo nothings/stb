@@ -22,6 +22,7 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    printf("%dx%d, ncomp=%d\n", x, y, n);
     printf("stbi_is_16_bit(\"%s\") = %d\n", argv[1], stbi_is_16_bit(argv[1]));
 
     stbi_write_png("decoded.png", x, y, 4, data, x * 4);
