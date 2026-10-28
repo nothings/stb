@@ -5458,13 +5458,7 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
       stbi__get32le(s); // discard vres
       stbi__get32le(s); // discard colorsused
       stbi__get32le(s); // discard max important
-      if (hsz == 40 || hsz == 56) {
-         if (hsz == 56) {
-            stbi__get32le(s);
-            stbi__get32le(s);
-            stbi__get32le(s);
-            stbi__get32le(s);
-         }
+      if (hsz == 40) { // BITMAPINFOHEADER
          if (info->bpp == 16 || info->bpp == 32) {
             if (compress == 0) {
                stbi__bmp_set_mask_defaults(info, compress);
@@ -5482,9 +5476,9 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
                return stbi__errpuc("bad BMP", "bad BMP");
          }
       } else {
-         // V4/V5 header
+         // V3/V4/V5 header
          int i;
-         if (hsz != 108 && hsz != 124)
+         if (hsz != 56 && hsz != 108 && hsz != 124)
             return stbi__errpuc("bad BMP", "bad BMP");
          info->mr = stbi__get32le(s);
          info->mg = stbi__get32le(s);
@@ -5492,9 +5486,11 @@ static void *stbi__bmp_parse_header(stbi__context *s, stbi__bmp_data *info)
          info->ma = stbi__get32le(s);
          if (compress != 3) // override mr/mg/mb unless in BI_BITFIELDS mode, as per docs
             stbi__bmp_set_mask_defaults(info, compress);
-         stbi__get32le(s); // discard color space
-         for (i=0; i < 12; ++i)
-            stbi__get32le(s); // discard color space parameters
+         if (hsz >= 108) {
+            stbi__get32le(s); // discard color space
+            for (i=0; i < 12; ++i)
+               stbi__get32le(s); // discard color space parameters
+         }
          if (hsz == 124) {
             stbi__get32le(s); // discard rendering intent
             stbi__get32le(s); // discard offset of profile data
