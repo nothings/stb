@@ -49,7 +49,7 @@ static int my_eof(void *user)
    return c->ptr == c->end;
 }
 
-int main(int argc, char **argv)
+int main()
 {
    my_ioctx ctx;
    stbi_io_callbacks ioc = { my_read, my_skip, my_eof };
