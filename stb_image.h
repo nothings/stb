@@ -5840,8 +5840,7 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    int tga_height = stbi__get16le(s);
    int tga_bits_per_pixel = stbi__get8(s);
    int tga_comp, tga_rgb16=0;
-   int tga_inverted = stbi__get8(s);
-   // int tga_alpha_bits = tga_inverted & 15; // the 4 lowest bits - unused (useless?)
+   int tga_desc = stbi__get8(s);
    //   image data
    unsigned char *tga_data;
    unsigned char *tga_palette = NULL;
@@ -5862,7 +5861,6 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
       tga_image_type -= 8;
       tga_is_RLE = 1;
    }
-   tga_inverted = 1 - ((tga_inverted >> 5) & 1);
 
    //   If I'm paletted, then I'll use the number of bits from the palette
    if (tga_indexed)
@@ -5889,8 +5887,7 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
 
    if (!tga_indexed && !tga_is_RLE && !tga_rgb16) {
       for (i=0; i < tga_height; ++i) {
-         int row = tga_inverted ? tga_height -i - 1 : i;
-         stbi_uc *tga_row = tga_data + row*tga_width*tga_comp;
+         stbi_uc *tga_row = tga_data + i*tga_width*tga_comp;
          if (!stbi__getn(s, tga_row, tga_width * tga_comp))
             return stbi__errpuc("premature EOF", "Corrupt TGA");
       }
@@ -5971,14 +5968,32 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
          //   in case we're in RLE mode, keep counting down
          --RLE_count;
       }
-      // flip image if required
-      if (tga_inverted)
-         stbi__vertical_flip(tga_data, tga_width, tga_height, tga_comp);
       //   clear my palette, if I had one
       if (tga_palette != NULL) {
          STBI_FREE(tga_palette);
       }
    }
+
+   // horizontal flip if required
+   if (tga_desc & 0x10) {
+      for (i = 0; i < tga_height; ++i) {
+         stbi_uc *row = tga_data + i * tga_width * tga_comp;
+         for (j = 0; j < tga_width/2; ++j) {
+            stbi_uc *p = row + j * tga_comp;
+            stbi_uc *q = row + (tga_width - 1 - j) * tga_comp;
+            int k;
+            for (k = 0; k < tga_comp; ++k) {
+               stbi_uc t = p[k];
+               p[k] = q[k];
+               q[k] = t;
+            }
+         }
+      }
+   }
+
+   // vertical flip if required
+   if ((tga_desc & 0x20) == 0)
+      stbi__vertical_flip(tga_data, tga_width, tga_height, tga_comp);
 
    // swap RGB - if the source data was RGB16, it already is in the right order
    if (tga_comp >= 3 && !tga_rgb16) {
