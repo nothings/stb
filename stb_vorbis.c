@@ -1253,12 +1253,14 @@ static int vorbis_validate(uint8 *data)
 // (formula implied by specification)
 static int lookup1_values(int entries, int dim)
 {
-   int r = (int) floor(exp((float) log((float) entries) / dim));
-   if ((int) floor(pow((float) r+1, dim)) <= entries)   // (int) cast for MinGW warning;
-      ++r;                                              // floor() to avoid _ftol() when non-CRT
-   if (pow((float) r+1, dim) <= entries)
+   double entriesd = (double)entries; // exact (all int32 exact in IEEE double)
+   // dim >= 1, so r <= entries (definitely fits in int)
+   int r = (int) floor(exp(log(entriesd) / dim));
+   if (floor(pow((double) r+1, dim)) <= entriesd)
+      ++r;
+   if (pow((double) r+1, dim) <= entriesd)
       return -1;
-   if ((int) floor(pow((float) r, dim)) > entries)
+   if (floor(pow((double) r, dim)) > entriesd)
       return -1;
    return r;
 }
@@ -1708,8 +1710,12 @@ static int codebook_decode_scalar_raw(vorb *f, Codebook *c)
    // if small, linear search
    assert(!c->sparse);
    for (i=0; i < c->entries; ++i) {
+      uint32 mask;
       if (c->codeword_lengths[i] == NO_CODE) continue;
-      if (c->codewords[i] == (f->acc & ((1 << c->codeword_lengths[i])-1))) {
+      // codeword lengths are in [1,32]. this expression gives the correct mask for all choices.
+      // (for length 32, this involves intentional unsigned overflow).
+      mask = (2u << (c->codeword_lengths[i] - 1)) - 1u;
+      if (c->codewords[i] == (f->acc & mask)) {
          if (f->valid_bits >= c->codeword_lengths[i]) {
             f->acc >>= c->codeword_lengths[i];
             f->valid_bits -= c->codeword_lengths[i];
@@ -5185,36 +5191,20 @@ static int8 channel_position[7][6] =
    { L, C, R, L, R, C },
 };
 
-
-#ifndef STB_VORBIS_NO_FAST_SCALED_FLOAT
-   typedef union {
-      float f;
-      int i;
-   } float_conv;
-   typedef char stb_vorbis_float_size_test[sizeof(float)==4 && sizeof(int) == 4];
-   #define FASTDEF(x) float_conv x
-   // add (1<<23) to convert to int, then divide by 2^SHIFT, then add 0.5/2^SHIFT to round
-   #define MAGIC(SHIFT) (1.5f * (1 << (23-SHIFT)) + 0.5f/(1 << SHIFT))
-   #define ADDEND(SHIFT) (((150-SHIFT) << 23) + (1 << 22))
-   #define FAST_SCALED_FLOAT_TO_INT(temp,x,s) (temp.f = (x) + MAGIC(s), temp.i - ADDEND(s))
-   #define check_endianness()
-#else
-   #define FAST_SCALED_FLOAT_TO_INT(temp,x,s) ((int) ((x) * (1 << (s))))
-   #define check_endianness()
-   #define FASTDEF(x)
-#endif
+static __forceinline short float_to_sample(float f)
+{
+   // clamp f to [-1,1]
+   f = (f < 1.0f) ? f : 1.0f;
+   f = (f > -1.0f) ? f : -1.0f;
+   // convert with rounding
+   return (short)(f * 32767.0f + (f > 0.0f ? 0.5f : -0.5f));
+}
 
 static void copy_samples(short *dest, float *src, int len)
 {
    int i;
-   check_endianness();
-   for (i=0; i < len; ++i) {
-      FASTDEF(temp);
-      int v = FAST_SCALED_FLOAT_TO_INT(temp, src[i],15);
-      if (((unsigned int) v + 32768) > 65535)
-         v = v < 0 ? -32768 : 32767;
-      dest[i] = v;
-   }
+   for (i=0; i < len; ++i)
+      dest[i] = float_to_sample(src[i]);
 }
 
 static void compute_samples(int mask, short *output, int num_c, float **data, int d_offset, int len)
@@ -5222,7 +5212,6 @@ static void compute_samples(int mask, short *output, int num_c, float **data, in
    #define STB_BUFFER_SIZE  32
    float buffer[STB_BUFFER_SIZE];
    int i,j,o,n = STB_BUFFER_SIZE;
-   check_endianness();
    for (o = 0; o < len; o += STB_BUFFER_SIZE) {
       memset(buffer, 0, sizeof(buffer));
       if (o + n > len) n = len - o;
@@ -5232,13 +5221,8 @@ static void compute_samples(int mask, short *output, int num_c, float **data, in
                buffer[i] += data[j][d_offset+o+i];
          }
       }
-      for (i=0; i < n; ++i) {
-         FASTDEF(temp);
-         int v = FAST_SCALED_FLOAT_TO_INT(temp,buffer[i],15);
-         if (((unsigned int) v + 32768) > 65535)
-            v = v < 0 ? -32768 : 32767;
-         output[o+i] = v;
-      }
+      for (i=0; i < n; ++i)
+         output[o+i] = float_to_sample(buffer[i]);
    }
    #undef STB_BUFFER_SIZE
 }
@@ -5249,7 +5233,6 @@ static void compute_stereo_samples(short *output, int num_c, float **data, int d
    float buffer[STB_BUFFER_SIZE];
    int i,j,o,n = STB_BUFFER_SIZE >> 1;
    // o is the offset in the source data
-   check_endianness();
    for (o = 0; o < len; o += STB_BUFFER_SIZE >> 1) {
       // o2 is the offset in the output data
       int o2 = o << 1;
@@ -5272,13 +5255,8 @@ static void compute_stereo_samples(short *output, int num_c, float **data, int d
             }
          }
       }
-      for (i=0; i < (n<<1); ++i) {
-         FASTDEF(temp);
-         int v = FAST_SCALED_FLOAT_TO_INT(temp,buffer[i],15);
-         if (((unsigned int) v + 32768) > 65535)
-            v = v < 0 ? -32768 : 32767;
-         output[o2+i] = v;
-      }
+      for (i=0; i < (n<<1); ++i)
+         output[o2+i] = float_to_sample(buffer[i]);
    }
    #undef STB_BUFFER_SIZE
 }
@@ -5312,7 +5290,6 @@ int stb_vorbis_get_frame_short(stb_vorbis *f, int num_c, short **buffer, int num
 static void convert_channels_short_interleaved(int buf_c, short *buffer, int data_c, float **data, int d_offset, int len)
 {
    int i;
-   check_endianness();
    if (buf_c != data_c && buf_c <= 2 && data_c <= 6) {
       assert(buf_c == 2);
       for (i=0; i < buf_c; ++i)
@@ -5321,14 +5298,8 @@ static void convert_channels_short_interleaved(int buf_c, short *buffer, int dat
       int limit = buf_c < data_c ? buf_c : data_c;
       int j;
       for (j=0; j < len; ++j) {
-         for (i=0; i < limit; ++i) {
-            FASTDEF(temp);
-            float f = data[i][d_offset+j];
-            int v = FAST_SCALED_FLOAT_TO_INT(temp, f,15);//data[i][d_offset+j],15);
-            if (((unsigned int) v + 32768) > 65535)
-               v = v < 0 ? -32768 : 32767;
-            *buffer++ = v;
-         }
+         for (i=0; i < limit; ++i)
+            *buffer++ = float_to_sample(data[i][d_offset+j]);
          for (   ; i < buf_c; ++i)
             *buffer++ = 0;
       }
