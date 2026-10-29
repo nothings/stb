@@ -7155,10 +7155,6 @@ static int stbi__psd_is16(stbi__context *s)
 //
 // PGM: http://netpbm.sourceforge.net/doc/pgm.html
 // PPM: http://netpbm.sourceforge.net/doc/ppm.html
-//
-// Known limitations:
-//    Does not support comments in the header section
-//    Does not support ASCII image data (formats P2 and P3)
 
 #ifndef STBI_NO_PNM
 
@@ -7167,7 +7163,7 @@ static int      stbi__pnm_test(stbi__context *s)
    char p, t;
    p = (char) stbi__get8(s);
    t = (char) stbi__get8(s);
-   if (p != 'P' || (t != '5' && t != '6')) {
+   if (p != 'P' || (t != '2' && t != '3' && t != '5' && t != '6')) {
        stbi__rewind( s );
        return 0;
    }
@@ -7201,13 +7197,13 @@ static int stbi__pnm_getinteger(stbi__context *s, char *c)
       value = value*10 + (*c - '0');
       *c = (char) stbi__get8(s);
       if((value > 214748364) || (value == 214748364 && *c > '7'))
-          return stbi__err("integer parse overflow", "Parsing an integer in the PPM header overflowed a 32-bit int");
+          return stbi__err("integer parse overflow", "Parsing an integer in the PPM overflowed a 32-bit int");
    }
 
    return value;
 }
 
-static int stbi__pnm_info_internal(stbi__context *s, int *x, int *y, int *comp, int *maxv)
+static int stbi__pnm_info_internal(stbi__context *s, int *x, int *y, int *comp, int *maxv, int *isascii)
 {
    int dummy;
    char c, p, t;
@@ -7215,18 +7211,21 @@ static int stbi__pnm_info_internal(stbi__context *s, int *x, int *y, int *comp, 
    if (!x) x = &dummy;
    if (!y) y = &dummy;
    if (!comp) comp = &dummy;
+   if (!isascii) isascii = &dummy;
 
    stbi__rewind(s);
+   *isascii = 0;
 
    // Get identifier
    p = (char) stbi__get8(s);
    t = (char) stbi__get8(s);
-   if (p != 'P' || (t != '5' && t != '6')) {
+   if (p != 'P' || (t != '2' && t != '3' && t != '5' && t != '6')) {
        stbi__rewind(s);
        return 0;
    }
 
-   *comp = (t == '6') ? 3 : 1;  // '5' is 1-component .pgm; '6' is 3-component .ppm
+   *comp = (t == '3' || t == '6') ? 3 : 1;  // '2'/'5' is 1-component .pgm; '3'/'6' is 3-component .ppm
+   *isascii = t == '2' || t == '3';
 
    c = (char) stbi__get8(s);
    stbi__pnm_skip_whitespace(s, &c);
@@ -7255,9 +7254,10 @@ static int stbi__pnm_info_internal(stbi__context *s, int *x, int *y, int *comp, 
 static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
 {
    stbi_uc *out;
-   int i, maxv, expected_maxv, nvals;
+   int i, maxv, expected_maxv, nvals, isascii;
+   int bpv; // bytes per value
 
-   ri->bits_per_channel = stbi__pnm_info_internal(s, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n, &maxv);
+   ri->bits_per_channel = stbi__pnm_info_internal(s, (int *)&s->img_x, (int *)&s->img_y, (int *)&s->img_n, &maxv, &isascii);
    if (ri->bits_per_channel == 0)
       return 0;
 
@@ -7268,19 +7268,42 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
    *y = s->img_y;
    if (comp) *comp = s->img_n;
 
-   if (!stbi__mad4sizes_valid(s->img_n, s->img_x, s->img_y, ri->bits_per_channel / 8, 0))
+   bpv = ri->bits_per_channel / 8;
+
+   if (!stbi__mad4sizes_valid(s->img_n, s->img_x, s->img_y, bpv, 0))
       return stbi__errpuc("too large", "PNM too large");
 
-   out = (stbi_uc *) stbi__malloc_mad4(s->img_n, s->img_x, s->img_y, ri->bits_per_channel / 8, 0);
+   out = (stbi_uc *) stbi__malloc_mad4(s->img_n, s->img_x, s->img_y, bpv, 0);
    if (!out) return stbi__errpuc("outofmem", "Out of memory");
    nvals = s->img_n * s->img_x * s->img_y;
-   if (!stbi__getn(s, out, nvals * (ri->bits_per_channel / 8))) {
-      STBI_FREE(out);
-      return stbi__errpuc("bad PNM", "PNM file truncated");
+   if (!isascii) {
+      if (!stbi__getn(s, out, nvals * bpv)) {
+         STBI_FREE(out);
+         return stbi__errpuc("bad PNM", "PNM file truncated");
+      }
+   } else {
+      char c = (char) stbi__get8(s);
+      for (i = 0; i < nvals; ++i) {
+         int val;
+         stbi__pnm_skip_whitespace(s, &c);
+         val = stbi__pnm_getinteger(s, &c);
+         if (val < 0) {
+            STBI_FREE(out);
+            return NULL; // error already set
+         }
+         if (val > maxv) val = maxv - 1;
+         if (bpv == 1)
+            out[i] = (stbi_uc)val;
+         else {
+            out[i*2 + 0] = (stbi_uc)(val >> 8); // BE to match binary reader, fixed up below
+            out[i*2 + 1] = (stbi_uc)val;
+         }
+      }
    }
 
-   expected_maxv = (ri->bits_per_channel == 8) ? 255 : 65535;
-   if (ri->bits_per_channel == 16) {
+   // expected_maxv conversion
+   expected_maxv = (bpv == 1) ? 255 : 65535;
+   if (bpv == 2) {
       stbi__uint16* out16 = (stbi__uint16 *) out;
       for (i = 0; i < nvals; ++i) {
          stbi__uint32 val = (out[i*2 + 0] << 8) + out[i*2 + 1]; // BE
@@ -7299,12 +7322,11 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
    }
 
    if (req_comp && req_comp != s->img_n) {
-      if (ri->bits_per_channel == 16) {
+      if (bpv == 2) {
          out = (stbi_uc *) stbi__convert_format16((stbi__uint16 *) out, s->img_n, req_comp, s->img_x, s->img_y);
       } else {
          out = stbi__convert_format(out, s->img_n, req_comp, s->img_x, s->img_y);
       }
-      if (out == NULL) return out; // stbi__convert_format frees input on failure
    }
    return out;
 }
@@ -7312,7 +7334,7 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
 static int stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp)
 {
     int maxv;
-    return stbi__pnm_info_internal(s, x, y, comp, &maxv);
+    return stbi__pnm_info_internal(s, x, y, comp, &maxv, NULL);
 }
 
 static int stbi__pnm_is16(stbi__context *s)
