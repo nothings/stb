@@ -6838,26 +6838,16 @@ static char *stbi__hdr_gettoken(stbi__context *z, char *buffer)
    return buffer;
 }
 
-static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp)
+static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp, float explut[256])
 {
-   if (input[3] != 0) {
-      float f1;
-      // Exponent
-      f1 = (float) ldexp(1.0f, input[3] - (int)(128 + 8));
-      if (req_comp <= 2) {
-         output[0] = (input[0] + input[1] + input[2]) * f1 / 3;
-         if (req_comp == 2) output[1] = 1;
-      } else {
-         output[0] = input[0] * f1;
-         output[1] = input[1] * f1;
-         output[2] = input[2] * f1;
-         if (req_comp == 4) output[3] = 1;
-      }
-   } else if (req_comp <= 2) {
-      output[0] = 0;
+   float f1 = explut[input[3]];
+   if (req_comp <= 2) {
+      output[0] = (input[0] + input[1] + input[2]) * f1;
       if (req_comp == 2) output[1] = 1;
    } else {
-      output[0] = output[1] = output[2] = 0;
+      output[0] = input[0] * f1;
+      output[1] = input[1] * f1;
+      output[2] = input[2] * f1;
       if (req_comp == 4) output[3] = 1;
    }
 }
@@ -6867,6 +6857,16 @@ static int stbi__hdr_load_pixels(stbi__context *s, float *hdr_data, int width, i
    int x,y,k;
    stbi_uc rgbe[4];
    stbi_uc count,value;
+   float explut[256];
+
+   // make 256-entry LUT of exponent scale factors to speed up conversion
+   explut[0] = 0.0f; // exponent 0 always gives 0.0f
+   for (k = 1; k < 256; ++k) {
+      explut[k] = (float) ldexp(1.0, k - (128 + 8));
+      // when req_comp <= 2, we convert to grayscale instead by averaging the three channels;
+      // fold the /3 into the scale factor
+      if (req_comp <= 2) explut[k] /= 3.f;
+   }
 
    // image data is stored as some number of scanlines
    for (y = 0; y < height; ++y) {
@@ -6879,7 +6879,7 @@ static int stbi__hdr_load_pixels(stbi__context *s, float *hdr_data, int width, i
          isrle = 0;
          x = 0;
          for (;;) {
-            stbi__hdr_convert(hdr_data+(y*width + x)*req_comp, rgbe, req_comp);
+            stbi__hdr_convert(hdr_data+(y*width + x)*req_comp, rgbe, req_comp, explut);
             ++x;
             if (x >= width) break;
             rgbe[0] = stbi__get8(s);
@@ -6915,7 +6915,7 @@ static int stbi__hdr_load_pixels(stbi__context *s, float *hdr_data, int width, i
          }
       }
       for (x=0; x < width; ++x)
-         stbi__hdr_convert(hdr_data+(y*width + x)*req_comp, scanline + x*4, req_comp);
+         stbi__hdr_convert(hdr_data+(y*width + x)*req_comp, scanline + x*4, req_comp, explut);
    }
 
    return 1;
