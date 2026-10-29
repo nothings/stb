@@ -7327,6 +7327,8 @@ static int stbi__info_main(stbi__context *s, int *x, int *y, int *comp)
    if (stbi__tga_info(s, x, y, comp))
        return 1;
    #endif
+
+   STBI_NOTUSED(s);
    return stbi__err("unknown image type", "Image not of any known type, or corrupt");
 }
 
@@ -7343,6 +7345,8 @@ static int stbi__is_16_main(stbi__context *s)
    #ifndef STBI_NO_PNM
    if (stbi__pnm_is16(s))  return 1;
    #endif
+
+   STBI_NOTUSED(s);
    return 0;
 }
 
