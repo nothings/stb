@@ -4682,7 +4682,7 @@ static int get_seek_page_info(stb_vorbis *f, ProbedPage *z)
    z->page_start = stb_vorbis_get_file_offset(f);
 
    // parse the header
-   f (!getn(f, header, 27))
+   if (!getn(f, header, 27))
       return 0;
    if (header[0] != 'O' || header[1] != 'g' || header[2] != 'g' || header[3] != 'S')
       return 0;
