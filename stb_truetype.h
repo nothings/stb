@@ -4459,7 +4459,7 @@ static int stbtt__ray_intersect_bezier(float orig[2], float ray[2], float q0[2],
    }
 }
 
-static int equal(float *a, float *b)
+static int stbtt__equal(float *a, float *b)
 {
    return (a[0] == b[0] && a[1] == b[1]);
 }
@@ -4507,7 +4507,7 @@ static int stbtt__compute_crossings_x(float x, float y, int nverts, stbtt_vertex
             q1[1] = (float)y1;
             q2[0] = (float)x2;
             q2[1] = (float)y2;
-            if (equal(q0,q1) || equal(q1,q2)) {
+            if (stbtt__equal(q0,q1) || stbtt__equal(q1,q2)) {
                x0 = (int)verts[i-1].x;
                y0 = (int)verts[i-1].y;
                x1 = (int)verts[i  ].x;
