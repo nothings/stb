@@ -547,9 +547,6 @@ extern void * stbds_hminit_impl(void *a, size_t elemsize);
 
 #if defined(__GNUC__) || defined(__clang__)
 #define STBDS_HAS_TYPEOF
-#ifdef __cplusplus
-//#define STBDS_HAS_LITERAL_ARRAY  // this is currently broken for clang
-#endif
 #endif
 
 #if !defined(__cplusplus)
@@ -560,13 +557,11 @@ extern void * stbds_hminit_impl(void *a, size_t elemsize);
 
 // this macro takes the address of the argument, but on gcc/clang can accept rvalues
 #if defined(STBDS_HAS_LITERAL_ARRAY) && defined(STBDS_HAS_TYPEOF)
-  #if __clang__
   #define STBDS_ADDRESSOF(typevar, value)     ((__typeof__(typevar)[1]){value}) // literal array decays to pointer to value
-  #else
-  #define STBDS_ADDRESSOF(typevar, value)     ((typeof(typevar)[1]){value}) // literal array decays to pointer to value
-  #endif
+#elif defined(_MSC_VER) && _MSC_VER >= 1939
+  #define STBDS_ADDRESSOF(typevar, value)     ((__typeof__(typevar)[1]){value}) // literal array decays to pointer to value
 #else
-#define STBDS_ADDRESSOF(typevar, value)     &(value)
+  #define STBDS_ADDRESSOF(typevar, value)     &(value)
 #endif
 
 #define STBDS_OFFSETOF(var,field)           ((char *) &(var)->field - (char *) (var))
