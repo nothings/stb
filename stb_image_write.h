@@ -85,6 +85,11 @@ USAGE:
    For PNG, "stride_in_bytes" is the distance in bytes from the first byte of
    a row of pixels to the first byte of the next row of pixels.
 
+   The number of components does not generally map to the number of channels
+   written to the file. In most cases, low-channel data is expanded out to
+   RGB/RGBA data on write. If you need to write images that actually have
+   1 or 2 channels, this library is not sufficient for your needs.
+
    PNG creates output files with the same number of components as the input.
    The BMP format expands Y to RGB in the file format and does not
    output alpha.
