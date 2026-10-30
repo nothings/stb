@@ -1577,6 +1577,7 @@ STBIDEF int      stbi_is_hdr_from_callbacks(stbi_io_callbacks const *clbk, void 
    stbi__start_callbacks(&s, (stbi_io_callbacks *) clbk, user);
    result = stbi__hdr_test(&s);
    stbi__stop(&s);
+   return result;
    #else
    STBI_NOTUSED(clbk);
    STBI_NOTUSED(user);
@@ -6415,6 +6416,7 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
 
    len = 0;
    for(;;) {
+      stbi__int32 code;
       while (valid_bits < codesize) {
          if (len == 0) {
             len = stbi__get8(s); // start new block
@@ -6426,7 +6428,7 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
          valid_bits += 8;
       }
 
-      stbi__int32 code = bits & codemask;
+      code = bits & codemask;
       bits >>= codesize;
       valid_bits -= codesize;
       // @OPTIMIZE: is there some way we can accelerate the non-clear path?
