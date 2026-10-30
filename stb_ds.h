@@ -824,10 +824,8 @@ size_t stbds_rehash_items;
 
 void *stbds_arrgrowf(void *a, size_t elemsize, size_t addlen, size_t min_cap)
 {
-  stbds_array_header temp={0}; // force debugging
   void *b;
   size_t min_len = stbds_arrlen(a) + addlen;
-  (void) sizeof(temp);
 
   // compute the minimum capacity needed
   if (min_len > min_cap)
@@ -1726,11 +1724,12 @@ void stbds_unit_tests(void)
   struct { stbds_struct key; int value; }  *map     = NULL;
   stbds_struct                             *map2    = NULL;
   stbds_struct2                            *map3    = NULL;
-  stbds_string_arena                        sa      = { 0 };
+  stbds_string_arena                        sa            ;
   int key3[2] = { 1,2 };
   ptrdiff_t temp;
 
   int i,j;
+  memset(&sa, 0, sizeof(sa));
 
   arrpush(arr, 3);
   arrpush(arr, arrlen(arr));

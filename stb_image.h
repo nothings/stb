@@ -5096,7 +5096,7 @@ static void stbi__de_iphone(stbi__png *z)
 static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
 {
    stbi_uc palette[1024], pal_img_n=0;
-   stbi_uc has_trans=0, tc[3]={0};
+   stbi_uc has_trans=0, tc[3]={0,0,0};
    stbi__uint16 tc16[3];
    stbi__uint32 ioff=0, idata_limit=0, i, pal_len=0;
    int first=1,k,interlace=0, color=0, is_iphone=0;
@@ -5862,7 +5862,7 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    unsigned char *tga_data;
    unsigned char *tga_palette = NULL;
    int i, j;
-   unsigned char raw_data[4] = {0};
+   unsigned char raw_data[4] = {0,0,0,0};
    int RLE_count = 0;
    int RLE_repeating = 0;
    int read_next_pixel = 1;
