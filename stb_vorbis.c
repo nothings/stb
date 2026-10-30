@@ -67,6 +67,10 @@
 //
 // See end of file for full version history.
 
+#ifdef STB_VORBIS_NO_PULLDATA_API
+   #define STB_VORBIS_NO_INTEGER_CONVERSION
+   #define STB_VORBIS_NO_STDIO
+#endif
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -562,11 +566,6 @@ enum STBVorbisError
 
 
 //////////////////////////////////////////////////////////////////////////////
-
-#ifdef STB_VORBIS_NO_PULLDATA_API
-   #define STB_VORBIS_NO_INTEGER_CONVERSION
-   #define STB_VORBIS_NO_STDIO
-#endif
 
 #if defined(STB_VORBIS_NO_CRT) && !defined(STB_VORBIS_NO_STDIO)
    #define STB_VORBIS_NO_STDIO 1
