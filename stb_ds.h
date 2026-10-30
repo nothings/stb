@@ -713,10 +713,17 @@ typedef struct
   ptrdiff_t   temp;
 } stbds_array_header;
 
+#ifndef STBDS_STRING_ARENA_BLOCKSIZE_MIN
+#define STBDS_STRING_ARENA_BLOCKSIZE_MIN  512u
+#endif
+#ifndef STBDS_STRING_ARENA_BLOCKSIZE_MAX
+#define STBDS_STRING_ARENA_BLOCKSIZE_MAX  (1u<<20)
+#endif
+
 typedef struct stbds_string_block
 {
   struct stbds_string_block *next;
-  char storage[8];
+  char storage[STBDS_STRING_ARENA_BLOCKSIZE_MAX];
 } stbds_string_block;
 
 struct stbds_string_arena
@@ -1613,13 +1620,6 @@ static char *stbds_strdup(char *str)
   return p;
 }
 
-#ifndef STBDS_STRING_ARENA_BLOCKSIZE_MIN
-#define STBDS_STRING_ARENA_BLOCKSIZE_MIN  512u
-#endif
-#ifndef STBDS_STRING_ARENA_BLOCKSIZE_MAX
-#define STBDS_STRING_ARENA_BLOCKSIZE_MAX  (1u<<20)
-#endif
-
 char *stbds_stralloc(stbds_string_arena *a, char *str)
 {
   char *p;
@@ -1641,7 +1641,7 @@ char *stbds_stralloc(stbds_string_arena *a, char *str)
       // note that we still advance string_block so block size will continue
       // increasing, so e.g. if somebody only calls this with 1000-long strings,
       // eventually the arena will start doubling and handling those as well
-      stbds_string_block *sb = (stbds_string_block *) STBDS_REALLOC(NULL, 0, sizeof(*sb)-8 + len);
+      stbds_string_block *sb = (stbds_string_block *) STBDS_REALLOC(NULL, 0, sizeof(*sb)-STBDS_STRING_ARENA_BLOCKSIZE_MAX + len);
       memmove(sb->storage, str, len);
       if (a->storage) {
         // insert it after the first element, so that we don't waste the space there
@@ -1654,7 +1654,7 @@ char *stbds_stralloc(stbds_string_arena *a, char *str)
       }
       return sb->storage;
     } else {
-      stbds_string_block *sb = (stbds_string_block *) STBDS_REALLOC(NULL, 0, sizeof(*sb)-8 + blocksize);
+      stbds_string_block *sb = (stbds_string_block *) STBDS_REALLOC(NULL, 0, sizeof(*sb)-STBDS_STRING_ARENA_BLOCKSIZE_MAX + blocksize);
       sb->next = a->storage;
       a->storage = sb;
       a->remaining = blocksize;
