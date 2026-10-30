@@ -41,12 +41,18 @@ int main(int argc, char **argv)
 
    //debug();
 
-   // @TODO: why is minglui.ttc failing? 
    //fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/mingliu.ttc", "rb"));
 
-   fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/DejaVuSans.ttf", "rb"));
-
+   //fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/DejaVuSans.ttf", "rb"));
+   fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/msgothic.ttc", "rb"));
+   
    stbtt_InitFont(&font, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0));
+
+   {
+      char buffer[999];
+      stbtt_GetFontNameDefault(&font, buffer, sizeof(buffer));
+      printf("%s\n", buffer);
+   }
 
 #if 0
    {

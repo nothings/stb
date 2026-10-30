@@ -1,8 +1,8 @@
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize2.h"
+//#define STB_IMAGE_RESIZE_IMPLEMENTATION
+//#include "stb_image_resize2.h"
 
-#define STB_SPRINTF_IMPLEMENTATION
-#include "stb_sprintf.h"
+//#define STB_SPRINTF_IMPLEMENTATION
+//#include "stb_sprintf.h"
 
 #define STB_PERLIN_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -45,6 +45,6 @@ void STBTE_DRAW_TILE(int x0, int y0, unsigned short id, int highlight, float *da
 int quicktest(void)
 {
    char buffer[999];
-   stbsp_sprintf(buffer, "test%%test");
+//   stbsp_sprintf(buffer, "test%%test");
    return 0;
 }

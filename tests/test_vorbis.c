@@ -1,5 +1,6 @@
+#ifdef TEST_VORBIS
 #include <stdio.h>
-#include "stb_vorbis.c"
+#include "stb_vorbis.h"
 
 int main(int argc, char **argv)
 {
@@ -23,3 +24,4 @@ int main(int argc, char **argv)
    }
    return 0;
 }
+#endif

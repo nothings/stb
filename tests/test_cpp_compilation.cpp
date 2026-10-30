@@ -13,9 +13,9 @@
 #include "stb_ds.h"
 #include "stb_hexwave.h"
 
-#include "stb_sprintf.h"
-#define STB_SPRINTF_IMPLEMENTATION
-#include "stb_sprintf.h"
+//#include "stb_sprintf.h"
+//#define STB_SPRINTF_IMPLEMENTATION
+//#include "stb_sprintf.h"
 
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -69,8 +69,8 @@ void my_free(void *) { }
 #define STB_LEAKCHECK_IMPLEMENTATION
 #include "stb_leakcheck.h"
 
-#define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "stb_image_resize2.h"
+//#define STB_IMAGE_RESIZE_IMPLEMENTATION
+//#include "stb_image_resize2.h"
 
 //#include "stretchy_buffer.h"  // deprecating
 
