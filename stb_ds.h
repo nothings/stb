@@ -210,6 +210,7 @@ DOCUMENTATION
       hmgeti
       shgeti
       hmgeti_ts
+      shgeti_ts
         ptrdiff_t hmgeti(T*, TK key)
         ptrdiff_t shgeti(T*, char* key)
         ptrdiff_t hmgeti_ts(T*, TK key, ptrdiff_t tempvar)
@@ -219,11 +220,18 @@ DOCUMENTATION
       hmget
       hmget_ts
       shget
+      shget_ts
         TV hmget(T*, TK key)
         TV shget(T*, char* key)
         TV hmget_ts(T*, TK key, ptrdiff_t tempvar)
+        TV shget_ts(T*, char *key, ptrdiff_t tempvar)
           Returns the value corresponding to 'key' in the hashmap.
-          The structure must have a 'value' field
+          The structure must have a 'value' field. Returns a default
+          value if the key is not found. The _ts functions are
+          thread-safe: multiple threads can query the same hashmap
+          at the same time. However, for these functions only, the
+          hash map cannot be NULL; it must either be non-empty or
+          have been initialized with hminit() or shinit().
 
       hmgets
       shgets
@@ -280,6 +288,17 @@ DOCUMENTATION
         int shdel(T*, char* key)
           If 'key' is in the hashmap, deletes its entry and returns 1.
           Otherwise returns 0.
+
+      hminit
+      shinit
+        void hminit(T*)
+        void shinit(T*)
+          Initializes the hash table with a valid "default" value from a
+          NULL variable pointer to the appropriate type. Most functions
+          allow NULL to be an empty hashmap and lazily initialize, but
+          certain functions like hmget_ts() cannot lazily initialize and
+          require this function to be run when a query would return the
+          default value from an empty table.
 
     Function interface (actually macros) for strings only:
 
@@ -445,6 +464,7 @@ CREDITS
 #define hmfree      stbds_hmfree
 #define hmdefault   stbds_hmdefault
 #define hmdefaults  stbds_hmdefaults
+#define hminit      stbds_hminit
 
 #define shput       stbds_shput
 #define shputi      stbds_shputi
@@ -465,6 +485,7 @@ CREDITS
 #define shdefaults  stbds_shdefaults
 #define sh_new_arena  stbds_sh_new_arena
 #define sh_new_strdup stbds_sh_new_strdup
+#define shinit      stbds_shinit
 
 #define stralloc    stbds_stralloc
 #define strreset    stbds_strreset
@@ -518,6 +539,7 @@ extern void * stbds_hmput_default(void *a, size_t elemsize);
 extern void * stbds_hmput_key(void *a, size_t elemsize, void *key, size_t keysize, int mode);
 extern void * stbds_hmdel_key(void *a, size_t elemsize, void *key, size_t keysize, size_t keyoffset, int mode);
 extern void * stbds_shmode_func(size_t elemsize, int mode);
+extern void * stbds_hminit_impl(void *a, size_t elemsize);
 
 #ifdef __cplusplus
 }
@@ -567,7 +589,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arraddnindex(a,n)(stbds_arrmaybegrow(a,n), (n) ? (stbds_header(a)->length += (n), stbds_header(a)->length-(n)) : stbds_arrlen(a))
 #define stbds_arraddnoff       stbds_arraddnindex
 #define stbds_arrlast(a)       ((a)[stbds_header(a)->length-1])
-#define stbds_arrfree(a)       stbds_arrfreef(a) // do not call STBDS_FREE directly as this is in the header file, so may not be defined!
+#define stbds_arrfree(a)       (stbds_arrfreef(a),(a)=NULL) // do not call STBDS_FREE directly as this is in the header file, so may not be defined!
 #define stbds_arrdel(a,i)      stbds_arrdeln(a,i,1)
 #define stbds_arrdeln(a,i,n)   (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
 #define stbds_arrdelswap(a,i)  ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
@@ -620,6 +642,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_hmlen(t)        ((t) ? (ptrdiff_t) stbds_header((t)-1)->length-1 : 0)
 #define stbds_hmlenu(t)       ((t) ?             stbds_header((t)-1)->length-1 : 0)
 #define stbds_hmgetp_null(t,k)  (stbds_hmgeti(t,k) == -1 ? NULL : &(t)[stbds_temp((t)-1)])
+#define stbds_hminit(t)       ((t) = stbds_hminit_wrapper(t, sizeof *(t)))
 
 #define stbds_shput(t, k, v) \
     ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) (k), sizeof (t)->key, STBDS_HM_STRING),   \
@@ -667,6 +690,8 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
     ((t) = stbds_shmode_func_wrapper(t, sizeof *(t), STBDS_SH_ARENA))
 #define stbds_sh_new_strdup(t) \
     ((t) = stbds_shmode_func_wrapper(t, sizeof *(t), STBDS_SH_STRDUP))
+#define stbds_shinit(t)        \
+    ((t) = stbds_shmode_func_wrapper(t, sizeof *(t), STBDS_SH_DEFAULT))
 
 #define stbds_shdefault(t, v)  stbds_hmdefault(t,v)
 #define stbds_shdefaults(t, s) stbds_hmdefaults(t,s)
@@ -737,6 +762,9 @@ template<class T> static T * stbds_hmdel_key_wrapper(T *a, size_t elemsize, void
 template<class T> static T * stbds_shmode_func_wrapper(T *, size_t elemsize, int mode) {
   return (T*)stbds_shmode_func(elemsize, mode);
 }
+template<class T> static T * stbds_hminit_wrapper(T *a, size_t elemsize) {
+  return (T*)stbds_hminit_impl(a, elemsize);
+}
 #else
 #define stbds_arrgrowf_wrapper            stbds_arrgrowf
 #define stbds_hmget_key_wrapper           stbds_hmget_key
@@ -745,6 +773,7 @@ template<class T> static T * stbds_shmode_func_wrapper(T *, size_t elemsize, int
 #define stbds_hmput_key_wrapper           stbds_hmput_key
 #define stbds_hmdel_key_wrapper           stbds_hmdel_key
 #define stbds_shmode_func_wrapper(t,e,m)  stbds_shmode_func(e,m)
+#define stbds_hminit_wrapper              stbds_hminit_impl
 #endif
 
 #endif // INCLUDE_STB_DS_H
@@ -1326,7 +1355,7 @@ void * stbds_hmget_key_ts(void *a, size_t elemsize, void *key, size_t keysize, p
   return a;
 }
 
-void * stbds_hmget_key(void *a, size_t elemsize, void *key, size_t keysize, int mode)
+void * stbds_hminit_impl(void *a, size_t elemsize)
 {
   if (a == NULL) {
     // make it non-empty so we can return a temp
@@ -1335,6 +1364,15 @@ void * stbds_hmget_key(void *a, size_t elemsize, void *key, size_t keysize, int 
     memset(a, 0, elemsize);
     stbds_temp(a) = STBDS_INDEX_EMPTY;
     return STBDS_ARR_TO_HASH(a,elemsize);
+  }
+  return a;
+}
+
+void * stbds_hmget_key(void *a, size_t elemsize, void *key, size_t keysize, int mode)
+{
+  if (a == NULL) {
+    // make it non-empty so we can return a temp
+    return stbds_hminit_impl(a, elemsize);
   } else {
     ptrdiff_t temp;
     void *p = stbds_hmget_key_ts(a, elemsize, key, keysize, &temp, mode);
@@ -1717,6 +1755,11 @@ void stbds_unit_tests(void)
       STBDS_ASSERT(arr[4] == 4);
     arrfree(arr);
   }
+
+  intmap = hminit(intmap);
+  i = 2;
+  hmget_ts(intmap, i, temp);
+  intmap = 0;
 
   i = 1;
   STBDS_ASSERT(hmgeti(intmap,i) == -1);

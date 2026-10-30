@@ -18,8 +18,8 @@
 #include "../stb.h"
 #endif
 
-#ifdef DS_TEST
 #define STBDS_UNIT_TESTS
+#ifdef DS_TEST
 #define STBDS_SMALL_BUCKET
 #endif
 
