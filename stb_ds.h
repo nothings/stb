@@ -273,7 +273,8 @@ DOCUMENTATION
         TV hmput(T*, TK key, TV value)
         TV shput(T*, char* key, TV value)
           Inserts a <key,value> pair into the hashmap. If the key is already
-          present in the hashmap, updates its value.
+          present in the hashmap, updates its value. Note that because this is
+          a macro, the TV value expression is computed after expanding the table.
 
       hmputs
       shputs
@@ -581,7 +582,7 @@ extern void * stbds_hminit_impl(void *a, size_t elemsize);
 #define stbds_arrcap(a)        ((a) ? stbds_header(a)->capacity : 0)
 #define stbds_arrlen(a)        ((a) ? (ptrdiff_t) stbds_header(a)->length : 0)
 #define stbds_arrlenu(a)       ((a) ?             stbds_header(a)->length : 0)
-#define stbds_arrput(a,v)      (stbds_arrmaybegrow(a,1), (a)[stbds_header(a)->length++] = (v))
+#define stbds_arrput(a,v)      (stbds_arrmaybegrow(a,1), (a)[stbds_header(a)->length] = (v), (a)[stbds_header(a)->length++])
 #define stbds_arrpush          stbds_arrput  // synonym
 #define stbds_arrpop(a)        (stbds_header(a)->length--, (a)[stbds_header(a)->length])
 #define stbds_arraddn(a,n)     ((void)(stbds_arraddnindex(a, n)))    // deprecated, use one of the following instead:
@@ -1730,6 +1731,13 @@ void stbds_unit_tests(void)
   ptrdiff_t temp;
 
   int i,j;
+
+  arrpush(arr, 3);
+  arrpush(arr, arrlen(arr));
+  arrpush(arr, arrlen(arr));
+  STBDS_ASSERT(arr[1] == 1);
+  STBDS_ASSERT(arr[2] == 2);
+  arrfree(arr);
 
   STBDS_ASSERT(arrlen(arr)==0);
   for (i=0; i < 20000; i += 50) {
