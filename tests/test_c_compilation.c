@@ -44,7 +44,7 @@ void STBTE_DRAW_TILE(int x0, int y0, unsigned short id, int highlight, float *da
 
 int quicktest(void)
 {
-   char buffer[999];
+//   char buffer[999];
 //   stbsp_sprintf(buffer, "test%%test");
    return 0;
 }

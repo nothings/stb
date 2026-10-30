@@ -1,4 +1,4 @@
-
+#if 0
 #define USE_STB 1
 
 #if USE_STB
@@ -199,4 +199,5 @@ int main()
 
    return 0;
 }
+#endif
 #endif
