@@ -140,6 +140,8 @@ typedef struct
    int max_frame_size;
 } stb_vorbis_info;
 
+#ifndef STB_VORBIS_NO_COMMENTS
+
 typedef struct
 {
    char *vendor;
@@ -148,11 +150,15 @@ typedef struct
    char **comment_list;
 } stb_vorbis_comment;
 
+#endif
+
 // get general information about the file
 extern stb_vorbis_info stb_vorbis_get_info(stb_vorbis *f);
 
+#ifndef STB_VORBIS_NO_COMMENTS
 // get ogg comments
 extern stb_vorbis_comment stb_vorbis_get_comment(stb_vorbis *f);
+#endif
 
 // get the last error detected (clears it, too)
 extern int stb_vorbis_get_error(stb_vorbis *f);
@@ -450,12 +456,12 @@ enum STBVorbisError
 //     does not compile the code for converting audio sample data from
 //     float to integer (implied by STB_VORBIS_NO_PULLDATA_API)
 // #define STB_VORBIS_NO_INTEGER_CONVERSION
-
-// STB_VORBIS_NO_FAST_SCALED_FLOAT
-//      does not use a fast float-to-int trick to accelerate float-to-int on
-//      most platforms which requires endianness be defined correctly.
-//#define STB_VORBIS_NO_FAST_SCALED_FLOAT
-
+//
+// STB_VORBIS_NO_COMMENTS
+//     disables reading and storing vendor and comment information,
+//     which can large amounts of memory with adversarial inputs and is
+//     not necessary for pure audio playback.
+// #define STB_VORBIS_NO_COMMENTS
 
 // STB_VORBIS_MAX_CHANNELS [number]
 //     globally define this to the maximum number of channels you need.
@@ -565,22 +571,6 @@ enum STBVorbisError
 #if defined(STB_VORBIS_NO_CRT) && !defined(STB_VORBIS_NO_STDIO)
    #define STB_VORBIS_NO_STDIO 1
 #endif
-
-#ifndef STB_VORBIS_NO_INTEGER_CONVERSION
-#ifndef STB_VORBIS_NO_FAST_SCALED_FLOAT
-
-   // only need endianness for fast-float-to-int, which we don't
-   // use for pushdata
-
-   #ifndef STB_VORBIS_BIG_ENDIAN
-     #define STB_VORBIS_ENDIAN  0
-   #else
-     #define STB_VORBIS_ENDIAN  1
-   #endif
-
-#endif
-#endif
-
 
 #ifndef STB_VORBIS_NO_STDIO
 #include <stdio.h>
@@ -800,9 +790,11 @@ struct stb_vorbis
    unsigned int temp_memory_required;
    unsigned int setup_temp_memory_required;
 
+#ifndef STB_VORBIS_NO_COMMENTS
    char *vendor;
    int comment_list_length;
    char **comment_list;
+#endif
 
   // input config
 #ifndef STB_VORBIS_NO_STDIO
@@ -1594,6 +1586,7 @@ static int get8_packet(vorb *f)
    return x;
 }
 
+#ifndef STB_VORBIS_NO_COMMENTS
 static int get32_packet(vorb *f)
 {
    uint32 x;
@@ -1603,6 +1596,7 @@ static int get32_packet(vorb *f)
    x += (uint32) get8_packet(f) << 24;
    return x;
 }
+#endif
 
 static void flush_packet(vorb *f)
 {
@@ -3664,6 +3658,7 @@ static int start_decoder(vorb *f)
 
    if (!start_packet(f))                            return FALSE;
 
+#ifndef STB_VORBIS_NO_COMMENTS
    if (!next_segment(f))                            return FALSE;
 
    if (get8_packet(f) != VORBIS_packet_comment)            return error(f, VORBIS_invalid_setup);
@@ -3708,6 +3703,7 @@ static int start_decoder(vorb *f)
 
    skip(f, f->bytes_in_seg);
    f->bytes_in_seg = 0;
+#endif // STB_VORBIS_NO_COMMENTS
 
    do {
       len = next_segment(f);
@@ -4235,6 +4231,7 @@ static void vorbis_deinit(stb_vorbis *p)
 {
    int i,j;
 
+#ifndef STB_VORBIS_NO_COMMENTS
    setup_free(p, p->vendor);
    if (p->comment_list) {
       for (i=0; i < p->comment_list_length; ++i) {
@@ -4242,6 +4239,7 @@ static void vorbis_deinit(stb_vorbis *p)
       }
    }
    setup_free(p, p->comment_list);
+#endif
 
    if (p->residue_config) {
       for (i=0; i < p->residue_count; ++i) {
@@ -4350,6 +4348,7 @@ stb_vorbis_info stb_vorbis_get_info(stb_vorbis *f)
    return d;
 }
 
+#ifndef STB_VORBIS_NO_COMMENTS
 stb_vorbis_comment stb_vorbis_get_comment(stb_vorbis *f)
 {
    stb_vorbis_comment d;
@@ -4358,6 +4357,7 @@ stb_vorbis_comment stb_vorbis_get_comment(stb_vorbis *f)
    d.comment_list = f->comment_list;
    return d;
 }
+#endif
 
 int stb_vorbis_get_error(stb_vorbis *f)
 {
