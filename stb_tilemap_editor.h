@@ -4113,7 +4113,7 @@ void stbte_tick(stbte_tilemap *tm, float dt)
 
 void stbte_mouse_sdl(stbte_tilemap *tm, const void *sdl_event, float xs, float ys, int xo, int yo)
 {
-#ifdef _SDL_H
+#if defined(_SDL_H) /* SDL1 */ || defined(_SDL_h_) /* SDL2 */ || defined(SDL_h_) /* SDL3 */
    SDL_Event *event = (SDL_Event *) sdl_event;
    SDL_Keymod km = SDL_GetModState();
    int shift = (km & KMOD_LCTRL) || (km & KMOD_RCTRL);
