@@ -764,9 +764,8 @@ STBTT_DEF float stbtt_ScaleForPixelHeight(const stbtt_fontinfo *info, float pixe
 // so if you prefer to measure height by the ascent only, use a similar calculation.
 
 STBTT_DEF float stbtt_ScaleForPixelWidth(const stbtt_fontinfo *info, float pixels);
-// computes a scale factor to produce a font whose "height" is 'pixels' tall.
-// Width is measured as the distance from the start of the line gap to the end.
-
+// computes a scale factor to produce a font whose width is 'pixels' wide.
+// Width is measured as the distance from the left-side-bearing to the right-side-bearing
 
 STBTT_DEF float stbtt_ScaleForMappingEmToPixels(const stbtt_fontinfo *info, float pixels);
 // computes a scale factor to produce a font whose EM size is mapped to
