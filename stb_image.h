@@ -6680,7 +6680,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
    if (!stbi__gif_test(s))
       return stbi__errpuc("not GIF", "Image is not a GIF.");
 
-   g = stbi__malloc(sizeof(*g));
+   g = (stbi__gif *) stbi__malloc(sizeof(*g));
    if (!g)
       return stbi__errpuc("outofmem", "Out of memory");
    memset(g, 0, sizeof(*g));
@@ -6731,12 +6731,12 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
    // allocate output space
    if (ok) {
       if (delays) {
-         *delays = stbi__malloc_mad2(layers, sizeof(int), 0);
+         *delays = (int *) stbi__malloc_mad2(layers, sizeof(int), 0);
          ok &= *delays != NULL;
       }
 
       if (ok) {
-         out = stbi__malloc_mad2(layers, stride, 0);
+         out = (stbi_uc *) stbi__malloc_mad2(layers, stride, 0);
          ok &= out != NULL;
       }
    }
@@ -6775,7 +6775,7 @@ static void *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y,
 static void *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri)
 {
    stbi_uc *u = 0;
-   stbi__gif *g = stbi__malloc(sizeof(*g));
+   stbi__gif *g = (stbi__gif *) stbi__malloc(sizeof(*g));
    if (!g)
       return stbi__errpuc("outofmem", "Out of memory");
 
