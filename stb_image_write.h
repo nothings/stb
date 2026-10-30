@@ -90,6 +90,10 @@ USAGE:
    RGB/RGBA data on write. If you need to write images that actually have
    1 or 2 channels, this library is not sufficient for your needs.
 
+   No color space conversions or transforms beyond trivial channel replication
+   are applied. That is, for all the lossless formats, the byte values you
+   pass to stbi_write_* are exactly what ends up in the file.
+
    PNG creates output files with the same number of components as the input.
    The BMP format expands Y to RGB in the file format and does not
    output alpha.
