@@ -322,7 +322,7 @@ void my_stbtt_print(float x, float y, char *text)
 //
 //////////////////////////////////////////////////////////////////////////////
 //
-// Complete program (this compiles): get a single bitmap, print as ASCII art
+// Compilable program (does no cleanup): get a single bitmap, print as ASCII art
 //
 #if 0
 #include <stdio.h>
@@ -337,10 +337,10 @@ int main(int argc, char **argv)
    unsigned char *bitmap;
    int w,h,i,j,c = (argc > 1 ? atoi(argv[1]) : 'a'), s = (argc > 2 ? atoi(argv[2]) : 20);
 
-   fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/arialbd.ttf", "rb"));
+   fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/arialbd.ttf", "rb")); // fclose() omitted for clarity
 
    stbtt_InitFont(&font, ttf_buffer, stbtt_GetFontOffsetForIndex(ttf_buffer,0));
-   bitmap = stbtt_GetCodepointBitmap(&font, 0,stbtt_ScaleForPixelHeight(&font, s), c, &w, &h, 0,0);
+   bitmap = stbtt_GetCodepointBitmap(&font, 0,stbtt_ScaleForPixelHeight(&font, s), c, &w, &h, 0,0); // stbtt_FreeBitmap() omitted for clarity
 
    for (j=0; j < h; ++j) {
       for (i=0; i < w; ++i)
@@ -366,7 +366,7 @@ int main(int argc, char **argv)
 //
 //////////////////////////////////////////////////////////////////////////////
 //
-// Complete program: print "Hello World!" banner, with bugs
+// Complete program: print "Hello World!" banner, with bugs & no cleanup
 //
 #if 0
 char buffer[24<<20];
