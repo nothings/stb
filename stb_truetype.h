@@ -1041,11 +1041,8 @@ STBTT_DEF const char *stbtt_GetFontNameString(const stbtt_fontinfo *font, int *l
 //     http://developer.apple.com/textfonts/TTRefMan/RM06/Chap6name.html
 //     http://www.microsoft.com/typography/otspec/name.htm
 
-STBTT_DEF const char *stbtt_GetFontNameDefault(const stbtt_fontinfo *font, int *length);
+STBTT_DEF int stbtt_GetFontNameDefault(const stbtt_fontinfo *font, char *output_buffer, size_t output_buffer_len);
 // return the default english full name of the font as utf-8
-
-STBTT_DEF const char* stbtt__ConvertUTF16BEtoUTF8(const char* wideSrc, stbtt_int32 srcLen, stbtt_int32* newLen);
-// performs a basic conversion of a big endian utf-16 string to a utf-8 string
 
 enum { // platformID
    STBTT_PLATFORM_ID_UNICODE   =0,
@@ -4848,49 +4845,114 @@ STBTT_DEF const char *stbtt_GetFontNameString(const stbtt_fontinfo *font, int *l
    return NULL;
 }
 
-STBTT_DEF const char* stbtt__ConvertUTF16BEtoUTF8(const char* wideSrc, stbtt_int32 srcLen, stbtt_int32* newLen)
+// convert utf16 to utf8 and return the maximum length required; buffer can be NULL to just query length
+STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsigned char *src, size_t src_len_raw)
 {
-   char* convStr = (char*) STBTT_malloc(srcLen / 2, NULL);
-   stbtt_int32 i=0;
+   int src_len = (int) src_len_raw;
+   size_t total_len=0;
+   int write_max = 0;
+   int i = 0, write, off = 0;
+   write = (buffer != NULL);
+   if (buffer_len <= 1)
+      write = 0;
+   else
+      write_max = (int) (buffer_len-1);
 
-   while (srcLen) {
-      stbtt_uint16 ch = wideSrc[0]*256 + wideSrc[1];
-      if (ch < 0x80) convStr[i++] = ch;
-      wideSrc += 2;
-      srcLen -= 2;
+   if ((size_t) src_len != src_len_raw || write_max < 0 || ((size_t) write_max+1 != buffer_len && write_max != 0))
+      return -1;
+
+
+   while (off < src_len) {
+      stbtt_uint16 ch = src[off+0]*256 + src[off+1];
+      off += 2;
+      if (ch < 0x80) {
+         if (write) {
+            if (i >= write_max) { buffer[i] = 0; write = 0; }
+            buffer[i] = (char) ch;
+         }
+         ++i;
+      } else if (ch < 0x800) {
+         if (write) {
+            if (i+1 >= write_max) { buffer[i] = 0; write = 0; }
+            buffer[i+0] = (char) 0xc0 + (ch >> 6);
+            buffer[i+1] = (char) 0x80 + (ch & 0x3f);
+         }
+         i += 2;
+      } else if (ch >= 0xd800 && ch < 0xdc00) {
+         stbtt_uint32 c;
+         stbtt_uint16 ch2 = src[off+0]*256 + src[off+1];
+         off += 2;
+         if (write) {
+            if (i+3 >= write_max) { buffer[i] = 0; write = 0; }
+            c = ((ch - 0xd800) << 10) + (ch2 - 0xdc00) + 0x10000;
+            buffer[i+0] = (char) 0xf0 + (c >> 18);
+            buffer[i+1] = (char) 0x80 + ((c >> 12) & 0x3f);
+            buffer[i+2] = (char) 0x80 + ((c >>  6) & 0x3f);
+            buffer[i+3] = (char) 0x80 + ((c      ) & 0x3f);
+         }
+         i += 4;
+      } else if (ch >= 0xdc00 && ch < 0xe000) {
+         return -1;
+      } else {
+         if (write) {
+            if (i+2 >= write_max) { buffer[i] = 0; write = 0; }
+            buffer[i+0] = 0xe0 + (ch >> 12);
+            buffer[i+1] = 0x80 + ((ch >> 6) & 0x3f);
+            buffer[i+2] = 0x80 + ((ch     ) & 0x3f);
+         }
+         i += 3;
+      }
    }
-   *newLen = i;
-   return convStr;
+   if (write)
+      buffer[i] = 0;
+   return i;
 }
 
 // Returns the english full name of the font as UTF-8
-STBTT_DEF const char *stbtt_GetFontNameDefault(const stbtt_fontinfo *font, int *length)
+STBTT_DEF int stbtt_GetFontNameDefault(const stbtt_fontinfo *font, char *buffer, size_t buffer_len)
 {
    stbtt_int32 i,count,stringOffset;
    stbtt_uint8 *fc = font->data;
    stbtt_uint32 offset = font->fontstart;
    stbtt_uint32 nm = stbtt__find_table(fc, offset, "name");
-   if (!nm) return NULL;
+   if (!nm) return -1;
 
    count = ttUSHORT(fc+nm+2);
    stringOffset = nm + ttUSHORT(fc+nm+4);
    for (i=0; i < count; ++i) {
+      char* str;
+      stbtt_uint16 platformId;
+      stbtt_uint16 encodingId;
+      stbtt_uint16 languageId;
+      size_t length;
       stbtt_uint32 loc = nm + 6 + 12 * i;
       if (ttUSHORT(fc+loc+6) != 4) continue;
-      stbtt_uint16 platformId = ttUSHORT(fc+loc+0);
-      stbtt_uint16 encodingId = ttUSHORT(fc+loc+2);
-      stbtt_uint16 languageId = ttUSHORT(fc+loc+4);
+      platformId = ttUSHORT(fc+loc+0);
+      encodingId = ttUSHORT(fc+loc+2);
+      languageId = ttUSHORT(fc+loc+4);
       if (!(platformId == STBTT_PLATFORM_ID_MAC && languageId == STBTT_MAC_LANG_ENGLISH) && !(platformId == STBTT_PLATFORM_ID_MICROSOFT && languageId == STBTT_MS_LANG_ENGLISH))
           continue;
 
-      *length = ttUSHORT(fc+loc+8);
-      const char* str = (const char *) (fc+stringOffset+ttUSHORT(fc+loc+10));
+      length = ttUSHORT(fc+loc+8);
+      str = (char *) (fc+stringOffset+ttUSHORT(fc+loc+10));
       if (platformId == STBTT_PLATFORM_ID_UNICODE || (platformId == STBTT_PLATFORM_ID_MICROSOFT && (encodingId == 1 || encodingId == 10)))
-          return stbtt__ConvertUTF16BEtoUTF8(str, *length, length);
-      else
-          return str;
+          return stbtt__ConvertUTF16BEtoUTF8(buffer, buffer_len, (unsigned char *) str, length);
+      else {
+         if (buffer == NULL)
+            return (int) length;
+
+         if (length < buffer_len) {
+            memcpy(buffer, str, length);
+            buffer[length] = 0;
+            return (int) length;
+         } else {
+            memcpy(buffer, str, buffer_len-1);
+            buffer[buffer_len-1] = 0;
+            return (int) length;
+         }
+      }
    }
-   return NULL;
+   return -1;
 }
 
 static int stbtt__matchpair(stbtt_uint8 *fc, stbtt_uint32 nm, stbtt_uint8 *name, stbtt_int32 nlen, stbtt_int32 target_id, stbtt_int32 next_id)
