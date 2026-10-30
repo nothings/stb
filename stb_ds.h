@@ -98,6 +98,10 @@ DOCUMENTATION
         T arrput(T* a, T b);
           Appends the item b to the end of array a. Returns b.
 
+      arrlast:
+        T arrlast(T* a);
+          Returns the last element in the array as an lvalue.
+          
       arrins:
         T arrins(T* a, int p, T b);
           Inserts the item b into the middle of array a, into a[p],
