@@ -5905,8 +5905,10 @@ static void *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req
    if (!tga_indexed && !tga_is_RLE && !tga_rgb16) {
       for (i=0; i < tga_height; ++i) {
          stbi_uc *tga_row = tga_data + i*tga_width*tga_comp;
-         if (!stbi__getn(s, tga_row, tga_width * tga_comp))
+         if (!stbi__getn(s, tga_row, tga_width * tga_comp)) {
+            STBI_FREE(tga_data);
             return stbi__errpuc("premature EOF", "Corrupt TGA");
+         }
       }
    } else {
       //   do I need to load a palette?
