@@ -1569,17 +1569,26 @@ STBTT_DEF int stbtt_FindGlyphIndex(const stbtt_fontinfo *info, int unicode_codep
          stbtt_int16 delta;
          stbtt_uint16 item = (stbtt_uint16) ((search - endCount) >> 1);
 
+         // get the actual range for this segment
          start = ttUSHORT(data + index_map + 14 + segcount*2 + 2 + 2*item);
          last = ttUSHORT(data + endCount + 2*item);
          if (unicode_codepoint < start || unicode_codepoint > last)
             return 0;
 
-         delta = ttSHORT(data + index_map + 14 + segcount*4 + 2 + 2*item);
          offset = ttUSHORT(data + index_map + 14 + segcount*6 + 2 + 2*item);
+         delta = ttSHORT(data + index_map + 14 + segcount*4 + 2 + 2*item);
+
+         // "if idRangeOffset is 0, the idDelta value is added directly to the character code"
          if (offset == 0)
             return (stbtt_uint16) (unicode_codepoint + delta);
 
+         // "If the idRangeOffset value for the segment is not 0, ..."
+         // "glyphIndexAddress = idRangeOffset[i] + 2 * (c - startCode[i]) + (Ptr) &idRangeOffset[i]"
          index = ttUSHORT(data + offset + (unicode_codepoint-start)*2 + index_map + 14 + segcount*6 + 2 + 2*item);
+
+         // "Once the glyph indexing operation is complete, the glyph ID at the indicated address
+         // is checked. If it's not 0 (that is, if it's not the missing glyph), the value is added
+         // to idDelta[i] to get the actual glyph ID to use."
          if (index != 0) {
             index = (stbtt_uint16) (index + delta);
          }
