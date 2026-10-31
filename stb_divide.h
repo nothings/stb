@@ -63,15 +63,8 @@
 // by Raymond Boute (1992), or "Division and Modulus for Computer
 // Scientists" by Daan Leijen (2001)
 //
-// We assume of the built-in C division:
-//     (a) modulus is the remainder for the corresponding division
-//     (b) a/b truncates if a and b are the same sign
-//
-// Property (a) requires (a/b)*b + (a%b)==a, and is required by C.
-// Property (b) seems to be true of all hardware but is *not* satisfied
-// by the euclidean division operator we define, so it's possibly not
-// always true. If any such platform turns up, we can add more cases.
-// (Possibly only stb_div_trunc currently relies on property (b).)
+// We use the C stdlib function div() which is guaranteed to provide
+// truncating integer division in both C89 and C99.
 //
 // LICENSE
 //
