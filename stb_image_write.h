@@ -223,6 +223,7 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 #include <math.h>
 
 #if defined(STBIW_MALLOC) && defined(STBIW_FREE) && (defined(STBIW_REALLOC) || defined(STBIW_REALLOC_SIZED))
@@ -351,6 +352,34 @@ static void stbi__end_write_file(stbi__write_context *s)
 }
 
 #endif // !STBI_WRITE_NO_STDIO
+
+// return 1 if the sum is valid, 0 on overflow.
+// negative terms are considered invalid.
+static int stbiw__addsizes_valid(int a, int b)
+{
+   if (b < 0) return 0;
+   // now 0 <= b <= INT_MAX, hence also
+   // 0 <= INT_MAX - b <= INTMAX.
+   // And "a + b <= INT_MAX" (which might overflow) is the
+   // same as a <= INT_MAX - b (no overflow)
+   return a <= INT_MAX - b;
+}
+
+// returns 1 if the product is valid, 0 on overflow.
+// negative factors are considered invalid.
+static int stbiw__mul2sizes_valid(int a, int b)
+{
+   if (a < 0 || b < 0) return 0;
+   if (b == 0) return 1; // mul-by-0 is always safe
+   // portable way to check for no overflows in a*b
+   return a <= INT_MAX/b;
+}
+
+// returns 1 if "a*b + add" has no negative terms/factors and doesn't overflow
+static int stbiw__mad2sizes_valid(int a, int b, int add)
+{
+   return stbiw__mul2sizes_valid(a, b) && stbiw__addsizes_valid(a*b, add);
+}
 
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
@@ -832,7 +861,7 @@ STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const 
 
 #define stbiw__sbneedgrow(a,n)  ((a)==0 || stbiw__sbn(a)+n >= stbiw__sbm(a))
 #define stbiw__sbmaybegrow(a,n) (stbiw__sbneedgrow(a,(n)) ? stbiw__sbgrow(a,n) : 0)
-#define stbiw__sbgrow(a,n)  stbiw__sbgrowf((void **) &(a), (n), sizeof(*(a)))
+#define stbiw__sbgrow(a,n)      stbiw__sbgrowf((void **) &(a), (n), sizeof(*(a)))
 
 #define stbiw__sbpush(a, v)      (stbiw__sbmaybegrow(a,1), (a)[stbiw__sbn(a)++] = (v))
 #define stbiw__sbcount(a)        ((a) ? stbiw__sbn(a) : 0)
@@ -840,14 +869,21 @@ STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const 
 
 static void *stbiw__sbgrowf(void **arr, int increment, int itemsize)
 {
-   int m = *arr ? 2*stbiw__sbm(*arr)+increment : increment+1;
-   void *p = STBIW_REALLOC_SIZED(*arr ? stbiw__sbraw(*arr) : 0, *arr ? (stbiw__sbm(*arr)*itemsize + sizeof(int)*2) : 0, itemsize * m + sizeof(int)*2);
-   STBIW_ASSERT(p);
-   if (p) {
-      if (!*arr) ((int *) p)[1] = 0;
-      *arr = (void *) ((int *) p + 2);
-      stbiw__sbm(*arr) = m;
-   }
+   if (*arr == NULL || stbiw__mad2sizes_valid(2, stbiw__sbm(*arr), increment)) {
+      int m = *arr ? 2*stbiw__sbm(*arr)+increment : increment+1;
+      if (stbiw__mad2sizes_valid(itemsize, m, sizeof(int)*2)) {
+         void *p = STBIW_REALLOC_SIZED(*arr ? stbiw__sbraw(*arr) : 0, *arr ? (stbiw__sbm(*arr)*itemsize + sizeof(int)*2) : 0
+                                                                    , itemsize * m + sizeof(int)*2);
+         STBIW_ASSERT(p);
+         if (p) {
+            if (!*arr) ((int *) p)[1] = 0;
+            *arr = (void *) ((int *) p + 2);
+            stbiw__sbm(*arr) = m;
+         }
+      } else
+         *arr = 0; // force crash
+   } else
+      *arr = 0; // force crash
    return *arr;
 }
 
@@ -1155,6 +1191,9 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
    if (force_filter >= 5) {
       force_filter = -1;
    }
+
+   if (!stbiw__mad2sizes_valid(x,n,1)) return 0;
+   if (!stbiw__mul2sizes_valid((x*n+1),y)) return 0;
 
    filt = (unsigned char *) STBIW_MALLOC((x*n+1) * y); if (!filt) return 0;
    line_buffer = (signed char *) STBIW_MALLOC(x * n); if (!line_buffer) { STBIW_FREE(filt); return 0; }
