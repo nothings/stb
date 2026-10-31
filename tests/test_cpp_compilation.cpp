@@ -31,6 +31,7 @@
 #define STB_CONNECTED_COMPONENTS_IMPLEMENTATION
 #define STB_HEXWAVE_IMPLEMENTATION
 #define STB_DS_IMPLEMENTATION
+#define STB_INCLUDE_IMPLEMENTATION
 #define STBDS_UNIT_TESTS
 
 #define STBI_MALLOC     my_malloc
@@ -51,6 +52,7 @@ void my_free(void *) { }
 #include "stb_herringbone_wang_tile.h"
 #include "stb_ds.h"
 #include "stb_hexwave.h"
+#include "stb_include.h"
 
 #define STBCC_GRID_COUNT_X_LOG2  10
 #define STBCC_GRID_COUNT_Y_LOG2  10
