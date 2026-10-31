@@ -33,6 +33,8 @@ unsigned char temp_bitmap[BITMAP_H][BITMAP_W];
 stbtt_bakedchar cdata[256*2]; // ASCII 32..126 is 95 glyphs
 stbtt_packedchar pdata[256*2];
 
+extern void stbds_unit_tests(void);
+
 int main(int argc, char **argv)
 {
    stbtt_fontinfo font;
