@@ -230,10 +230,10 @@
 //
 //    - Use the functions with Subpixel at the end to allow your characters
 //      to have subpixel positioning. Since the font is anti-aliased, not
-//      hinted, this is very import for quality. (This is not possible with
+//      hinted, this is very important for quality. (This is not possible with
 //      baked fonts.)
 //
-//    - Kerning is now supported, and if you're supporting subpixel rendering
+//    - Kerning is supported, and if you're supporting subpixel rendering
 //      then kerning is worth using to give your text a polished look.
 //
 //   Performance:
@@ -1632,7 +1632,7 @@ static int stbtt__GetGlyphInfoT2(const stbtt_fontinfo *info, int glyph_index, in
 STBTT_DEF int stbtt_GetGlyphBox(const stbtt_fontinfo *info, int glyph_index, int *x0, int *y0, int *x1, int *y1)
 {
    if (info->cff.size) {
-      stbtt__GetGlyphInfoT2(info, glyph_index, x0, y0, x1, y1);
+      return stbtt__GetGlyphInfoT2(info, glyph_index, x0, y0, x1, y1);
    } else {
       int g = stbtt__GetGlyfOffset(info, glyph_index);
       if (g < 0) return 0;
