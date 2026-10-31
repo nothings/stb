@@ -947,17 +947,19 @@ static void *make_block_array(void *mem, int count, int size)
    return p;
 }
 
-static void *setup_malloc(vorb *f, int sz)
+static void *setup_malloc(vorb *f, size_t sz)
 {
-   sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
-   f->setup_memory_required += sz;
+   int isz;
+   if (sz == 0 || sz > (size_t)(INT_MAX - 7)) return NULL;
+   isz = (int)((sz+7) & ~(size_t)7);
+   f->setup_memory_required += isz;
    if (f->alloc.alloc_buffer) {
       void *p = (char *) f->alloc.alloc_buffer + f->setup_offset;
-      if (f->setup_offset + sz > f->temp_offset) return NULL;
-      f->setup_offset += sz;
+      if (f->setup_offset + isz > f->temp_offset) return NULL;
+      f->setup_offset += isz;
       return p;
    }
-   return sz ? malloc(sz) : NULL;
+   return malloc(isz);
 }
 
 static void setup_free(vorb *f, void *p)
@@ -966,21 +968,23 @@ static void setup_free(vorb *f, void *p)
    free(p);
 }
 
-static void *setup_temp_malloc(vorb *f, int sz)
+static void *setup_temp_malloc(vorb *f, size_t sz)
 {
-   sz = (sz+7) & ~7; // round up to nearest 8 for alignment of future allocs.
+   int isz;
+   if (sz == 0 || sz > (size_t)(INT_MAX - 7)) return NULL;
+   isz = (int)((sz+7) & ~(size_t)7);
    if (f->alloc.alloc_buffer) {
-      if (f->temp_offset - sz < f->setup_offset) return NULL;
-      f->temp_offset -= sz;
+      if (f->temp_offset - isz < f->setup_offset) return NULL;
+      f->temp_offset -= isz;
       return (char *) f->alloc.alloc_buffer + f->temp_offset;
    }
-   return malloc(sz);
+   return malloc(isz);
 }
 
-static void setup_temp_free(vorb *f, void *p, int sz)
+static void setup_temp_free(vorb *f, void *p, size_t sz)
 {
    if (f->alloc.alloc_buffer) {
-      f->temp_offset += (sz+7)&~7;
+      f->temp_offset += (int)((sz+7)&~(size_t)7);
       return;
    }
    free(p);
