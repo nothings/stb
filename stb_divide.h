@@ -1,8 +1,9 @@
-// stb_divide.h - v0.94 - public domain - Sean Barrett, Feb 2010
+// stb_divide.h - v0.95 - public domain - Sean Barrett, Feb 2010
 // Three kinds of divide/modulus of signed integers.
 //
 // HISTORY
 //
+//   v0.95  2026-10-31  Switch to using div()/div_t from C89 stdlib
 //   v0.94              Fix integer overflow issues
 //   v0.93  2020-02-02  Write useful exit() value from main()
 //   v0.92  2019-02-25  Fix warning
@@ -20,13 +21,6 @@
 //    #include "stb_divide.h"
 //
 // Other source files should just include stb_divide.h
-//
-// Note 1: On platforms/compilers that you know signed C division
-// truncates, you can #define C_INTEGER_DIVISION_TRUNCATES.
-//
-// Note 2: On platforms/compilers that you know signed C division
-// floors (rounds to negative infinity), you can #define
-// C_INTEGER_DIVISION_FLOORS.
 //
 // You can #define STB_DIVIDE_TEST in which case the implementation
 // will generate a main() and compiling the result will create a
@@ -69,15 +63,8 @@
 // by Raymond Boute (1992), or "Division and Modulus for Computer
 // Scientists" by Daan Leijen (2001)
 //
-// We assume of the built-in C division:
-//     (a) modulus is the remainder for the corresponding division
-//     (b) a/b truncates if a and b are the same sign
-//
-// Property (a) requires (a/b)*b + (a%b)==a, and is required by C.
-// Property (b) seems to be true of all hardware but is *not* satisfied
-// by the euclidean division operator we define, so it's possibly not
-// always true. If any such platform turns up, we can add more cases.
-// (Possibly only stb_div_trunc currently relies on property (b).)
+// We use the C stdlib function div() which is guaranteed to provide
+// truncating integer division in both C89 and C99.
 //
 // LICENSE
 //
@@ -105,113 +92,52 @@ extern int stb_mod_eucl (int value_to_be_divided, int value_to_divide_by);
 #ifdef STB_DIVIDE_IMPLEMENTATION
 #include <stdlib.h>
 
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
-   #ifndef C_INTEGER_DIVISION_TRUNCATES
-      #define C_INTEGER_DIVISION_TRUNCATES
-   #endif
-#endif
+// div() function in stdblib ALWAYS truncates towards 0, even in C89
 
 #ifndef INT_MIN
 #include <limits.h> // if you have no limits.h, #define INT_MIN yourself
 #endif
 
-// the following macros are designed to allow testing
-// other platforms by simulating them
-#ifndef STB_DIVIDE_TEST_FLOOR
-   #define stb__div(a,b)  (div((a),(b)))
-#else
-   // implement floor-style divide on trunc platform
-   #ifndef C_INTEGER_DIVISION_TRUNCATES
-   #error "floor test requires truncating division"
-   #endif
-   #undef C_INTEGER_DIVISION_TRUNCATES
-   #define C_INTEGER_DIVISION_FLOORS
-   div_t stb__div(int v1, int v2)
-   {
-      div_t dt = div(v1,v2);
-      int q = dt.quot, r = dt.rem;
-      if ((r > 0 && v2 < 0) || (r < 0 && v2 > 0)) {
-         dt.quot = q-1;
-         dt.rem = r+v2;
-         return dt;
-      }
-      else
-         return dt;
-   }
-#endif
-
 int stb_div_trunc(int v1, int v2)
 {
-   #ifdef C_INTEGER_DIVISION_TRUNCATES
-   return stb__div(v1,v2).quot;
-   #else
-   div_t dt = stb__div(v1,v2);
-   if (dt.rem != 0 && dt.quot < 0)
-      return dt.quot+1;
-   else
-      return dt.quot;
-   #endif
+   return div(v1,v2).quot;
 }
 
 int stb_div_floor(int v1, int v2)
 {
-   #ifdef C_INTEGER_DIVISION_FLOORS
-   return stb__div(v1,v2).quot;
-   #else
-   div_t dt = stb__div(v1,v2);
+   div_t dt = div(v1,v2);
    if (dt.rem != 0 && (v1 > 0 != v2 > 0))
       return dt.quot-1;
    else
       return dt.quot;
-   #endif
 }
 
 int stb_div_eucl(int v1, int v2)
 {
-   div_t dt = stb__div(v1,v2);
-   #ifdef C_INTEGER_DIVISION_TRUNCATES
+   div_t dt = div(v1,v2);
    if (dt.rem < 0)
       return dt.quot + (v2 > 0 ? -1 : 1);
    else
       return dt.quot;
-   #else
-   if (dt.rem < 0)
-      return dt.quot + 1;
-   else
-      return dt.quot;
-   #endif
 }
 
 int stb_mod_trunc(int v1, int v2)
 {
-   #ifdef C_INTEGER_DIVISION_TRUNCATES
-   return stb__div(v1,v2).rem;
-   #else
-   div_t dt = stb__div(v1,v2);
-   if (dt.rem != 0 && dt.quot < 0)
-      return dt.rem - v2;
-   else
-      return dt.rem;
-   #endif
+   return div(v1,v2).rem;
 }
 
 int stb_mod_floor(int v1, int v2)
 {
-   #ifdef C_INTEGER_DIVISION_FLOORS
-   return stb__div(v1,v2).rem;
-   #else
-   div_t dt = stb__div(v1,v2);
+   div_t dt = div(v1,v2);
    if (dt.rem != 0 && (v1 > 0 != v2 > 0))
       return dt.rem + v2;
    else
       return dt.rem;
-   #endif
 }
 
 int stb_mod_eucl(int v1, int v2)
 {
-   div_t dt= stb__div(v1,v2);
-   #ifdef C_INTEGER_DIVISION_TRUNCATES
+   div_t dt = div(v1,v2);
    if (dt.rem < 0)
       if (v2 > 0)
           return dt.rem + v2;
@@ -219,12 +145,6 @@ int stb_mod_eucl(int v1, int v2)
           return dt.rem - v2;
    else
       return dt.rem;
-   #else
-   if (dt.rem < 0)
-      return dt.rem - v2;
-   else
-      return dt.rem;
-   #endif
 }
 
 #ifdef STB_DIVIDE_TEST
