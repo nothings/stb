@@ -3739,6 +3739,10 @@ STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info
    if (yoff  ) *yoff   = iy0;
 
    if (gbm.w && gbm.h) {
+      if ((unsigned int) gbm.w > INT_MAX / (unsigned int) gbm.h) {
+         STBTT_free(vertices, info->userdata);
+         return NULL;
+      }
       gbm.pixels = (unsigned char *) STBTT_malloc(gbm.w * gbm.h, info->userdata);
       if (gbm.pixels) {
          gbm.stride = gbm.w;
@@ -4610,6 +4614,10 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
       float *precompute;
       stbtt_vertex *verts;
       int num_verts = stbtt_GetGlyphShape(info, glyph, &verts);
+      if (w > 0 && h > 0 && (unsigned int) w > INT_MAX / (unsigned int) h) {
+         STBTT_free(verts, info->userdata);
+         return NULL;
+      }
       data = (unsigned char *) STBTT_malloc(w * h, info->userdata);
       precompute = (float *) STBTT_malloc(num_verts * sizeof(float), info->userdata);
 
