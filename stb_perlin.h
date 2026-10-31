@@ -101,7 +101,7 @@
 //    github:fp64 - derivatives
 //
 
-#ifdef __cplusplus
+#if defined(__cplusplus) && (!defined(_MSC_VER) || _MSC_VER > 1400) // VC6 doesn't allow default arguments in extern "C"
 // Only the basic version gets default arguments.
 extern "C" float stb_perlin_noise3(float x, float y, float z, int x_wrap=0, int y_wrap=0, int z_wrap=0);
 #else
@@ -349,9 +349,10 @@ static float stb_perlin_noise3_internal(float x, float y, float z, int x_wrap, i
    int x0 = px & x_mask, x1 = (px+1) & x_mask;
    int y0 = py & y_mask, y1 = (py+1) & y_mask;
    int z0 = pz & z_mask, z1 = (pz+1) & z_mask;
+   int r0,r1;
    seed &= 255;
-   int r0 = stb__perlin_randtab[x0+seed];
-   int r1 = stb__perlin_randtab[x1+seed];
+   r0 = stb__perlin_randtab[x0+seed];
+   r1 = stb__perlin_randtab[x1+seed];
    x -= (float)px;
    y -= (float)py;
    z -= (float)pz;
