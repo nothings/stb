@@ -1,0 +1,5 @@
+header_hdr_radiance="#?RADIANCE\x0A"
+header_hdr_rgbe="#?RGBE\x0A"
+hdr_format_rgbe="FORMAT=32-bit_rle_rgbe"
+hdr_dir_negy="-Y "
+hdr_dir_posx="+X "

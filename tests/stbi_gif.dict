@@ -1,0 +1,18 @@
+# AFL dictionary for GIF images
+# -----------------------------
+#
+# Created by Michal Zalewski <lcamtuf@google.com>
+#
+
+header_87a="87a"
+header_89a="89a"
+header_gif="GIF"
+
+marker_2c=","
+marker_3b=";"
+
+section_2101="!\x01\x12"
+section_21f9="!\xf9\x04"
+section_21fe="!\xfe"
+section_21ff="!\xff\x11"
+
