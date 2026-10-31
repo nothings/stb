@@ -3857,7 +3857,9 @@ static int start_decoder(vorb *f)
             if (values < 0) return error(f, VORBIS_invalid_setup);
             c->lookup_values = (uint32) values;
          } else {
-            c->lookup_values = c->entries * c->dimensions;
+            if (c->entries > 0 && (uint32) c->dimensions > UINT_MAX / (uint32) c->entries)
+               return error(f, VORBIS_invalid_setup);
+            c->lookup_values = (uint32) c->entries * (uint32) c->dimensions;
          }
          if (c->lookup_values == 0) return error(f, VORBIS_invalid_setup);
          mults = (uint16 *) setup_temp_malloc(f, sizeof(mults[0]) * c->lookup_values);
@@ -3875,9 +3877,12 @@ static int start_decoder(vorb *f)
             // pre-expand the lookup1-style multiplicands, to avoid a divide in the inner loop
             if (sparse) {
                if (c->sorted_entries == 0) goto skip;
+               if (c->dimensions > 0 && (unsigned int) c->sorted_entries > UINT_MAX / (unsigned int) c->dimensions) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_invalid_setup); }
                c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->sorted_entries * c->dimensions);
-            } else
+            } else {
+               if (c->dimensions > 0 && (unsigned int) c->entries > UINT_MAX / (unsigned int) c->dimensions) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_invalid_setup); }
                c->multiplicands = (codetype *) setup_malloc(f, sizeof(c->multiplicands[0]) * c->entries        * c->dimensions);
+            }
             if (c->multiplicands == NULL) { setup_temp_free(f,mults,sizeof(mults[0])*c->lookup_values); return error(f, VORBIS_outofmem); }
             len = sparse ? c->sorted_entries : c->entries;
             for (j=0; j < len; ++j) {
@@ -3886,7 +3891,7 @@ static int start_decoder(vorb *f)
                for (k=0; k < c->dimensions; ++k) {
                   int off = (z / div) % c->lookup_values;
                   float val = mults[off]*c->delta_value + c->minimum_value + last;
-                  c->multiplicands[j*c->dimensions + k] = val;
+                  c->multiplicands[(unsigned int)j*(unsigned int)c->dimensions + (unsigned int)k] = val;
                   if (c->sequence_p)
                      last = val;
                   if (k+1 < c->dimensions) {
