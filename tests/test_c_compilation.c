@@ -15,6 +15,7 @@
 #define STB_EASY_FONT_IMPLEMENTATION
 #define STB_DXT_IMPLEMENTATION
 #define STB_INCLUDE_IMPLEMENTATION
+#define STB_HEXWAVE_IMPLEMENTATION
 
 #include "stb_herringbone_wang_tile.h"
 #include "stb_image.h"
@@ -25,6 +26,7 @@
 #include "stb_rect_pack.h"
 #include "stb_dxt.h"
 #include "stb_include.h"
+#include "stb_hexwave.h"
 
 #include "stb_ds.h"
 
