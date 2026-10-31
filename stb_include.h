@@ -21,6 +21,8 @@
 //
 //      Define STB_INCLUDE_LINE_NONE to disable output of #line directives.
 //
+//      Define STB_INCLUDE_MALLOC, STB_INCLUDE_REALLOC, STB_INCLUDE_FREE to avoid using malloc,realloc,free
+//
 // Standard libraries:
 //
 //      stdio.h     FILE, fopen, fclose, fseek, ftell
@@ -33,28 +35,43 @@
 //
 // Fixes:
 //  Michal Klos
+//  AnthoFoxo
 
 #ifndef STB_INCLUDE_STB_INCLUDE_H
 #define STB_INCLUDE_STB_INCLUDE_H
 
-// Do include-processing on the string 'str'. To free the return value, pass it to free()
+// Do include-processing on the string 'str'. To free the return value, pass it to stb_include_free()
 char *stb_include_string(const char *str, const char *inject, const char *path_to_includes, const char *filename_for_line_directive, char error[256]);
 
-// Concatenate the strings 'strs' and do include-processing on the result. To free the return value, pass it to free()
+// Concatenate the strings 'strs' and do include-processing on the result. To free the return value, pass it to stb_include_free()
 char *stb_include_strings(const char **strs, int count, const char *inject, const char *path_to_includes, const char *filename_for_line_directive, char error[256]);
 
 // Load the file 'filename' and do include-processing on the string therein. note that
-// 'filename' is opened directly; 'path_to_includes' is not used. To free the return value, pass it to free()
+// 'filename' is opened directly; 'path_to_includes' is not used. To free the return value, pass it to stb_include_free()
 char *stb_include_file(const char *filename, const char *inject, const char *path_to_includes, char error[256]);
+
+// Free return values of stb_include_xxx
+void stb_include_free(char *p);
 
 #endif
 
 
 #ifdef STB_INCLUDE_IMPLEMENTATION
 
+#ifndef STB_INCLUDE_MALLOC
+#define STB_INCLUDE_MALLOC(sz)           malloc(sz)
+#define STB_INCLUDE_REALLOC(p,newsz)     realloc(p,newsz)
+#define STB_INCLUDE_FREE(p)              free(p)
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+void stb_include_free(char *p)
+{
+   STB_INCLUDE_FREE(p);
+}
 
 static char *stb_include_load_file(char *filename, size_t *plen)
 {
@@ -65,7 +82,7 @@ static char *stb_include_load_file(char *filename, size_t *plen)
    fseek(f, 0, SEEK_END);
    len = (size_t) ftell(f);
    if (plen) *plen = len;
-   text = (char *) malloc(len+1);
+   text = (char *) STB_INCLUDE_MALLOC(len+1);
    if (text == 0) {
       fclose(f);
       return 0;
@@ -87,7 +104,7 @@ typedef struct
 
 static include_info *stb_include_append_include(include_info *array, int len, int offset, int end, char *filename, int next_line)
 {
-   include_info *z = (include_info *) realloc(array, sizeof(*z) * (len+1));
+   include_info *z = (include_info *) STB_INCLUDE_REALLOC(array, sizeof(*z) * (len+1));
    z[len].offset   = offset;
    z[len].end      = end;
    z[len].filename = filename;
@@ -99,8 +116,8 @@ static void stb_include_free_includes(include_info *array, int len)
 {
    int i;
    for (i=0; i < len; ++i)
-      free(array[i].filename);
-   free(array);
+      STB_INCLUDE_FREE(array[i].filename);
+   STB_INCLUDE_FREE(array);
 }
 
 static int stb_include_isspace(int ch)
@@ -133,7 +150,7 @@ static int stb_include_find_includes(char *text, include_info **plist)
                while (*t != '"' && *t != '\n' && *t != '\r' && *t != 0)
                   ++t;
                if (*t == '"') {
-                  char *filename = (char *) malloc(t-s+1);
+                  char *filename = (char *) STB_INCLUDE_MALLOC(t-s+1);
                   memcpy(filename, s, t-s);
                   filename[t-s] = 0;
                   s=t;
@@ -178,7 +195,7 @@ static void stb_include_itoa(char str[9], int n)
 
 static char *stb_include_append(char *str, size_t *curlen, char *addstr, size_t addlen)
 {
-   str = (char *) realloc(str, *curlen + addlen);
+   str = (char *) STB_INCLUDE_REALLOC(str, *curlen + addlen);
    memcpy(str + *curlen, addstr, addlen);
    *curlen += addlen;
    return str;
@@ -233,7 +250,7 @@ char *stb_include_string(const char *cstr, const char *cinject, const char *path
             return NULL;
          }
          text = stb_include_append(text, &textlen, inc, strlen(inc));
-         free(inc);
+         STB_INCLUDE_FREE(inc);
       }
       // write out line directive
       #ifndef STB_INCLUDE_LINE_NONE
@@ -263,14 +280,14 @@ char *stb_include_strings(const char **strs, int count, const char *inject, cons
    size_t length=0;
    for (i=0; i < count; ++i)
       length += strlen(strs[i]);
-   text = (char *) malloc(length+1);
+   text = (char *) STB_INCLUDE_MALLOC(length+1);
    length = 0;
    for (i=0; i < count; ++i) {
       strcpy(text + length, strs[i]);
       length += strlen(strs[i]);
    }
    result = stb_include_string(text, inject, path_to_includes, filename, error);
-   free(text);
+   STB_INCLUDE_FREE(text);
    return result;
 }
 
@@ -287,7 +304,7 @@ char *stb_include_file(const char *cfilename, const char *inject, const char *pa
       return 0;
    }
    result = stb_include_string(text, inject, path_to_includes, filename, error);
-   free(text);
+   STB_INCLUDE_FREE(text);
    return result;
 }
 
