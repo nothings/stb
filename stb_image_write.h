@@ -884,6 +884,10 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
       char buffer[128];
       char* dst = buffer;
       char header[] = "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n";
+
+      if (scratch == NULL)
+         return 0;
+
       s->func(s->context, header, sizeof(header)-1);
 
       memcpy(dst, header_str_part1, header_str_part1_len);
