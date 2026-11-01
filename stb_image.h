@@ -8,10 +8,11 @@
    v0.3 is the current stable version, but v0.4 includes an stb_image-compatible
    API using #define WUFFS_CONFIG__ENABLE_DROP_IN_REPLACEMENT__STB
 
-   Limitations: Wuffs is not public domain, but is available under MIT and
-   Apache licenses. Wuffs supports a different set of file formats. And
-   the Wuffs source file v0.3 is 1.8 MB and v0.4 is currently 3.5 MB,
-   whereas this file is about 0.3 MB.
+   Limitations:
+     - Wuffs is not public domain, but is available under MIT and Apache licenses.
+     - Wuffs supports a different set of file formats.
+     - Wuffs source file 1.8 MB (v0.3) or 3.5 MB (v0.4 as of 2026-11-01),
+       whereas stb_image is about 0.3 MB.
 
    == stb_image ==
 
