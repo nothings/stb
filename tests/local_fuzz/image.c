@@ -136,6 +136,10 @@ typedef struct
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#ifdef __cplusplus
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
+#endif
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
    stbi_io_callbacks callbacks = { fuzz_read, fuzz_skip, fuzz_eof };
@@ -235,6 +239,3 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
    return 0;
 }
 
-#ifdef __cplusplus
-}
-#endif

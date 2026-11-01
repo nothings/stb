@@ -83,6 +83,10 @@ typedef struct
 #undef realloc
 #undef free
 
+#ifdef __cplusplus
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
+#endif
+
 int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
    int chans, sample_rate;
@@ -111,6 +115,3 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
    return 0;
 }
 
-#ifdef __cplusplus
-}
-#endif
