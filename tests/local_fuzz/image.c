@@ -229,8 +229,13 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
       break;
 
    case LOAD_MODE_anim_gif:
+   #ifndef STBI_NO_GIF
       // no callback variant exists
       img = stbi_load_gif_from_memory(data, size, &delays, &w, &h, &nimg, &nch, req_comp);
+   #else
+      img = NULL;
+   #endif
+      break;
    }
 
    stbi_image_free(img);
