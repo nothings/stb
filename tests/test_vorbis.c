@@ -1,6 +1,6 @@
 #ifdef TEST_VORBIS
 #include <stdio.h>
-#include "stb_vorbis.h"
+#include "stb_vorbis.c"
 
 int main(int argc, char **argv)
 {
