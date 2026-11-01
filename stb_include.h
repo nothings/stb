@@ -268,7 +268,7 @@ char *stb_include_string(const char *cstr, const char *cinject, const char *path
          strcat(temp, "\"");
          if (inc_list[i].filename == 0)
             strcat(temp, "INJECT");
-         else
+         else if (strlen(inc_list[i].filename) < 2048)
             strcat(temp, inc_list[i].filename);
          strcat(temp, "\"");
          #endif
@@ -283,7 +283,8 @@ char *stb_include_string(const char *cstr, const char *cinject, const char *path
          char *inc;
          strcpy(temp, path_to_includes);
          strcat(temp, "/");
-         strcat(temp, inc_list[i].filename);
+         if (strlen(inc_list[i].filename) < 2048)
+            strcat(temp, inc_list[i].filename);
          inc = stb_include_file(temp, inject, path_to_includes, error);
          if (inc == NULL) {
             stb_include_free_includes(inc_list, num);
@@ -300,7 +301,11 @@ char *stb_include_string(const char *cstr, const char *cinject, const char *path
       #ifdef STB_INCLUDE_LINE_GLSL
       stb_include_itoa(temp+15, 0);
       #else
-      strcat(temp, filename != 0 ? filename : "source-file");
+      if (filename) {
+         if (strlen(filename) < 2048)
+            strcat(temp, filename);
+      } else
+         strcat(temp, "source-file");
       #endif
       text = stb_include_append(text, &textlen, temp, strlen(temp));
       // no newlines, because we kept the #include newlines, which will get appended next
