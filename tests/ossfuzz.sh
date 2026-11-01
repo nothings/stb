@@ -4,15 +4,15 @@
 
 # oss-fuzz: "you _must_ use CXX as a linker, even if your project is written in pure C."
 # could compile via CC then only link via CXX, but eh, it's fine
-$CXX $CXXFLAGS -std=c++11 -I.. -DSTBI_ONLY_PNG  \
+$CXX $CXXFLAGS -std=c++11 -I. -DSTBI_ONLY_PNG  \
     $SRC/stb/tests/local_fuzz/image.c \
     -o $OUT/stb_png_read_fuzzer $LIB_FUZZING_ENGINE
 
-$CXX $CXXFLAGS -std=c++11 -I.. \
+$CXX $CXXFLAGS -std=c++11 -I. \
     $SRC/stb/tests/local_fuzz/image.c \
     -o $OUT/stbi_read_fuzzer $LIB_FUZZING_ENGINE
 
-$CXX $CXXFLAGS -std=c++11 -I.. \
+$CXX $CXXFLAGS -std=c++11 -I. \
 	$SRC/stb/tests/local_fuzz/vorbis.c \
 	-o $OUT/stb_vorbis_fuzzer $LIB_FUZZING_ENGINE
 
