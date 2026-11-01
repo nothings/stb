@@ -885,6 +885,8 @@ STBHW_EXTERN int stbhw_build_tileset_from_image(stbhw_tileset *ts, unsigned char
    unsigned char header[9];
    stbhw_config c = { 0 };
    stbhw__process p = { 0 };
+   if (w < 9)
+      return 0;
 
    // extract binary header
 
