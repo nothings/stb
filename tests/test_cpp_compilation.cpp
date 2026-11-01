@@ -187,7 +187,11 @@ void dummy3(void)
 
 #include "stb_c_lexer.h"
 
+#ifdef DEFINE_MAIN
+
 int main()
 {
    return 0;
 }
+
+#endif
