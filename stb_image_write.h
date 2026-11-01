@@ -44,7 +44,7 @@ USAGE:
 
    There are five functions, one for each image file format:
 
-     int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
+     int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, ptrdiff_t stride_in_bytes);
      int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_jpg(char const *filename, int w, int h, int comp, const void *data, int quality);
@@ -52,22 +52,22 @@ USAGE:
 
      void stbi_flip_vertically_on_write(int flag); // flag is non-zero to flip data vertically
 
-   In addition there are four more functions which accept the "int stride_in_bytes" argument, new functions for
+   In addition there are four more functions which accept the "ptrdiff_t stride_in_bytes" argument, new functions for
    backwards compatibility:
 
-     int stbi_write_bmp_strided(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-     int stbi_write_tga_strided(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
-     int stbi_write_jpg_strided(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes, int quality);
-     int stbi_write_hdr_strided(char const *filename, int w, int h, int comp, const float *data, int stride_in_bytes);
+     int stbi_write_bmp_strided(char const *filename, int w, int h, int comp, const void *data, ptrdiff_t stride_in_bytes);
+     int stbi_write_tga_strided(char const *filename, int w, int h, int comp, const void *data, ptrdiff_t stride_in_bytes);
+     int stbi_write_jpg_strided(char const *filename, int w, int h, int comp, const void *data, ptrdiff_t stride_in_bytes, int quality);
+     int stbi_write_hdr_strided(char const *filename, int w, int h, int comp, const float *data, ptrdiff_t stride_in_bytes);
 
    There are also five equivalent functions that use an arbitrary write function. You are
    expected to open/close your file-equivalent before and after calling these:
 
-     int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
-     int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
-     int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
-     int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data, int stride_in_bytes);
-     int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, int quality, const void *data, int stride_in_bytes);
+     int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
+     int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
+     int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
+     int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data, ptrdiff_t stride_in_bytes);
+     int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, int quality, const void *data, ptrdiff_t stride_in_bytes);
 
    where the callback is:
       void stbi_write_func(void *context, void *data, int size);
@@ -172,6 +172,7 @@ LICENSE
 #define INCLUDE_STB_IMAGE_WRITE_H
 
 #include <stdlib.h>
+#include <stddef.h>
 
 // if STB_IMAGE_WRITE_STATIC causes problems, try defining STBIWDEF to 'inline' or 'static inline'
 #ifndef STBIWDEF
@@ -193,16 +194,16 @@ STBIWDEF int stbi_write_force_png_filter;
 #endif
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
+STBIWDEF int stbi_write_png(char const *filename, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
 STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_tga(char const *filename, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_hdr(char const *filename, int w, int h, int comp, const float *data);
 STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const void  *data, int quality);
 
-STBIWDEF int stbi_write_bmp_strided(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
-STBIWDEF int stbi_write_tga_strided(char const *filename, int w, int h, int comp, const void  *data, int stride_in_bytes);
-STBIWDEF int stbi_write_hdr_strided(char const *filename, int w, int h, int comp, const float *data, int stride_in_bytes);
-STBIWDEF int stbi_write_jpg_strided(char const *filename, int x, int y, int comp, const void  *data, int stride_in_bytes, int quality);
+STBIWDEF int stbi_write_bmp_strided(char const *filename, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
+STBIWDEF int stbi_write_tga_strided(char const *filename, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
+STBIWDEF int stbi_write_hdr_strided(char const *filename, int w, int h, int comp, const float *data, ptrdiff_t stride_in_bytes);
+STBIWDEF int stbi_write_jpg_strided(char const *filename, int x, int y, int comp, const void  *data, ptrdiff_t stride_in_bytes, int quality);
 
 #ifdef STBIW_WINDOWS_UTF8
 STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const wchar_t* input);
@@ -211,16 +212,16 @@ STBIWDEF int stbiw_convert_wchar_to_utf8(char *buffer, size_t bufferlen, const w
 
 typedef void stbi_write_func(void *context, void *data, int size);
 
-STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
+STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
 STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data);
 STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data);
 STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, int quality);
 
-STBIWDEF int stbi_write_bmp_strided_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
-STBIWDEF int stbi_write_tga_strided_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes);
-STBIWDEF int stbi_write_hdr_strided_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data, int stride_in_bytes);
-STBIWDEF int stbi_write_jpg_strided_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, int stride_in_bytes, int quality);
+STBIWDEF int stbi_write_bmp_strided_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
+STBIWDEF int stbi_write_tga_strided_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
+STBIWDEF int stbi_write_hdr_strided_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data, ptrdiff_t stride_in_bytes);
+STBIWDEF int stbi_write_jpg_strided_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, ptrdiff_t stride_in_bytes, int quality);
 
 STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 
@@ -411,6 +412,19 @@ static int stbiw__mad2sizes_valid(int a, int b, int add)
    return stbiw__mul2sizes_valid(a, b) && stbiw__addsizes_valid(a*b, add);
 }
 
+// does some boilerplate validation on image dimensions that is the same for all formats.
+// it's intended to make sure dimensions are sane and avoid overflow issues.
+static int stbiw__validate_dimensions(int x, int y, int comp)
+{
+   if (comp < 1 || comp > 4) return 0;
+   // limit x to [1,INT_MAX/4] to exclude negative or 0 dimensions.
+   // INT_MAX/4 because it guarantees that x*comp <= INT_MAX, and that's our usual offset calc.
+   if (x <= 0 || x > INT_MAX / 4) return 0;
+   // same bounds on y for symmetry
+   if (y <= 0 || y > INT_MAX / 4) return 0;
+   return 1;
+}
+
 typedef unsigned int stbiw_uint32;
 typedef int stb_image_write_test[sizeof(stbiw_uint32)==4 ? 1 : -1];
 
@@ -516,12 +530,12 @@ static void stbiw__write_pixel(stbi__write_context *s, int rgb_dir, int comp, in
       stbiw__write1(s, d[comp - 1]);
 }
 
-static void stbiw__write_pixels(stbi__write_context *s, int rgb_dir, int vdir, int x, int y, int comp, void *data, int stride_in_bytes, int write_alpha, int scanline_pad, int expand_mono)
+static void stbiw__write_pixels(stbi__write_context *s, int rgb_dir, int vdir, int x, int y, int comp, void *data, ptrdiff_t stride_in_bytes, int write_alpha, int scanline_pad, int expand_mono)
 {
    stbiw_uint32 zero = 0;
    int i,j, j_end;
 
-   if (y <= 0)
+   if (!stbiw__validate_dimensions(x,y,comp))
       return;
 
    if (stbi__flip_vertically_on_write)
@@ -546,7 +560,7 @@ static void stbiw__write_pixels(stbi__write_context *s, int rgb_dir, int vdir, i
    }
 }
 
-static int stbiw__outfile(stbi__write_context *s, int rgb_dir, int vdir, int x, int y, int comp, int expand_mono, void *data, int stride_in_bytes, int alpha, int pad, const char *fmt, ...)
+static int stbiw__outfile(stbi__write_context *s, int rgb_dir, int vdir, int x, int y, int comp, int expand_mono, void *data, ptrdiff_t stride_in_bytes, int alpha, int pad, const char *fmt, ...)
 {
    if (y < 0 || x < 0) {
       return 0;
@@ -560,7 +574,7 @@ static int stbiw__outfile(stbi__write_context *s, int rgb_dir, int vdir, int x, 
    }
 }
 
-static int stbi_write_bmp_core(stbi__write_context *s, int x, int y, int comp, const void *data, int stride_in_bytes)
+static int stbi_write_bmp_core(stbi__write_context *s, int x, int y, int comp, const void *data, ptrdiff_t stride_in_bytes)
 {
    if (comp != 4) {
       // write RGB bitmap
@@ -580,7 +594,7 @@ static int stbi_write_bmp_core(stbi__write_context *s, int x, int y, int comp, c
    }
 }
 
-STBIWDEF int stbi_write_bmp_strided_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes)
+STBIWDEF int stbi_write_bmp_strided_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes)
 {
    stbi__write_context s;
    memset(&s, 0, sizeof(s));
@@ -594,7 +608,7 @@ STBIWDEF int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int x,
 }
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_bmp_strided(char const *filename, int x, int y, int comp, const void *data, int stride_in_bytes)
+STBIWDEF int stbi_write_bmp_strided(char const *filename, int x, int y, int comp, const void *data, ptrdiff_t stride_in_bytes)
 {
    stbi__write_context s;
    memset(&s, 0, sizeof(s));
@@ -611,13 +625,13 @@ STBIWDEF int stbi_write_bmp(char const *filename, int w, int h, int comp, const 
 }
 #endif //!STBI_WRITE_NO_STDIO
 
-static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, void *data, int stride_in_bytes)
+static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, void *data, ptrdiff_t stride_in_bytes)
 {
    int has_alpha = (comp == 2 || comp == 4);
    int colorbytes = has_alpha ? comp-1 : comp;
    int format = colorbytes < 2 ? 3 : 2; // 3 color channels (RGB/RGBA) = 2, 1 color channel (Y/YA) = 3
 
-   if (y < 0 || x < 0)
+   if (!stbiw__validate_dimensions(x, y, comp))
       return 0;
 
    if (!stbi_write_tga_with_rle) {
@@ -693,7 +707,7 @@ static int stbi_write_tga_core(stbi__write_context *s, int x, int y, int comp, v
    return 1;
 }
 
-STBIWDEF int stbi_write_tga_strided_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, int stride_in_bytes)
+STBIWDEF int stbi_write_tga_strided_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes)
 {
    stbi__write_context s;
    memset(&s, 0, sizeof(s));
@@ -707,7 +721,7 @@ STBIWDEF int stbi_write_tga_to_func(stbi_write_func *func, void *context, int x,
 }
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_tga_strided(char const *filename, int x, int y, int comp, const void  *data, int stride_in_bytes)
+STBIWDEF int stbi_write_tga_strided(char const *filename, int x, int y, int comp, const void  *data, ptrdiff_t stride_in_bytes)
 {
    stbi__write_context s;
    memset(&s, 0, sizeof(s));
@@ -863,19 +877,19 @@ static int stbiw__u32_to_string(unsigned int value, char* dest)
       value /= 10;
    } while (value != 0);
 
-   len = 11 - (s - buff);
+   len = (int) (11 - (s - buff));
    memcpy(dest, s, len);
    return len;
 }
 
-static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, float *data, int stride_in_bytes)
+static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, float *data, ptrdiff_t stride_in_bytes)
 {
-   const char* header_str_part1 = "EXPOSURE=          1.0000000000000\n\n-Y ";
-   const char* header_str_part2 = " +X ";
-   const int header_str_part1_len = strlen(header_str_part1);
-   const int header_str_part2_len = strlen(header_str_part2);
+   const char header_str_part1[] = "EXPOSURE=          1.0000000000000\n\n-Y ";
+   const char header_str_part2[] = " +X ";
+   const int header_str_part1_len = (int) (sizeof(header_str_part1) - 1); // sizeof includes terminating 0
+   const int header_str_part2_len = (int) (sizeof(header_str_part2) - 1);
 
-   if (y <= 0 || x <= 0 || data == NULL)
+   if (!stbiw__validate_dimensions(x, y, comp) || data == NULL)
       return 0;
    else {
       // Each component is stored separately. Allocate scratch space for full output scanline.
@@ -898,7 +912,7 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
       dst += stbiw__u32_to_string(x, dst);
       *dst++ = '\n';
 
-      s->func(s->context, buffer, dst - buffer);
+      s->func(s->context, buffer, (int) (dst - buffer));
       if (stride_in_bytes == 0)
          stride_in_bytes = comp*x;
 
@@ -909,7 +923,7 @@ static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, f
    }
 }
 
-STBIWDEF int stbi_write_hdr_strided_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const float *data, int stride_in_bytes)
+STBIWDEF int stbi_write_hdr_strided_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const float *data, ptrdiff_t stride_in_bytes)
 {
    stbi__write_context s;
    memset(&s, 0, sizeof(s));
@@ -924,7 +938,7 @@ STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int x,
 
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_hdr_strided(char const *filename, int x, int y, int comp, const float *data, int stride_in_bytes)
+STBIWDEF int stbi_write_hdr_strided(char const *filename, int x, int y, int comp, const float *data, ptrdiff_t stride_in_bytes)
 {
    stbi__write_context s;
    memset(&s, 0, sizeof(s));
@@ -1234,7 +1248,7 @@ static unsigned char stbiw__paeth(int a, int b, int c)
 }
 
 // @OPTIMIZE: provide an option that always forces left-predict or paeth predict
-static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int width, int height, int y, int n, int filter_type, signed char *line_buffer)
+static void stbiw__encode_png_line(unsigned char *pixels, ptrdiff_t stride_bytes, int width, int height, int y, int n, int filter_type, signed char *line_buffer)
 {
    static int mapping[] = { 0,1,2,3,4 };
    static int firstmap[] = { 0,1,0,5,6 };
@@ -1242,7 +1256,7 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
    int i;
    int type = mymap[filter_type];
    unsigned char *z = pixels + stride_bytes * (stbi__flip_vertically_on_write ? height-1-y : y);
-   int signed_stride = stbi__flip_vertically_on_write ? -stride_bytes : stride_bytes;
+   ptrdiff_t signed_stride = stbi__flip_vertically_on_write ? -stride_bytes : stride_bytes;
 
    if (type==0) {
       memcpy(line_buffer, z, width*n);
@@ -1270,7 +1284,7 @@ static void stbiw__encode_png_line(unsigned char *pixels, int stride_bytes, int 
    }
 }
 
-STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int stride_bytes, int x, int y, int n, int *out_len)
+STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, ptrdiff_t stride_bytes, int x, int y, int n, int *out_len)
 {
    int force_filter = stbi_write_force_png_filter;
    int ctype[5] = { -1, 0, 4, 2, 6 };
@@ -1278,6 +1292,9 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
    unsigned char *out,*o, *filt, *zlib;
    signed char *line_buffer;
    int j,zlen;
+
+   if (!stbiw__validate_dimensions(x, y, n))
+      return 0;
 
    if (stride_bytes == 0)
       stride_bytes = x * n;
@@ -1360,7 +1377,7 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, int s
 }
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, int stride_bytes)
+STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, ptrdiff_t stride_bytes)
 {
    FILE *f;
    int len;
@@ -1376,7 +1393,7 @@ STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const 
 }
 #endif
 
-STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, int stride_bytes)
+STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, ptrdiff_t stride_bytes)
 {
    int len;
    unsigned char *png = stbi_write_png_to_mem((const unsigned char *) data, stride_bytes, x, y, comp, &len);
@@ -1544,7 +1561,7 @@ static int stbiw__jpg_processDU(stbi__write_context *s, unsigned int *bitBuf, in
    return DU[0];
 }
 
-static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp, const void* data, int quality, int stride_in_bytes) {
+static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, int comp, const void* data, int quality, ptrdiff_t stride_in_bytes) {
    // Constants that don't pollute global namespace
    static const unsigned char std_dc_luminance_nrcodes[] = {0,0,1,5,1,1,1,1,1,1,0,0,0,0,0,0,0};
    static const unsigned char std_dc_luminance_values[] = {0,1,2,3,4,5,6,7,8,9,10,11};
@@ -1620,7 +1637,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
    float fdtbl_Y[64], fdtbl_UV[64];
    unsigned char YTable[64], UVTable[64];
 
-   if(!data || !width || !height || comp > 4 || comp < 1) {
+   if (!data || !stbiw__validate_dimensions(width, height, comp)) {
       return 0;
    }
 
@@ -1690,10 +1707,10 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
                for(row = y, pos = 0; row < y+16; ++row) {
                   // row >= height => use last input row
                   int clamped_row = (row < height) ? row : height - 1;
-                  int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*stride_in_bytes;
+                  ptrdiff_t base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*stride_in_bytes;
                   for(col = x; col < x+16; ++col, ++pos) {
                      // if col >= width => use pixel from last input column
-                     int p = base_p + ((col < width) ? col : (width-1))*comp;
+                     ptrdiff_t p = base_p + ((col < width) ? col : (width-1))*comp;
                      float r = dataR[p], g = dataG[p], b = dataB[p];
                      Y[pos]= +0.29900f*r + 0.58700f*g + 0.11400f*b - 128;
                      U[pos]= -0.16874f*r - 0.33126f*g + 0.50000f*b;
@@ -1728,10 +1745,10 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
                for(row = y, pos = 0; row < y+8; ++row) {
                   // row >= height => use last input row
                   int clamped_row = (row < height) ? row : height - 1;
-                  int base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*stride_in_bytes;
+                  ptrdiff_t base_p = (stbi__flip_vertically_on_write ? (height-1-clamped_row) : clamped_row)*stride_in_bytes;
                   for(col = x; col < x+8; ++col, ++pos) {
                      // if col >= width => use pixel from last input column
-                     int p = base_p + ((col < width) ? col : (width-1))*comp;
+                     ptrdiff_t p = base_p + ((col < width) ? col : (width-1))*comp;
                      float r = dataR[p], g = dataG[p], b = dataB[p];
                      Y[pos]= +0.29900f*r + 0.58700f*g + 0.11400f*b - 128;
                      U[pos]= -0.16874f*r - 0.33126f*g + 0.50000f*b;
@@ -1757,7 +1774,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
    return 1;
 }
 
-STBIWDEF int stbi_write_jpg_strided_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, int stride_in_bytes, int quality)
+STBIWDEF int stbi_write_jpg_strided_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void  *data, ptrdiff_t stride_in_bytes, int quality)
 {
    stbi__write_context s;
    memset(&s, 0, sizeof(s));
@@ -1771,7 +1788,7 @@ STBIWDEF int stbi_write_jpg_to_func(stbi_write_func *func, void *context, int x,
 }
 
 #ifndef STBI_WRITE_NO_STDIO
-STBIWDEF int stbi_write_jpg_strided(char const *filename, int x, int y, int comp, const void  *data, int stride_in_bytes, int quality)
+STBIWDEF int stbi_write_jpg_strided(char const *filename, int x, int y, int comp, const void  *data, ptrdiff_t stride_in_bytes, int quality)
 {
    stbi__write_context s;
    memset(&s, 0, sizeof(s));
