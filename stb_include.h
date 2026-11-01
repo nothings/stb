@@ -1,5 +1,12 @@
 // stb_include.h - v0.02 - parse and process #include directives - public domain
 //
+//          SECURITY CONCERNS
+//
+//          - if you let other people control the inputs to this,
+//            they can read arbitrary files from the filesystem.
+//
+//          - there may be other bugs too. that's not what this is for.
+//
 // To build this, in one source file that includes this file do
 //      #define STB_INCLUDE_IMPLEMENTATION
 //
