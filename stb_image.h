@@ -989,37 +989,37 @@ typedef struct
 #ifndef STBI_NO_JPEG
 static int      stbi__jpeg_test(stbi__context *s);
 static void    *stbi__jpeg_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
-static int      stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp);
+static int      stbi__jpeg_info(stbi__context *s, stbi_info_res *res);
 #endif
 
 #ifndef STBI_NO_PNG
 static int      stbi__png_test(stbi__context *s);
 static void    *stbi__png_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
-static int      stbi__png_info(stbi__context *s, int *x, int *y, int *comp, int *is16, int *iphone);
+static int      stbi__png_info(stbi__context *s, stbi_info_res *res);
 #endif
 
 #ifndef STBI_NO_BMP
 static int      stbi__bmp_test(stbi__context *s);
 static void    *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
-static int      stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp);
+static int      stbi__bmp_info(stbi__context *s, stbi_info_res *res);
 #endif
 
 #ifndef STBI_NO_TGA
 static int      stbi__tga_test(stbi__context *s);
 static void    *stbi__tga_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
-static int      stbi__tga_info(stbi__context *s, int *x, int *y, int *comp);
+static int      stbi__tga_info(stbi__context *s, stbi_info_res *res);
 #endif
 
 #ifndef STBI_NO_PSD
 static int      stbi__psd_test(stbi__context *s);
 static void    *stbi__psd_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri, int bpc);
-static int      stbi__psd_info(stbi__context *s, int *x, int *y, int *comp, int *is16);
+static int      stbi__psd_info(stbi__context *s, stbi_info_res *res);
 #endif
 
 #ifndef STBI_NO_HDR
 static int      stbi__hdr_test(stbi__context *s);
 static float   *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
-static int      stbi__hdr_info(stbi__context *s, int *x, int *y, int *comp);
+static int      stbi__hdr_info(stbi__context *s, stbi_info_res *res);
 #endif
 
 // PIC support removed Oct 2026. If you really need to load a PIC file, use either an old version of stb_image
@@ -1029,13 +1029,13 @@ static int      stbi__hdr_info(stbi__context *s, int *x, int *y, int *comp);
 static int      stbi__gif_test(stbi__context *s);
 static void    *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
 static void    *stbi__load_gif_main(stbi__context *s, int **delays, int *x, int *y, int *z, int *comp, int req_comp);
-static int      stbi__gif_info(stbi__context *s, int *x, int *y, int *comp);
+static int      stbi__gif_info(stbi__context *s, stbi_info_res *res);
 #endif
 
 #ifndef STBI_NO_PNM
 static int      stbi__pnm_test(stbi__context *s);
 static void    *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req_comp, stbi__result_info *ri);
-static int      stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp, int *is16);
+static int      stbi__pnm_info(stbi__context *s, stbi_info_res *res);
 #endif
 
 static
@@ -4146,14 +4146,17 @@ static int stbi__jpeg_info_raw(stbi__jpeg *j, int *x, int *y, int *comp)
    return 1;
 }
 
-static int stbi__jpeg_info(stbi__context *s, int *x, int *y, int *comp)
+static int stbi__jpeg_info(stbi__context *s, stbi_info_res *res)
 {
    int result;
    stbi__jpeg* j = (stbi__jpeg*) (stbi__malloc(sizeof(stbi__jpeg)));
    if (!j) return stbi__err("outofmem", "Out of memory");
    memset(j, 0, sizeof(stbi__jpeg));
    j->s = s;
-   result = stbi__jpeg_info_raw(j, x, y, comp);
+   result = stbi__jpeg_info_raw(j, &res->x, &res->y, &res->comp);
+   if (result) {
+       res->type = STBI_type_jpeg;
+   }
    STBI_FREE(j);
    return result;
 }
@@ -5387,7 +5390,7 @@ static int stbi__png_test(stbi__context *s)
    return r;
 }
 
-static int stbi__png_info(stbi__context *s, int *x, int *y, int *comp, int *is16, int *iphone)
+static int stbi__png_info(stbi__context *s, stbi_info_res *res) 
 {
    stbi__png p;
    p.s = s;
@@ -5395,11 +5398,12 @@ static int stbi__png_info(stbi__context *s, int *x, int *y, int *comp, int *is16
       stbi__rewind( p.s );
       return 0;
    }
-   *x = p.s->img_x;
-   *y = p.s->img_y;
-   *comp = p.s->img_n;
-   *is16 = p.depth == 16;
-   *iphone = p.is_iphone;
+   res->type = STBI_type_png;
+   res->x = p.s->img_x;
+   res->y = p.s->img_y;
+   res->comp = p.s->img_n;
+   res->is_16_bit = p.depth == 16;
+   res->is_iphone_png = p.is_iphone;
    return 1;
 }
 #endif
@@ -5855,12 +5859,13 @@ static int stbi__tga_info_impl(stbi__context *s, int *x, int *y, int *comp)
    return 1;                   // seems to have passed everything
 }
 
-static int stbi__tga_info(stbi__context *s, int *x, int *y, int *comp)
+static int stbi__tga_info(stbi__context *s, stbi_info_res *res)
 {
-   if (!stbi__tga_info_impl(s, x, y, comp)) {
+   if (!stbi__tga_info_impl(s, &res->x, &res->y, &res->comp)) {
       stbi__rewind(s);
       return 0;
    }
+   res->type = STBI_type_tga;
    return 1;
 }
 
@@ -6854,9 +6859,13 @@ static void *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req
    return u;
 }
 
-static int stbi__gif_info(stbi__context *s, int *x, int *y, int *comp)
+static int stbi__gif_info(stbi__context *s, stbi_info_res *res)
 {
-   return stbi__gif_info_raw(s,x,y,comp);
+   if (stbi__gif_info_raw(s,&res->x,&res->y,&res->comp)) {
+      res->type = STBI_type_gif;
+      return 1;
+   }
+   return 0;
 }
 #endif
 
@@ -7071,16 +7080,11 @@ static float *stbi__hdr_load(stbi__context *s, int *x, int *y, int *comp, int re
    return hdr_data;
 }
 
-static int stbi__hdr_info(stbi__context *s, int *x, int *y, int *comp)
+static int stbi__hdr_info(stbi__context *s, stbi_info_res *res)
 {
    char buffer[STBI__HDR_BUFLEN];
    char *token;
-   int valid = 0;
-   int dummy;
-
-   if (!x) x = &dummy;
-   if (!y) y = &dummy;
-   if (!comp) comp = &dummy;
+   int valid = 0, x, y;
 
    if (stbi__hdr_test(s) == 0) {
        stbi__rewind( s );
@@ -7103,21 +7107,26 @@ static int stbi__hdr_info(stbi__context *s, int *x, int *y, int *comp)
        return 0;
    }
    token += 3;
-   *y = (int) strtol(token, &token, 10);
+   y = (int) strtol(token, &token, 10);
    while (*token == ' ') ++token;
    if (strncmp(token, "+X ", 3)) {
        stbi__rewind( s );
        return 0;
    }
    token += 3;
-   *x = (int) strtol(token, NULL, 10);
-   *comp = 3;
+   x = (int) strtol(token, NULL, 10);
+
+   res->type = STBI_type_hdr;
+   res->x = x;
+   res->y = y;
+   res->comp = 3;
+   res->is_hdr = 1;
    return 1;
 }
 #endif // STBI_NO_HDR
 
 #ifndef STBI_NO_BMP
-static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
+static int stbi__bmp_info(stbi__context *s, stbi_info_res *res)
 {
    void *p;
    stbi__bmp_data info;
@@ -7128,25 +7137,21 @@ static int stbi__bmp_info(stbi__context *s, int *x, int *y, int *comp)
       stbi__rewind( s );
       return 0;
    }
-   if (x) *x = s->img_x;
-   if (y) *y = s->img_y;
-   if (comp) {
-      if (info.bpp == 24 && info.ma == 0xff000000)
-         *comp = 3;
-      else
-         *comp = info.ma ? 4 : 3;
-   }
+   res->type = STBI_type_bmp;
+   res->x = s->img_x;
+   res->y = s->img_y;
+   if (info.bpp == 24 && info.ma == 0xff000000)
+      res->comp = 3;
+   else
+      res->comp = info.ma ? 4 : 3;
    return 1;
 }
 #endif
 
 #ifndef STBI_NO_PSD
-static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp, int *is16)
+static int stbi__psd_info(stbi__context *s, stbi_info_res *res)
 {
-   int channelCount, dummy, depth;
-   if (!x) x = &dummy;
-   if (!y) y = &dummy;
-   if (!comp) comp = &dummy;
+   int channelCount, depth, x, y;
    if (stbi__get32be(s) != 0x38425053) {
        stbi__rewind( s );
        return 0;
@@ -7161,19 +7166,22 @@ static int stbi__psd_info(stbi__context *s, int *x, int *y, int *comp, int *is16
        stbi__rewind( s );
        return 0;
    }
-   *y = stbi__get32be(s);
-   *x = stbi__get32be(s);
+   y = stbi__get32be(s);
+   x = stbi__get32be(s);
    depth = stbi__get16be(s);
    if (depth != 8 && depth != 16) {
        stbi__rewind( s );
        return 0;
    }
-   *is16 = depth == 16;
    if (stbi__get16be(s) != 3) {
        stbi__rewind( s );
        return 0;
    }
-   *comp = 4;
+   res->type = STBI_type_psd;
+   res->x = x;
+   res->y = y;
+   res->comp = 4;
+   res->is_16_bit = depth == 16;
    return 1;
 }
 #endif
@@ -7360,16 +7368,17 @@ static void *stbi__pnm_load(stbi__context *s, int *x, int *y, int *comp, int req
    return out;
 }
 
-static int stbi__pnm_info(stbi__context *s, int *x, int *y, int *comp, int *is16)
+static int stbi__pnm_info(stbi__context *s, stbi_info_res *res)
 {
-    int maxv;
-    int bits = stbi__pnm_info_internal(s, x, y, comp, &maxv, NULL);
-    if (bits) {
-        *is16 = bits == 16;
-        return 1;
-    } else {
-        return 0;
-    }
+   int maxv;
+   int bits = stbi__pnm_info_internal(s, &res->x, &res->y, &res->comp, &maxv, NULL);
+   if (bits) {
+      res->type = STBI_type_pnm;
+      res->is_16_bit = bits == 16;
+      return 1;
+   } else {
+      return 0;
+   }
 }
 #endif
 
@@ -7379,61 +7388,36 @@ static stbi_info_res stbi__info2_main(stbi__context *s)
    memset(&res, 0, sizeof(res));
 
    #ifndef STBI_NO_JPEG
-   if (stbi__jpeg_info(s, &res.x, &res.y, &res.comp)) {
-      res.type = STBI_type_jpeg;
-      return res;
-   }
+   if (stbi__jpeg_info(s, &res)) return res;
    #endif
 
    #ifndef STBI_NO_PNG
-   if (stbi__png_info(s, &res.x, &res.y, &res.comp, &res.is_16_bit, &res.is_iphone_png)) {
-      res.type = STBI_type_png;
-      return res;
-   }
+   if (stbi__png_info(s, &res)) return res;
    #endif
 
    #ifndef STBI_NO_GIF
-   if (stbi__gif_info(s, &res.x, &res.y, &res.comp)) {
-      res.type = STBI_type_gif;
-      return res;
-   }
+   if (stbi__gif_info(s, &res)) return res;
    #endif
 
    #ifndef STBI_NO_BMP
-   if (stbi__bmp_info(s, &res.x, &res.y, &res.comp)) {
-      res.type = STBI_type_bmp;
-      return res;
-   }
+   if (stbi__bmp_info(s, &res)) return res;
    #endif
 
    #ifndef STBI_NO_PSD
-   if (stbi__psd_info(s, &res.x, &res.y, &res.comp, &res.is_16_bit)) {
-      res.type = STBI_type_psd;
-      return res;
-   }
+   if (stbi__psd_info(s, &res)) return res;
    #endif
 
    #ifndef STBI_NO_PNM
-   if (stbi__pnm_info(s, &res.x, &res.y, &res.comp, &res.is_16_bit)) {
-      res.type = STBI_type_pnm;
-      return res;
-   }
+   if (stbi__pnm_info(s, &res)) return res;
    #endif
 
    #ifndef STBI_NO_HDR
-   if (stbi__hdr_info(s, &res.x, &res.y, &res.comp)) {
-      res.type = STBI_type_hdr;
-      res.is_hdr = 1;
-      return res;
-   }
+   if (stbi__hdr_info(s, &res)) return res;
    #endif
 
    // test tga last because it's a crappy test!
    #ifndef STBI_NO_TGA
-   if (stbi__tga_info(s, &res.x, &res.y, &res.comp)) {
-      res.type = STBI_type_tga;
-      return res;
-   }
+   if (stbi__tga_info(s, &res)) return res;
    #endif
 
    res.type = STBI_type_unsupported;
