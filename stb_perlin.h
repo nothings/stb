@@ -101,6 +101,9 @@
 //    github:fp64 - derivatives
 //
 
+#ifndef STB_INCLUDED_STB_PERLIN_H
+#define STB_INCLUDED_STB_PERLIN_H
+
 #if defined(__cplusplus) && (!defined(_MSC_VER) || _MSC_VER > 1400) // VC6 doesn't allow default arguments in extern "C"
 // Only the basic version gets default arguments.
 extern "C" float stb_perlin_noise3(float x, float y, float z, int x_wrap=0, int y_wrap=0, int z_wrap=0);
@@ -120,6 +123,8 @@ extern float stb_perlin_turbulence_noise3(float x, float y, float z, float lacun
 #ifdef __cplusplus
 }
 #endif
+
+#endif // STB_INCLUDED_STB_PERLIN_H
 
 #ifdef STB_PERLIN_IMPLEMENTATION
 
