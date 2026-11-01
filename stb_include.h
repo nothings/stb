@@ -23,6 +23,21 @@
 //
 //      Define STB_INCLUDE_MALLOC, STB_INCLUDE_REALLOC, STB_INCLUDE_FREE to avoid using malloc,realloc,free
 //
+//      Define STB_INCLUDE_NO_C_COMMENT_PROCESSING to disable comment processing.
+//
+// Comments:
+//
+//      Comments are only handled in a simple way to allow commenting out include/inject:
+//
+//      #include "foo.h"                  <- included
+//      // #include "foo.h"               <- not included
+//      /* #include "foo.h" */            <- not included
+//      /* foo */   #include "foo.h"      <- NOT INCLUDED!
+//      #include /* foo */ "foo.h"        <- NOT INCLUDED!
+//
+//      This processing can be disabled entirely by defining STB_INCLUDE_NO_C_COMMENT_PROCESSING
+//      before the implementation, which causes the first 3 cases to be included.
+//
 // Standard libraries:
 //
 //      stdio.h     FILE, fopen, fclose, fseek, ftell
@@ -166,8 +181,33 @@ static int stb_include_find_includes(char *text, include_info **plist)
             list = stb_include_append_include(list, inc_count++, start-text, s-text, NULL, line_count+1);
          }
       }
+
+#ifdef STB_INCLUDE_NO_C_COMMENT_PROCESSING
       while (*s != '\r' && *s != '\n' && *s != 0)
          ++s;
+#else
+      // scan to end of line, checking for comments
+      while (*s != '\r' && *s != '\n' && *s != 0) {
+         if (*s == '/') {
+            if (s[1] == '/')
+               // scan to end of line ignoring contents
+               while (*s != '\r' && *s != '\n' && *s != 0)
+                  ++s;
+            else if (s[1] == '*') {
+               // scan for end of comment
+               s += 2;
+               for(;;) {
+                  if (*s == 0) break;
+                  if (s[0] == '*' && s[1] == '/') break;
+                  ++s;
+               }
+               if (*s) s += 2;
+            }
+         } else
+            ++s;
+      }
+#endif
+
       if (*s == '\r' || *s == '\n') {
          s = s + (s[0] + s[1] == '\r' + '\n' ? 2 : 1);
       }
