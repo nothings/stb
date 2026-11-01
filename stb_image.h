@@ -1,6 +1,20 @@
 /* stb_image - v2.30 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 
+   == SECURITY NOTE ==
+
+   If security is a priority, consider using Wuffs instead:
+     https://github.com/google/wuffs-mirror-release-c
+   v0.3 is the current stable version, but v0.4 includes an stb_image-compatible
+   API using #define WUFFS_CONFIG__ENABLE_DROP_IN_REPLACEMENT__STB
+
+   Limitations: Wuffs is not public domain, but is available under MIT and
+   Apache licenses. Wuffs supports a different set of file formats. And
+   the Wuffs source file v0.3 is 1.8 MB and v0.4 is currently 3.5 MB,
+   whereas this file is about 0.3 MB.
+
+   == stb_image ==
+
    Do this:
       #define STB_IMAGE_IMPLEMENTATION
    before you include this file in *one* C or C++ file to create the implementation.
