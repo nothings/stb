@@ -3030,7 +3030,7 @@ static void stbvox_make_mesh_for_block_with_geo(stbvox_mesh_maker *mm, stbvox_po
 
    #ifndef STBVOX_CONFIG_ROTATION_IN_LIGHTING
    if (mm->input.packed_compact) {
-      rot = mm->input.packed_compact[rot] & 3;
+      rot = mm->input.packed_compact[v_off] & 3;
       nrot[0] = mm->input.packed_compact[v_off + ew_off] & 3;
       nrot[1] = mm->input.packed_compact[v_off + ns_off] & 3;
       nrot[2] = mm->input.packed_compact[v_off - ew_off] & 3;
