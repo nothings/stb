@@ -2,6 +2,9 @@ bin
 image_asan
 image_ubsan
 image_msan
+vorbis_asan
+vorbis_ubsan
+vorbis_msan
 cache
 image.dict
 

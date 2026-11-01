@@ -1,7 +1,7 @@
 CFLAGS := -O2 -g -I../.. -MMD -MP
 
-DEPS := bin/image.d
-TARGETS := bin/image_asan bin/image_msan bin/image_ubsan
+TARGETS := bin/image_asan bin/image_msan bin/image_ubsan \
+			  bin/vorbis_asan bin/vorbis_msan bin/vorbis_ubsan
 DEPS := $(addsuffix .d,$(TARGETS))
 
 all: $(TARGETS) | bin
