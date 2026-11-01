@@ -39,6 +39,6 @@ cat $SRC/stb/tests/stb_png.dict $SRC/stb/tests/stbi_*.dict > $OUT/stbi_read_fuzz
 # stb_vorbis corpus
 
 find $SRC/stb/tests/local_fuzz/vorbis_seeds -name "*.ogg" \
-	| xargs zip $OUT/stb_vorbis_seed_corpus.zip
+	| xargs zip $OUT/stb_vorbis_fuzzer_seed_corpus.zip
 
 cp $SRC/stb/tests/stb_vorbis.dict $OUT/stb_vorbis_fuzzer.dict
