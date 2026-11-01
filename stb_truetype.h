@@ -217,10 +217,10 @@
 //    the current point based on that.
 //
 //  Displaying a character:
-//    Compute the bounding box of the character. It will contain signed values
-//    relative to <current_point, baseline>. I.e. if it returns x0,y0,x1,y1,
-//    then the character should be displayed in the rectangle from
-//    <current_point+SF*x0, baseline+SF*y0> to <current_point+SF*x1,baseline+SF*y1).
+//    Call a function to compute the bounding box of the character. It will contain
+//    signed values relative to <current_point, baseline>. I.e. if it returns x0,y0,
+//    x1,y1, then the character should be displayed in the rectangle from
+//    <current_point+x0,baseline+y0> to <current_point+x1,baseline+y1>.
 //
 //  Advancing for the next character:
 //    Call GlyphHMetrics, and compute 'current_point += SF * advance'.
