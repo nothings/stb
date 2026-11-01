@@ -299,7 +299,7 @@ static void stbi__start_write_callbacks(stbi__write_context *s, stbi_write_func 
 static void stbi__stdio_write(void *context, void *data, int size)
 {
    stbi__write_context *s = (stbi__write_context*)context;
-   if (fwrite(data,1,size,(FILE*) s->file_maybe) != size)
+   if (fwrite(data,1,size,(FILE*) s->file_maybe) != (size_t) size)
        s->ok = 0;
 }
 
