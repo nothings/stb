@@ -84,6 +84,10 @@ LINK32=link.exe
 # Name "stb_cpp - Win32 Debug"
 # Begin Source File
 
+SOURCE=.\stb_cpp.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\stb_vorbis.c
 # End Source File
 # Begin Source File
