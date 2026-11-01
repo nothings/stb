@@ -1,0 +1,4 @@
+# Fuzzer dictionary for stb_vorbis
+header_ogg_page="OggS"
+header_vorbis="vorbis"
+
