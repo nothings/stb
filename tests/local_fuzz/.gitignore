@@ -2,7 +2,6 @@ bin
 image_asan
 image_ubsan
 image_msan
-image_seeds
 cache
 image.dict
 

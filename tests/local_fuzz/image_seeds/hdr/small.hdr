@@ -1,0 +1,6 @@
+#?RADIANCE
+SOFTWARE=GEGL
+FORMAT=32-bit_rle_rgbe
+
+-Y 4 +X 4
+ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€ÌÌ€
