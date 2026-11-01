@@ -267,7 +267,7 @@ char *stb_include_string(const char *cstr, const char *cinject, const char *path
          #else
          strcat(temp, "\"");
          if (inc_list[i].filename == 0)
-            strcmp(temp, "INJECT");
+            strcat(temp, "INJECT");
          else
             strcat(temp, inc_list[i].filename);
          strcat(temp, "\"");
