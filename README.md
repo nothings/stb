@@ -15,6 +15,7 @@ Noteworthy:
 
 * image loader: [stb_image.h](stb_image.h)
 * image writer: [stb_image_write.h](stb_image_write.h)
+* image resizer: [stb_image_resize2.h](stb_image_resize2.h)
 * font text rasterizer: [stb_truetype.h](stb_truetype.h)
 * typesafe containers: [stb_ds.h](stb_ds.h)
 
@@ -25,28 +26,28 @@ by Jorge L. "VinoBS" Rodriguez, and stb_image_resize2 and stb_sprintf by Jeff Ro
 
 library    | latest version | category | LoC | description
 --------------------- | ---- | -------- | --- | --------------------------------
-**[stb_vorbis.c](stb_vorbis.c)** | 1.22 | audio | 5584 | decode ogg vorbis files from file/memory to float/16-bit signed output
+**[stb_vorbis.c](stb_vorbis.c)** | 1.22 | audio | 5627 | decode ogg vorbis files from file/memory to float/16-bit signed output
 **[stb_hexwave.h](stb_hexwave.h)** | 0.5 | audio | 680 | audio waveform synthesizer
-**[stb_image.h](stb_image.h)** | 2.30 | graphics | 7988 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR, PIC
-**[stb_truetype.h](stb_truetype.h)** | 1.26 | graphics | 5079 | parse, decode, and rasterize characters from truetype fonts
-**[stb_image_write.h](stb_image_write.h)** | 1.16 | graphics | 1724 | image writing to disk: PNG, TGA, BMP
-**[stb_rect_pack.h](stb_rect_pack.h)** | 1.01 | graphics | 623 | simple 2D rectangle packer with decent quality
-**[stb_perlin.h](stb_perlin.h)** | 0.5 | graphics | 428 | perlin's revised simplex noise w/ different seeds
-**[stb_ds.h](stb_ds.h)** | 0.67 | utility | 1895 | typesafe dynamic array and hash tables for C, will compile in C++
-**[stb_textedit.h](stb_textedit.h)** | 1.14 | user&nbsp;interface | 1429 | guts of a text editor for games etc implementing them from scratch
+**[stb_image.h](stb_image.h)** | 2.30 | graphics | 7716 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR
+**[stb_truetype.h](stb_truetype.h)** | 1.26 | graphics | 5275 | parse, decode, and rasterize characters from truetype fonts
+**[stb_image_write.h](stb_image_write.h)** | 1.16 | graphics | 1883 | image writing to disk: PNG, JPG, BMP, TGA, HDR
+**[stb_rect_pack.h](stb_rect_pack.h)** | 1.01 | graphics | 628 | simple 2D rectangle packer with decent quality
+**[stb_perlin.h](stb_perlin.h)** | 0.5 | graphics | 512 | perlin's revised simplex noise w/ different seeds
+**[stb_ds.h](stb_ds.h)** | 0.67 | utility | 1943 | typesafe dynamic array and hash tables for C, will compile in C++
+**[stb_textedit.h](stb_textedit.h)** | 1.14 | user&nbsp;interface | 1436 | guts of a text editor for games etc implementing them from scratch
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.89 | 3D&nbsp;graphics | 3807 | Minecraft-esque voxel rendering "engine" with many more features
-**[stb_dxt.h](stb_dxt.h)** | 1.12 | 3D&nbsp;graphics | 719 | Fabian "ryg" Giesen's real-time DXT compressor
+**[stb_dxt.h](stb_dxt.h)** | 1.12 | 3D&nbsp;graphics | 720 | Fabian "ryg" Giesen's real-time DXT compressor
 **[stb_easy_font.h](stb_easy_font.h)** | 1.1 | 3D&nbsp;graphics | 305 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc
 **[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.42 | game&nbsp;dev | 4187 | embeddable tilemap editor
-**[stb_herringbone_wa...](stb_herringbone_wang_tile.h)** | 0.7 | game&nbsp;dev | 1221 | herringbone Wang tile map generator
-**[stb_c_lexer.h](stb_c_lexer.h)** | 0.12 | parsing | 941 | simplify writing parsers for C-like languages
-**[stb_divide.h](stb_divide.h)** | 0.94 | math | 433 | more useful 32-bit modulus e.g. "euclidean divide"
+**[stb_herringbone_wa...](stb_herringbone_wang_tile.h)** | 0.7 | game&nbsp;dev | 1223 | herringbone Wang tile map generator
+**[stb_c_lexer.h](stb_c_lexer.h)** | 0.12 | parsing | 1046 | simplify writing parsers for C-like languages
+**[stb_divide.h](stb_divide.h)** | 0.95 | math | 310 | more useful 32-bit modulus e.g. "euclidean divide"
 **[stb_connected_comp...](stb_connected_components.h)** | 0.96 | misc | 1049 | incrementally compute reachability on grids
-**[stb_leakcheck.h](stb_leakcheck.h)** | 0.6 | misc | 194 | quick-and-dirty malloc/free leak-checking
-**[stb_include.h](stb_include.h)** | 0.02 | misc | 295 | implement recursive #include support, particularly for GLSL
+**[stb_leakcheck.h](stb_leakcheck.h)** | 0.6 | misc | 206 | quick-and-dirty malloc/free leak-checking
+**[stb_include.h](stb_include.h)** | 0.02 | misc | 358 | implement recursive #include support, particularly for GLSL
 
 Total libraries: 19
-Total lines of C code: 38581
+Total lines of C code: 38911
 
 
 FAQ
