@@ -279,22 +279,28 @@ typedef struct
 {
    stbi_write_func *func;
    void *context;
+   void *file_maybe;
    unsigned char buffer[64];
    int buf_used;
+   int ok;
 } stbi__write_context;
 
 // initialize a callback-based context
 static void stbi__start_write_callbacks(stbi__write_context *s, stbi_write_func *c, void *context)
 {
-   s->func    = c;
-   s->context = context;
+   s->func       = c;
+   s->context    = context;
+   s->file_maybe = NULL;
+   s->ok         = 1;
 }
 
 #ifndef STBI_WRITE_NO_STDIO
 
 static void stbi__stdio_write(void *context, void *data, int size)
 {
-   fwrite(data,1,size,(FILE*) context);
+   stbi__write_context *s = (stbi__write_context*)context;
+   if (fwrite(data,1,size,(FILE*) s->file_maybe) != size)
+       s->ok = 0;
 }
 
 #if defined(_WIN32) && defined(STBIW_WINDOWS_UTF8)
@@ -343,13 +349,16 @@ static FILE *stbiw__fopen(char const *filename, char const *mode)
 static int stbi__start_write_file(stbi__write_context *s, const char *filename)
 {
    FILE *f = stbiw__fopen(filename, "wb");
-   stbi__start_write_callbacks(s, stbi__stdio_write, (void *) f);
+   stbi__start_write_callbacks(s, stbi__stdio_write, s);
+   s->file_maybe = (void *) f;
    return f != NULL;
 }
 
-static void stbi__end_write_file(stbi__write_context *s)
+static int stbi__end_write_file(stbi__write_context *s, int result)
 {
-   fclose((FILE *)s->context);
+   if (fclose((FILE *)s->context) != 0)
+       s->ok = 0;
+   return s->ok ? result : 0;
 }
 
 #endif // !STBI_WRITE_NO_STDIO
@@ -563,8 +572,7 @@ STBIWDEF int stbi_write_bmp(char const *filename, int x, int y, int comp, const 
    memset(&s, 0, sizeof(s));
    if (stbi__start_write_file(&s,filename)) {
       int r = stbi_write_bmp_core(&s, x, y, comp, data);
-      stbi__end_write_file(&s);
-      return r;
+      return stbi__end_write_file(&s, r);
    } else
       return 0;
 }
@@ -664,8 +672,7 @@ STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const 
    memset(&s, 0, sizeof(s));
    if (stbi__start_write_file(&s,filename)) {
       int r = stbi_write_tga_core(&s, x, y, comp, (void *) data);
-      stbi__end_write_file(&s);
-      return r;
+      return stbi__end_write_file(&s, r);
    } else
       return 0;
 }
@@ -865,8 +872,7 @@ STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const 
    memset(&s, 0, sizeof(s));
    if (stbi__start_write_file(&s,filename)) {
       int r = stbi_write_hdr_core(&s, x, y, comp, (float *) data);
-      stbi__end_write_file(&s);
-      return r;
+      return stbi__end_write_file(&s, r);
    } else
       return 0;
 }
@@ -1701,8 +1707,7 @@ STBIWDEF int stbi_write_jpg(char const *filename, int x, int y, int comp, const 
    memset(&s, 0, sizeof(s));
    if (stbi__start_write_file(&s,filename)) {
       int r = stbi_write_jpg_core(&s, x, y, comp, data, quality);
-      stbi__end_write_file(&s);
-      return r;
+      return stbi__end_write_file(&s, r);
    } else
       return 0;
 }
