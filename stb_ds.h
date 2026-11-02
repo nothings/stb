@@ -146,6 +146,10 @@ DOCUMENTATION
           Returns the number of total elements the array can contain without
           needing to be reallocated.
 
+      arrlast:
+        T arrlast(T* a);
+          Returns the last element in the array.
+
   Hash maps & String hash maps
 
     Given T is a structure type: struct { TK key; TV value; }. Note that some
@@ -382,6 +386,7 @@ CREDITS
     Macoy Madson
     Andreas Vennstrom
     Tobias Mansfield-Williams
+    Tiago Chaves
 */
 
 #ifdef STBDS_UNIT_TESTS
@@ -548,7 +553,7 @@ extern void * stbds_shmode_func(size_t elemsize, int mode);
 #define stbds_arraddnindex(a,n)(stbds_arrmaybegrow(a,n), (n) ? (stbds_header(a)->length += (n), stbds_header(a)->length-(n)) : stbds_arrlen(a))
 #define stbds_arraddnoff       stbds_arraddnindex
 #define stbds_arrlast(a)       ((a)[stbds_header(a)->length-1])
-#define stbds_arrfree(a)       ((void) ((a) ? STBDS_FREE(NULL,stbds_header(a)) : (void)0), (a)=NULL)
+#define stbds_arrfree(a)       ((void) ((a) ? stbds_arrfreef(a) : (void)0), (a)=NULL)
 #define stbds_arrdel(a,i)      stbds_arrdeln(a,i,1)
 #define stbds_arrdeln(a,i,n)   (memmove(&(a)[i], &(a)[(i)+(n)], sizeof *(a) * (stbds_header(a)->length-(n)-(i))), stbds_header(a)->length -= (n))
 #define stbds_arrdelswap(a,i)  ((a)[i] = stbds_arrlast(a), stbds_header(a)->length -= 1)
