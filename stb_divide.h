@@ -103,8 +103,9 @@ extern int stb_mod_eucl (int value_to_be_divided, int value_to_divide_by);
 #endif
 
 #ifdef STB_DIVIDE_IMPLEMENTATION
+#include <stdlib.h>
 
-#if defined(__STDC_VERSION) && __STDC_VERSION__ >= 19901
+#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
    #ifndef C_INTEGER_DIVISION_TRUNCATES
       #define C_INTEGER_DIVISION_TRUNCATES
    #endif
@@ -117,160 +118,113 @@ extern int stb_mod_eucl (int value_to_be_divided, int value_to_divide_by);
 // the following macros are designed to allow testing
 // other platforms by simulating them
 #ifndef STB_DIVIDE_TEST_FLOOR
-   #define stb__div(a,b)  ((a)/(b))
-   #define stb__mod(a,b)  ((a)%(b))
+   #define stb__div(a,b)  (div((a),(b)))
 #else
    // implement floor-style divide on trunc platform
    #ifndef C_INTEGER_DIVISION_TRUNCATES
    #error "floor test requires truncating division"
    #endif
    #undef C_INTEGER_DIVISION_TRUNCATES
-   int stb__div(int v1, int v2)
+   #define C_INTEGER_DIVISION_FLOORS
+   div_t stb__div(int v1, int v2)
    {
-      int q = v1/v2, r = v1%v2;
-      if ((r > 0 && v2 < 0) || (r < 0 && v2 > 0))
-         return q-1;
+      div_t dt = div(v1,v2);
+      int q = dt.quot, r = dt.rem;
+      if ((r > 0 && v2 < 0) || (r < 0 && v2 > 0)) {
+         dt.quot = q-1;
+         dt.rem = r+v2;
+         return dt;
+      }
       else
-         return q;
-   }
-
-   int stb__mod(int v1, int v2)
-   {
-      int r = v1%v2;
-      if ((r > 0 && v2 < 0) || (r < 0 && v2 > 0))
-         return r+v2;
-      else
-         return r;
+         return dt;
    }
 #endif
 
 int stb_div_trunc(int v1, int v2)
 {
    #ifdef C_INTEGER_DIVISION_TRUNCATES
-   return v1/v2;
+   return stb__div(v1,v2).quot;
    #else
-   if (v1 >= 0 && v2 <= 0)
-      return -stb__div(-v1,v2);  // both negative to avoid overflow
-   if (v1 <= 0 && v2 >= 0)
-      if (v1 != INT_MIN)
-         return -stb__div(v1,-v2);    // both negative to avoid overflow
-      else
-         return -stb__div(v1+v2,-v2)-1; // push v1 away from wrap point
+   div_t dt = stb__div(v1,v2);
+   if (dt.rem != 0 && dt.quot < 0)
+      return dt.quot+1;
    else
-      return v1/v2;            // same sign, so expect truncation
+      return dt.quot;
    #endif
 }
 
 int stb_div_floor(int v1, int v2)
 {
    #ifdef C_INTEGER_DIVISION_FLOORS
-   return v1/v2;
+   return stb__div(v1,v2).quot;
    #else
-   if (v1 >= 0 && v2 < 0) {
-      if (v2 + 1 >= INT_MIN + v1) // check if increasing v1's magnitude overflows
-         return -stb__div((v2+1)-v1,v2); // nope, so just compute it
-      else
-         return -stb__div(-v1,v2) + ((-v1)%v2 ? -1 : 0);
-   }
-   if (v1 < 0 && v2 >= 0) {
-      if (v1 != INT_MIN) {
-         if (v1 + 1 >= INT_MIN + v2) // check if increasing v1's magnitude overflows
-            return -stb__div((v1+1)-v2,-v2); // nope, so just compute it
-         else
-            return -stb__div(-v1,v2) + (stb__mod(v1,-v2) ? -1 : 0);
-      } else // it must be possible to compute -(v1+v2) without overflowing
-         return -stb__div(-(v1+v2),v2) + (stb__mod(-(v1+v2),v2) ? -2 : -1);
-   } else
-      return v1/v2;           // same sign, so expect truncation
+   div_t dt = stb__div(v1,v2);
+   if (dt.rem != 0 && (v1 > 0 != v2 > 0))
+      return dt.quot-1;
+   else
+      return dt.quot;
    #endif
 }
 
 int stb_div_eucl(int v1, int v2)
 {
-   int q,r;
+   div_t dt = stb__div(v1,v2);
    #ifdef C_INTEGER_DIVISION_TRUNCATES
-   q = v1/v2;
-   r = v1%v2;
-   #else
-   // handle every quadrant separately, since we can't rely on q and r flor
-   if (v1 >= 0)
-      if (v2 >= 0)
-         return stb__div(v1,v2);
-      else if (v2 != INT_MIN)
-         q = -stb__div(v1,-v2), r = stb__mod(v1,-v2);
-      else
-         q = 0, r = v1;
-   else if (v1 != INT_MIN)
-      if (v2 >= 0)
-         q = -stb__div(-v1,v2), r = -stb__mod(-v1,v2);
-      else if (v2 != INT_MIN)
-         q = stb__div(-v1,-v2), r = -stb__mod(-v1,-v2);
-      else // if v2 is INT_MIN, then we can't use -v2, but we can't divide by v2
-         q = 1, r = v1-q*v2;
-   else // if v1 is INT_MIN, we have to move away from overflow place
-      if (v2 >= 0)
-         q = -stb__div(-(v1+v2),v2)-1, r = -stb__mod(-(v1+v2),v2);
-      else if (v2 != INT_MIN)
-         q = stb__div(-(v1-v2),-v2)+1, r = -stb__mod(-(v1-v2),-v2);
-      else // for INT_MIN / INT_MIN, we need to be extra-careful to avoid overflow
-         q = 1, r = 0;
-   #endif
-   if (r >= 0)
-      return q;
+   if (dt.rem < 0)
+      return dt.quot + (v2 > 0 ? -1 : 1);
    else
-      return q + (v2 > 0 ? -1 : 1);
+      return dt.quot;
+   #else
+   if (dt.rem < 0)
+      return dt.quot + 1;
+   else
+      return dt.quot;
+   #endif
 }
 
 int stb_mod_trunc(int v1, int v2)
 {
    #ifdef C_INTEGER_DIVISION_TRUNCATES
-   return v1%v2;
+   return stb__div(v1,v2).rem;
    #else
-   if (v1 >= 0) { // modulus result should always be positive
-      int r = stb__mod(v1,v2);
-      if (r >= 0)
-         return r;
-      else
-         return r - (v2 < 0 ? v2 : -v2);
-   } else {    // modulus result should always be negative
-      int r = stb__mod(v1,v2);
-      if (r <= 0)
-         return r;
-      else
-         return r + (v2 < 0 ? v2 : -v2);
-   }
+   div_t dt = stb__div(v1,v2);
+   if (dt.rem != 0 && dt.quot < 0)
+      return dt.rem - v2;
+   else
+      return dt.rem;
    #endif
 }
 
 int stb_mod_floor(int v1, int v2)
 {
    #ifdef C_INTEGER_DIVISION_FLOORS
-   return v1%v2;
+   return stb__div(v1,v2).rem;
    #else
-   if (v2 >= 0) { // result should always be positive
-      int r = stb__mod(v1,v2);
-      if (r >= 0)
-         return r;
-      else
-         return r + v2;
-   } else { // result should always be negative
-      int r = stb__mod(v1,v2);
-      if (r <= 0)
-         return r;
-      else
-         return r + v2;
-   }
+   div_t dt = stb__div(v1,v2);
+   if (dt.rem != 0 && (v1 > 0 != v2 > 0))
+      return dt.rem + v2;
+   else
+      return dt.rem;
    #endif
 }
 
 int stb_mod_eucl(int v1, int v2)
 {
-   int r = stb__mod(v1,v2);
-
-   if (r >= 0)
-      return r;
+   div_t dt= stb__div(v1,v2);
+   #ifdef C_INTEGER_DIVISION_TRUNCATES
+   if (dt.rem < 0)
+      if (v2 > 0)
+          return dt.rem + v2;
+      else
+          return dt.rem - v2;
    else
-      return r - (v2 < 0 ? v2 : -v2); // negative abs() [to avoid overflow]
+      return dt.rem;
+   #else
+   if (dt.rem < 0)
+      return dt.rem - v2;
+   else
+      return dt.rem;
+   #endif
 }
 
 #ifdef STB_DIVIDE_TEST
@@ -353,7 +307,7 @@ int main(int argc, char **argv)
    test(INT_MIN,1);
    test(INT_MIN+1,1);
    test(INT_MAX,-1);
-   //test(INT_MIN,-1); // this traps in MSVC, so we leave it untested
+   // test(INT_MIN,-1); this traps in MSVC, so we leave it untested
    test(INT_MIN+1,-1);
    test(INT_MIN,-2);
    test(INT_MIN+1,2);
