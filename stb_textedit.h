@@ -200,6 +200,7 @@
 //    void stb_textedit_drag(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, float x, float y)
 //    int  stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
 //    int  stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len)
+//    void stb_textedit_char(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE ch)
 //    void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXEDIT_KEYTYPE key)
 //
 //    Each of these functions potentially updates the string and updates the
@@ -226,6 +227,13 @@
 //      paste:
 //          call this to paste text at the current cursor point or over the current
 //          selection if there is one.
+//
+//      char:
+//          (optional) call this for character input sent to the textfield. if the
+//          framework you are using supplies you with a character or text event, it
+//          makes sense to use this function.
+//          make sure to set STB_TEXTEDIT_KEYTOTEXT to 0 for any key that generates
+//          a corresponding character or text event.
 //
 //      key:
 //          call this for keyboard inputs sent to the textfield. you can use it
@@ -716,6 +724,30 @@ static int stb_textedit_paste_internal(STB_TEXTEDIT_STRING *str, STB_TexteditSta
    return 0;
 }
 
+// API char: process a character input
+static void stb_textedit_char(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE ch)
+{
+   // can't add newline in single-line mode
+   if (ch == STB_TEXTEDIT_NEWLINE && state->single_line)
+      return;
+
+   if (state->insert_mode && !STB_TEXT_HAS_SELECTION(state) && state->cursor < STB_TEXTEDIT_STRINGLEN(str)) {
+      stb_text_makeundo_replace(str, state, state->cursor, 1, 1);
+      STB_TEXTEDIT_DELETECHARS(str, state->cursor, 1);
+      if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, &ch, 1)) {
+         ++state->cursor;
+         state->has_preferred_x = 0;
+      }
+   } else {
+      stb_textedit_delete_selection(str,state); // implicitly clamps
+      if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, &ch, 1)) {
+         stb_text_makeundo_insert(state, state->cursor, 1);
+         ++state->cursor;
+         state->has_preferred_x = 0;
+      }
+   }
+}
+
 #ifndef STB_TEXTEDIT_KEYTYPE
 #define STB_TEXTEDIT_KEYTYPE int
 #endif
@@ -729,26 +761,7 @@ retry:
          int c = STB_TEXTEDIT_KEYTOTEXT(key);
          if (c > 0) {
             STB_TEXTEDIT_CHARTYPE ch = (STB_TEXTEDIT_CHARTYPE) c;
-
-            // can't add newline in single-line mode
-            if (c == '\n' && state->single_line)
-               break;
-
-            if (state->insert_mode && !STB_TEXT_HAS_SELECTION(state) && state->cursor < STB_TEXTEDIT_STRINGLEN(str)) {
-               stb_text_makeundo_replace(str, state, state->cursor, 1, 1);
-               STB_TEXTEDIT_DELETECHARS(str, state->cursor, 1);
-               if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, &ch, 1)) {
-                  ++state->cursor;
-                  state->has_preferred_x = 0;
-               }
-            } else {
-               stb_textedit_delete_selection(str,state); // implicitly clamps
-               if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, &ch, 1)) {
-                  stb_text_makeundo_insert(state, state->cursor, 1);
-                  ++state->cursor;
-                  state->has_preferred_x = 0;
-               }
-            }
+            stb_textedit_char(str, state, ch);
          }
          break;
       }
