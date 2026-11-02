@@ -62,6 +62,10 @@
 #ifndef STB_INCLUDE_STB_INCLUDE_H
 #define STB_INCLUDE_STB_INCLUDE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Do include-processing on the string 'str'. To free the return value, pass it to stb_include_free()
 char *stb_include_string(const char *str, const char *inject, const char *path_to_includes, const char *filename_for_line_directive, char error[256]);
 
@@ -75,7 +79,11 @@ char *stb_include_file(const char *filename, const char *inject, const char *pat
 // Free return values of stb_include_xxx
 void stb_include_free(char *p);
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif // STB_INCLUDE_STB_INCLUDE_H
 
 
 #ifdef STB_INCLUDE_IMPLEMENTATION
@@ -89,6 +97,10 @@ void stb_include_free(char *p);
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 void stb_include_free(char *p)
 {
@@ -364,6 +376,10 @@ char *stb_include_file(const char *cfilename, const char *inject, const char *pa
 char *stb_include_preloaded(char *str, char *inject, char *includes[][2], char error[256])
 {
 
+}
+#endif
+
+#ifdef __cplusplus
 }
 #endif
 
