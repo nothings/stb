@@ -7546,7 +7546,6 @@ STBIDEF int stbi_is_16_bit_from_memory(stbi_uc const *buffer, int len)
 
 STBIDEF int stbi_is_16_bit_from_callbacks(stbi_io_callbacks const *c, void *user)
 {
-   int result;
    stbi__context s;
    stbi_info_res r;
    stbi__start_callbacks(&s, (stbi_io_callbacks *) c, user);
