@@ -1402,6 +1402,7 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, in
 {
    stbtt_uint32 cmap, t;
    stbtt_int32 i,numTables;
+   stbtt_uint32 symbol_map=0;
 
    info->data = data;
    info->fontstart = fontstart;
@@ -1497,6 +1498,9 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, in
                   // MS/Unicode
                   info->index_map = cmap + ttULONG(data+encoding_record+4);
                   break;
+               case STBTT_MS_EID_SYMBOL:
+                  symbol_map = cmap + ttULONG(data+encoding_record+4);
+                  break;
             }
             break;
         case STBTT_PLATFORM_ID_UNICODE:
@@ -1506,6 +1510,9 @@ static int stbtt_InitFont_internal(stbtt_fontinfo *info, unsigned char *data, in
             break;
       }
    }
+   if (info->index_map == 0)
+      info->index_map = symbol_map;
+
    if (info->index_map == 0)
       return 0;
 
@@ -4692,8 +4699,13 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
    stbtt_GetGlyphBitmapBoxSubpixel(info, glyph, scale, scale, 0.0f,0.0f, &ix0,&iy0,&ix1,&iy1);
 
    // if empty, return NULL
-   if (ix0 == ix1 || iy0 == iy1)
+   if (ix0 == ix1 || iy0 == iy1) {
+      if (width) *width = 0;
+      if (height) *height = 0;
+      if (xoff) *xoff = 0;
+      if (yoff) *yoff = 0;
       return NULL;
+   }
 
    ix0 -= padding;
    iy0 -= padding;
