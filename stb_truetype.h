@@ -1053,7 +1053,7 @@ STBTT_DEF const char *stbtt_GetFontNameString(const stbtt_fontinfo *font, int *l
 // and puts the length in bytes in *length.
 //
 // some of the values for the IDs are below; for more see the truetype spec:
-//     http://developer.apple.com/textfonts/TTRefMan/RM06/Chap6name.html
+//     https://developer.apple.com/fonts/TrueType-Reference-Manual/RM06/Chap6name.html
 //     http://www.microsoft.com/typography/otspec/name.htm
 
 STBTT_DEF int stbtt_GetFontNameDefault(const stbtt_fontinfo *font, char *output_buffer, size_t output_buffer_len);
