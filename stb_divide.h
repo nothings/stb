@@ -313,11 +313,14 @@ void test(int a, int b)
    int q,r;
    if (show) printf("(%+11d,%+d) |  ", a,b);
    q = stb_div_trunc(a,b), r = stb_mod_trunc(a,b);
-   if (show) printf("(%+11d,%+2d)  ", q,r); stbdiv_check(q,r,a,b, "trunc",a);
+   if (show) printf("(%+11d,%+2d)  ", q,r);
+   stbdiv_check(q,r,a,b, "trunc",a);
    q = stb_div_floor(a,b), r = stb_mod_floor(a,b);
-   if (show) printf("(%+11d,%+2d)  ", q,r); stbdiv_check(q,r,a,b, "floor",b);
+   if (show) printf("(%+11d,%+2d)  ", q,r);
+   stbdiv_check(q,r,a,b, "floor",b);
    q = stb_div_eucl (a,b), r = stb_mod_eucl (a,b);
-   if (show) printf("(%+11d,%+2d)\n", q,r); stbdiv_check(q,r,a,b, "euclidean",1);
+   if (show) printf("(%+11d,%+2d)\n", q,r);
+   stbdiv_check(q,r,a,b, "euclidean",1);
 }
 
 void testh(int a, int b)
