@@ -62,6 +62,10 @@
 #ifndef STB_INCLUDE_STB_INCLUDE_H
 #define STB_INCLUDE_STB_INCLUDE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // Do include-processing on the string 'str'. To free the return value, pass it to stb_include_free()
 char *stb_include_string(const char *str, const char *inject, const char *path_to_includes, const char *filename_for_line_directive, char error[256]);
 
@@ -75,6 +79,10 @@ char *stb_include_file(const char *filename, const char *inject, const char *pat
 // Free return values of stb_include_xxx
 void stb_include_free(char *p);
 
+#ifdef __cplusplus
+}
+#endif
+
 #endif
 
 
@@ -86,11 +94,17 @@ void stb_include_free(char *p);
 #define STB_INCLUDE_FREE(p)              free(p)
 #endif
 
+#ifdef __cplusplus
+#define STBINCDEF extern "C"
+#else
+#define STBINCDEF
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-void stb_include_free(char *p)
+STBINCDEF void stb_include_free(char *p)
 {
    STB_INCLUDE_FREE(p);
 }
@@ -248,7 +262,7 @@ static char *stb_include_append(char *str, size_t *curlen, char *addstr, size_t 
    return str;
 }
 
-char *stb_include_string(const char *cstr, const char *cinject, const char *path_to_includes, const char *filename, char error[256])
+STBINCDEF char *stb_include_string(const char *cstr, const char *cinject, const char *path_to_includes, const char *filename, char error[256])
 {
    char *str = (char *) cstr;
    char *inject = (char *) cinject;
@@ -324,7 +338,7 @@ char *stb_include_string(const char *cstr, const char *cinject, const char *path
    return text;
 }
 
-char *stb_include_strings(const char **strs, int count, const char *inject, const char *path_to_includes, const char *filename, char error[256])
+STBINCDEF char *stb_include_strings(const char **strs, int count, const char *inject, const char *path_to_includes, const char *filename, char error[256])
 {
    char *text;
    char *result;
@@ -343,7 +357,7 @@ char *stb_include_strings(const char **strs, int count, const char *inject, cons
    return result;
 }
 
-char *stb_include_file(const char *cfilename, const char *inject, const char *path_to_includes, char error[256])
+STBINCDEF char *stb_include_file(const char *cfilename, const char *inject, const char *path_to_includes, char error[256])
 {
    char *filename = (char *) cfilename;
    size_t len;
@@ -359,12 +373,5 @@ char *stb_include_file(const char *cfilename, const char *inject, const char *pa
    STB_INCLUDE_FREE(text);
    return result;
 }
-
-#if 0 // @TODO, GL_ARB_shader_language_include-style system that doesn't touch filesystem
-char *stb_include_preloaded(char *str, char *inject, char *includes[][2], char error[256])
-{
-
-}
-#endif
 
 #endif // STB_INCLUDE_IMPLEMENTATION
