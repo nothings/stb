@@ -8,12 +8,22 @@
 int main(int argc, char **argv)
 {
     int x,y,n;
+    stbi_info_res res;
     stbi_uc *data;
 
     if (argc < 2) {
         printf("test_one_image <file>\n");
         printf("writes 'decoded.png'\n");
         return 1;
+    }
+
+    res = stbi_info2(argv[1]);
+    if (res.type != STBI_type_unsupported) {
+        printf("info successful! type=%d\n", res.type);
+        printf("  x=%d\n  y=%d\n  comp=%d\n  is_16_bit=%d\n  is_hdr=%d\n  is_iphone_png=%d\n",
+            res.x, res.y, res.comp, res.is_16_bit, res.is_hdr, res.is_iphone_png);
+    } else {
+        printf("info failed!\n");
     }
 
     data = stbi_load(argv[1], &x, &y, &n, 4);
