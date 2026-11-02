@@ -141,6 +141,7 @@ CREDITS:
       github:ignotion
       Adam Schackart
       Andrew Kensler
+      Sanjay Nambiar
 
 LICENSE
 
@@ -634,8 +635,6 @@ STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const 
 
 #define stbiw__max(a, b)  ((a) > (b) ? (a) : (b))
 
-#ifndef STBI_WRITE_NO_STDIO
-
 static void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
 {
    int exponent;
@@ -758,24 +757,48 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
    }
 }
 
+static int stbiw__u32_to_string(unsigned int value, char* dest)
+{
+   char buff[12] = {0};
+   char* s = &buff[11];
+   int len = 0;
+
+   do {
+      *--s = '0' + (value % 10);
+   } while(value /= 10);
+
+   len = 11 - (s - buff);
+   memcpy(dest, s, len);
+   return len;
+}
+
 static int stbi_write_hdr_core(stbi__write_context *s, int x, int y, int comp, float *data)
 {
+   const char* header_str_part1 = "EXPOSURE=          1.0000000000000\n\n-Y ";
+   const char* header_str_part2 = " +X ";
+   const int header_str_part1_len = strlen(header_str_part1);
+   const int header_str_part2_len = strlen(header_str_part2);
+
    if (y <= 0 || x <= 0 || data == NULL)
       return 0;
    else {
       // Each component is stored separately. Allocate scratch space for full output scanline.
       unsigned char *scratch = (unsigned char *) STBIW_MALLOC(x*4);
-      int i, len;
+      int i;
       char buffer[128];
+      char* dst = buffer;
       char header[] = "#?RADIANCE\n# Written by stb_image_write.h\nFORMAT=32-bit_rle_rgbe\n";
       s->func(s->context, header, sizeof(header)-1);
 
-#ifdef __STDC_LIB_EXT1__
-      len = sprintf_s(buffer, sizeof(buffer), "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
-#else
-      len = sprintf(buffer, "EXPOSURE=          1.0000000000000\n\n-Y %d +X %d\n", y, x);
-#endif
-      s->func(s->context, buffer, len);
+      memcpy(dst, header_str_part1, header_str_part1_len);
+      dst += header_str_part1_len;
+      dst += stbiw__u32_to_string(y, dst);
+      memcpy(dst, header_str_part2, header_str_part2_len);
+      dst += header_str_part2_len;
+      dst += stbiw__u32_to_string(x, dst);
+      *dst++ = '\n';
+
+      s->func(s->context, buffer, dst - buffer);
 
       for(i=0; i < y; i++)
          stbiw__write_hdr_scanline(s, x, comp, scratch, data + comp*x*(stbi__flip_vertically_on_write ? y-1-i : i));
@@ -791,6 +814,7 @@ STBIWDEF int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int x,
    return stbi_write_hdr_core(&s, x, y, comp, (float *) data);
 }
 
+#ifndef STBI_WRITE_NO_STDIO
 STBIWDEF int stbi_write_hdr(char const *filename, int x, int y, int comp, const float *data)
 {
    stbi__write_context s = { 0 };
