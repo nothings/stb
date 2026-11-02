@@ -54,7 +54,7 @@ You can't always do this, but when you can, embedded developers
 will appreciate it. I almost never bother avoiding, as it's
 too much work (and in some cases is pretty infeasible;
 see http://nothings.org/gamedev/font_rendering_malloc.txt ).
-But it's definitely something one of the things I've gotten
+But it's definitely one of the things I've gotten
 the most pushback on from potential users.
 
 
@@ -161,7 +161,7 @@ for my libraries; liability in the face of no explicit
 disclaimer of liability is an open question.)
 
 However, public domain has frictions of its own, because
-public domain declarations aren't necessary recognized
+public domain declarations aren't necessarily recognized
 in the USA and some other locations. For that reason,
 I recommend a declaration along these lines:
 
