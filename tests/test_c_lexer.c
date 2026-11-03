@@ -4,7 +4,7 @@
 #define STB_C_LEX_C_HEX_INTS        Y   //  "0x[0-9a-fA-F]+"                       CLEX_intlit
 #define STB_C_LEX_C_OCTAL_INTS      Y   //  "[0-7]+"                               CLEX_intlit
 #define STB_C_LEX_C_DECIMAL_FLOATS  Y   //  "[0-9]*(.[0-9]*([eE][-+]?[0-9]+)?)     CLEX_floatlit
-#define STB_C_LEX_C99_HEX_FLOATS    N   //  "0x{hex}+(.{hex}*)?[pP][-+]?{hex}+     CLEX_floatlit
+#define STB_C_LEX_C99_HEX_FLOATS    Y   //  "0x{hex}+(.{hex}*)?[pP][-+]?{hex}+     CLEX_floatlit
 #define STB_C_LEX_C_IDENTIFIERS     Y   //  "[_a-zA-Z][_a-zA-Z0-9]*"               CLEX_id
 #define STB_C_LEX_C_DQ_STRINGS      Y   //  double-quote-delimited strings with escapes  CLEX_dqstring
 #define STB_C_LEX_C_SQ_STRINGS      N   //  single-quote-delimited strings with escapes  CLEX_ssstring
@@ -23,10 +23,10 @@
                                         //  if both STB_C_LEX_C_SHIFTS & STB_C_LEX_C_ARITHEQ:
                                         //                      "<<=" CLEX_shleq    ">>=" CLEX_shreq
 
-#define STB_C_LEX_PARSE_SUFFIXES    N   // letters after numbers are parsed as part of those numbers, and must be in suffix list below
-#define STB_C_LEX_DECIMAL_SUFFIXES  ""  // decimal integer suffixes e.g. "uUlL" -- these are returned as-is in string storage
-#define STB_C_LEX_HEX_SUFFIXES      ""  // e.g. "uUlL"
-#define STB_C_LEX_OCTAL_SUFFIXES    ""  // e.g. "uUlL"
+#define STB_C_LEX_PARSE_SUFFIXES    Y   // letters after numbers are parsed as part of those numbers, and must be in suffix list below
+#define STB_C_LEX_DECIMAL_SUFFIXES  "uUlL"  // decimal integer suffixes e.g. "uUlL" -- these are returned as-is in string storage
+#define STB_C_LEX_HEX_SUFFIXES      "uUlL"  // e.g. "uUlL"
+#define STB_C_LEX_OCTAL_SUFFIXES    "uUlL"  // e.g. "uUlL"
 #define STB_C_LEX_FLOAT_SUFFIXES    ""  //
 
 #define STB_C_LEX_0_IS_EOF             Y  // if Y, ends parsing at '\0'; if N, returns '\0' as token
@@ -34,7 +34,7 @@
 #define STB_C_LEX_MULTILINE_DSTRINGS   N  // allow newlines in double-quoted strings // @TODO These two don't currently do anything. See
                                           //                                                  the Status section at the start of the file.
 #define STB_C_LEX_MULTILINE_SSTRINGS   N  // allow newlines in single-quoted strings // @TODO See comment above
-#define STB_C_LEX_USE_STDLIB           Y  // use strtod,strtol for parsing #s; otherwise inaccurate hack
+#define STB_C_LEX_USE_STDLIB           N  // use strtod,strtol for parsing #s; otherwise inaccurate hack
 #define STB_C_LEX_DOLLAR_IDENTIFIER    Y  // allow $ as an identifier character
 #define STB_C_LEX_FLOAT_NO_DECIMAL     Y  // allow floats that have no decimal point if they have an exponent
 
@@ -49,4 +49,116 @@
 
 #define STB_C_LEXER_DEFINITIONS         // This line prevents the header file from replacing your definitions
 
+#define STB_C_LEXER_IMPLEMENTATION
+
 #include "stb_c_lexer.h"
+
+#include "stb_ds.h"
+
+
+#ifdef C_LEXER_TEST
+
+typedef struct
+{
+   int id;
+   double realval;
+   unsigned int intval;
+   char *str;
+   char *where1, *where2;
+} token;
+
+token *parse(stb_lexer *lexer)
+{
+   token *p = 0;
+   for(;;) {
+      int result = stb_c_lexer_get_token(lexer);
+      token t;
+      if (result == 0)
+         return p;
+
+      t.id = lexer->token;
+      t.intval = 0;
+      t.realval = 0;
+      t.str = 0;
+      t.where1 = lexer->where_firstchar;
+      t.where2 = lexer->where_lastchar;
+
+      switch (lexer->token) {
+         case CLEX_id        :
+         case CLEX_dqstring  :
+         case CLEX_sqstring  :
+            t.str = strdup(lexer->string);
+            break;
+         case CLEX_intlit    :
+         case CLEX_charlit   :
+            t.intval = lexer->int_number;
+            break;
+         case CLEX_floatlit  :
+            t.realval = lexer->real_number;
+            break;
+         default:
+            break;
+      }
+
+      arrpush(p, t);
+      if (t.id == CLEX_parse_error)
+         return p;
+   }
+}
+
+#include <stdio.h>
+int main(int argc, char **argv)
+{
+   int i,j;
+   char *buffer = malloc(1<<20), *zbuf;
+   char *strings = malloc(1<<16);
+   size_t len = fread(buffer, 1, 1<<20, fopen("tests/test_c_lexer.txt", "rb"));
+   buffer[len] = 0;
+   zbuf = malloc(len+1);
+   memcpy(zbuf, buffer, len);
+   for (i=len; i >= 0; --i) {
+      stb_lexer lexer;
+      token *t1, *t2;
+      printf("%d\n", i);
+      zbuf[i] = 0;
+      stb_c_lexer_init(&lexer, buffer, buffer+i, strings, 1 << 16);
+      t1 = parse(&lexer);
+      stb_c_lexer_init(&lexer, zbuf, 0, strings, 1 << 16);
+      t2 = parse(&lexer);
+      for (j=0; j < arrlen(t1) && j < arrlen(t2); ++j) {
+         if (t1[j].id != t2[j].id) { printf("Length %d: Mismatched token #%d: %d vs %d", i, j, t1[j].id, t2[j].id); goto error; }
+         switch (t1[j].id) {
+            case CLEX_id        :
+            case CLEX_dqstring  :
+            case CLEX_sqstring  :
+               if (0 != strcmp(t1[j].str, t2[j].str)) { printf("Length %d: Mismatched string '%s' vs '%s", i, t1[j].str, t2[j].str); goto error; }
+               break;
+            case CLEX_intlit    :
+            case CLEX_charlit   :
+               if (t1[j].intval != t2[j].intval) { printf("Length %d: Mismatched int %d vs %d (%xd vs %xd)", i, t1[j].intval, t2[j].intval, t1[j].intval, t2[j].intval); goto error; }
+               break;
+            case CLEX_floatlit  :
+               if (t1[j].realval != t2[j].realval) { printf("Length %d: Mismatched float %f vs %f", i, t1[j].realval, t2[j].realval, t1[j].intval, t2[j].intval); goto error; }
+               break;
+         }
+      }
+      if (j < arrlen(t1)) { printf("Length %d: More tokens in explicit-length stream; first unmatched token is %d. Zero-terminated stream ends: ", i, t1[j]); goto error; }
+      if (j < arrlen(t2)) { printf("Length %d: More tokens in zero-terminated stream; first unmatched token is %d. ", i, t2[j]); goto error; }
+      continue;
+     error:
+      if (j < arrlen(t2)) {
+         stb_lex_location loc1,loc2;
+         stb_c_lexer_get_location(&lexer, t2[j].where1, &loc1);
+         stb_c_lexer_get_location(&lexer, t2[j].where2, &loc2);
+         printf(". Line %d, offset %d..%d\n", loc1.line_number, loc1.line_offset, loc2.line_offset);
+      }
+      if (len > 50)
+         printf("\n%s\n", zbuf+len-50);
+      else
+         printf("\n%s\n", zbuf);
+      len=len;
+      break;
+   }
+   return 0;
+}
+#endif

@@ -48,11 +48,12 @@
 
 #ifdef STB_C_LEXER_IMPLEMENTATION
 #ifndef STB_C_LEXER_DEFINITIONS
-// to change the default parsing rules, copy the following lines
-// into your C/C++ file *before* including this, and then replace
-// the Y's with N's for the ones you don't want. This needs to be
-// set to the same values for every place in your program where
-// stb_c_lexer.h is included.
+// To change the parsing rules, copy the following lines into your C/C++ file
+// *before* the IMPLEMENATION include, and then replace the Y's with N's for
+// the ones you don't want, from --BEGIN-- to --END--.
+//
+// This strange approach chosen to avoid issues with misspelled #defines silently failing.
+//
 // --BEGIN--
 
 #if defined(Y) || defined(N)
@@ -152,6 +153,11 @@ extern void stb_c_lexer_init(stb_lexer *lexer, const char *input_stream, const c
 //   - input_stream_end points to the end of the file, or NULL if you use 0-for-EOF
 //   - string_store is storage the lexer can use for storing parsed strings and identifiers
 //   - store_length is the length of that storage
+//
+// Note, if input_stream_end is NULL, then the input string must be NUL-terminated,
+// and it is legal to use STB_C_LEX_USE_STDLIB to parse numbers. If you want to use
+// non-NULL input_stream_end, STB_C_LEX_USE_STDLIB must be set to N, otherwise the
+// library will just return parse errors.
 
 extern int stb_c_lexer_get_token(stb_lexer *lexer);
 // this function returns non-zero if a token is parsed, or 0 if at EOF
@@ -350,10 +356,12 @@ static const char *stb__strchr(char *eof, const char *str, int ch)
 static int stb__clex_parse_suffixes(stb_lexer *lexer, long tokenid, char *start, char *cur, const char *suffixes)
 {
    #ifdef STB__clex_parse_suffixes
+   char *eof = lexer->eof;
+
    lexer->string = lexer->string_storage;
    lexer->string_len = 0;
 
-   while ((*cur >= 'a' && *cur <= 'z') || (*cur >= 'A' && *cur <= 'Z')) {
+   while (cur != eof && ((*cur >= 'a' && *cur <= 'z') || (*cur >= 'A' && *cur <= 'Z'))) {
       if (stb__strchr(lexer->eof, suffixes, *cur) == 0)
          return stb__clex_token(lexer, CLEX_parse_error, start, cur);
       if (lexer->string_len+1 >= lexer->string_storage_len)
@@ -429,7 +437,7 @@ static double stb__clex_parse_float(stb_lexer *lexer, char *p, char **q)
 #ifdef STB__clex_hex_floats
    if (base == 16) {
       // exponent required for hex float literal
-      if (p != eof && *p != 'p' && *p != 'P') {
+      if (p == eof || (*p != 'p' && *p != 'P')) {
          *q = s;
          return 0;
       }
@@ -557,7 +565,7 @@ static int stb__clex_parse_string(stb_lexer *lexer, char *p, int type)
    char delim = *p++; // grab the " or ' for later matching
    char *out = lexer->string_storage;
    char *outend = lexer->string_storage + lexer->string_storage_len;
-   while (p != eof && *p != delim) {
+   while (p != eof && *p != 0 && *p != delim) {
       int n;
       if (*p == '\\') {
          char *q;
@@ -574,7 +582,7 @@ static int stb__clex_parse_string(stb_lexer *lexer, char *p, int type)
       // @TODO expand unicode escapes to UTF8
       *out++ = (char) n;
    }
-   if (p == eof) // ran off the end without a closing delimiter
+   if (p == eof || *p == 0) // ran off the end without a closing delimiter
       return stb__clex_token(lexer, CLEX_parse_error, start, p);
    *out = 0;
    lexer->string = lexer->string_storage;
@@ -586,6 +594,11 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
 {
    char *p = lexer->parse_point;
    char *eof = lexer->eof;
+
+   #ifdef STB__CLEX_use_stdlib
+   if (eof != NULL)
+      return stb__clex_token(lexer, CLEX_parse_error, p,p);
+   #endif
 
    // skip whitespace and comments
    for (;;) {
@@ -605,7 +618,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
 
       STB_C_LEX_CPP_COMMENTS(
          if (p != eof && p[0] == '/' && p+1 != eof && p[1] == '/') {
-            while (p != eof && *p != '\r' && *p != '\n')
+            while (p != eof && *p != 0 && *p != '\r' && *p != '\n')
                ++p;
             continue;
          }
@@ -615,9 +628,16 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
          if (p != eof && p[0] == '/' && p+1 != eof && p[1] == '*') {
             char *start = p;
             p += 2;
-            while (p != eof && (p[0] != '*' || p+1 == eof || p[1] != '/'))
-               ++p;
-            if (p == eof)
+            if (eof) {
+               while (p+1 < eof && (p[0] != '*' || p[1] != '/'))
+                  ++p;
+               // either p+1 == eof, p[0] == '*', or p[1] == '/'
+               if (p+1 == eof) ++p;
+            } else {
+               while (p[0] && (p[0] != '*' || p[1] != '/'))
+                  ++p;
+            }
+            if (p == eof || *p == 0)
                return stb__clex_token(lexer, CLEX_parse_error, start, p-1);
             p += 2;
             continue;
@@ -630,7 +650,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
          // be at the start. (because this parser doesn't otherwise
          // check for line breaks!)
          if (p != eof && p[0] == '#') {
-            while (p != eof && *p != '\r' && *p != '\n')
+            while (p != eof && *p != 0 && *p != '\r' && *p != '\n')
                ++p;
             continue;
          }
@@ -679,6 +699,8 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
 
       single_char:
          // not an identifier, return the character as itself
+         if (*p == '}')
+            p = p;
          return stb__clex_token(lexer, *p, p, p);
 
       case '+':

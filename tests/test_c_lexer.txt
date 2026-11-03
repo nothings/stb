@@ -1,0 +1,38 @@
+/* Force a test
+of parsing
+multiline comments */
+
+/*/ comment /*/
+/**/ extern /**/
+
+#line 5
+
+! @ $ % ^ & * ( )
+- -- --- --> --->
++ ++ += *= /= -= &= ^= $=
+%% :: ;; ??
+<= => >= =< == ===
+!= !!= !=!
+
+void dummy(void)
+{
+   double some_floats[] = {
+      1.0501, -10.4e12, 5E+10,
+      0x1.0p+24, 0xff.FP-8, 0x1p-23,
+      4.
+   };
+   sizeof(some_floats);
+   some_floats[1];
+
+   printf("test %d",1); // https://github.com/nothings/stb/issues/13
+   "\n(pg)Jackd\141ws love my big sphinx of qu\x61rtz.\040\n";
+   'a'  '\x21'    '\042'  "\478"  "test"
+   foooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo
+   f999999999999999999999999ff
+   0xf0f0
+   0x00f
+   _
+   __
+   _9_
+   03891
+}
