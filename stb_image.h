@@ -3099,13 +3099,17 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
          for (j=0; j < h; ++j) {
             for (i=0; i < w; ++i) {
                short *data = z->img_comp[n].coeff + 64 * (i + j * z->img_comp[n].coeff_w);
-               if (z->spec_start == 0) {
-                  if (!stbi__jpeg_decode_block_prog_dc(z, data, &z->huff_dc[z->img_comp[n].hd], n))
-                     return 0;
-               } else {
-                  int ha = z->img_comp[n].ha;
-                  if (!stbi__jpeg_decode_block_prog_ac(z, data, &z->huff_ac[ha], z->fast_ac[ha]))
-                     return 0;
+               // if we're out of data, just skip decoding this MCU
+               // progressive coeffs got initialized at setup so this is fine
+               if (!z->nomore) {
+                  if (z->spec_start == 0) {
+                     if (!stbi__jpeg_decode_block_prog_dc(z, data, &z->huff_dc[z->img_comp[n].hd], n))
+                        return 0;
+                  } else {
+                     int ha = z->img_comp[n].ha;
+                     if (!stbi__jpeg_decode_block_prog_ac(z, data, &z->huff_ac[ha], z->fast_ac[ha]))
+                        return 0;
+                  }
                }
                // every data block is an MCU, so countdown the restart interval
                if (--z->todo <= 0) {
@@ -3505,7 +3509,7 @@ static int stbi__decode_jpeg_image(stbi__jpeg *j)
          if (!stbi__process_scan_header(j)) return 0;
          if (!stbi__parse_entropy_coded_data(j)) return 0;
          if (j->marker == STBI__MARKER_none ) {
-         j->marker = stbi__skip_jpeg_junk_at_end(j);
+            j->marker = stbi__skip_jpeg_junk_at_end(j);
             // if we reach eof without hitting a marker, stbi__get_marker() below will fail and we'll eventually return 0
          }
          m = stbi__get_marker(j);
