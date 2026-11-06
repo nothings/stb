@@ -27,3 +27,21 @@ find $SRC/stb/tests -name "*.png" -o -name "*.jpg" -o -name "*.gif" \
 
 echo "" >> $SRC/stbi/gif.dict
 cat $SRC/stbi/gif.dict $SRC/stb/tests/stb_png.dict > $OUT/stbi_read_fuzzer.dict
+
+# stb_image_write_roundtrip_fuzzer (coverage-pipeline pair
+# stb-image-write-roundtrip-fuzzer): seeds are valid images from the suites
+# already extracted above; the harness decodes, re-encodes and decodes back.
+$CXX $CXXFLAGS -std=c++11 -I. \
+    $SRC/stb/tests/stb_image_write_roundtrip_fuzzer.c \
+    -o $OUT/stb_image_write_roundtrip_fuzzer $LIB_FUZZING_ENGINE
+
+find $SRC/stb/tests/pngsuite -name "*.png" | head -40 | \
+     xargs zip $OUT/stb_image_write_roundtrip_fuzzer_seed_corpus.zip
+find $SRC/stb/tests \( -name "*.jpg" -o -name "*.gif" -o -name "*.bmp" \
+                  -o -name "*.tga" -o -name "*.TGA" \) | head -60 | \
+     xargs zip $OUT/stb_image_write_roundtrip_fuzzer_seed_corpus.zip
+find $SRC/stb/tests \( -name "*.ppm" -o -name "*.pgm" -o -name "*.png" \) \
+                  -not -path "*/pngsuite/*" | head -60 | \
+     xargs zip $OUT/stb_image_write_roundtrip_fuzzer_seed_corpus.zip
+
+cp $SRC/stb/tests/stb_image_write_roundtrip.dict $OUT/stb_image_write_roundtrip_fuzzer.dict
