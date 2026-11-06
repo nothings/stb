@@ -27,3 +27,19 @@ find $SRC/stb/tests -name "*.png" -o -name "*.jpg" -o -name "*.gif" \
 
 echo "" >> $SRC/stbi/gif.dict
 cat $SRC/stbi/gif.dict $SRC/stb/tests/stb_png.dict > $OUT/stbi_read_fuzzer.dict
+
+# stbi_float_fuzzer (coverage-pipeline pair stb-image-float-api-fuzzer):
+# drives the stbi_loadf float API family and the hdr/pic/pnm/psd decoders
+# that no existing harness or corpus reaches. Seeds are synthesized from
+# scratch by generate_float_seeds.py (no network downloads).
+$CXX $CXXFLAGS -std=c++11 -I. \
+    $SRC/stb/tests/stbi_float_fuzzer.c \
+    -o $OUT/stbi_float_fuzzer $LIB_FUZZING_ENGINE
+
+python3 $SRC/stb/tests/generate_float_seeds.py $SRC/stb/tests/float_fuzz_seeds
+find $SRC/stb/tests/float_fuzz_seeds -type f | \
+     xargs zip $OUT/stbi_float_fuzzer_seed_corpus.zip
+find $SRC/stb/tests/pngsuite -name "*.png" | head -30 | \
+     xargs zip $OUT/stbi_float_fuzzer_seed_corpus.zip
+
+cp $SRC/stb/tests/stbi_float.dict $OUT/stbi_float_fuzzer.dict
