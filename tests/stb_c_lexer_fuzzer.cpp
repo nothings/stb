@@ -36,8 +36,11 @@
 #define STB_C_LEX_DISCARD_PREPROCESSOR    Y  
 #define STB_C_LEXER_DEFINITIONS         
 
+/* STB_C_LEXER_SELF_TEST is intentionally NOT defined here: it makes
+   stb_c_lexer.h emit its own main(), which collides with libFuzzer's
+   main when built with $LIB_FUZZING_ENGINE. */
+
 #define STB_C_LEXER_IMPLEMENTATION
-#define STB_C_LEXER_SELF_TEST
 #include "../stb_c_lexer.h"
 #include <stdint.h>
 #include <stdlib.h>
