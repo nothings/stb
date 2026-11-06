@@ -27,3 +27,14 @@ find $SRC/stb/tests -name "*.png" -o -name "*.jpg" -o -name "*.gif" \
 
 echo "" >> $SRC/stbi/gif.dict
 cat $SRC/stbi/gif.dict $SRC/stb/tests/stb_png.dict > $OUT/stbi_read_fuzzer.dict
+
+# stb_vorbis_fuzzer (coverage-pipeline pair stb-vorbis-fuzzer)
+$CXX $CXXFLAGS -std=c++11 -I. \
+    $SRC/stb/tests/stb_vorbis_fuzzer.c \
+    -o $OUT/stb_vorbis_fuzzer $LIB_FUZZING_ENGINE
+
+python3 $SRC/stb/tests/generate_vorbis_seeds.py $SRC/stb/tests/vorbis_fuzz_seeds
+find $SRC/stb/tests/vorbis_fuzz_seeds -type f | \
+     xargs zip $OUT/stb_vorbis_fuzzer_seed_corpus.zip
+
+cp $SRC/stb/tests/stb_vorbis.dict $OUT/stb_vorbis_fuzzer.dict
