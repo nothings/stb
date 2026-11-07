@@ -27,3 +27,17 @@ find $SRC/stb/tests -name "*.png" -o -name "*.jpg" -o -name "*.gif" \
 
 echo "" >> $SRC/stbi/gif.dict
 cat $SRC/stbi/gif.dict $SRC/stb/tests/stb_png.dict > $OUT/stbi_read_fuzzer.dict
+
+# stb_c_lexer_fuzzer (coverage-pipeline pair stb-c-lexer-fuzzer): wires the
+# already-existing tests/stb_c_lexer_fuzzer.cpp into the build; it was never
+# compiled by ossfuzz.sh before. Seeds are the repository's own C sources.
+$CXX $CXXFLAGS -std=c++11 -I. \
+    $SRC/stb/tests/stb_c_lexer_fuzzer.cpp \
+    -o $OUT/stb_c_lexer_fuzzer $LIB_FUZZING_ENGINE
+
+find $SRC/stb/tests -maxdepth 1 \( -name "*.c" -o -name "*.cpp" \) | \
+     xargs zip $OUT/stb_c_lexer_fuzzer_seed_corpus.zip
+find $SRC/stb -maxdepth 1 -name "*.h" -o -maxdepth 1 -name "*.c" | head -12 | \
+     xargs zip $OUT/stb_c_lexer_fuzzer_seed_corpus.zip
+
+cp $SRC/stb/tests/stb_c_lexer.dict $OUT/stb_c_lexer_fuzzer.dict
