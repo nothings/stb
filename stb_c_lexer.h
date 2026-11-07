@@ -39,6 +39,7 @@
 //   Arpad Goretity (bugfix)
 //   Alan Hickman (hex floats)
 //   github:mundusnine (bugfix)
+//   Alhuda Khan (bounds-check reads against eof)
 //
 // LICENSE
 //
@@ -445,9 +446,11 @@ static double stb__clex_parse_float(char *p, char **q)
 }
 #endif
 
-static int stb__clex_parse_char(char *p, char **q)
+static int stb__clex_parse_char(char *p, char *eof, char **q)
 {
+   if (eof && p == eof) { *q = p; return -1; }
    if (*p == '\\') {
+      if (eof && p+1 == eof) { *q = p+1; return -1; } // escaped char runs off the end
       *q = p+2; // tentatively guess we'll parse two characters
       switch(p[1]) {
          case '\\': return '\\';
@@ -472,11 +475,11 @@ static int stb__clex_parse_string(stb_lexer *lexer, char *p, int type)
    char delim = *p++; // grab the " or ' for later matching
    char *out = lexer->string_storage;
    char *outend = lexer->string_storage + lexer->string_storage_len;
-   while (*p != delim) {
+   while (p != lexer->eof && *p != delim) {
       int n;
       if (*p == '\\') {
          char *q;
-         n = stb__clex_parse_char(p, &q);
+         n = stb__clex_parse_char(p, lexer->eof, &q);
          if (n < 0)
             return stb__clex_token(lexer, CLEX_parse_error, start, q);
          p = q;
@@ -489,6 +492,8 @@ static int stb__clex_parse_string(stb_lexer *lexer, char *p, int type)
       // @TODO expand unicode escapes to UTF8
       *out++ = (char) n;
    }
+   if (lexer->eof && p == lexer->eof) // ran off the end without a closing delimiter
+      return stb__clex_token(lexer, CLEX_parse_error, start, p);
    *out = 0;
    lexer->string = lexer->string_storage;
    lexer->string_len = (int) (out - lexer->string_storage);
@@ -516,7 +521,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
       #endif
 
       STB_C_LEX_CPP_COMMENTS(
-         if (p != lexer->eof && p[0] == '/' && p[1] == '/') {
+         if (p != lexer->eof && p[0] == '/' && p+1 != lexer->eof && p[1] == '/') {
             while (p != lexer->eof && *p != '\r' && *p != '\n')
                ++p;
             continue;
@@ -524,10 +529,10 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
       )
 
       STB_C_LEX_C_COMMENTS(
-         if (p != lexer->eof && p[0] == '/' && p[1] == '*') {
+         if (p != lexer->eof && p[0] == '/' && p+1 != lexer->eof && p[1] == '*') {
             char *start = p;
             p += 2;
-            while (p != lexer->eof && (p[0] != '*' || p[1] != '/'))
+            while (p != lexer->eof && (p[0] != '*' || p+1 == lexer->eof || p[1] != '/'))
                ++p;
             if (p == lexer->eof)
                return stb__clex_token(lexer, CLEX_parse_error, start, p-1);
@@ -569,12 +574,13 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
                lexer->string[n] = p[n];
                ++n;
             } while (
+               p+n != lexer->eof && (
                   (p[n] >= 'a' && p[n] <= 'z')
                || (p[n] >= 'A' && p[n] <= 'Z')
                || (p[n] >= '0' && p[n] <= '9') // allow digits in middle of identifier
                || p[n] == '_' || (unsigned char) p[n] >= 128
                 STB_C_LEX_DOLLAR_IDENTIFIER( || p[n] == '$' )
-            );
+            ));
             lexer->string[n] = 0;
             lexer->string_len = n;
             return stb__clex_token(lexer, CLEX_id, p, p+n-1);
@@ -667,7 +673,7 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
          STB_C_LEX_C_CHARS(
          {
             char *start = p;
-            lexer->int_number = stb__clex_parse_char(p+1, &p);
+            lexer->int_number = stb__clex_parse_char(p+1, lexer->eof, &p);
             if (lexer->int_number < 0)
                return stb__clex_token(lexer, CLEX_parse_error, start,start);
             if (p == lexer->eof || *p != '\'')
