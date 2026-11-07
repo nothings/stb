@@ -1,0 +1,26 @@
+2026-11-09
+
+== stb_image
+
+- various bugfixes
+- [remove PIC]
+- [???]
+
+== stb_vorbis
+
+- various bugfixes
+- 
+
+== stb_truetype
+
+== stb_include
+
+== stb_herringbone_wang_tile
+
+== stb_text_editor
+
+== stb_image_resize2.h
+- moved to https://github.com/nothings/stb_image_resize
+
+== stb_sprintf.h
+- moved to https://github.com/nothings/stb_sprintf
