@@ -1,5 +1,11 @@
 2026-11-09
 
+== stb_image_resize2.h
+- moved to https://github.com/nothings/stb_image_resize
+
+== stb_sprintf.h
+- moved to https://github.com/nothings/stb_sprintf
+
 == stb_image
 
 - various bugfixes
@@ -13,14 +19,59 @@
 
 == stb_truetype
 
+- many bugfixes
+- add support for WingDing & other symbol fonts
+- new function: stbtt_GetFontNameDefault()
+- new function: stbtt_ScaleForPixelWidth()
+- new function: stbtt_GetFontUnderlineMetrics()
+- vertical layout:
+  - new function: stbtt_GetFontHMetrics()
+  - new function: stbtt_GetGlyphVMetrics()
+  - new function: stbtt_GetCodepointVMetrics()
+
+== stb_ds.h
+- several bugfixes
+- new function: arrclear()
+- thread-safety issues:
+  - change hmget_ts() on NULL map so it crashes
+    - it used to allocate so it could return the default value
+    - in typical use that would either leak the table or update it thread-unsafely
+    - there's no legitimate way to return a default value safely, so we crash instead
+    - hmgeti_ts() remains viable
+  - new functions (optional): hminit() and shinit()
+    - these allocate empty tables with proper default values instead of relying on NULL
+    - only need to call these if you're using the _ts() functions on empty maps
+  - new functions: shget_ts(), shgeti_ts(), shgetp_ts()
+
+== stb_image_write.h
+- many bugfixes
+- add support for image stride:
+  - new function stbi_write_bmp_strided()
+  - new function stbi_write_tga_strided()
+  - new function stbi_write_jpg_strided()
+  - new function stbi_write_hdr_strided()
+  - new functions stbi_write_bmp_strided_to_func(), stbi_write_tga_strided_to_func(),
+                  stbi_write_hdr_strided_to_func(), stbi_write_jpg_strided_to_func()
+  - (PNG already supported stride)
+
+== stb_perlin
+- new function computes analytic derivatives: stb_perlin_noise3_derivatives()
+
+== stb_rect_pack.h:
+- should now produce identical results on all platforms (previously dependent on qsort() tiebreak)
+
+== stb_c_lexer
+- many bugfixes
+- add support for octal and hexadecimal characters in character and string literals
+
 == stb_include
+- bugfixes
 
 == stb_herringbone_wang_tile
+- bugfixes
 
 == stb_text_editor
+- bugfixes
 
-== stb_image_resize2.h
-- moved to https://github.com/nothings/stb_image_resize
-
-== stb_sprintf.h
-- moved to https://github.com/nothings/stb_sprintf
+== stb_conneced_components.h
+- bugfix
