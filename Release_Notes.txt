@@ -1,23 +1,25 @@
 2026-11-09
 
-== stb_image_resize2.h
+==== stb_image_resize2.h
+
 - moved to https://github.com/nothings/stb_image_resize
 
-== stb_sprintf.h
+==== stb_sprintf.h
+
 - moved to https://github.com/nothings/stb_sprintf
 
-== stb_image
+==== stb_image
 
 - various bugfixes
 - [remove PIC]
 - [???]
 
-== stb_vorbis
+==== stb_vorbis
 
 - various bugfixes
 - 
 
-== stb_truetype
+==== stb_truetype
 
 - many bugfixes
 - add support for WingDing & other symbol fonts
@@ -29,7 +31,8 @@
   - new function: stbtt_GetGlyphVMetrics()
   - new function: stbtt_GetCodepointVMetrics()
 
-== stb_ds.h
+==== stb_ds.h
+
 - several bugfixes
 - new function: arrclear()
 - thread-safety issues:
@@ -37,13 +40,14 @@
     - it used to allocate so it could return the default value
     - in typical use that would either leak the table or update it thread-unsafely
     - there's no legitimate way to return a default value safely, so we crash instead
-    - hmgeti_ts() remains viable
+    - hmgeti_ts() remains viable for NULL
   - new functions (optional): hminit() and shinit()
     - these allocate empty tables with proper default values instead of relying on NULL
     - only need to call these if you're using the _ts() functions on empty maps
   - new functions: shget_ts(), shgeti_ts(), shgetp_ts()
 
-== stb_image_write.h
+==== stb_image_write.h
+
 - many bugfixes
 - add support for image stride:
   - new function stbi_write_bmp_strided()
@@ -54,24 +58,60 @@
                   stbi_write_hdr_strided_to_func(), stbi_write_jpg_strided_to_func()
   - (PNG already supported stride)
 
-== stb_perlin
+==== stb_perlin
+
 - new function computes analytic derivatives: stb_perlin_noise3_derivatives()
 
-== stb_rect_pack.h:
+==== stb_rect_pack.h:
+
 - should now produce identical results on all platforms (previously dependent on qsort() tiebreak)
 
-== stb_c_lexer
+==== stb_c_lexer
+
 - many bugfixes
 - add support for octal and hexadecimal characters in character and string literals
 
-== stb_include
+==== stb_leakcheck.h
+
+- handle calloc()
+
+==== stb_tilemap_editor.h
+
+- SDL 3 event handling
+
+==== stb_divide.h
+
+- radical simplification
+
+==== stb_include
+
 - bugfixes
 
-== stb_herringbone_wang_tile
+==== stb_herringbone_wang_tile
+
 - bugfixes
 
-== stb_text_editor
+==== stb_text_editor
+
 - bugfixes
 
-== stb_conneced_components.h
+==== stb_connected_components.h
+
 - bugfix
+
+==== stb_hexwave.h
+
+- bugfix
+
+==== stb_voxel_render.h
+
+- bugfix
+
+==== stb_easy_font.h
+
+- fix warning
+
+==== stb_dxt.h
+
+- fix warning
+
