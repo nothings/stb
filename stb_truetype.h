@@ -1819,7 +1819,7 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
          stbtt_uint16 flags, gidx;
          int comp_num_verts = 0, i;
          stbtt_vertex *comp_verts = 0, *tmp = 0;
-         float mtx[6] = {1,0,0,1,0,0}, m, n;
+         float mtx[6] = {1,0,0,1,0,0};
 
          flags = ttSHORT(comp); comp+=2;
          gidx = ttSHORT(comp); comp+=2;
@@ -1851,23 +1851,50 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
             mtx[3] = ttSHORT(comp)/16384.0f; comp+=2;
          }
 
-         // Find transformation scales.
-         m = (float) STBTT_sqrt(mtx[0]*mtx[0] + mtx[1]*mtx[1]);
-         n = (float) STBTT_sqrt(mtx[2]*mtx[2] + mtx[3]*mtx[3]);
-
          // Get indexed glyph.
          comp_num_verts = stbtt_GetGlyphShape(info, gidx, &comp_verts);
          if (comp_num_verts > 0) {
             // Transform vertices.
-            for (i = 0; i < comp_num_verts; ++i) {
-               stbtt_vertex* v = &comp_verts[i];
-               stbtt_vertex_type x,y;
-               x=v->x; y=v->y;
-               v->x = (stbtt_vertex_type)(m * (mtx[0]*x + mtx[2]*y + mtx[4]));
-               v->y = (stbtt_vertex_type)(n * (mtx[1]*x + mtx[3]*y + mtx[5]));
-               x=v->cx; y=v->cy;
-               v->cx = (stbtt_vertex_type)(m * (mtx[0]*x + mtx[2]*y + mtx[4]));
-               v->cy = (stbtt_vertex_type)(n * (mtx[1]*x + mtx[3]*y + mtx[5]));
+            if (stbtt_tag(info->data, "true")) { // Follow Apple specification
+               float abs[4];
+               abs[0] = STBTT_fabs(mtx[0]);
+               abs[1] = STBTT_fabs(mtx[1]);
+               abs[2] = STBTT_fabs(mtx[2]);
+               abs[3] = STBTT_fabs(mtx[3]);
+               float m = abs[0] < abs[1] ? abs[1] : abs[0];
+               float n = abs[2] < abs[3] ? abs[3] : abs[2];
+               if (STBTT_fabs(abs[0] - abs[2]) <= 33.f / 65536)
+                  m = m * 2;
+               if (STBTT_fabs(abs[1] - abs[3]) <= 33.f / 65536)
+                  n = n * 2;
+               for (i = 0; i < comp_num_verts; ++i) {
+                  stbtt_vertex* v = &comp_verts[i];
+                  stbtt_vertex_type x, y;
+                  x = v->x; y = v->y;
+                  v->x = (stbtt_vertex_type)(mtx[0] * x + mtx[2] * y + m * mtx[4]);
+                  v->y = (stbtt_vertex_type)(mtx[1] * x + mtx[3] * y + n * mtx[5]);
+                  x = v->cx; y = v->cy;
+                  v->cx = (stbtt_vertex_type)(mtx[0] * x + mtx[2] * y + m * mtx[4]);
+                  v->cy = (stbtt_vertex_type)(mtx[1] * x + mtx[3] * y + n * mtx[5]);
+               }
+            }
+            else { // Follow Microsoft specification
+               float xoff = mtx[4];
+               float yoff = mtx[5];
+               if (flags & (1 << 11)) { // SCALED_COMPONENT_OFFSET
+                  xoff = mtx[0] * mtx[4] + mtx[2] * mtx[5];
+                  yoff = mtx[1] * mtx[4] + mtx[3] * mtx[5];
+               }
+               for (i = 0; i < comp_num_verts; ++i) {
+                  stbtt_vertex* v = &comp_verts[i];
+                  stbtt_vertex_type x, y;
+                  x = v->x; y = v->y;
+                  v->x = (stbtt_vertex_type)(mtx[0] * x + mtx[2] * y + xoff);
+                  v->y = (stbtt_vertex_type)(mtx[1] * x + mtx[3] * y + yoff);
+                  x = v->cx; y = v->cy;
+                  v->cx = (stbtt_vertex_type)(mtx[0] * x + mtx[2] * y + xoff);
+                  v->cy = (stbtt_vertex_type)(mtx[1] * x + mtx[3] * y + yoff);
+               }
             }
             // Append vertices.
             tmp = (stbtt_vertex*)STBTT_malloc((num_vertices+comp_num_verts)*sizeof(stbtt_vertex), info->userdata);
@@ -2506,7 +2533,7 @@ static stbtt_int32 stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, in
    data = info->data + info->gpos;
 
    if (ttUSHORT(data+0) != 1) return 0; // Major version 1
-   if (ttUSHORT(data+2) != 0) return 0; // Minor version 0
+   if (ttUSHORT(data+2)  > 1) return 0; // Minor version 0, or 1
 
    lookupListOffset = ttUSHORT(data+8);
    lookupList = data + lookupListOffset;
@@ -2519,12 +2546,21 @@ static stbtt_int32 stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, in
       stbtt_uint16 lookupType = ttUSHORT(lookupTable);
       stbtt_uint16 subTableCount = ttUSHORT(lookupTable + 4);
       stbtt_uint8 *subTableOffsets = lookupTable + 6;
-      if (lookupType != 2) // Pair Adjustment Positioning Subtable
+      if (lookupType != 2 && // Pair Adjustment Positioning Subtable
+          lookupType != 9)   // Positioning Subtable Extension
          continue;
 
       for (sti=0; sti<subTableCount; sti++) {
          stbtt_uint16 subtableOffset = ttUSHORT(subTableOffsets + 2 * sti);
          stbtt_uint8 *table = lookupTable + subtableOffset;
+         if (lookupType == 9) {
+            if (ttUSHORT(table + 0) != 1) // Format 1
+               continue;
+            if (ttUSHORT(table + 2) != 2) // PairPos Subtable
+               continue;
+            stbtt_uint32 exOffset = ttULONG(table + 4);
+            table += exOffset;
+         }
          stbtt_uint16 posFormat = ttUSHORT(table);
          stbtt_uint16 coverageOffset = ttUSHORT(table + 2);
          stbtt_int32 coverageIndex = stbtt__GetCoverageIndex(table + coverageOffset, glyph1);
@@ -2536,8 +2572,10 @@ static stbtt_int32 stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, in
                int straw, needle;
                stbtt_uint16 valueFormat1 = ttUSHORT(table + 4);
                stbtt_uint16 valueFormat2 = ttUSHORT(table + 6);
-               if (valueFormat1 == 4 && valueFormat2 == 0) { // Support more formats?
-                  stbtt_int32 valueRecordPairSizeInBytes = 2;
+               if ((valueFormat1 == 4 ||
+                    valueFormat1 == 68) &&
+                    valueFormat2 == 0) { // Support more formats?
+                  stbtt_int32 valueRecordPairSizeInBytes = valueFormat1 == 68 ? 4 : 2;
                   stbtt_uint16 pairSetCount = ttUSHORT(table + 8);
                   stbtt_uint16 pairPosOffset = ttUSHORT(table + 10 + 2 * coverageIndex);
                   stbtt_uint8 *pairValueTable = table + pairPosOffset;
@@ -2575,7 +2613,9 @@ static stbtt_int32 stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, in
             case 2: {
                stbtt_uint16 valueFormat1 = ttUSHORT(table + 4);
                stbtt_uint16 valueFormat2 = ttUSHORT(table + 6);
-               if (valueFormat1 == 4 && valueFormat2 == 0) { // Support more formats?
+               if ((valueFormat1 == 4 ||
+                    valueFormat1 == 68) &&
+                    valueFormat2 == 0) { // Support more formats?
                   stbtt_uint16 classDef1Offset = ttUSHORT(table + 8);
                   stbtt_uint16 classDef2Offset = ttUSHORT(table + 10);
                   int glyph1class = stbtt__GetGlyphClass(table + classDef1Offset, glyph1);
@@ -2589,9 +2629,11 @@ static stbtt_int32 stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, in
                   if (glyph1class < 0 || glyph1class >= class1Count) return 0; // malformed
                   if (glyph2class < 0 || glyph2class >= class2Count) return 0; // malformed
 
+                  stbtt_int32 valueRecordPairSizeInBytes = valueFormat1 == 68 ? 4 : 2;
+
                   class1Records = table + 16;
-                  class2Records = class1Records + 2 * (glyph1class * class2Count);
-                  xAdvance = ttSHORT(class2Records + 2 * glyph2class);
+                  class2Records = class1Records + valueRecordPairSizeInBytes * (glyph1class * class2Count);
+                  xAdvance = ttSHORT(class2Records + valueRecordPairSizeInBytes * glyph2class);
                   return xAdvance;
                } else
                   return 0;
