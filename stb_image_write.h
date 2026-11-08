@@ -246,6 +246,7 @@ STBIWDEF void stbi_flip_vertically_on_write(int flip_boolean);
 #include <stdlib.h>
 #include <string.h>
 #include <limits.h>
+#include <float.h>
 #include <math.h>
 
 #if defined(STBIW_MALLOC) && defined(STBIW_FREE) && (defined(STBIW_REALLOC) || defined(STBIW_REALLOC_SIZED))
@@ -742,21 +743,60 @@ STBIWDEF int stbi_write_tga(char const *filename, int x, int y, int comp, const 
 // Radiance RGBE HDR writer
 // by Baldur Karlsson
 
-#define stbiw__max(a, b)  ((a) > (b) ? (a) : (b))
-
-static void stbiw__linear_to_rgbe(unsigned char *rgbe, float *linear)
+static void stbiw__linear_to_rgbe(unsigned char *rgbe, float *pixel, int ncomp)
 {
    int exponent;
-   float maxcomp = stbiw__max(linear[0], stbiw__max(linear[1], linear[2]));
+   float r, g, b, maxcomp;
 
-   if (maxcomp < 1e-32f) {
+   if (ncomp >= 3) {
+      r = pixel[0];
+      g = pixel[1];
+      b = pixel[2];
+      maxcomp = r > g ? r : g;
+      maxcomp = maxcomp > b ? maxcomp : b;
+   } else {
+      r = g = b = maxcomp = pixel[0];
+   }
+
+   // if one of the values is infinite, clamp it to FLT_MAX.
+   if (maxcomp >= FLT_MAX) {
+      r = (r < FLT_MAX) ? r : FLT_MAX;
+      g = (g < FLT_MAX) ? g : FLT_MAX;
+      b = (b < FLT_MAX) ? b : FLT_MAX;
+      maxcomp = FLT_MAX;
+   }
+
+   // if maxcomp <= 1e-32f, snap to 0. this is in both the original RADIANCE and
+   // Bruce Walter's widely-used implementation, so we consider this part of the spec.
+   if (maxcomp <= 1e-32f) {
       rgbe[0] = rgbe[1] = rgbe[2] = rgbe[3] = 0;
    } else {
-      float normalize = (float) frexp(maxcomp, &exponent) * 256.0f/maxcomp;
-
-      rgbe[0] = (unsigned char)((linear[0] > 0) ? linear[0] * normalize : 0);
-      rgbe[1] = (unsigned char)((linear[1] > 0) ? linear[1] * normalize : 0);
-      rgbe[2] = (unsigned char)((linear[2] > 0) ? linear[2] * normalize : 0);
+      // this is always an exact power of 2 and has no overflows or underflows, but the
+      // reason why is a bit subtle. first, the no overflows/underflows part:
+      //
+      // in here, 2^(-107) < 1e-32 < maxcomp <= FLT_MAX < 2^128
+      //
+      //   0.5 <= frexp(maxcomp, &exponent) < 1             [frexp scale]
+      // => 128 <= frexp(maxcomp, &exponent) * 256 < 256    [mul by 256]
+      // => 128 / maxcomp <= normalize < 256 / maxcomp      [div by maxcomp]
+      //
+      // normalize >= 128 / maxcomp > 128 / 2^128 = 2^(7 - 128) = 2^(-121) -> no underflow
+      // normalize  < 256 / maxcomp < 256 / 2^(-107) = 2^(8 + 107) = 2^115 -> no overflow
+      //
+      // exact power of 2: the return value of frexp has the same significand as maxcomp,
+      // by definition; the only difference is the exponent.
+      // multiplying by 256 changes the exponent, but not the significand, thus exact
+      //   (barring overflow/underflow, which we just proved doesn't occur)
+      //
+      // therefore, the division divides two values with the same significand, making
+      // the quotient exact with a significand of 1 (in any rounding mode)
+      //
+      // -> normalize is an exact power of 2
+      //    (this was also verified exhaustively for all maxcomp in [1e-32f, FLT_MAX])
+      float normalize = (float) (frexp(maxcomp, &exponent) * 256.0f) / maxcomp;
+      rgbe[0] = (unsigned char)((r > 0) ? r * normalize : 0);
+      rgbe[1] = (unsigned char)((g > 0) ? g * normalize : 0);
+      rgbe[2] = (unsigned char)((b > 0) ? b * normalize : 0);
       rgbe[3] = (unsigned char)(exponent + 128);
    }
 }
@@ -781,7 +821,6 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
 {
    unsigned char scanlineheader[4] = { 2, 2, 0, 0 };
    unsigned char rgbe[4];
-   float linear[3];
    int x;
 
    scanlineheader[2] = (width&0xff00)>>8;
@@ -790,34 +829,14 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
    /* skip RLE for images too small or large */
    if (width < 8 || width >= 32768) {
       for (x=0; x < width; x++) {
-         switch (ncomp) {
-            case 4: /* fallthrough */
-            case 3: linear[2] = scanline[x*ncomp + 2];
-                    linear[1] = scanline[x*ncomp + 1];
-                    linear[0] = scanline[x*ncomp + 0];
-                    break;
-            default:
-                    linear[0] = linear[1] = linear[2] = scanline[x*ncomp + 0];
-                    break;
-         }
-         stbiw__linear_to_rgbe(rgbe, linear);
+         stbiw__linear_to_rgbe(rgbe, &scanline[x*ncomp], ncomp);
          s->func(s->context, rgbe, 4);
       }
    } else {
       int c,r;
       /* encode into scratch buffer */
       for (x=0; x < width; x++) {
-         switch(ncomp) {
-            case 4: /* fallthrough */
-            case 3: linear[2] = scanline[x*ncomp + 2];
-                    linear[1] = scanline[x*ncomp + 1];
-                    linear[0] = scanline[x*ncomp + 0];
-                    break;
-            default:
-                    linear[0] = linear[1] = linear[2] = scanline[x*ncomp + 0];
-                    break;
-         }
-         stbiw__linear_to_rgbe(rgbe, linear);
+         stbiw__linear_to_rgbe(rgbe, &scanline[x*ncomp], ncomp);
          scratch[x + width*0] = rgbe[0];
          scratch[x + width*1] = rgbe[1];
          scratch[x + width*2] = rgbe[2];
