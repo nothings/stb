@@ -6921,6 +6921,19 @@ static char *stbi__hdr_gettoken(stbi__context *z, char *buffer)
    return buffer;
 }
 
+static void stbi__hdr_makelut(float explut[256], int req_comp)
+{
+   int k;
+
+   explut[0] = 0.0f; // exponent 0 always gives 0.0f
+   for (k = 1; k < 256; ++k) {
+      explut[k] = (float) ldexp(1.0, k - (128 + 8));
+      // when req_comp <= 2, we convert to grayscale instead by averaging the three channels;
+      // fold the /3 into the scale factor
+      if (req_comp <= 2) explut[k] /= 3.f;
+   }
+}
+
 static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp, float explut[256])
 {
    float scale = explut[input[3]];
@@ -6942,14 +6955,7 @@ static int stbi__hdr_load_pixels(stbi__context *s, float *hdr_data, int width, i
    stbi_uc count,value;
    float explut[256];
 
-   // make 256-entry LUT of exponent scale factors to speed up conversion
-   explut[0] = 0.0f; // exponent 0 always gives 0.0f
-   for (k = 1; k < 256; ++k) {
-      explut[k] = (float) ldexp(1.0, k - (128 + 8));
-      // when req_comp <= 2, we convert to grayscale instead by averaging the three channels;
-      // fold the /3 into the scale factor
-      if (req_comp <= 2) explut[k] /= 3.f;
-   }
+   stbi__hdr_makelut(explut, req_comp);
 
    // image data is stored as some number of scanlines
    for (y = 0; y < height; ++y) {
