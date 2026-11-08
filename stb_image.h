@@ -6923,14 +6923,14 @@ static char *stbi__hdr_gettoken(stbi__context *z, char *buffer)
 
 static void stbi__hdr_convert(float *output, stbi_uc *input, int req_comp, float explut[256])
 {
-   float f1 = explut[input[3]];
+   float scale = explut[input[3]];
    if (req_comp <= 2) {
-      output[0] = (input[0] + input[1] + input[2]) * f1;
+      output[0] = (input[0] + input[1] + input[2] + 1.5f) * scale;
       if (req_comp == 2) output[1] = 1;
    } else {
-      output[0] = input[0] * f1;
-      output[1] = input[1] * f1;
-      output[2] = input[2] * f1;
+      output[0] = (input[0] + 0.5f) * scale;
+      output[1] = (input[1] + 0.5f) * scale;
+      output[2] = (input[2] + 0.5f) * scale;
       if (req_comp == 4) output[3] = 1;
    }
 }
