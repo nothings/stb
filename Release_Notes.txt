@@ -11,13 +11,20 @@
 ==== stb_image
 
 - various bugfixes
-- [remove PIC]
-- [???]
+- PIC support removed: the only reasons to use PIC were Softimage|3D/XSI, which have now been dead for 12 years.
+- PNM now has proper support for maxvals other than 255 or 65535
+- PNM now supports ASCII (P2, P3) variants of PGM/PPM
+- HDR loader appreciably faster (no more ldexp per pixel)
+- ARM64EC targets now compile correectly and use NEON paths
+- when using installable IO callbacks, all image readers now seek backwards at the end to "unget" unconsumed bytes left in IO buffer
 
 ==== stb_vorbis
 
 - various bugfixes
-- 
+- new stb_vorbis_get_playback_sample_offset reports current playback position in samples from beginning of the file
+- configurable CODEBOOK_LIMIT to reject files with huge codebooks as malformed (default of 262144 accepts all files ever produced by libvorbis)
+- new compile-time option STB_VORBIS_NO_COMMENTS that skips over (potentially huge) comment fields in Vorbis files instead of keeping them in memory
+- new 64-bit versions of get_sample_offset, get_playback_offset, seek_frame, seek, stream_length_in_samples for Vorbis files containing more than INT_MAX samples
 
 ==== stb_truetype
 
@@ -57,6 +64,7 @@
   - new functions stbi_write_bmp_strided_to_func(), stbi_write_tga_strided_to_func(),
                   stbi_write_hdr_strided_to_func(), stbi_write_jpg_strided_to_func()
   - (PNG already supported stride)
+- HDR writer now automatically clamps infinite or negative values during writing
 
 ==== stb_perlin
 
