@@ -26,25 +26,25 @@ by Jorge L. "VinoBS" Rodriguez, and stb_image_resize2 and stb_sprintf by Jeff Ro
 
 library    | latest version | category | LoC | description | last updated
 ---------- | -------------- | -------- | --- | ------------|---------------
-**[stb_vorbis.c](stb_vorbis.c)** | 1.23 | audio | 5707 | decode ogg vorbis files from file/memory to float/16-bit signed output | 2026-11-02
-**[stb_hexwave.h](stb_hexwave.h)** | 0.6 | audio | 680 | audio waveform synthesizer | 2024-10-13
+**[stb_vorbis.c](stb_vorbis.c)** | 1.23 | audio | 5707 | decode ogg vorbis files from file/memory to float/16-bit signed output | 2026-11-08
+**[stb_hexwave.h](stb_hexwave.h)** | 0.6 | audio | 680 | audio waveform synthesizer | 2026-11-08
 **[stb_image.h](stb_image.h)** | 2.31 | graphics | 7794 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR | 2026-11-08
-**[stb_truetype.h](stb_truetype.h)** | 1.27 | graphics | 5310 | parse, decode, and rasterize characters from truetype fonts | 2026-11-02
+**[stb_truetype.h](stb_truetype.h)** | 1.27 | graphics | 5310 | parse, decode, and rasterize characters from truetype fonts | 2026-11-08
 **[stb_image_write.h](stb_image_write.h)** | 1.17 | graphics | 1923 | image writing to disk: PNG, JPG, BMP, TGA, HDR | 2026-11-08
-**[stb_rect_pack.h](stb_rect_pack.h)** | 1.02 | graphics | 628 | simple 2D rectangle packer with decent quality | 2026-10-30
-**[stb_perlin.h](stb_perlin.h)** | 0.6 | graphics | 517 | perlin's revised simplex noise w/ different seeds | 2026-11-01
-**[stb_ds.h](stb_ds.h)** | 0.98 | utility | 1943 | typesafe dynamic array and hash tables for C, will compile in C++ | 2026-10-30
-**[stb_textedit.h](stb_textedit.h)** | 1.15 | user&nbsp;interface | 1437 | guts of a text editor for games etc implementing them from scratch | 2026-10-31
-**[stb_voxel_render.h](stb_voxel_render.h)** | 0.90 | 3D&nbsp;graphics | 3808 | Minecraft-esque voxel rendering "engine" with many more features | 2026-11-01
-**[stb_dxt.h](stb_dxt.h)** | 1.13 | 3D&nbsp;graphics | 721 | Fabian "ryg" Giesen's real-time DXT compressor | 2026-10-30
-**[stb_easy_font.h](stb_easy_font.h)** | 1.2 | 3D&nbsp;graphics | 306 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc | 2021-08-19
-**[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.43 | game&nbsp;dev | 4206 | embeddable tilemap editor | 2026-11-01
+**[stb_rect_pack.h](stb_rect_pack.h)** | 1.02 | graphics | 628 | simple 2D rectangle packer with decent quality | 2026-11-08
+**[stb_perlin.h](stb_perlin.h)** | 0.6 | graphics | 517 | perlin's revised simplex noise w/ different seeds | 2026-11-08
+**[stb_ds.h](stb_ds.h)** | 0.98 | utility | 1943 | typesafe dynamic array and hash tables for C, will compile in C++ | 2026-11-08
+**[stb_textedit.h](stb_textedit.h)** | 1.15 | user&nbsp;interface | 1437 | guts of a text editor for games etc implementing them from scratch | 2026-11-08
+**[stb_voxel_render.h](stb_voxel_render.h)** | 0.90 | 3D&nbsp;graphics | 3808 | Minecraft-esque voxel rendering "engine" with many more features | 2026-11-08
+**[stb_dxt.h](stb_dxt.h)** | 1.13 | 3D&nbsp;graphics | 721 | Fabian "ryg" Giesen's real-time DXT compressor | 2026-11-08
+**[stb_easy_font.h](stb_easy_font.h)** | 1.2 | 3D&nbsp;graphics | 306 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc | 2026-11-08
+**[stb_tilemap_editor.h](stb_tilemap_editor.h)** | 0.43 | game&nbsp;dev | 4206 | embeddable tilemap editor | 2026-11-08
 **[stb_herringbone_wa...](stb_herringbone_wang_tile.h)** | 0.7 | game&nbsp;dev | 1232 | herringbone Wang tile map generator | 2026-11-01
-**[stb_c_lexer.h](stb_c_lexer.h)** | 0.13 | parsing | 1069 | simplify writing parsers for C-like languages | 2026-11-02
-**[stb_divide.h](stb_divide.h)** | 1.0 | math | 310 | more useful 32-bit modulus e.g. "euclidean divide" | 2026-10-31
-**[stb_connected_comp...](stb_connected_components.h)** | 0.97 | misc | 1050 | incrementally compute reachability on grids | 2026-10-31
-**[stb_leakcheck.h](stb_leakcheck.h)** | 0.7 | misc | 206 | quick-and-dirty malloc/free leak-checking | 2021-07-24
-**[stb_include.h](stb_include.h)** | 0.3 | misc | 378 | implement recursive #include support, particularly for GLSL | 2026-11-01
+**[stb_c_lexer.h](stb_c_lexer.h)** | 0.13 | parsing | 1069 | simplify writing parsers for C-like languages | 2026-11-08
+**[stb_divide.h](stb_divide.h)** | 1.0 | math | 310 | more useful 32-bit modulus e.g. "euclidean divide" | 2026-11-08
+**[stb_connected_comp...](stb_connected_components.h)** | 0.97 | misc | 1050 | incrementally compute reachability on grids | 2026-11-08
+**[stb_leakcheck.h](stb_leakcheck.h)** | 0.7 | misc | 206 | quick-and-dirty malloc/free leak-checking | 2026-11-08
+**[stb_include.h](stb_include.h)** | 0.3 | misc | 378 | implement recursive #include support, particularly for GLSL | 2026-11-08
 
 Total libraries: 19
 Total lines of C code: 39225
