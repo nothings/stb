@@ -1,4 +1,4 @@
-// stb_hexwave - v0.5 - public domain, initial release 2021-04-01
+// stb_hexwave - v0.6 - public domain, initial release 2021-04-01
 //
 // A flexible anti-aliased (bandlimited) digital audio oscillator.
 //

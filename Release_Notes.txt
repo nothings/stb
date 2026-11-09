@@ -8,7 +8,7 @@
 
 - moved to https://github.com/nothings/stb_sprintf
 
-==== stb_image
+==== stb_image v2.31
 
 - various bugfixes
 - PIC support removed: the only reasons to use PIC were Softimage|3D/XSI, which have now been dead for 12 years.
@@ -18,7 +18,7 @@
 - ARM64EC targets now compile correectly and use NEON paths
 - when using installable IO callbacks, all image readers now seek backwards at the end to "unget" unconsumed bytes left in IO buffer
 
-==== stb_vorbis
+==== stb_vorbis v1.23
 
 - various bugfixes
 - new stb_vorbis_get_playback_sample_offset reports current playback position in samples from beginning of the file
@@ -26,7 +26,7 @@
 - new compile-time option STB_VORBIS_NO_COMMENTS that skips over (potentially huge) comment fields in Vorbis files instead of keeping them in memory
 - new 64-bit versions of get_sample_offset, get_playback_offset, seek_frame, seek, stream_length_in_samples for Vorbis files containing more than INT_MAX samples
 
-==== stb_truetype
+==== stb_truetype v1.27
 
 - many bugfixes
 - add support for WingDing & other symbol fonts
@@ -38,7 +38,7 @@
   - new function: stbtt_GetGlyphVMetrics()
   - new function: stbtt_GetCodepointVMetrics()
 
-==== stb_ds.h
+==== stb_ds.h v0.98
 
 - several bugfixes
 - new function: arrclear()
@@ -53,7 +53,7 @@
     - only need to call these if you're using the _ts() functions on empty maps
   - new functions: shget_ts(), shgeti_ts(), shgetp_ts()
 
-==== stb_image_write.h
+==== stb_image_write.h v1.17
 
 - many bugfixes
 - add support for image stride:
@@ -66,60 +66,60 @@
   - (PNG already supported stride)
 - HDR writer now automatically clamps infinite or negative values during writing
 
-==== stb_perlin
+==== stb_perlin.h  v0.6
 
 - new function computes analytic derivatives: stb_perlin_noise3_derivatives()
 
-==== stb_rect_pack.h:
+==== stb_rect_pack.h  v1.02
 
 - should now produce identical results on all platforms (previously dependent on qsort() tiebreak)
 
-==== stb_c_lexer
+==== stb_c_lexer  v1.13
 
 - many bugfixes
 - add support for octal and hexadecimal characters in character and string literals
 
-==== stb_leakcheck.h
+==== stb_leakcheck.h  v0.7
 
 - handle calloc()
 
-==== stb_tilemap_editor.h
+==== stb_tilemap_editor.h  v0.43
 
 - SDL 3 event handling
 
-==== stb_divide.h
+==== stb_divide.h  v1.0
 
-- radical simplification
+- radical simplification using div()/div_t
 
-==== stb_include
-
-- bugfixes
-
-==== stb_herringbone_wang_tile
+==== stb_include.h v0.3
 
 - bugfixes
 
-==== stb_text_editor
+==== stb_herringbone_wang_tile.h v0.7
 
 - bugfixes
 
-==== stb_connected_components.h
+==== stb_textedit.h v1.15
+
+- bugfixes
+
+==== stb_connected_components.h v0.97
 
 - bugfix
 
-==== stb_hexwave.h
+==== stb_hexwave.h v0.6
 
 - bugfix
 
-==== stb_voxel_render.h
+==== stb_voxel_render.h v0.90
 
 - bugfix
 
-==== stb_easy_font.h
+==== stb_easy_font.h v1.2
 
 - fix warning
 
-==== stb_dxt.h
+==== stb_dxt.h v1.13
 
 - fix warning
 

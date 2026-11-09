@@ -1,9 +1,9 @@
-// stb_divide.h - v0.95 - public domain - Sean Barrett, Feb 2010
+// stb_divide.h - v1.0 - public domain - Sean Barrett, Feb 2010
 // Three kinds of divide/modulus of signed integers.
 //
 // HISTORY
 //
-//   v0.95  2026-10-31  Switch to using div()/div_t from C89 stdlib
+//   v1.0   2026-10-31  Switch to using div()/div_t from C89 stdlib
 //   v0.94              Fix integer overflow issues
 //   v0.93  2020-02-02  Write useful exit() value from main()
 //   v0.92  2019-02-25  Fix warning

@@ -1,4 +1,4 @@
-// stb_dxt.h - v1.12 - DXT1/DXT5 compressor - public domain
+// stb_dxt.h - v1.13 - DXT1/DXT5 compressor - public domain
 // original by fabian "ryg" giesen - ported to C by stb
 // use '#define STB_DXT_IMPLEMENTATION' before including to create the implementation
 //
@@ -9,7 +9,8 @@
 //     must supply some constant alpha in the alpha channel).
 //     You can turn on dithering and "high quality" using mode.
 //
-// version history:
+// version history
+//   v1.13  - (stb) fix warning
 //   v1.12  - (ryg) fix bug in single-color table generator
 //   v1.11  - (ryg) avoid racy global init, better single-color tables, remove dither
 //   v1.10  - (i.c) various small quality improvements

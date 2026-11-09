@@ -1,4 +1,4 @@
-// stb_easy_font.h - v1.1 - bitmap font for 3D rendering - public domain
+// stb_easy_font.h - v1.2 - bitmap font for 3D rendering - public domain
 // Sean Barrett, Feb 2015
 //
 //    Easy-to-deploy,
@@ -71,6 +71,7 @@
 //
 // VERSION HISTORY
 //
+//   (2026-11-08)  1.2   fix incorrect initializer
 //   (2020-02-02)  1.1   make everything static so can compile it in more than one src file
 //   (2017-01-15)  1.0   space character takes same space as numbers; fix bad spacing of 'f'
 //   (2016-01-22)  0.7   width() supports multiline text; add height()

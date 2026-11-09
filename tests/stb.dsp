@@ -126,11 +126,11 @@ SOURCE=..\stb_herringbone_wang_tile.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\stb_image.h
+SOURCE=..\stb_hexwave.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\stb_image_resize2.h
+SOURCE=..\stb_image.h
 # End Source File
 # Begin Source File
 
@@ -155,10 +155,6 @@ SOURCE=..\stb_perlin.h
 # Begin Source File
 
 SOURCE=..\stb_rect_pack.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\stb_sprintf.h
 # End Source File
 # Begin Source File
 

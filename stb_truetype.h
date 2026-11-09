@@ -1,4 +1,4 @@
-// stb_truetype.h - v1.26 - public domain
+// stb_truetype.h - v1.27 - public domain
 // authored from 2009-2021 by Sean Barrett / RAD Game Tools
 //
 // =======================================================================
@@ -60,6 +60,7 @@
 //
 // VERSION HISTORY
 //
+//   1.27 (2026-11-08) many fixes, support vertical layout, underlines, font name
 //   1.26 (2021-08-28) fix broken rasterizer
 //   1.25 (2021-07-11) many fixes
 //   1.24 (2020-02-05) fix warning

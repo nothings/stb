@@ -1,4 +1,4 @@
-/* stb_image - v2.30 - public domain image loader - http://nothings.org/stb
+/* stb_image - v2.31 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 
    == SECURITY NOTE ==
@@ -64,6 +64,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.31  (2026-11-08) many bugfixes and etc.
       2.30  (2024-05-31) avoid erroneous gcc warning
       2.29  (2023-05-xx) optimizations
       2.28  (2023-01-29) many error fixes, security errors, just tons of stuff
@@ -71,24 +72,6 @@ RECENT REVISION HISTORY:
       2.26  (2020-07-13) many minor fixes
       2.25  (2020-02-02) fix warnings
       2.24  (2020-02-02) fix warnings; thread-local failure_reason and flip_vertically
-      2.23  (2019-08-11) fix clang static analysis warning
-      2.22  (2019-03-04) gif fixes, fix warnings
-      2.21  (2019-02-25) fix typo in comment
-      2.20  (2019-02-07) support utf8 filenames in Windows; fix warnings and platform ifdefs
-      2.19  (2018-02-11) fix warning
-      2.18  (2018-01-30) fix warnings
-      2.17  (2018-01-29) bugfix, 1-bit BMP, 16-bitness query, fix warnings
-      2.16  (2017-07-23) all functions have 16-bit variants; optimizations; bugfixes
-      2.15  (2017-03-18) fix png-1,2,4; all Imagenet JPGs; no runtime SSE detection on GCC
-      2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD; fixes for Imagenet JPGs
-      2.13  (2016-12-04) experimental 16-bit API, only for PNG so far; fixes
-      2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
-      2.11  (2016-04-02) 16-bit PNGS; enable SSE2 in non-gcc x64
-                         RGB-format JPEG; remove white matting in PSD;
-                         allocate large structures on the stack;
-                         correct channel count for PNG & BMP
-      2.10  (2016-01-22) avoid warning introduced in 2.09
-      2.09  (2016-01-16) 16-bit TGA; comments in PNM files; STBI_REALLOC_SIZED
 
    See end of file for full revision history.
 
@@ -7568,6 +7551,24 @@ STBIDEF int stbi_is_16_bit_from_callbacks(stbi_io_callbacks const *c, void *user
 
 /*
    revision history:
+      2.23  (2019-08-11) fix clang static analysis warning
+      2.22  (2019-03-04) gif fixes, fix warnings
+      2.21  (2019-02-25) fix typo in comment
+      2.20  (2019-02-07) support utf8 filenames in Windows; fix warnings and platform ifdefs
+      2.19  (2018-02-11) fix warning
+      2.18  (2018-01-30) fix warnings
+      2.17  (2018-01-29) bugfix, 1-bit BMP, 16-bitness query, fix warnings
+      2.16  (2017-07-23) all functions have 16-bit variants; optimizations; bugfixes
+      2.15  (2017-03-18) fix png-1,2,4; all Imagenet JPGs; no runtime SSE detection on GCC
+      2.14  (2017-03-03) remove deprecated STBI_JPEG_OLD; fixes for Imagenet JPGs
+      2.13  (2016-12-04) experimental 16-bit API, only for PNG so far; fixes
+      2.12  (2016-04-02) fix typo in 2.11 PSD fix that caused crashes
+      2.11  (2016-04-02) 16-bit PNGS; enable SSE2 in non-gcc x64
+                         RGB-format JPEG; remove white matting in PSD;
+                         allocate large structures on the stack;
+                         correct channel count for PNG & BMP
+      2.10  (2016-01-22) avoid warning introduced in 2.09
+      2.09  (2016-01-16) 16-bit TGA; comments in PNM files; STBI_REALLOC_SIZED
       2.20  (2019-02-07) support utf8 filenames in Windows; fix warnings and platform ifdefs
       2.19  (2018-02-11) fix warning
       2.18  (2018-01-30) fix warnings

@@ -15,11 +15,25 @@ int main(int argc, char  **argv)
    fwrite(header, 1, hlen, f);
 
    for (i=0; i < listlen; ++i) {
+      char date[100] = { 0 };
       int num,j;
       char **tokens = stb_tokens_stripwhite(list[i], "|", &num);  // stb_tokens -- tokenize string into malloced array of strings
       int num_lines;
       char **lines = stb_stringfile(stb_sprintf("../%s", tokens[0]), &num_lines);
       char *s1, *s2,*s3;
+
+      {
+         FILE *f = _popen(stb_sprintf("git log -1 --pretty=%%ai ../%s", tokens[0]), "r");
+         int len = fread(date, 1, 90, f);
+         if (len >= 0 && len < sizeof(date))
+            date[len] = 0;
+         else
+            date[99] = 0;
+         if (date[10] == ' ')
+            date[10] = 0;
+      }
+
+
       if (lines == NULL) stb_fatal("Couldn't open '%s'", tokens[0]);
       s1 = strchr(lines[0], '-');
       if (!s1) stb_fatal("Couldn't find '-' before version number in %s", tokens[0]); // stb_fatal -- print error message & exit
@@ -51,6 +65,7 @@ int main(int argc, char  **argv)
       total_lines += num_lines;
       for (j=2; j < num; ++j)
          fprintf(f, " | %s", tokens[j]);
+      fprintf(f, " | %s", date);
       fprintf(f, "\r\n");
    }
 

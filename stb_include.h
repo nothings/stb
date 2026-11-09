@@ -1,21 +1,22 @@
-// stb_include.h - v0.02 - parse and process #include directives - public domain
+// stb_include.h - v0.3 - parse and process #include directives - public domain
 //
 //          SECURITY CONCERNS
 //
 //          - if you let other people control the inputs to this,
 //            they can read arbitrary files from the filesystem.
 //
-//          - there may be other bugs too. that's not what this is for.
+//          - there may be other security bugs too. this isn't meant
+//            for untrusted inputs
 //
 // To build this, in one source file that includes this file do
 //      #define STB_INCLUDE_IMPLEMENTATION
 //
 // This program parses a string and replaces lines of the form
 //         #include "foo"
-// with the contents of a file named "foo". It also embeds the
-// appropriate #line directives. Note that all include files must
-// reside in the location specified in the path passed to the API;
-// it does not check multiple directories.
+// with the contents of a file named "foo". It also embeds the appropriate
+// #line directives. Note that all include files must reside reside in the
+// location specified relative to the path passed to the API; it does not
+// check multiple directories.
 //
 // If the string contains a line of the form
 //         #inject

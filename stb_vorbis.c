@@ -1,4 +1,4 @@
-// Ogg Vorbis audio decoder - v1.22 - public domain
+// Ogg Vorbis audio decoder - v1.23 - public domain
 // http://nothings.org/stb_vorbis/
 //
 // Original version written by Sean Barrett in 2007.
@@ -38,6 +38,7 @@
 //    Alice Rowan
 //
 // Partial history:
+//    1.23    - 2026-11-08 - many fixes, support for 64-bit seek/offsets
 //    1.22    - 2021-07-11 - various small fixes
 //    1.21    - 2021-07-02 - fix bug for files with no comments
 //    1.20    - 2020-07-11 - several small fixes
