@@ -599,7 +599,6 @@ extern void * stbds_hminit_impl(void *a, size_t elemsize);
 
 #define stbds_hmput(t, k, v) \
     ((t) = stbds_hmput_key_wrapper((t), sizeof *(t), (void*) STBDS_ADDRESSOF((t)->key, (k)), sizeof (t)->key, 0),   \
-     (t)[stbds_temp((t)-1)].key = (k),    \
      (t)[stbds_temp((t)-1)].value = (v))
 
 #define stbds_hmputs(t, s) \
