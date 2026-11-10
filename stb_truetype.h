@@ -5017,6 +5017,8 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
          }
          i += 4;
       } else if (ch >= 0xdc00 && ch < 0xe000) {
+         if (write)
+            buffer[i] = 0;
          return -1;
       } else {
          if (write) {
