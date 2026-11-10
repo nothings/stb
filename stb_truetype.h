@@ -4963,39 +4963,44 @@ STBTT_DEF const char *stbtt_GetFontNameString(const stbtt_fontinfo *font, int *l
    return NULL;
 }
 
-// convert utf16 to utf8 and return the maximum length required; buffer can be NULL to just query length
+// convert utf16 to utf8 and return the length required to output NUL-terminated; buffer_len of 0 means to just query length
+// if you pass a buffer that's too small, it'll NULL terminate and return the actual length computed
 STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsigned char *src, size_t src_len_raw)
 {
    int src_len = (int) src_len_raw;
    size_t total_len=0;
    int write_max = 0;
    int i = 0, write, off = 0;
-   write = (buffer != NULL);
-   if (buffer_len <= 1)
-      write = 0;
-   else
-      write_max = (int) (buffer_len-1);
+   write = (buffer_len != 0);
+   write_max = (int) (buffer_len-1);
 
-   if ((size_t) src_len != src_len_raw || write_max < 0 || ((size_t) write_max+1 != buffer_len && write_max != 0))
+   if ((size_t) src_len != src_len_raw)
       return -1;
+
+   if (write) {
+      if (write_max < 0 || ((size_t) write_max+1 != buffer_len && write_max != 0))
+         return -1;
+   }
+
+   if (buffer_len == 1) {
+      buffer[0] = 0;
+      return 1;
+   }
 
    while (off < src_len) {
       stbtt_uint16 ch = src[off+0]*256 + src[off+1];
       off += 2;
       if (ch < 0x80) {
          if (write) {
-            if (i >= write_max) { buffer[i] = 0; write = 0; }
-            else
-               buffer[i] = (char) ch;
+            if (i >= write_max) { buffer[i] = 0; return i+1; }
+            buffer[i] = (char) ch;
          }
          ++i;
       } else if (ch < 0x800) {
          if (write) {
-            if (i+1 >= write_max) { buffer[i] = 0; write = 0; }
-            else {
-               buffer[i+0] = (char) 0xc0 + (ch >> 6);
-               buffer[i+1] = (char) 0x80 + (ch & 0x3f);
-            }
+            if (i+1 >= write_max) { buffer[i] = 0; return i+1; }
+            buffer[i+0] = (char) 0xc0 + (ch >> 6);
+            buffer[i+1] = (char) 0x80 + (ch & 0x3f);
          }
          i += 2;
       } else if (ch >= 0xd800 && ch < 0xdc00) {
@@ -5003,26 +5008,22 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
          stbtt_uint16 ch2 = src[off+0]*256 + src[off+1];
          off += 2;
          if (write) {
-            if (i+3 >= write_max) { buffer[i] = 0; write = 0; }
-            else {
-               c = ((ch - 0xd800) << 10) + (ch2 - 0xdc00) + 0x10000;
-               buffer[i+0] = (char) 0xf0 + (c >> 18);
-               buffer[i+1] = (char) 0x80 + ((c >> 12) & 0x3f);
-               buffer[i+2] = (char) 0x80 + ((c >>  6) & 0x3f);
-               buffer[i+3] = (char) 0x80 + ((c      ) & 0x3f);
-            }
+            if (i+3 >= write_max) { buffer[i] = 0; return i+1; }
+            c = ((ch - 0xd800) << 10) + (ch2 - 0xdc00) + 0x10000;
+            buffer[i+0] = (char) 0xf0 + (c >> 18);
+            buffer[i+1] = (char) 0x80 + ((c >> 12) & 0x3f);
+            buffer[i+2] = (char) 0x80 + ((c >>  6) & 0x3f);
+            buffer[i+3] = (char) 0x80 + ((c      ) & 0x3f);
          }
          i += 4;
       } else if (ch >= 0xdc00 && ch < 0xe000) {
          return -1;
       } else {
          if (write) {
-            if (i+2 >= write_max) { buffer[i] = 0; write = 0; }
-            else {
-               buffer[i+0] = 0xe0 + (ch >> 12);
-               buffer[i+1] = 0x80 + ((ch >> 6) & 0x3f);
-               buffer[i+2] = 0x80 + ((ch     ) & 0x3f);
-            }
+            if (i+2 >= write_max) { buffer[i] = 0; return i+1; }
+            buffer[i+0] = 0xe0 + (ch >> 12);
+            buffer[i+1] = 0x80 + ((ch >> 6) & 0x3f);
+            buffer[i+2] = 0x80 + ((ch     ) & 0x3f);
          }
          i += 3;
       }
@@ -5031,7 +5032,7 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
       assert(i <= write_max);
       buffer[i] = 0;
    }
-   return i;
+   return i+1;
 }
 
 // Returns the english full name of the font as UTF-8

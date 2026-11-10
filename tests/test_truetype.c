@@ -42,18 +42,26 @@ int main(int argc, char **argv)
    int w,h,i,j,c = (argc > 1 ? atoi(argv[1]) : '@'), s = (argc > 2 ? atoi(argv[2]) : 32);
 
    for (j=1; j < 0x800; ++j) {
-      char buffer[4] = { (j>>8), (j&255)< 0,0 };
+      char buffer[4] = { (j>>8), (j&255), 0,0 };
       char decode[10];
       int len = stbtt__ConvertUTF16BEtoUTF8(NULL, 0, (char*) buffer, 2);
       printf("%d", len);
       if (len == -1)
          len = len;
 
-      for (i=0; i < 10; ++i) {
+      for (i=1; i < 10; ++i) {
          int ilen;
          memset(decode, 0xff, 10);
          ilen = stbtt__ConvertUTF16BEtoUTF8(decode, i, (char*) buffer, 2);
-         if (ilen >= 0) assert(len == ilen);
+         if (len >= 0)
+            assert(ilen >= 0 && ilen <= len);
+         if (ilen >= 0) {
+            for (w=0; w < ilen; ++w)
+               assert((unsigned char) decode[w] != 0xff);
+            for (w=0; w < ilen-1; ++w)
+               assert(decode[w] != 0);
+            assert(decode[w] == 0);
+         }
          for (w=i; w < 10; ++w)
             assert((unsigned char) decode[w] == 0xff);
       }
@@ -67,11 +75,19 @@ int main(int argc, char **argv)
       if (len == -1)
          len = len;
 
-      for (i=0; i < 10; ++i) {
+      for (i=1; i < 10; ++i) {
          int ilen;
          memset(decode, 0xff, 10);
          ilen = stbtt__ConvertUTF16BEtoUTF8(decode, i, (char*) buffer, 2);
-         if (ilen >= 0) assert(len == ilen);
+         if (len >= 0)
+            assert(ilen >= 0 && ilen <= len);
+         if (ilen >= 0) {
+            for (w=0; w < ilen; ++w)
+               assert((unsigned char) decode[w] != 0xff);
+            for (w=0; w < ilen-1; ++w)
+               assert(decode[w] != 0);
+            assert(decode[w] == 0);
+         }
          for (w=i; w < 10; ++w)
             assert((unsigned char) decode[w] == 0xff);
       }
