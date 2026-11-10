@@ -4979,7 +4979,7 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
    if ((size_t) src_len != src_len_raw || write_max < 0 || ((size_t) write_max+1 != buffer_len && write_max != 0))
       return -1;
 
-   while (off < src_len && i < write_max) {
+   while (off < src_len) {
       stbtt_uint16 ch = src[off+0]*256 + src[off+1];
       off += 2;
       if (ch < 0x80) {
