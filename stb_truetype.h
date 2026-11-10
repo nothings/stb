@@ -5028,7 +5028,7 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
       }
    }
    if (write) {
-      assert(i < write_max);
+      assert(i <= write_max);
       buffer[i] = 0;
    }
    return i;

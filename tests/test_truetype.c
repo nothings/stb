@@ -43,6 +43,15 @@ int main(int argc, char **argv)
 
    stbds_unit_tests();
 
+   for (j=1; j < 0x800; ++j) {
+      short buffer[2] = { j,0 };
+      char decode[10];
+      int len = stbtt__ConvertUTF16BEtoUTF8(NULL, 0, (char*) buffer, 2);
+
+      for (i=0; i < 10; ++i)
+         stbtt__ConvertUTF16BEtoUTF8(decode, i, (char*) buffer, 2);
+   }
+
    //debug();
 
    //fread(ttf_buffer, 1, 1<<25, fopen(argc > 3 ? argv[3] : "c:/windows/fonts/mingliu.ttc", "rb"));
