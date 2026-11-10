@@ -888,7 +888,7 @@ struct stb_vorbis
 
   // current page/packet/segment streaming info
    uint32 serial; // stream serial number for verification
-   int last_page;
+   int64 last_page;
    int segment_count;
    uint8 segments[255];
    uint8 page_flag;
@@ -3475,7 +3475,7 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
                // negative truncation, that's impossible!
                *len = 0;
             } else {
-               *len = current_end - f->current_loc;
+               *len = (int) (current_end - f->current_loc);  // this should always fit in an int
             }
             *len += left_start; // this doesn't seem right, but has no ill effect on my test files
             if (*len > right_end) *len = right_end; // this should never happen
@@ -4676,7 +4676,7 @@ unsigned int stb_vorbis_get_file_offset(stb_vorbis *f)
 // DATA-PULLING API
 //
 
-static uint32 vorbis_find_page(stb_vorbis *f, uint32 *end, uint32 *last)
+static uint32 vorbis_find_page(stb_vorbis *f, int64 *end, int64 *last)
 {
    for(;;) {
       int n;
@@ -4792,9 +4792,9 @@ static int get_seek_page_info(stb_vorbis *f, ProbedPage *z)
 
 // rarely used function to seek back to the preceding page while finding the
 // start of a packet
-static int go_to_page_before(stb_vorbis *f, unsigned int limit_offset)
+static int go_to_page_before(stb_vorbis *f, int64 limit_offset)
 {
-   unsigned int previous_safe, end;
+   int64 previous_safe, end;
 
    // now we want to seek back 64K from the limit
    if (limit_offset >= 65536 && limit_offset-65536 >= f->first_audio_page_offset)
@@ -4820,8 +4820,8 @@ static int go_to_page_before(stb_vorbis *f, unsigned int limit_offset)
 static int seek_to_sample_coarse(stb_vorbis *f, stb_vorbis_int64 sample_number)
 {
    ProbedPage left, right, mid;
-   int i, start_seg_with_known_loc, end_pos, page_start;
-   int64 delta, stream_length, padding, last_sample_limit;
+   int i, start_seg_with_known_loc, end_pos;
+   int64 delta, stream_length, padding, last_sample_limit, page_start;
    double offset = 0.0, bytes_per_sample = 0.0;
    int probe = 0;
 
@@ -4873,7 +4873,7 @@ static int seek_to_sample_coarse(stb_vorbis *f, stb_vorbis_int64 sample_number)
          if (probe < 2) {
             if (probe == 0) {
                // first probe (interpolate)
-               double data_bytes = right.page_end - left.page_start;
+               double data_bytes = (double) (right.page_end - left.page_start);
                bytes_per_sample = data_bytes / right.last_decoded_sample;
                offset = left.page_start + bytes_per_sample * (last_sample_limit - left.last_decoded_sample);
             } else {
@@ -4886,11 +4886,11 @@ static int seek_to_sample_coarse(stb_vorbis *f, stb_vorbis_int64 sample_number)
 
             // ensure the offset is valid
             if (offset < left.page_end)
-               offset = left.page_end;
+               offset = (double) left.page_end;
             if (offset > right.page_start - 65536)
-               offset = right.page_start - 65536;
+               offset = (double) (right.page_start - 65536);
 
-            set_file_offset(f, (unsigned int) offset);
+            set_file_offset(f, (int64) offset);
          } else {
             // binary search for large ranges (offset by 32K to ensure
             // we don't hit the right page)
@@ -5059,11 +5059,11 @@ int stb_vorbis_seek64(stb_vorbis *f, stb_vorbis_int64 sample_number)
 
    if (sample_number != f->current_loc) {
       int n;
-      uint32 frame_start = f->current_loc;
+      int64 frame_start = f->current_loc;
       (void)stb_vorbis_get_frame_float(f, &n, NULL);
       assert(sample_number > frame_start);
       assert(f->channel_buffer_start + (int) (sample_number-frame_start) <= f->channel_buffer_end);
-      f->channel_buffer_start += (sample_number - frame_start);
+      f->channel_buffer_start += (int) (sample_number - frame_start);
    }
 
    f->current_playback_loc_valid = TRUE;
@@ -5086,17 +5086,18 @@ unsigned int stb_vorbis_stream_length_in_samples(stb_vorbis *f)
 {
    int64 ret = stb_vorbis_stream_length_in_samples64(f);
    if (ret > UINT_MAX) { return UINT_MAX; }
-   return ret;
+   return (unsigned int) ret;
 }
 
 stb_vorbis_int64 stb_vorbis_stream_length_in_samples64(stb_vorbis *f)
 {
    unsigned int restore_offset, previous_safe;
-   unsigned int end, last_page_loc;
+   unsigned int last_page_loc;
+   int64 end;
 
    if (IS_PUSH_MODE(f)) return error(f, VORBIS_invalid_api_mixing);
    if (!f->total_samples) {
-      unsigned int last;
+      int64 last;
       uint64 total;
       char header[6];
 
@@ -5413,14 +5414,15 @@ int stb_vorbis_get_frame_short_interleaved(stb_vorbis *f, int num_c, short *buff
    return len;
 }
 
-static stb_vorbis_int64 fixup_current_playback_loc(stb_vorbis *f, stb_vorbis_int64 n)
+// returns number of samples decoded, so int not int64
+static int fixup_current_playback_loc(stb_vorbis *f, int n)
 {
    int64 lgs;
 
    f->current_playback_loc += n;
    lgs = stb_vorbis_stream_length_in_samples64(f);
    if (lgs != 0 && lgs != SAMPLE_unknown && f->current_playback_loc > lgs) {
-       int64 r = n - (f->current_playback_loc - lgs);
+       int r = (int) (n - (f->current_playback_loc - lgs));
        f->current_playback_loc = lgs;
        return r;
    }
@@ -5434,7 +5436,7 @@ int stb_vorbis_get_samples_short_interleaved(stb_vorbis *f, int channels, short 
    int len = num_shorts / channels;
    int n=0;
    while (n < len) {
-      int k = f->channel_buffer_end - f->channel_buffer_start;
+      int k = (int) (f->channel_buffer_end - f->channel_buffer_start);
       if (n+k >= len) k = len - n;
       if (k)
          convert_channels_short_interleaved(channels, buffer, f->channels, f->channel_buffers, f->channel_buffer_start, k);
