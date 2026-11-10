@@ -4979,21 +4979,23 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
    if ((size_t) src_len != src_len_raw || write_max < 0 || ((size_t) write_max+1 != buffer_len && write_max != 0))
       return -1;
 
-
-   while (off < src_len) {
+   while (off < src_len && i < write_max) {
       stbtt_uint16 ch = src[off+0]*256 + src[off+1];
       off += 2;
       if (ch < 0x80) {
          if (write) {
             if (i >= write_max) { buffer[i] = 0; write = 0; }
-            buffer[i] = (char) ch;
+            else
+               buffer[i] = (char) ch;
          }
          ++i;
       } else if (ch < 0x800) {
          if (write) {
             if (i+1 >= write_max) { buffer[i] = 0; write = 0; }
-            buffer[i+0] = (char) 0xc0 + (ch >> 6);
-            buffer[i+1] = (char) 0x80 + (ch & 0x3f);
+            else {
+               buffer[i+0] = (char) 0xc0 + (ch >> 6);
+               buffer[i+1] = (char) 0x80 + (ch & 0x3f);
+            }
          }
          i += 2;
       } else if (ch >= 0xd800 && ch < 0xdc00) {
@@ -5002,11 +5004,13 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
          off += 2;
          if (write) {
             if (i+3 >= write_max) { buffer[i] = 0; write = 0; }
-            c = ((ch - 0xd800) << 10) + (ch2 - 0xdc00) + 0x10000;
-            buffer[i+0] = (char) 0xf0 + (c >> 18);
-            buffer[i+1] = (char) 0x80 + ((c >> 12) & 0x3f);
-            buffer[i+2] = (char) 0x80 + ((c >>  6) & 0x3f);
-            buffer[i+3] = (char) 0x80 + ((c      ) & 0x3f);
+            else {
+               c = ((ch - 0xd800) << 10) + (ch2 - 0xdc00) + 0x10000;
+               buffer[i+0] = (char) 0xf0 + (c >> 18);
+               buffer[i+1] = (char) 0x80 + ((c >> 12) & 0x3f);
+               buffer[i+2] = (char) 0x80 + ((c >>  6) & 0x3f);
+               buffer[i+3] = (char) 0x80 + ((c      ) & 0x3f);
+            }
          }
          i += 4;
       } else if (ch >= 0xdc00 && ch < 0xe000) {
@@ -5014,15 +5018,19 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
       } else {
          if (write) {
             if (i+2 >= write_max) { buffer[i] = 0; write = 0; }
-            buffer[i+0] = 0xe0 + (ch >> 12);
-            buffer[i+1] = 0x80 + ((ch >> 6) & 0x3f);
-            buffer[i+2] = 0x80 + ((ch     ) & 0x3f);
+            else {
+               buffer[i+0] = 0xe0 + (ch >> 12);
+               buffer[i+1] = 0x80 + ((ch >> 6) & 0x3f);
+               buffer[i+2] = 0x80 + ((ch     ) & 0x3f);
+            }
          }
          i += 3;
       }
    }
-   if (write)
+   if (write) {
+      assert(i < write_max);
       buffer[i] = 0;
+   }
    return i;
 }
 
