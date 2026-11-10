@@ -41,16 +41,43 @@ int main(int argc, char **argv)
    unsigned char *bitmap;
    int w,h,i,j,c = (argc > 1 ? atoi(argv[1]) : '@'), s = (argc > 2 ? atoi(argv[2]) : 32);
 
-   stbds_unit_tests();
-
    for (j=1; j < 0x800; ++j) {
+      char buffer[4] = { (j>>8), (j&255)< 0,0 };
+      char decode[10];
+      int len = stbtt__ConvertUTF16BEtoUTF8(NULL, 0, (char*) buffer, 2);
+      printf("%d", len);
+      if (len == -1)
+         len = len;
+
+      for (i=0; i < 10; ++i) {
+         int ilen;
+         memset(decode, 0xff, 10);
+         ilen = stbtt__ConvertUTF16BEtoUTF8(decode, i, (char*) buffer, 2);
+         if (ilen >= 0) assert(len == ilen);
+         for (w=i; w < 10; ++w)
+            assert((unsigned char) decode[w] == 0xff);
+      }
+   }
+
+   for (j=1; j < 0x8000; ++j) {
       short buffer[2] = { j,0 };
       char decode[10];
       int len = stbtt__ConvertUTF16BEtoUTF8(NULL, 0, (char*) buffer, 2);
+      printf("%d", len);
+      if (len == -1)
+         len = len;
 
-      for (i=0; i < 10; ++i)
-         stbtt__ConvertUTF16BEtoUTF8(decode, i, (char*) buffer, 2);
+      for (i=0; i < 10; ++i) {
+         int ilen;
+         memset(decode, 0xff, 10);
+         ilen = stbtt__ConvertUTF16BEtoUTF8(decode, i, (char*) buffer, 2);
+         if (ilen >= 0) assert(len == ilen);
+         for (w=i; w < 10; ++w)
+            assert((unsigned char) decode[w] == 0xff);
+      }
    }
+
+   stbds_unit_tests();
 
    //debug();
 
