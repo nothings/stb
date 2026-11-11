@@ -45,10 +45,12 @@
 extern "C" {
 #endif
 
+#ifndef STBDDEF
 #ifdef STB_DXT_STATIC
 #define STBDDEF static
 #else
 #define STBDDEF extern
+#endif
 #endif
 
 // compression mode (bitflags)
