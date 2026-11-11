@@ -5587,6 +5587,7 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
    stbi_uc pal[256][4];
    int psize=0,i,j,width;
    int flip_vertically, pad, target;
+   int bytes_read_so_far;
    stbi__bmp_data info;
    STBI_NOTUSED(ri);
 
@@ -5606,17 +5607,20 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
    ma = info.ma;
    all_a = info.all_a;
 
+   bytes_read_so_far = info.hsz + info.extra_read;
+   if (info.offset < bytes_read_so_far)
+      return stbi__errpuc("bad header", "Corrupt BMP");
+
    if (info.hsz == 12) {
       if (info.bpp < 24)
-         psize = (info.offset - info.extra_read - info.hsz) / 3;
+         psize = (info.offset - bytes_read_so_far) / 3;
    } else {
       if (info.bpp < 16)
-         psize = (info.offset - info.extra_read - info.hsz) >> 2;
+         psize = (info.offset - bytes_read_so_far) >> 2;
    }
    if (psize == 0) {
       // accept some number of extra bytes after the header, but if the offset points either to before
       // the header ends or implies a large amount of extra data, reject the file as malformed
-      int bytes_read_so_far = info.extra_read + info.hsz;
       int header_limit = 1024; // max we actually read is below 256 bytes currently.
       int extra_data_limit = 256*4; // what ordinarily goes here is a palette; 256 entries*4 bytes is its max size.
       if (bytes_read_so_far <= 0 || bytes_read_so_far > header_limit) {
