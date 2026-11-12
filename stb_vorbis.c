@@ -69,8 +69,12 @@
 // See end of file for full version history.
 
 #ifdef STB_VORBIS_NO_PULLDATA_API
-   #define STB_VORBIS_NO_INTEGER_CONVERSION
-   #define STB_VORBIS_NO_STDIO
+   #ifndef STB_VORBIS_NO_INTEGER_CONVERSION
+      #define STB_VORBIS_NO_INTEGER_CONVERSION
+   #endif
+   #ifndef STB_VORBIS_NO_STDIO
+      #define STB_VORBIS_NO_STDIO
+   #endif
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -80,10 +84,6 @@
 
 #ifndef STB_VORBIS_INCLUDE_STB_VORBIS_H
 #define STB_VORBIS_INCLUDE_STB_VORBIS_H
-
-#if defined(STB_VORBIS_NO_CRT) && !defined(STB_VORBIS_NO_STDIO)
-#define STB_VORBIS_NO_STDIO 1
-#endif
 
 #ifndef STB_VORBIS_NO_STDIO
 #include <stdio.h>
@@ -580,35 +580,23 @@ enum STBVorbisError
 
 //////////////////////////////////////////////////////////////////////////////
 
-#if defined(STB_VORBIS_NO_CRT) && !defined(STB_VORBIS_NO_STDIO)
-   #define STB_VORBIS_NO_STDIO 1
-#endif
-
 #ifndef STB_VORBIS_NO_STDIO
 #include <stdio.h>
 #endif
 
-#ifndef STB_VORBIS_NO_CRT
-   #include <stdlib.h>
-   #include <string.h>
-   #include <assert.h>
-   #include <math.h>
-
-   // find definition of alloca if it's not in stdlib.h:
-   #if defined(_MSC_VER) || defined(__MINGW32__)
-      #include <malloc.h>
-   #endif
-   #if defined(__linux__) || defined(__linux) || defined(__sun__) || defined(__EMSCRIPTEN__) || defined(__NEWLIB__)
-      #include <alloca.h>
-   #endif
-#else // STB_VORBIS_NO_CRT
-   #define NULL 0
-   #define malloc(s)   0
-   #define free(p)     ((void) 0)
-   #define realloc(p,s) 0
-#endif // STB_VORBIS_NO_CRT
-
+#include <stdlib.h>
+#include <string.h>
+#include <assert.h>
+#include <math.h>
 #include <limits.h>
+
+// find definition of alloca if it's not in stdlib.h:
+#if defined(_MSC_VER) || defined(__MINGW32__)
+   #include <malloc.h>
+#endif
+#if defined(__linux__) || defined(__linux) || defined(__sun__) || defined(__EMSCRIPTEN__) || defined(__NEWLIB__)
+   #include <alloca.h>
+#endif
 
 #ifdef __MINGW32__
    // eff you mingw:
@@ -1431,6 +1419,8 @@ static void skip(vorb *z, int n)
    #endif
 }
 
+#ifndef STB_VORBIS_NO_PULLDATA_API
+
 static int set_file_offset(stb_vorbis *f, stb_vorbis_int64 loc)
 {
    #ifndef STB_VORBIS_NO_PUSHDATA_API
@@ -1470,6 +1460,8 @@ static int set_file_offset(stb_vorbis *f, stb_vorbis_int64 loc)
    return 0;
    #endif
 }
+
+#endif // STBI_VORBIS_NO_PULLDATA_API
 
 static __forceinline uint64 get64raw(uint8 *f)
 {
@@ -3561,6 +3553,7 @@ static int vorbis_finish_frame(stb_vorbis *f, int len, int left, int right)
    return right - left;
 }
 
+#ifndef STB_VORBIS_NO_PULLDATA_API
 static int vorbis_pump_first_frame(stb_vorbis *f)
 {
    int len, right, left, res;
@@ -3571,6 +3564,7 @@ static int vorbis_pump_first_frame(stb_vorbis *f)
    f->current_playback_loc_valid = TRUE;
    return res;
 }
+#endif
 
 #ifndef STB_VORBIS_NO_PUSHDATA_API
 static int is_whole_packet_present(stb_vorbis *f)
@@ -5267,6 +5261,22 @@ stb_vorbis * stb_vorbis_open_memory(const unsigned char *data, int len, int *err
    return NULL;
 }
 
+// returns number of samples decoded, so int not int64
+static int fixup_current_playback_loc(stb_vorbis *f, int n)
+{
+   int64 lgs;
+
+   f->current_playback_loc += n;
+   lgs = stb_vorbis_stream_length_in_samples64(f);
+   if (lgs != 0 && lgs != SAMPLE_unknown && f->current_playback_loc > lgs) {
+       int r = (int) (n - (f->current_playback_loc - lgs));
+       f->current_playback_loc = lgs;
+       return r;
+   }
+
+   return n;
+}
+
 #ifndef STB_VORBIS_NO_INTEGER_CONVERSION
 #define PLAYBACK_MONO     1
 #define PLAYBACK_LEFT     2
@@ -5412,22 +5422,6 @@ int stb_vorbis_get_frame_short_interleaved(stb_vorbis *f, int num_c, short *buff
       convert_channels_short_interleaved(num_c, buffer, f->channels, output, 0, len);
    }
    return len;
-}
-
-// returns number of samples decoded, so int not int64
-static int fixup_current_playback_loc(stb_vorbis *f, int n)
-{
-   int64 lgs;
-
-   f->current_playback_loc += n;
-   lgs = stb_vorbis_stream_length_in_samples64(f);
-   if (lgs != 0 && lgs != SAMPLE_unknown && f->current_playback_loc > lgs) {
-       int r = (int) (n - (f->current_playback_loc - lgs));
-       f->current_playback_loc = lgs;
-       return r;
-   }
-
-   return n;
 }
 
 int stb_vorbis_get_samples_short_interleaved(stb_vorbis *f, int channels, short *buffer, int num_shorts)
