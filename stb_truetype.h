@@ -54,7 +54,7 @@
 //       Hou Qiming                 Derek Vinyard
 //       Rob Loach                  Cort Stratton
 //       Kenney Phillis Jr.         Brian Costabile
-//       Ken Voskuil (kaesve)       Yakov Galka           
+//       Ken Voskuil (kaesve)       Yakov Galka
 //       Neil Bickford              Matthias Dorfelt
 //       Isaac "Atridas" Serrano
 //
@@ -654,7 +654,7 @@ STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h
 STBTT_DEF void stbtt_PackSetSkipMissingCodepoints(stbtt_pack_context *spc, int skip);
 // If skip != 0, this tells stb_truetype to skip any codepoints for which
 // there is no corresponding glyph. If skip=0, which is the default, then
-// codepoints without a glyph recived the font's "missing character" glyph,
+// codepoints without a glyph received the font's "missing character" glyph,
 // typically an empty box by convention.
 
 STBTT_DEF void stbtt_GetPackedQuad(const stbtt_packedchar *chardata, int pw, int ph,  // same data as above
@@ -897,7 +897,7 @@ STBTT_DEF unsigned char *stbtt_GetCodepointBitmap(const stbtt_fontinfo *info, fl
 // xoff/yoff are the offset it pixel space from the glyph origin to the top-left of the bitmap
 
 STBTT_DEF unsigned char *stbtt_GetCodepointBitmapSubpixel(const stbtt_fontinfo *info, float scale_x, float scale_y, float shift_x, float shift_y, int codepoint, int *width, int *height, int *xoff, int *yoff);
-// the same as stbtt_GetCodepoitnBitmap, but you can specify a subpixel
+// the same as stbtt_GetCodepointBitmap, but you can specify a subpixel
 // shift for the character
 
 STBTT_DEF void stbtt_MakeCodepointBitmap(const stbtt_fontinfo *info, unsigned char *output, int out_w, int out_h, int out_stride, float scale_x, float scale_y, int codepoint);
@@ -4418,7 +4418,7 @@ STBTT_DEF void stbtt_PackFontRangesPackRects(stbtt_pack_context *spc, stbrp_rect
 STBTT_DEF int stbtt_PackFontRanges(stbtt_pack_context *spc, const unsigned char *fontdata, int font_index, stbtt_pack_range *ranges, int num_ranges)
 {
    stbtt_fontinfo info;
-   int i,j,n, return_value = 1;
+   int i, j, n, return_value;
    //stbrp_context *context = (stbrp_context *) spc->pack_info;
    stbrp_rect    *rects;
 
@@ -4968,7 +4968,6 @@ STBTT_DEF const char *stbtt_GetFontNameString(const stbtt_fontinfo *font, int *l
 STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsigned char *src, size_t src_len_raw)
 {
    int src_len = (int) src_len_raw;
-   size_t total_len=0;
    int write_max = 0;
    int i = 0, write, off = 0;
    write = (buffer_len != 0);
@@ -4999,8 +4998,8 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
       } else if (ch < 0x800) {
          if (write) {
             if (i+1 >= write_max) { buffer[i] = 0; return i+1; }
-            buffer[i+0] = (char) 0xc0 + (ch >> 6);
-            buffer[i+1] = (char) 0x80 + (ch & 0x3f);
+            buffer[i+0] = (char) ( 0xc0 + (ch >> 6) );
+            buffer[i+1] = (char) ( 0x80 + (ch & 0x3f) );
          }
          i += 2;
       } else if (ch >= 0xd800 && ch < 0xdc00) {
@@ -5010,10 +5009,10 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
          if (write) {
             if (i+3 >= write_max) { buffer[i] = 0; return i+1; }
             c = ((ch - 0xd800) << 10) + (ch2 - 0xdc00) + 0x10000;
-            buffer[i+0] = (char) 0xf0 + (c >> 18);
-            buffer[i+1] = (char) 0x80 + ((c >> 12) & 0x3f);
-            buffer[i+2] = (char) 0x80 + ((c >>  6) & 0x3f);
-            buffer[i+3] = (char) 0x80 + ((c      ) & 0x3f);
+            buffer[i+0] = (char) ( 0xf0 + (c >> 18) );
+            buffer[i+1] = (char) ( 0x80 + ((c >> 12) & 0x3f) );
+            buffer[i+2] = (char) ( 0x80 + ((c >>  6) & 0x3f) );
+            buffer[i+3] = (char) ( 0x80 + ((c      ) & 0x3f) );
          }
          i += 4;
       } else if (ch >= 0xdc00 && ch < 0xe000) {
@@ -5023,15 +5022,15 @@ STBTT_DEF int stbtt__ConvertUTF16BEtoUTF8(char *buffer, size_t buffer_len, unsig
       } else {
          if (write) {
             if (i+2 >= write_max) { buffer[i] = 0; return i+1; }
-            buffer[i+0] = 0xe0 + (ch >> 12);
-            buffer[i+1] = 0x80 + ((ch >> 6) & 0x3f);
-            buffer[i+2] = 0x80 + ((ch     ) & 0x3f);
+            buffer[i+0] = (char) ( 0xe0 + (ch >> 12) );
+            buffer[i+1] = (char) ( 0x80 + ((ch >> 6) & 0x3f) );
+            buffer[i+2] = (char) ( 0x80 + ((ch     ) & 0x3f) );
          }
          i += 3;
       }
    }
    if (write) {
-      assert(i <= write_max);
+      STBTT_assert(i <= write_max);
       buffer[i] = 0;
    }
    return i+1;
