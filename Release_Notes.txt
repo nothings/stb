@@ -102,6 +102,7 @@
 ==== stb_textedit.h v1.15
 
 - bugfixes
+- new function: stb_textedit_char() for separate handling e.g. WM_KEYDOWN vs WM_CHAR
 
 ==== stb_connected_components.h v0.97
 
