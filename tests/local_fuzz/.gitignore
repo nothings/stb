@@ -5,6 +5,10 @@ image_msan
 vorbis_asan
 vorbis_ubsan
 vorbis_msan
+c_lexer_asan
+c_lexer_ubsan
+c_lexer_msan
+c_lexer_seeds
 cache
 image.dict
 

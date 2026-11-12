@@ -26,7 +26,6 @@
 //     0.02 first public release
 //
 // Status:
-//     - haven't tested compiling as C++
 //     - haven't tested the float parsing path
 //     - haven't tested the non-default-config paths (e.g. non-stdlib)
 //     - only tested default-config paths by eyeballing output of self-parse

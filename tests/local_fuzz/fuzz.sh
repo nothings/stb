@@ -23,6 +23,13 @@ case "$1" in
       # as seed
       EXTRA_ARGS="-dict=../stb_vorbis.dict vorbis_asan"
       ;;
+   c_lexer_asan)
+      EXTRA_ARGS="-dict=../stb_c_lexer.dict c_lexer_seeds"
+      ;;
+   c_lexer_*)
+      # same thing again
+      EXTRA_ARGS="-dict=../stb_c_lexer.dict c_lexer_asan"
+      ;;
    *)
       echo "Target not recognized."
       exit 1
@@ -31,4 +38,4 @@ esac
 
 mkdir -p $1
 
-bin/$1 $1 -max_len=4096 $EXTRA_ARGS
+bin/$1 $1 -max_len=131072 $EXTRA_ARGS
