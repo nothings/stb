@@ -7454,10 +7454,11 @@ STBIDEF int stbi_info_from_file(FILE *f, int *x, int *y, int *comp)
 
 STBIDEF stbi_info_res stbi_info2(char const *filename)
 {
-   stbi_info_res res = {0};
+   stbi_info_res res;
    FILE *f = stbi__fopen(filename, "rb");
    if (!f) {
       stbi__err("can't fopen", "Unable to open file");
+      memset(&res,0,sizeof(res));
       return res;
    }
    res = stbi_info2_from_file(f);
@@ -7467,7 +7468,7 @@ STBIDEF stbi_info_res stbi_info2(char const *filename)
 
 STBIDEF stbi_info_res stbi_info2_from_file(FILE *f)
 {
-   stbi_info_res res = {0};
+   stbi_info_res res;
    stbi__context s;
    long pos = ftell(f);
    stbi__start_file(&s, f);
