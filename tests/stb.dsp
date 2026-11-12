@@ -90,6 +90,10 @@ SOURCE=.\grid_reachability.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\Release_Notes.txt
+# End Source File
+# Begin Source File
+
 SOURCE=.\stb.c
 # End Source File
 # Begin Source File
