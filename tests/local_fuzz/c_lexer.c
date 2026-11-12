@@ -33,42 +33,41 @@
 #define STB_C_LEX_FLOAT_NO_DECIMAL     Y
 
 #define STB_C_LEX_DISCARD_PREPROCESSOR    Y
+
+#define STB_C_LEX_OCTAL_CHARS          Y
+#define STB_C_LEX_HEX_CHARS            Y
+
 //#define STB_C_LEX_ISWHITE(str)    ...
 #define STB_C_LEXER_DEFINITIONS
 
 #define STB_C_LEXER_IMPLEMENTATION
-#define STB_C_LEXER_SELF_TEST
-#include "../stb_c_lexer.h"
+#include "stb_c_lexer.h"
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
 
+#ifdef __cplusplus
+extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size);
+#endif
 
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
+int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
-	if(size<3){
-		return 0;
-	}
-	char *input_stream = (char *)malloc(size);
-	if (input_stream == NULL){
-		return 0;
-	}
-	memcpy(input_stream, data, size);
+   char *input_stream = (char *)data;
+   char *input_end = input_stream+size-1;
+   int len = 0x10000;
+   char *store = (char *)malloc(len);
+   stb_lexer lex;
 
-	stb_lexer lex;
-	char *input_end = input_stream+size-1;
-	char *store = (char *)malloc(0x10000);
-	int len = 0x10000;
-	
-	stb_c_lexer_init(&lex, input_stream, input_end, store, len);
-	while (stb_c_lexer_get_token(&lex)) {
-		if (lex.token == CLEX_parse_error) {
-			break;
-		}
-	}
-	
-	free(input_stream);
-	free(store);
-	return 0;
+   if (size >= 3) {
+      stb_c_lexer_init(&lex, input_stream, input_end, store, len);
+      while (stb_c_lexer_get_token(&lex)) {
+         if (lex.token == CLEX_parse_error) {
+            break;
+         }
+      }
+   }
+
+   free(store);
+   return 0;
 }

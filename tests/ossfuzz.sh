@@ -16,6 +16,10 @@ $CXX $CXXFLAGS -std=c++11 -I. \
 	$SRC/stb/tests/local_fuzz/vorbis.c \
 	-o $OUT/stb_vorbis_fuzzer $LIB_FUZZING_ENGINE
 
+$CXX $CXXFLAGS -std=c++11 -I. \
+	$SRC/stb/tests/local_fuzz/c_lexer.c \
+	-o $OUT/stb_c_lexer_fuzzer $LIB_FUZZING_ENGINE
+
 # PNG-only corpus
 
 find $SRC/stb/tests/pngsuite -name "*.png" | \
@@ -42,3 +46,8 @@ find $SRC/stb/tests/local_fuzz/vorbis_seeds -name "*.ogg" \
 	| xargs zip $OUT/stb_vorbis_fuzzer_seed_corpus.zip
 
 cp $SRC/stb/tests/stb_vorbis.dict $OUT/stb_vorbis_fuzzer.dict
+
+# stb_c_lexer starting corpus is just stb_c_lexer.h itself
+
+zip $OUT/stb_c_lexer_seed_corpus.zip $SRC/stb/stb_c_lexer.h
+cp $SRC/stb/tests/stb_c_lexer.dict $OUT/stb_c_lexer_fuzzer.dict
