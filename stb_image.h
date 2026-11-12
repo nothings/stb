@@ -5594,11 +5594,13 @@ static void *stbi__bmp_load(stbi__context *s, int *x, int *y, int *comp, int req
    if (stbi__bmp_parse_header(s, &info) == NULL)
       return NULL; // error code already set
 
+   if (s->img_y > STBI_MAX_DIMENSIONS || s->img_y < -STBI_MAX_DIMENSIONS || !s->img_y ||
+       s->img_x > STBI_MAX_DIMENSIONS || s->img_x <= 0) {
+       return stbi__errpuc("bad size","Invalid image dimensions (corrupt?)");
+   }
+
    flip_vertically = ((int) s->img_y) > 0;
    s->img_y = abs((int) s->img_y);
-
-   if (s->img_y > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
-   if (s->img_x > STBI_MAX_DIMENSIONS) return stbi__errpuc("too large","Very large image (corrupt?)");
 
    mr = info.mr;
    mg = info.mg;
