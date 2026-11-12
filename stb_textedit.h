@@ -29,7 +29,7 @@
 //
 // VERSION HISTORY
 //
-//   x.xx (2026-11-12) add stb_textedit_text(), STB_TEXTEDIT_GETPREVCHARINDEX(), STB_TEXTEDIT_GETNEXTCHARINDEX() to facilitate UTF-8 support while preserving byte indices.
+//   1.16 (2026-xx-xx) add stb_textedit_text(), STB_TEXTEDIT_GETPREVCHARINDEX(), STB_TEXTEDIT_GETNEXTCHARINDEX() to facilitate UTF-8 support while preserving byte indices.
 //   1.15 (2026-11-08) various fixes
 //   1.14 (2021-07-11) page up/down, various fixes
 //   1.13 (2019-02-07) fix bug in undo size management
@@ -56,11 +56,11 @@
 //   Fabian Giesen: secondary key inputs in 1.5
 //   Martins Mozeiko: STB_TEXTEDIT_memmove in 1.6
 //   Louis Schnellbach: page up/down in 1.14
+//   Omar Cornut, alektron@github: move-by-codepoint in UTF8, stb_textedit_text in 1.16
 //
 //   Bugfixes:
 //      Scott Graham
 //      Daniel Keller
-//      Omar Cornut
 //      Dan Thompson
 //
 // USAGE
@@ -745,13 +745,13 @@ static void stb_textedit_text(STB_TEXTEDIT_STRING* str, STB_TexteditState* state
    if (state->insert_mode && !STB_TEXT_HAS_SELECTION(state) && state->cursor < STB_TEXTEDIT_STRINGLEN(str)) {
       stb_text_makeundo_replace(str, state, state->cursor, 1, 1);
       STB_TEXTEDIT_DELETECHARS(str, state->cursor, 1);
-      if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, text, text_len)) {
+      if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, (STB_TEXTEDIT_CHARTYPE*) text, text_len)) {
          state->cursor += text_len;
          state->has_preferred_x = 0;
       }
    } else {
       stb_textedit_delete_selection(str, state); // implicitly clamps
-      if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, text, text_len)) {
+      if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, (STB_TEXTEDIT_CHARTYPE*) text, text_len)) {
          stb_text_makeundo_insert(state, state->cursor, text_len);
          state->cursor += text_len;
          state->has_preferred_x = 0;
