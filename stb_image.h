@@ -6447,7 +6447,10 @@ static stbi_uc *stbi__process_gif_raster(stbi__context *s, stbi__gif *g)
    int revind;
 
    lzw_cs = stbi__get8(s);
-   if (lzw_cs > 12) return NULL;
+   // GIF89a spec: cs should correspond to number of actual pixel values, but 1-bit
+   // images need to signal 2. we don't support literals >8 bits, so legal range is
+   // [2,8].
+   if (lzw_cs < 2 || lzw_cs > 8) return stbi__errpuc("bad code size", "Corrupt GIF");
    clear = 1 << lzw_cs;
    first = 1;
    codesize = lzw_cs + 1;
