@@ -29,7 +29,7 @@
 //
 // VERSION HISTORY
 //
-//   1.16 (2026-xx-xx) add stb_textedit_text(), STB_TEXTEDIT_GETPREVCHARINDEX(), STB_TEXTEDIT_GETNEXTCHARINDEX() to facilitate UTF-8 support while preserving byte indices.
+//   1.16 (2026-11-12) add stb_textedit_text(), STB_TEXTEDIT_GETPREVCHARINDEX(), STB_TEXTEDIT_GETNEXTCHARINDEX() to facilitate UTF-8 support while preserving byte indices.
 //   1.15 (2026-11-08) various fixes
 //   1.14 (2021-07-11) page up/down, various fixes
 //   1.13 (2019-02-07) fix bug in undo size management

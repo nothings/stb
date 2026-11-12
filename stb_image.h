@@ -1,4 +1,4 @@
-/* stb_image - v2.31 - public domain image loader - http://nothings.org/stb
+/* stb_image - v2.32 - public domain image loader - http://nothings.org/stb
                                   no warranty implied; use at your own risk
 
    == SECURITY NOTE ==
@@ -64,6 +64,7 @@ LICENSE
 
 RECENT REVISION HISTORY:
 
+      2.32  (2026-11-12) fix req_comp regression; other fixes
       2.31  (2026-11-08) many bugfixes and etc.
       2.30  (2024-05-31) avoid erroneous gcc warning
       2.29  (2023-05-xx) optimizations

@@ -1,4 +1,29 @@
-2026-11-09
+2026-11-12
+
+==== stb_image v2.32
+
+- fix regression in req_comp==0
+- fix configuration problem with mad4sizes()
+
+==== stb_image_write v1.18
+
+- fix crash
+
+==== stb_textedit v1.16
+
+- various bugfixes
+- add support for UTF8 text buffer with left/right movement abstraction
+- new function: stb_textedit_text() allows adding UTF8 characters
+
+==== stb_truetype v1.28
+
+- bugfixes
+
+==== stb_vorbis v1.24
+
+- various bugfixes
+
+2026-11-11
 
 ==== stb_image_resize2.h
 
