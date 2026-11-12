@@ -24,7 +24,7 @@ Most libraries by stb, except: stb_dxt by Fabian "ryg" Giesen
 
 library    | latest version | category | LoC | description | last updated
 ---------- | -------------- | -------- | --- | ------------|---------------
-**[stb_vorbis.c](stb_vorbis.c)** | 1.24 | audio | 5704 | decode ogg vorbis files from file/memory to float/16-bit signed output | 2026-11-11
+**[stb_vorbis.c](stb_vorbis.c)** | 1.24 | audio | 5704 | decode ogg vorbis files from file/memory to float/16-bit signed output | 2026-11-12
 **[stb_hexwave.h](stb_hexwave.h)** | 0.6 | audio | 680 | audio waveform synthesizer | 2026-11-08
 **[stb_image.h](stb_image.h)** | 2.32 | graphics | 7798 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR | 2026-11-12
 **[stb_truetype.h](stb_truetype.h)** | 1.28 | graphics | 5321 | parse, decode, and rasterize characters from truetype fonts | 2026-11-12
@@ -32,7 +32,7 @@ library    | latest version | category | LoC | description | last updated
 **[stb_rect_pack.h](stb_rect_pack.h)** | 1.02 | graphics | 628 | simple 2D rectangle packer with decent quality | 2026-11-08
 **[stb_perlin.h](stb_perlin.h)** | 0.6 | graphics | 517 | perlin's revised simplex noise w/ different seeds | 2026-11-08
 **[stb_ds.h](stb_ds.h)** | 0.98 | utility | 1942 | typesafe dynamic array and hash tables for C, will compile in C++ | 2026-11-08
-**[stb_textedit.h](stb_textedit.h)** | 1.15 | user&nbsp;interface | 1480 | guts of a text editor for games etc implementing them from scratch | 2026-11-12
+**[stb_textedit.h](stb_textedit.h)** | 1.16 | user&nbsp;interface | 1480 | guts of a text editor for games etc implementing them from scratch | 2026-11-12
 **[stb_voxel_render.h](stb_voxel_render.h)** | 0.90 | 3D&nbsp;graphics | 3808 | Minecraft-esque voxel rendering "engine" with many more features | 2026-11-08
 **[stb_dxt.h](stb_dxt.h)** | 1.13 | 3D&nbsp;graphics | 721 | Fabian "ryg" Giesen's real-time DXT compressor | 2026-11-08
 **[stb_easy_font.h](stb_easy_font.h)** | 1.2 | 3D&nbsp;graphics | 306 | quick-and-dirty easy-to-deploy bitmap font for printing frame rate, etc | 2026-11-08

@@ -1,4 +1,4 @@
-// stb_textedit.h - v1.15  - public domain - Sean Barrett
+// stb_textedit.h - v1.16  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
