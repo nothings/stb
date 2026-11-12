@@ -12,6 +12,7 @@
 
 - various bugfixes
 - PIC support removed: the only reasons to use PIC were Softimage|3D/XSI, which have now been dead for 12 years.
+  - if you still need it, use v2.30 located at deprecated/stb_image_pic.h
 - PNM now has proper support for maxvals other than 255 or 65535
 - PNM now supports ASCII (P2, P3) variants of PGM/PPM
 - HDR loader appreciably faster (no more ldexp per pixel)
@@ -52,6 +53,10 @@
     - these allocate empty tables with proper default values instead of relying on NULL
     - only need to call these if you're using the _ts() functions on empty maps
   - new functions: shget_ts(), shgeti_ts(), shgetp_ts()
+- the hash function for strings (shput etc. functions) has changed due to a bug 
+  - the final mix was incorrectly implemented and as a result was mixing poorly
+  - this change should in theory have no visible effect to the user
+    - in stb_ds, iteration over the hash table does NOT depend on the hash value
 
 ==== stb_image_write.h v1.17
 
