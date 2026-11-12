@@ -49,5 +49,5 @@ cp $SRC/stb/tests/stb_vorbis.dict $OUT/stb_vorbis_fuzzer.dict
 
 # stb_c_lexer starting corpus is just stb_c_lexer.h itself
 
-zip $OUT/stb_c_lexer_seed_corpus.zip $SRC/stb/stb_c_lexer.h
+zip $OUT/stb_c_lexer_fuzzer_seed_corpus.zip $SRC/stb/stb_c_lexer.h
 cp $SRC/stb/tests/stb_c_lexer.dict $OUT/stb_c_lexer_fuzzer.dict
