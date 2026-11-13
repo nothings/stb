@@ -3462,15 +3462,36 @@ static int vorbis_decode_packet_rest(vorb *f, int *len, Mode *m, int left_start,
       // if we have a valid current loc, and this is final:
       if (f->current_loc_valid && (f->page_flag & PAGEFLAG_last_page)) {
          int64 current_end = f->known_loc_for_packet;
+
          // then let's infer the size of the (probably) short final frame
+
+         // `current_end` is the location to truncate the file.
+         // current_loc is the location of the last fully decoded sample (+1?)
+         // our first overlap add starts at left_start, so the number of
+         // fully-decoded samples we'll compute from this packet is
+         //    right_start - left_start
+         // code is right_end-left_start, need to check if that's right! @TODO
+
          if (current_end < f->current_loc + (right_end-left_start)) {
+            if (f->previous_length < 0) {
+               *len = 0;
+               return TRUE;
+            }
+
             if (current_end < f->current_loc) {
                // negative truncation, that's impossible!
                *len = 0;
             } else {
                *len = (int) (current_end - f->current_loc);  // this should always fit in an int
             }
-            *len += left_start; // this doesn't seem right, but has no ill effect on my test files
+
+            // len is now the number of fully-decoded samples we want to compute
+            // first overlapped sample is at left_start, so [0..left_start) is all 0s
+            // but len is measured from offset 0, so we need to also decode those 0 samples;
+            // i.e. the decode needs to compute left_start..right_start truncated, but
+            // len is measured e.g. 0..right_start, so add [0..left_start) to the count:
+            *len += left_start;
+
             if (*len > right_end) *len = right_end; // this should never happen
             f->current_loc += *len;
             return TRUE;
@@ -3512,6 +3533,9 @@ static int vorbis_finish_frame(stb_vorbis *f, int len, int left, int right)
    // indicates where our sin() ending-window starts, therefore that's where
    // we start saving, and where our returned-data ends.
 
+   if (f->previous_length < 0)
+      return 0;
+
    // mixin from previous window
    if (f->previous_length) {
       int n = f->previous_length;
@@ -3529,6 +3553,13 @@ static int vorbis_finish_frame(stb_vorbis *f, int len, int left, int right)
 
    // last half of this data becomes previous window
    f->previous_length = len - right;
+
+   // if we're told to truncate the file before the last packet,
+   // we'll generate a negative length here. but 0-previous-length
+   // is currently used as our seek flag
+   if (f->previous_length <= 0) {
+      f->previous_length = -1;
+   }
 
    // @OPTIMIZE: could avoid this copy by double-buffering the
    // output (flipping previous_window with channel_buffers), but

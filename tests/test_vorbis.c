@@ -1,6 +1,8 @@
 #ifdef TEST_VORBIS
 #include <stdio.h>
+#define STB_VORBIS_HEADER_ONLY
 #include "stb_vorbis.c"
+#include <stdlib.h>
 
 int main(int argc, char **argv)
 {
