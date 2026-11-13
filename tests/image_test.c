@@ -96,6 +96,7 @@ int main(int argc, char **argv)
          data = stbi_load(argv[i], &w, &h,  0, 1); if (data) free(data); else printf("Failed 1\n");
          data = stbi_load(argv[i], &w, &h,  0, 2); if (data) free(data); else printf("Failed 2\n");
          data = stbi_load(argv[i], &w, &h,  0, 3); if (data) free(data); else printf("Failed 3\n");
+         data = (unsigned char*) stbi_loadf(argv[i], &w, &h, &n, 0);  if (data) free(data); else printf("Failed 3\n");
          data = stbi_load(argv[i], &w, &h, &n, 4);
          assert(data);
          assert(w == w2 && h == h2 && n == n2);

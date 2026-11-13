@@ -3479,6 +3479,7 @@ static stbi_uc stbi__skip_jpeg_junk_at_end(stbi__jpeg *j)
 static int stbi__decode_jpeg_image(stbi__jpeg *j)
 {
    int m;
+   int got_data = 0;
    for (m = 0; m < 4; m++) {
       j->img_comp[m].raw_data = NULL;
       j->img_comp[m].raw_coeff = NULL;
@@ -3488,6 +3489,7 @@ static int stbi__decode_jpeg_image(stbi__jpeg *j)
    m = stbi__get_marker(j);
    while (!stbi__EOI(m)) {
       if (stbi__SOS(m)) {
+         got_data = 1;
          if (!stbi__process_scan_header(j)) return 0;
          if (!stbi__parse_entropy_coded_data(j)) return 0;
          if (j->marker == STBI__MARKER_none ) {
@@ -3510,7 +3512,7 @@ static int stbi__decode_jpeg_image(stbi__jpeg *j)
    }
    if (j->progressive)
       stbi__jpeg_finish(j);
-   return 1;
+   return got_data;
 }
 
 // static jfif-centered resampling (across block boundaries)
