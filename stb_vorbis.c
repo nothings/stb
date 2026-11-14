@@ -437,7 +437,8 @@ enum STBVorbisError
    VORBIS_bad_packet_type,
    VORBIS_cant_find_last_page,
    VORBIS_seek_failed,
-   VORBIS_ogg_skeleton_not_supported
+   VORBIS_ogg_skeleton_not_supported,
+   VORBIS_invalid_granule_pos,
 };
 
 
@@ -1500,7 +1501,13 @@ static int start_page_no_capturepattern(vorb *f)
    f->page_flag = get8(f);
    // absolute granule position
    loc = get64(f);
-   // @TODO: validate loc0,loc1 as valid positions?
+   // quick sanity check on loc: 1<<50 samples is good for more than 100 years at 192kHz
+   // more than enough for any use case this lib is meant to handle, and small enough
+   // so the conversions of the granule positions to doubles in the seek logic are lossless.
+   // we want to avid overflows, so this seems like a reasonable limit to enforce.
+   // (we're not worried about someone actually decoding this much data, it's pretty much
+   // only files containing funny values that can trigger this.)
+   if (loc >= ((uint64)1 << 50)) return error(f, VORBIS_invalid_granule_pos);
    // stream serial number -- vorbis doesn't interleave, so discard
    get32(f);
    //if (f->serial != get32(f)) return error(f, VORBIS_incorrect_stream_serial_number);
