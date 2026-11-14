@@ -563,10 +563,6 @@ enum STBVorbisError
 #error "STB_VORBIS_CODEBOOK_SHORTS is no longer supported as it produced incorrect results for some input formats"
 #endif
 
-// STB_VORBIS_DIVIDE_TABLE
-//     this replaces small integer divides in the floor decode loop with
-//     table lookups. made less than 1% difference, so disabled by default.
-
 // STB_VORBIS_NO_INLINE_DECODE
 //     disables the inlining of the scalar codebook fast-huffman decode.
 //     might save a little codespace; useful for debugging
@@ -2083,12 +2079,6 @@ static float inverse_db_table[256] =
 #define LINE_OP(a,b)   a = b
 #endif
 
-#ifdef STB_VORBIS_DIVIDE_TABLE
-#define DIVTAB_NUMER   32
-#define DIVTAB_DENOM   64
-int8 integer_divide_table[DIVTAB_NUMER][DIVTAB_DENOM]; // 2KB
-#endif
-
 static __forceinline void draw_line(float *output, int x0, int y0, int x1, int y1, int n)
 {
    int dy = y1 - y0;
@@ -2099,29 +2089,8 @@ static __forceinline void draw_line(float *output, int x0, int y0, int x1, int y
    int err = 0;
    int sy;
 
-#ifdef STB_VORBIS_DIVIDE_TABLE
-   if (adx < DIVTAB_DENOM && ady < DIVTAB_NUMER) {
-      if (dy < 0) {
-         base = -integer_divide_table[ady][adx];
-         sy = base-1;
-      } else {
-         base =  integer_divide_table[ady][adx];
-         sy = base+1;
-      }
-   } else {
-      base = dy / adx;
-      if (dy < 0)
-         sy = base - 1;
-      else
-         sy = base+1;
-   }
-#else
    base = dy / adx;
-   if (dy < 0)
-      sy = base - 1;
-   else
-      sy = base+1;
-#endif
+   sy = base + ((dy < 0) ? -1 : 1);
    ady -= abs(base) * adx;
    if (x1 > n) x1 = n;
    if (x < x1) {
@@ -4258,13 +4227,6 @@ static int start_decoder(vorb *f)
    if (!init_blocksize(f, 1, f->blocksize_1)) return FALSE;
    f->blocksize[0] = f->blocksize_0;
    f->blocksize[1] = f->blocksize_1;
-
-#ifdef STB_VORBIS_DIVIDE_TABLE
-   if (integer_divide_table[1][1]==0)
-      for (i=0; i < DIVTAB_NUMER; ++i)
-         for (j=1; j < DIVTAB_DENOM; ++j)
-            integer_divide_table[i][j] = i / j;
-#endif
 
    // compute how much temporary memory is needed
 
