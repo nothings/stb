@@ -284,6 +284,8 @@ typedef long       stb__clex_int;
 #include <stdlib.h>
 #endif
 
+#include <limits.h>
+
 // Now for the rest of the file we'll use the basic definition where
 // where Y expands to its contents and N expands to nothing
 #undef  Y
@@ -489,7 +491,7 @@ static int stb__clex_parse_octal(char *eof, char *p, char **q)
 }
 #endif
 
-#ifdef STB__clex_hex_chars
+#if defined(STB__clex_hex_chars) || (defined(STB__clex_hex_ints) && !defined(STB__CLEX_use_stdlib))
 static int stb__clex_hex_digit(char x)
 {
   if (x >= '0' && x <= '9')
@@ -503,7 +505,9 @@ static int stb__clex_hex_digit(char x)
 
   return -1;
 }
+#endif
 
+#ifdef STB__clex_hex_chars
 static int stb__clex_parse_hex(char *eof, char *p, char **q)
 {
   unsigned int hexchar = 0;
@@ -820,16 +824,17 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
                   lexer->int_number = strtol((char *) p, (char **) &q, 16);
                   #else
                   {
-                     stb__clex_int n=0;
+                     long n=0;
                      for (q=p+2; q != eof; ++q) {
-                        if (*q >= '0' && *q <= '9')
-                           n = n*16 + (*q - '0');
-                        else if (*q >= 'a' && *q <= 'f')
-                           n = n*16 + (*q - 'a') + 10;
-                        else if (*q >= 'A' && *q <= 'F')
-                           n = n*16 + (*q - 'A') + 10;
+                        int digit = stb__clex_hex_digit(*q);
+                        if (digit < 0) break;
+                        // n*16 + digit > LONG_MAX
+                        // <=> n > (LONG_MAX - digit) / 16
+                        // (truncating div is fine here)
+                        if (n <= ((LONG_MAX - digit) >> 4))
+                           n = n*16 + digit;
                         else
-                           break;
+                           n = LONG_MAX; // strtol saturates at LONG_MAX
                      }
                      lexer->int_number = n;
                   }
@@ -873,11 +878,16 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
             #ifdef STB__CLEX_use_stdlib
             lexer->int_number = strtol((char *) p, (char **) &q, 8);
             #else
-            stb__clex_int n=0;
+            long n=0;
             while (q != eof) {
-               if (*q >= '0' && *q <= '7')
-                  n = n*8 + (*q - '0');
-               else
+               if (*q >= '0' && *q <= '7') {
+                  int digit = *q - '0';
+                  // see hex_ints case for derivation
+                  if (n <= ((LONG_MAX - digit) >> 3))
+                     n = n*8 + digit;
+                  else
+                     n = LONG_MAX; // strtol saturates at LONG_MAX
+               } else
                   break;
                ++q;
             }
@@ -895,11 +905,16 @@ int stb_c_lexer_get_token(stb_lexer *lexer)
             #ifdef STB__CLEX_use_stdlib
             lexer->int_number = strtol((char *) p, (char **) &q, 10);
             #else
-            stb__clex_int n=0;
+            long n=0;
             while (q != eof) {
-               if (*q >= '0' && *q <= '9')
-                  n = n*10 + (*q - '0');
-               else
+               if (*q >= '0' && *q <= '9') {
+                  int digit = *q - '0';
+                  // see hex_ints case for derivation
+                  if (n <= (LONG_MAX - digit) / 10)
+                     n = n*10 + digit;
+                  else
+                     n = LONG_MAX; // strtol saturates at LONG_MAX
+               } else
                   break;
                ++q;
             }

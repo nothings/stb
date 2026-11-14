@@ -107,6 +107,32 @@ token *parse(stb_lexer *lexer)
 }
 
 #include <stdio.h>
+
+static int test_intlits()
+{
+   static const char test_text[] =
+      "0x7fffffff 017777777777 2147483647\n" // INT32_MAX
+      "0x80000000 020000000000 2147483648\n" // INT32_MAX+1
+      "0x2540be400 0112402762000 10000000000\n" // 10 billion
+      "0x7fffffffffffffff 0777777777777777777777 9223372036854775807\n" // INT64_MAX
+      "0x8000000000000000 01000000000000000000000 9223372036854775808\n"; // INT64_MAX + 1
+
+   char string_store[256];
+   stb_lexer lexer;
+   int i, tok;
+
+   stb_c_lexer_init(&lexer, test_text, test_text + sizeof(test_text) - 1, string_store, sizeof(string_store));
+
+   for (i=0; i < 15; ++i) {
+      if (!stb_c_lexer_get_token(&lexer) || lexer.token != CLEX_intlit)
+         return 0;
+
+      printf("intlit: 0x%lx\n", lexer.int_number);
+   }
+
+   return 1;
+}
+
 int main(int argc, char **argv)
 {
    int i,j;
@@ -116,6 +142,7 @@ int main(int argc, char **argv)
    buffer[len] = 0;
    zbuf = malloc(len+1);
    memcpy(zbuf, buffer, len);
+   test_intlits();
    for (i=len; i >= 0; --i) {
       stb_lexer lexer;
       token *t1, *t2;
@@ -138,12 +165,12 @@ int main(int argc, char **argv)
                if (t1[j].intval != t2[j].intval) { printf("Length %d: Mismatched int %d vs %d (%xd vs %xd)", i, t1[j].intval, t2[j].intval, t1[j].intval, t2[j].intval); goto error; }
                break;
             case CLEX_floatlit  :
-               if (t1[j].realval != t2[j].realval) { printf("Length %d: Mismatched float %f vs %f", i, t1[j].realval, t2[j].realval, t1[j].intval, t2[j].intval); goto error; }
+               if (t1[j].realval != t2[j].realval) { printf("Length %d: Mismatched float %f vs %f", i, t1[j].realval, t2[j].realval); goto error; }
                break;
          }
       }
-      if (j < arrlen(t1)) { printf("Length %d: More tokens in explicit-length stream; first unmatched token is %d. Zero-terminated stream ends: ", i, t1[j]); goto error; }
-      if (j < arrlen(t2)) { printf("Length %d: More tokens in zero-terminated stream; first unmatched token is %d. ", i, t2[j]); goto error; }
+      if (j < arrlen(t1)) { printf("Length %d: More tokens in explicit-length stream; first unmatched token is %d. Zero-terminated stream ends: ", i, t1[j].id); goto error; }
+      if (j < arrlen(t2)) { printf("Length %d: More tokens in zero-terminated stream; first unmatched token is %d. ", i, t2[j].id); goto error; }
       continue;
      error:
       if (j < arrlen(t2)) {
