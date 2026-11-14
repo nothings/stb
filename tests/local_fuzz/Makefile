@@ -14,7 +14,7 @@ bin/%_msan: %.c | bin
 	clang $(CFLAGS) -fsanitize=memory,fuzzer $< -o $@
 
 bin/%_ubsan: %.c | bin
-	clang $(CFLAGS) -fsanitize=undefined,fuzzer $< -o $@
+	clang $(CFLAGS) -fsanitize=undefined,fuzzer -fno-sanitize-recover=undefined $< -o $@
 
 bin:
 	mkdir -p bin
