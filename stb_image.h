@@ -1921,14 +1921,19 @@ static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp)
 {
    int i,k,n;
    float *output;
+   float gamma_lut[256];
    if (!data) return NULL;
    output = (float *) stbi__malloc_mad4(x, y, comp, sizeof(float), 0);
    if (output == NULL) { STBI_FREE(data); return stbi__errpf("outofmem", "Out of memory"); }
+   // use a LUT for gamma since there's only 256 possible inputs
+   for (i=0; i < 256; ++i) {
+      gamma_lut[i] = (float) (pow(i/255.0f, stbi__l2h_gamma) * stbi__l2h_scale);
+   }
    // compute number of non-alpha components
    if (comp & 1) n = comp; else n = comp-1;
    for (i=0; i < x*y; ++i) {
       for (k=0; k < n; ++k) {
-         output[i*comp + k] = (float) (pow(data[i*comp+k]/255.0f, stbi__l2h_gamma) * stbi__l2h_scale);
+         output[i*comp + k] = gamma_lut[data[i*comp+k]];
       }
    }
    if (n < comp) {
