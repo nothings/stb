@@ -569,6 +569,7 @@ static int stb__clex_parse_string(stb_lexer *lexer, char *p, int type)
    char delim = *p++; // grab the " or ' for later matching
    char *out = lexer->string_storage;
    char *outend = lexer->string_storage + lexer->string_storage_len;
+
    while (p != eof && *p != 0 && *p != delim) {
       int n;
       if (*p == '\\') {
@@ -581,12 +582,12 @@ static int stb__clex_parse_string(stb_lexer *lexer, char *p, int type)
          // @OPTIMIZE: could speed this up by looping-while-not-backslash
          n = (unsigned char) *p++;
       }
-      if (out+1 > outend)
+      if (out == outend)
          return stb__clex_token(lexer, CLEX_parse_error, start, p);
       // @TODO expand unicode escapes to UTF8
       *out++ = (char) n;
    }
-   if (p == eof || *p == 0) // ran off the end without a closing delimiter
+   if (p == eof || *p == 0 || out == outend) // ran off the end without a closing delimiter, or out of space
       return stb__clex_token(lexer, CLEX_parse_error, start, p);
    *out = 0;
    lexer->string = lexer->string_storage;
