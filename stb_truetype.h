@@ -2673,6 +2673,9 @@ static stbtt_int32 stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, in
 
                   valueRecordPairSizeInBytes = valueFormat1 == 68 ? 4 : 2;
 
+                  if (glyph1class >= 0 && class2Count > 0 &&
+                      (stbtt_uint32) glyph1class > (stbtt_uint32) 0x7FFFFFFF / (stbtt_uint32) class2Count)
+                     return 0; // overflow
                   class1Records = table + 16;
                   class2Records = class1Records + valueRecordPairSizeInBytes * (glyph1class * class2Count);
                   xAdvance = ttSHORT(class2Records + valueRecordPairSizeInBytes * glyph2class);
@@ -3854,6 +3857,7 @@ STBTT_DEF unsigned char *stbtt_GetGlyphBitmapSubpixel(const stbtt_fontinfo *info
    if (yoff  ) *yoff   = iy0;
 
    if (gbm.w && gbm.h) {
+      if ((size_t) gbm.w > SIZE_MAX / (size_t) gbm.h) return NULL;
       gbm.pixels = (unsigned char *) STBTT_malloc(gbm.w * gbm.h, info->userdata);
       if (gbm.pixels) {
          gbm.stride = gbm.w;
@@ -4732,6 +4736,7 @@ STBTT_DEF unsigned char * stbtt_GetGlyphSDF(const stbtt_fontinfo *info, float sc
       float *precompute;
       stbtt_vertex *verts;
       int num_verts = stbtt_GetGlyphShape(info, glyph, &verts);
+      if (w > 0 && h > 0 && (size_t) w > SIZE_MAX / (size_t) h) return NULL;
       data = (unsigned char *) STBTT_malloc(w * h, info->userdata);
       precompute = (float *) STBTT_malloc(num_verts * sizeof(float), info->userdata);
 
