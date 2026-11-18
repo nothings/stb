@@ -407,38 +407,38 @@ extern int stb_vorbis_get_samples_short(stb_vorbis *f, int channels, short **buf
 
 enum STBVorbisError
 {
-   VORBIS__no_error,
+   VORBIS__no_error=0,
 
    VORBIS_need_more_data=1,             // not a real error
 
-   VORBIS_invalid_api_mixing,           // can't mix API modes
-   VORBIS_outofmem,                     // not enough memory
-   VORBIS_feature_not_supported,        // uses floor 0
-   VORBIS_too_many_channels,            // STB_VORBIS_MAX_CHANNELS is too small
-   VORBIS_file_open_failure,            // fopen() failed
-   VORBIS_seek_without_length,          // can't seek in unknown-length file
+   VORBIS_invalid_api_mixing=2,         // can't mix API modes
+   VORBIS_outofmem=3,                   // not enough memory
+   VORBIS_feature_not_supported=4,      // uses floor 0
+   VORBIS_too_many_channels=5,          // STB_VORBIS_MAX_CHANNELS is too small
+   VORBIS_file_open_failure=6,          // fopen() failed
+   VORBIS_seek_without_length=7,        // can't seek in unknown-length file
 
    VORBIS_unexpected_eof=10,            // file is truncated?
-   VORBIS_seek_invalid,                 // seek past EOF
+   VORBIS_seek_invalid=11,              // seek past EOF
 
    // decoding errors (corrupt/invalid stream) -- you probably
    // don't care about the exact details of these
 
    // vorbis errors:
    VORBIS_invalid_setup=20,
-   VORBIS_invalid_stream,
+   VORBIS_invalid_stream=21,
 
    // ogg errors:
    VORBIS_missing_capture_pattern=30,
-   VORBIS_invalid_stream_structure_version,
-   VORBIS_continued_packet_flag_invalid,
-   VORBIS_incorrect_stream_serial_number,
-   VORBIS_invalid_first_page,
-   VORBIS_bad_packet_type,
-   VORBIS_cant_find_last_page,
-   VORBIS_seek_failed,
-   VORBIS_ogg_skeleton_not_supported,
-   VORBIS_invalid_granule_pos,
+   VORBIS_invalid_stream_structure_version=31,
+   VORBIS_continued_packet_flag_invalid=32,
+   VORBIS_incorrect_stream_serial_number=33,
+   VORBIS_invalid_first_page=34,
+   VORBIS_bad_packet_type=35,
+   VORBIS_cant_find_last_page=36,
+   VORBIS_seek_failed=37,
+   VORBIS_ogg_skeleton_not_supported=38,
+   VORBIS_invalid_granule_pos=39,
 };
 
 
@@ -3642,6 +3642,7 @@ static int start_decoder(vorb *f)
 {
    uint8 header[6], x,y;
    int len,i,j,k, max_submaps = 0;
+   unsigned int max_blocksize, max_vector;
    int longest_floorlist=0;
 
    // first page, first packet
@@ -3695,6 +3696,7 @@ static int start_decoder(vorb *f)
       if (log1 < 8 || log1 > 13)                       return error(f, VORBIS_invalid_setup);
       if (log0 > log1)                                 return error(f, VORBIS_invalid_setup);
    }
+   max_blocksize = f->blocksize_0 > f->blocksize_1 ? f->blocksize_0 : f->blocksize_1;
 
    // framing_flag
    x = get8(f);
@@ -4089,6 +4091,10 @@ static int start_decoder(vorb *f)
    if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
    f->residue_config = (Residue *) setup_malloc(f, f->residue_count * sizeof(f->residue_config[0]));
    if (f->residue_config == NULL) return error(f, VORBIS_outofmem);
+
+   // actual residue size is ch * blocksize, limit 16 * 8192 == 2^17
+   max_vector = max_blocksize * f->channels;
+
    memset(f->residue_config, 0, f->residue_count * sizeof(f->residue_config[0]));
    for (i=0; i < f->residue_count; ++i) {
       uint8 residue_cascade[64];
@@ -4098,7 +4104,10 @@ static int start_decoder(vorb *f)
       r->begin = get_bits(f, 24);
       r->end = get_bits(f, 24);
       if (r->end < r->begin) return error(f, VORBIS_invalid_setup);
+      if (r->end > max_vector) return error(f, VORBIS_invalid_setup);
       r->part_size = get_bits(f,24)+1;
+      if (r->part_size > max_vector) return error(f, VORBIS_invalid_setup);
+
       r->classifications = (uint8) (get_bits(f,6)+1);
       r->classbook = (uint8) get_bits(f,8);
       if (f->valid_bits < 0) return error(f, VORBIS_unexpected_eof);
@@ -5467,7 +5476,13 @@ int stb_vorbis_decode_filename(const char *filename, int *channels, int *sample_
    int data_len, offset, total, limit, error;
    short *data;
    stb_vorbis *v = stb_vorbis_open_filename(filename, &error, NULL);
-   if (v == NULL) return -1;
+   if (v == NULL) {
+      if (error)
+         return -error;
+      else
+         return -VORBIS_file_open_failure;
+   }
+
    limit = v->channels * 4096;
    *channels = v->channels;
    if (sample_rate)
@@ -5477,7 +5492,7 @@ int stb_vorbis_decode_filename(const char *filename, int *channels, int *sample_
    data = (short *) malloc(total * sizeof(*data));
    if (data == NULL) {
       stb_vorbis_close(v);
-      return -2;
+      return -VORBIS_outofmem;
    }
    for (;;) {
       int n = stb_vorbis_get_frame_short_interleaved(v, v->channels, data+offset, total-offset);
@@ -5491,7 +5506,7 @@ int stb_vorbis_decode_filename(const char *filename, int *channels, int *sample_
          if (data2 == NULL) {
             free(data);
             stb_vorbis_close(v);
-            return -2;
+            return -VORBIS_outofmem;
          }
          data = data2;
       }
