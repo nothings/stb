@@ -28,7 +28,7 @@ library    | latest version | category | LoC | description | last updated
 **[stb_hexwave.h](stb_hexwave.h)** | 0.6 | audio | 680 | audio waveform synthesizer | 2026-11-08
 **[stb_image.h](stb_image.h)** | 2.34 | graphics | 7812 | image loading/decoding from file/memory: JPG, PNG, TGA, BMP, PSD, GIF, HDR | 2026-11-19
 **[stb_truetype.h](stb_truetype.h)** | 1.28 | graphics | 5321 | parse, decode, and rasterize characters from truetype fonts | 2026-11-12
-**[stb_image_write.h](stb_image_write.h)** | 1.18 | graphics | 1927 | image writing to disk: PNG, JPG, BMP, TGA, HDR | 2026-11-19
+**[stb_image_write.h](stb_image_write.h)** | 1.19 | graphics | 1932 | image writing to disk: PNG, JPG, BMP, TGA, HDR | 2026-11-19
 **[stb_rect_pack.h](stb_rect_pack.h)** | 1.02 | graphics | 628 | simple 2D rectangle packer with decent quality | 2026-11-08
 **[stb_perlin.h](stb_perlin.h)** | 0.6 | graphics | 517 | perlin's revised simplex noise w/ different seeds | 2026-11-08
 **[stb_ds.h](stb_ds.h)** | 0.98 | utility | 1942 | typesafe dynamic array and hash tables for C, will compile in C++ | 2026-11-08
@@ -45,7 +45,7 @@ library    | latest version | category | LoC | description | last updated
 **[stb_include.h](stb_include.h)** | 0.3 | misc | 378 | implement recursive #include support, particularly for GLSL | 2026-11-08
 
 Total libraries: 19
-Total lines of C code: 39329
+Total lines of C code: 39334
 
 
 FAQ
