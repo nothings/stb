@@ -88,6 +88,21 @@
 // float stb_perlin_turbulence_noise3(float x, float y, float z,
 //                                    float lacunarity, float gain, int octaves)
 //
+// Here is the versions of those fractal noise functions above with seed and wrap(non-pow2).
+//
+// float stb_perlin_ridge_noise3_seed(float x, float y, float z,
+//                               float lacunarity, float gain, float offset, int octaves, 
+//								 float x_wrap, float y_wrap, float z_wrap, int seed)
+//
+// float stb_perlin_fbm_noise3_seed(float x, float y, float z,
+//                             float lacunarity, float gain, int octaves, 
+//							   float x_wrap, float y_wrap, float z_wrap, int seed)
+//
+// float stb_perlin_turbulence_noise3_seed(float x, float y, float z,
+//                                    float lacunarity, float gain, int octaves, 
+//								 	  float x_wrap, float y_wrap, float z_wrap, int seed)
+//
+//
 // Typical values to start playing with:
 //     octaves    =   6     -- number of "octaves" of noise3() to sum
 //     lacunarity = ~ 2.0   -- spacing between successive octaves (use exactly 2.0 for wrapping output)
