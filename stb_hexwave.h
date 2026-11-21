@@ -217,10 +217,12 @@
 #define STB_HEXWAVE_MAX_BLEP_LENGTH   64 // good enough for anybody
 #endif
 
+#ifndef STB_HEXWAVE_DEF
 #ifdef STB_HEXWAVE_STATIC
 #define STB_HEXWAVE_DEF static
 #else
 #define STB_HEXWAVE_DEF extern
+#endif
 #endif
 
 typedef struct HexWave HexWave;
