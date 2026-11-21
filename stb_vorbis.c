@@ -1685,7 +1685,10 @@ static uint32 get_bits(vorb *f, int n)
 static __forceinline void prep_huffman(vorb *f)
 {
    if (f->valid_bits <= 24) {
-      if (f->valid_bits == 0) f->acc = 0;
+      if (f->valid_bits <= 0) {
+         f->acc = 0;
+         f->valid_bits = 0;
+      }
       do {
          int z;
          if (f->last_seg && !f->bytes_in_seg) return;
