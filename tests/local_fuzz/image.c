@@ -3,6 +3,12 @@
 #include <string.h>
 #include <stdlib.h>
 
+// ---- general configuration
+
+#define STBI_MAX_DIMENSIONS 8192 // avoid testing huge images
+#define STBI__FUZZER_CONTROLLED_SSE2 g_allow_sse2
+int g_allow_sse2;
+
 // ---- memory allocation with limit to memory allocations
 
 // reallocs and frees don't restore the byte count. this is
@@ -126,11 +132,17 @@ typedef struct
    // load mode
    uint8_t load_mode : 2; // LOAD_MODE_*
 
-   // requested component count-1
-   uint8_t req_comp_minus1 : 2;
+   // requested component count
+   uint8_t req_comp : 3;
 
    // if 1, load via callbacks (else use _memory variants)
    uint8_t use_callbacks : 1;
+
+   // various control flags
+   uint8_t unpremultiply : 1;
+   uint8_t iphone_png_to_rgb : 1;
+   uint8_t vertical_flip : 1;
+   uint8_t allow_sse2 : 1;
 } fuzz_control_footer;
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -144,6 +156,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 {
    stbi_io_callbacks callbacks = { fuzz_read, fuzz_skip, fuzz_eof };
    fuzz_ioctx ctx;
+   stbi_info_res info_result;
 
    int w, h, nch, nimg = 0;
    int *delays = NULL;
@@ -157,6 +170,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
    // reset global control parameters to default
    g_alloc_count_limit = ~(size_t) 0;
    g_alloc_bytes_remaining = MEM_LIMIT;
+   g_allow_sse2 = 1;
 
    // if we have the bytes for a fuzz control footer, try to parse it
    if (size >= sizeof(fuzz_control_footer)) {
@@ -166,8 +180,13 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
             g_alloc_count_limit = f->alloc_limit;
          }
          load_mode = f->load_mode;
-         req_comp = f->req_comp_minus1 + 1;
+         req_comp = f->req_comp;
          use_callbacks = f->use_callbacks;
+         g_allow_sse2 = f->allow_sse2;
+
+         stbi_set_unpremultiply_on_load(f->unpremultiply);
+         stbi_convert_iphone_png_to_rgb(f->iphone_png_to_rgb);
+         stbi_set_flip_vertically_on_load(f->vertical_flip);
       }
    }
 
@@ -184,6 +203,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
 
       (void)stbi_is_hdr_from_memory(data, size);
       (void)stbi_is_16_bit_from_memory(data, size);
+      info_result = stbi_info2_from_memory(data, size);
    } else {
       ctx.ptr = ctx.begin;
       if (!stbi_info_from_callbacks(&callbacks, &ctx, &w, &h, &nch)) {
@@ -194,6 +214,8 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
       (void)stbi_is_hdr_from_callbacks(&callbacks, &ctx);
       ctx.ptr = ctx.begin;
       (void)stbi_is_16_bit_from_callbacks(&callbacks, &ctx);
+      ctx.ptr = ctx.begin;
+      info_result = stbi_info2_from_callbacks(&callbacks, &ctx);
    }
 
    // don't even try if we would likely exceed our memory limit
