@@ -2554,14 +2554,17 @@ static void stbi__idct_block(stbi_uc *out, int out_stride, short data[64])
          // constants scaled things up by 1<<12; let's bring them back
          // down, but keep 2 extra bits of precision
          x0 += 512; x1 += 512; x2 += 512; x3 += 512;
-         v[ 0] = (x0+t3) >> 10;
-         v[56] = (x0-t3) >> 10;
-         v[ 8] = (x1+t2) >> 10;
-         v[48] = (x1-t2) >> 10;
-         v[16] = (x2+t1) >> 10;
-         v[40] = (x2-t1) >> 10;
-         v[24] = (x3+t0) >> 10;
-         v[32] = (x3-t0) >> 10;
+         // DCT coeffs from in-range values always comfortably fit into 16 bits here,
+         // but invalid values can be out of range; cast to short to range-limit malformed values
+         // to prevent arithmetic overflow in second pass
+         v[ 0] = (short) ((x0+t3) >> 10);
+         v[56] = (short) ((x0-t3) >> 10);
+         v[ 8] = (short) ((x1+t2) >> 10);
+         v[48] = (short) ((x1-t2) >> 10);
+         v[16] = (short) ((x2+t1) >> 10);
+         v[40] = (short) ((x2-t1) >> 10);
+         v[24] = (short) ((x3+t0) >> 10);
+         v[32] = (short) ((x3-t0) >> 10);
       }
    }
 
