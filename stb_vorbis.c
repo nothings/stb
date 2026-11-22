@@ -3809,8 +3809,10 @@ static int start_decoder(vorb *f)
       ordered = get_bits(f,1);
       c->sparse = ordered ? 0 : (uint8) get_bits(f,1);
 
-      if (c->dimensions == 0 && c->entries != 0)    return error(f, VORBIS_invalid_setup);
-      if (c->entries && CODEBOOK_LIMIT / c->entries < c->dimensions) return error(f, VORBIS_invalid_setup);
+      // vorbis spec doesn't explicitly forbid 0-entry codebooks, but libvorbis doesn't
+      // actually handle this correctly and never emits this. just reject it outright.
+      if (c->entries == 0 || c->dimensions == 0)    return error(f, VORBIS_invalid_setup);
+      if (CODEBOOK_LIMIT / c->entries < c->dimensions) return error(f, VORBIS_invalid_setup);
       if (f->valid_bits < 0)                        return error(f, VORBIS_unexpected_eof);
 
       if (c->sparse) {
