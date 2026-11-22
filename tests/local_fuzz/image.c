@@ -172,6 +172,10 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size)
    g_alloc_bytes_remaining = MEM_LIMIT;
    g_allow_sse2 = 1;
 
+   stbi_set_unpremultiply_on_load(0);
+   stbi_convert_iphone_png_to_rgb(0);
+   stbi_set_flip_vertically_on_load(0);
+
    // if we have the bytes for a fuzz control footer, try to parse it
    if (size >= sizeof(fuzz_control_footer)) {
       const fuzz_control_footer *f = (const fuzz_control_footer *)(data + size - sizeof(fuzz_control_footer));
