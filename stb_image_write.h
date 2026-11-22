@@ -42,9 +42,10 @@ UNICODE:
 
 USAGE:
 
-   There are five functions, one for each image file format:
+   There are six functions, one for each image file format:
 
      int stbi_write_png(char const *filename, int w, int h, int comp, const void *data, ptrdiff_t stride_in_bytes);
+     int stbi_write_png_16(char const *filename, int w, int h, int comp, const void *data, ptrdiff_t stride_in_bytes);
      int stbi_write_bmp(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_tga(char const *filename, int w, int h, int comp, const void *data);
      int stbi_write_jpg(char const *filename, int w, int h, int comp, const void *data, int quality);
@@ -60,10 +61,11 @@ USAGE:
      int stbi_write_jpg_strided(char const *filename, int w, int h, int comp, const void *data, ptrdiff_t stride_in_bytes, int quality);
      int stbi_write_hdr_strided(char const *filename, int w, int h, int comp, const float *data, ptrdiff_t stride_in_bytes);
 
-   There are also five equivalent functions that use an arbitrary write function. You are
+   There are also six equivalent functions that use an arbitrary write function. You are
    expected to open/close your file-equivalent before and after calling these:
 
      int stbi_write_png_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
+     int stbi_write_png_16_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
      int stbi_write_bmp_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
      int stbi_write_tga_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const void  *data, ptrdiff_t stride_in_bytes);
      int stbi_write_hdr_to_func(stbi_write_func *func, void *context, int w, int h, int comp, const float *data, ptrdiff_t stride_in_bytes);
