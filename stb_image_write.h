@@ -1661,7 +1661,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
    static const float aasf[] = { 1.0f * 2.828427125f, 1.387039845f * 2.828427125f, 1.306562965f * 2.828427125f, 1.175875602f * 2.828427125f,
                                  1.0f * 2.828427125f, 0.785694958f * 2.828427125f, 0.541196100f * 2.828427125f, 0.275899379f * 2.828427125f };
 
-   int row, col, i, k, subsample;
+   int row, col, i, k, isrgb, subsample;
    float fdtbl_Y[64], fdtbl_UV[64];
    unsigned char YTable[64], UVTable[64];
 
@@ -1673,7 +1673,8 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
       stride_in_bytes = comp*width;
 
    quality = quality ? quality : 90;
-   subsample = quality <= 90 ? 1 : 0;
+   isrgb = comp > 2; // comp==2 is grey+alpha (alpha is ignored)
+   subsample = quality <= 90 && isrgb;
    quality = quality < 1 ? 1 : quality > 100 ? 100 : quality;
    quality = quality < 50 ? 5000 / quality : 200 - quality * 2;
 
@@ -1694,26 +1695,32 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
    // Write Headers
    {
       static const unsigned char head0[] = { 0xFF,0xD8,0xFF,0xE0,0,0x10,'J','F','I','F',0,1,1,0,0,1,0,1,0,0,0xFF,0xDB,0,0x84,0 };
-      static const unsigned char head2[] = { 0xFF,0xDA,0,0xC,3,1,0,2,0x11,3,0x11,0,0x3F,0 };
-      const unsigned char head1[] = { 0xFF,0xC0,0,0x11,8,(unsigned char)(height>>8),STBIW_UCHAR(height),(unsigned char)(width>>8),STBIW_UCHAR(width),
-                                      3,1,(unsigned char)(subsample?0x22:0x11),0,2,0x11,1,3,0x11,1,0xFF,0xC4,0x01,0xA2,0 };
+      static const unsigned char head2_rgb[] = { 0xFF,0xDA,0,0xC,3,1,0,2,0x11,3,0x11,0,0x3F,0 };
+      static const unsigned char head2_grey[] = { 0xFF,0xDA,0,8,1,1,0,0,0x3F,0 };
+      const unsigned char head1_rgb[] = { 0xFF,0xC0,0,0x11,8,(unsigned char)(height>>8),STBIW_UCHAR(height),(unsigned char)(width>>8),STBIW_UCHAR(width),
+         3,1,(unsigned char)(subsample?0x22:0x11),0,2,0x11,1,3,0x11,1,0xFF,0xC4,0x01,0xA2,0 };
+      const unsigned char head1_grey[] = { 0xFF,0xC0,0,0x0B,8,(unsigned char)(height>>8),STBIW_UCHAR(height),(unsigned char)(width>>8),STBIW_UCHAR(width),
+         1,1,0x11,0,0xFF,0xC4,0x00,0xD2,0 };
+
       s->func(s->context, (void*)head0, sizeof(head0));
       s->func(s->context, (void*)YTable, sizeof(YTable));
       stbiw__putc(s, 1);
       s->func(s->context, UVTable, sizeof(UVTable));
-      s->func(s->context, (void*)head1, sizeof(head1));
+      s->func(s->context, (void*)(isrgb ? head1_rgb : head1_grey), isrgb ? sizeof(head1_rgb) : sizeof(head1_grey));
       s->func(s->context, (void*)(std_dc_luminance_nrcodes+1), sizeof(std_dc_luminance_nrcodes)-1);
       s->func(s->context, (void*)std_dc_luminance_values, sizeof(std_dc_luminance_values));
       stbiw__putc(s, 0x10); // HTYACinfo
       s->func(s->context, (void*)(std_ac_luminance_nrcodes+1), sizeof(std_ac_luminance_nrcodes)-1);
       s->func(s->context, (void*)std_ac_luminance_values, sizeof(std_ac_luminance_values));
-      stbiw__putc(s, 1); // HTUDCinfo
-      s->func(s->context, (void*)(std_dc_chrominance_nrcodes+1), sizeof(std_dc_chrominance_nrcodes)-1);
-      s->func(s->context, (void*)std_dc_chrominance_values, sizeof(std_dc_chrominance_values));
-      stbiw__putc(s, 0x11); // HTUACinfo
-      s->func(s->context, (void*)(std_ac_chrominance_nrcodes+1), sizeof(std_ac_chrominance_nrcodes)-1);
-      s->func(s->context, (void*)std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
-      s->func(s->context, (void*)head2, sizeof(head2));
+      if (isrgb) {
+         stbiw__putc(s, 1); // HTUDCinfo
+         s->func(s->context, (void*)(std_dc_chrominance_nrcodes+1), sizeof(std_dc_chrominance_nrcodes)-1);
+         s->func(s->context, (void*)std_dc_chrominance_values, sizeof(std_dc_chrominance_values));
+         stbiw__putc(s, 0x11); // HTUACinfo
+         s->func(s->context, (void*)(std_ac_chrominance_nrcodes+1), sizeof(std_ac_chrominance_nrcodes)-1);
+         s->func(s->context, (void*)std_ac_chrominance_values, sizeof(std_ac_chrominance_values));
+      }
+      s->func(s->context, (void*)(isrgb ? head2_rgb : head2_grey), isrgb ? sizeof(head2_rgb) : sizeof(head2_grey));
    }
 
    // Encode 8x8 macroblocks
@@ -1722,8 +1729,7 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
       int DCY=0, DCU=0, DCV=0;
       unsigned int bitBuf=0;
       int bitCnt=0;
-      // comp == 2 is grey+alpha (alpha is ignored)
-      int ofsG = comp > 2 ? 1 : 0, ofsB = comp > 2 ? 2 : 0;
+      int ofsG = isrgb ? 1 : 0, ofsB = isrgb ? 2 : 0;
       const unsigned char *dataR = (const unsigned char *)data;
       const unsigned char *dataG = dataR + ofsG;
       const unsigned char *dataB = dataR + ofsB;
@@ -1779,14 +1785,18 @@ static int stbi_write_jpg_core(stbi__write_context *s, int width, int height, in
                      ptrdiff_t p = base_p + ((col < width) ? col : (width-1))*comp;
                      float r = dataR[p], g = dataG[p], b = dataB[p];
                      Y[pos]= +0.29900f*r + 0.58700f*g + 0.11400f*b - 128;
-                     U[pos]= -0.16874f*r - 0.33126f*g + 0.50000f*b;
-                     V[pos]= +0.50000f*r - 0.41869f*g - 0.08131f*b;
+                     if (isrgb) {
+                        U[pos]= -0.16874f*r - 0.33126f*g + 0.50000f*b;
+                        V[pos]= +0.50000f*r - 0.41869f*g - 0.08131f*b;
+                     }
                   }
                }
 
                DCY = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, Y, 8, fdtbl_Y,  DCY, YDC_HT, YAC_HT);
-               DCU = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, U, 8, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
-               DCV = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, V, 8, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+               if (isrgb) {
+                  DCU = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, U, 8, fdtbl_UV, DCU, UVDC_HT, UVAC_HT);
+                  DCV = stbiw__jpg_processDU(s, &bitBuf, &bitCnt, V, 8, fdtbl_UV, DCV, UVDC_HT, UVAC_HT);
+               }
             }
          }
       }
