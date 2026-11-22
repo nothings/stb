@@ -1174,7 +1174,7 @@ STBIDEF void stbi_image_free(void *retval_from_stbi_load)
 }
 
 #ifndef STBI_NO_LINEAR
-static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp);
+static float   *stbi__ldr_to_hdr(stbi_us *data, int x, int y, int comp);
 #endif
 
 #ifndef STBI_NO_HDR
@@ -1521,7 +1521,7 @@ STBIDEF stbi_uc *stbi_load_gif_from_memory(stbi_uc const *buffer, int len, int *
 #ifndef STBI_NO_LINEAR
 static float *stbi__loadf_main(stbi__context *s, int *x, int *y, int *comp, int req_comp)
 {
-   unsigned char *data;
+   stbi_us *data;
    #ifndef STBI_NO_HDR
    if (stbi__hdr_test(s)) {
       stbi__result_info ri;
@@ -1531,10 +1531,9 @@ static float *stbi__loadf_main(stbi__context *s, int *x, int *y, int *comp, int 
       return hdr_data;
    }
    #endif
-   data = stbi__load_and_postprocess_8bit(s, x, y, comp, req_comp);
-   if (data)
-      return stbi__ldr_to_hdr(data, *x, *y, req_comp ? req_comp : *comp);
-   return stbi__errpf("unknown image type", "Image not of any known type, or corrupt");
+   data = stbi__load_and_postprocess_16bit(s, x, y, comp, req_comp);
+   if (!data) return NULL; // error already set
+   return stbi__ldr_to_hdr(data, *x, *y, req_comp ? req_comp : *comp);
 }
 
 STBIDEF float *stbi_loadf_from_memory(stbi_uc const *buffer, int len, int *x, int *y, int *comp, int req_comp)
@@ -1926,29 +1925,30 @@ static stbi__uint16 *stbi__convert_format16(stbi__uint16 *data, int img_n, int r
 #endif
 
 #ifndef STBI_NO_LINEAR
-static float   *stbi__ldr_to_hdr(stbi_uc *data, int x, int y, int comp)
+static float   *stbi__ldr_to_hdr(stbi_us *data, int x, int y, int comp)
 {
    int i,k,n;
    float *output;
-   float gamma_lut[256];
+   float gamma_lut[513];
    if (!data) return NULL;
    output = (float *) stbi__malloc_mad4(x, y, comp, sizeof(float), 0);
    if (output == NULL) { STBI_FREE(data); return stbi__errpf("outofmem", "Out of memory"); }
-   // use a LUT for gamma since there's only 256 possible inputs
-   for (i=0; i < 256; ++i) {
-      gamma_lut[i] = (float) (pow(i/255.0f, stbi__l2h_gamma) * stbi__l2h_scale);
+   // use a piecewise linear approximation for gamma. 512 segments is plenty
+   for (i=0; i < 513; ++i) {
+      gamma_lut[i] = (float) (pow(i*128.0f/65535.0f, stbi__l2h_gamma) * stbi__l2h_scale);
    }
    // compute number of non-alpha components
    if (comp & 1) n = comp; else n = comp-1;
    for (i=0; i < x*y; ++i) {
       for (k=0; k < n; ++k) {
-         output[i*comp + k] = gamma_lut[data[i*comp+k]];
+         int v = data[i*comp+k];
+         int ind = v >> 7;
+         float frac = (v & 0x7f) * (1.0f/128.f);
+         // make sure 0xffff is exact 1.0f
+         output[i*comp + k] = (v == 65535) ? 1.0f : gamma_lut[ind] + (gamma_lut[ind+1] - gamma_lut[ind])*frac;
       }
-   }
-   if (n < comp) {
-      for (i=0; i < x*y; ++i) {
-         output[i*comp + n] = data[i*comp + n]/255.0f;
-      }
+      if (n < comp)
+         output[i*comp + n] = data[i*comp + n]/65535.0f;
    }
    STBI_FREE(data);
    return output;
