@@ -1530,7 +1530,8 @@ static void stbiw__jpg_DCT(float *d0p, float *d1p, float *d2p, float *d3p, float
    *d0p = d0;  *d2p = d2;  *d4p = d4;  *d6p = d6;
 }
 
-static void stbiw__jpg_calcBits(int val, unsigned short bits[2]) {
+static void stbiw__jpg_writeVal(stbi__write_context *s, unsigned int *bitBuf, int *bitCnt, int val, const unsigned short HT[256][2], int base) {
+   unsigned short bits[2];
    int tmp1 = val < 0 ? -val : val;
    val = val < 0 ? val-1 : val;
    bits[1] = 1;
@@ -1538,11 +1539,11 @@ static void stbiw__jpg_calcBits(int val, unsigned short bits[2]) {
       ++bits[1];
    }
    bits[0] = val & ((1<<bits[1])-1);
+   stbiw__jpg_writeBits(s, bitBuf, bitCnt, HT[base + bits[1]]);
+   stbiw__jpg_writeBits(s, bitBuf, bitCnt, bits);
 }
 
 static int stbiw__jpg_processDU(stbi__write_context *s, unsigned int *bitBuf, int *bitCnt, float *CDU, int du_stride, float *fdtbl, int DC, const unsigned short HTDC[256][2], const unsigned short HTAC[256][2]) {
-   const unsigned short EOB[2] = { HTAC[0x00][0], HTAC[0x00][1] };
-   const unsigned short M16zeroes[2] = { HTAC[0xF0][0], HTAC[0xF0][1] };
    int dataOff, i, j, n, diff, end0pos, x, y;
    int DU[64];
 
@@ -1558,11 +1559,7 @@ static int stbiw__jpg_processDU(stbi__write_context *s, unsigned int *bitBuf, in
    // Quantize/descale/zigzag the coefficients
    for(y = 0, j=0; y < 8; ++y) {
       for(x = 0; x < 8; ++x,++j) {
-         float v;
-         i = y*du_stride+x;
-         v = CDU[i]*fdtbl[j];
-         // DU[stbiw__jpg_ZigZag[j]] = (int)(v < 0 ? ceilf(v - 0.5f) : floorf(v + 0.5f));
-         // ceilf() and floorf() are C99, not C89, but I /think/ they're not needed here anyway?
+         float v = CDU[y*du_stride + x] * fdtbl[j];
          DU[stbiw__jpg_ZigZag[j]] = (int)(v < 0 ? v - 0.5f : v + 0.5f);
       }
    }
@@ -1572,40 +1569,22 @@ static int stbiw__jpg_processDU(stbi__write_context *s, unsigned int *bitBuf, in
    if (diff == 0) {
       stbiw__jpg_writeBits(s, bitBuf, bitCnt, HTDC[0]);
    } else {
-      unsigned short bits[2];
-      stbiw__jpg_calcBits(diff, bits);
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, HTDC[bits[1]]);
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, bits);
+      stbiw__jpg_writeVal(s, bitBuf, bitCnt, diff, HTDC, 0);
    }
    // Encode ACs
-   end0pos = 63;
-   for(; (end0pos>0)&&(DU[end0pos]==0); --end0pos) {
-   }
+   for (end0pos=63; end0pos && DU[end0pos]==0; --end0pos);
    // end0pos = first element in reverse order !=0
-   if(end0pos == 0) {
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, EOB);
-      return DU[0];
-   }
    for(i = 1; i <= end0pos; ++i) {
       int startpos = i;
-      int nrzeroes;
-      unsigned short bits[2];
-      for (; DU[i]==0 && i<=end0pos; ++i) {
+      while (DU[i]==0 && i<=end0pos) ++i;
+      while (i-startpos >= 16) {
+         stbiw__jpg_writeBits(s, bitBuf, bitCnt, HTAC[0xF0]);
+         startpos += 16;
       }
-      nrzeroes = i-startpos;
-      if ( nrzeroes >= 16 ) {
-         int lng = nrzeroes>>4;
-         int nrmarker;
-         for (nrmarker=1; nrmarker <= lng; ++nrmarker)
-            stbiw__jpg_writeBits(s, bitBuf, bitCnt, M16zeroes);
-         nrzeroes &= 15;
-      }
-      stbiw__jpg_calcBits(DU[i], bits);
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, HTAC[(nrzeroes<<4)+bits[1]]);
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, bits);
+      stbiw__jpg_writeVal(s, bitBuf, bitCnt, DU[i], HTAC, (i-startpos)<<4);
    }
    if(end0pos != 63) {
-      stbiw__jpg_writeBits(s, bitBuf, bitCnt, EOB);
+      stbiw__jpg_writeBits(s, bitBuf, bitCnt, HTAC[0x00]);
    }
    return DU[0];
 }
