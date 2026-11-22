@@ -804,22 +804,6 @@ static void stbiw__linear_to_rgbe(unsigned char *rgbe, float *pixel, int ncomp)
    }
 }
 
-static void stbiw__write_run_data(stbi__write_context *s, int length, unsigned char databyte)
-{
-   unsigned char lengthbyte = STBIW_UCHAR(length+128);
-   STBIW_ASSERT(length+128 <= 255);
-   s->func(s->context, &lengthbyte, 1);
-   s->func(s->context, &databyte, 1);
-}
-
-static void stbiw__write_dump_data(stbi__write_context *s, int length, unsigned char *data)
-{
-   unsigned char lengthbyte = STBIW_UCHAR(length);
-   STBIW_ASSERT(length <= 128); // inconsistent with spec but consistent with official code
-   s->func(s->context, &lengthbyte, 1);
-   s->func(s->context, data, length);
-}
-
 static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int ncomp, unsigned char *scratch, float *scanline)
 {
    unsigned char scanlineheader[4] = { 2, 2, 0, 0 };
@@ -867,7 +851,9 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
             while (x < r) {
                int len = r-x;
                if (len > 128) len = 128;
-               stbiw__write_dump_data(s, len, &comp[x]);
+               rgbe[0] = STBIW_UCHAR(len);
+               s->func(s->context, rgbe, 1);
+               s->func(s->context, &comp[x], len);
                x += len;
             }
             // if there's a run, output it
@@ -879,7 +865,9 @@ static void stbiw__write_hdr_scanline(stbi__write_context *s, int width, int nco
                while (x < r) {
                   int len = r-x;
                   if (len > 127) len = 127;
-                  stbiw__write_run_data(s, len, comp[x]);
+                  rgbe[0] = STBIW_UCHAR(len + 128);
+                  rgbe[1] = comp[x];
+                  s->func(s->context, rgbe, 2);
                   x += len;
                }
             }
