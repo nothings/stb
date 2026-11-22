@@ -823,7 +823,14 @@ static int stbi__sse2_available(void)
    // If we're even attempting to compile this on GCC/Clang, that means
    // -msse2 is on, which means the compiler is allowed to use SSE2
    // instructions at will, and so are we.
+
+   // However, we let the fuzzers control whether they want to allow the SSE2
+   // paths so we can test coverage of both paths from a single binary.
+#ifdef STBI__FUZZER_CONTROLLED_SSE2
+   return STBI__FUZZER_CONTROLLED_SSE2;
+#else
    return 1;
+#endif
 }
 #endif
 
