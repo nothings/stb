@@ -7203,21 +7203,20 @@ static int stbi__psd_info(stbi__context *s, stbi_info_res *res)
 
 #ifndef STBI_NO_PNM
 
-static int      stbi__pnm_test(stbi__context *s)
-{
-   char p, t;
-   p = (char) stbi__get8(s);
-   t = (char) stbi__get8(s);
-   if (p != 'P' || (t != '2' && t != '3' && t != '5' && t != '6')) {
-       stbi__rewind( s );
-       return 0;
-   }
-   return 1;
-}
-
 static int stbi__pnm_isspace(char c)
 {
-   return c == ' ' || c == '\t' || c == '\n' || c == '\v' || c == '\f' || c == '\r';
+   return c == ' ' || c == '\t' || c == '\n' || c == '\r';
+}
+
+static int stbi__pnm_test(stbi__context *s)
+{
+   char p, t, w, n;
+   p = (char) stbi__get8(s); // P
+   t = (char) stbi__get8(s); // [2356]
+   w = (char) stbi__get8(s); // must be whitespace
+   n = (char) stbi__get8(s); // whitespace or [0-9]
+   stbi__rewind(s);
+   return p == 'P' && stbi__pnm_isspace(w) && (t == '2' || t == '3' || t == '5' || t == '6') && (stbi__pnm_isspace(n) || (n >= '0' && n <= '9'));
 }
 
 static void stbi__pnm_skip_whitespace(stbi__context *s, char *c)
