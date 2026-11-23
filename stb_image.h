@@ -1229,6 +1229,12 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    #else
    STBI_NOTUSED(bpc);
    #endif
+   #ifndef STBI_NO_HDR
+   if (stbi__hdr_test(s)) {
+      float *hdr = stbi__hdr_load(s, x,y,comp,req_comp, ri);
+      return stbi__hdr_to_ldr(hdr, *x, *y, req_comp ? req_comp : *comp);
+   }
+   #endif
 
    // then the formats that can end up attempting to load with just 1 or 2
    // bytes matching expectations; these are prone to false positives, so
@@ -1238,13 +1244,6 @@ static void *stbi__load_main(stbi__context *s, int *x, int *y, int *comp, int re
    #endif
    #ifndef STBI_NO_PNM
    if (stbi__pnm_test(s))  return stbi__pnm_load(s,x,y,comp,req_comp, ri);
-   #endif
-
-   #ifndef STBI_NO_HDR
-   if (stbi__hdr_test(s)) {
-      float *hdr = stbi__hdr_load(s, x,y,comp,req_comp, ri);
-      return stbi__hdr_to_ldr(hdr, *x, *y, req_comp ? req_comp : *comp);
-   }
    #endif
 
    #ifndef STBI_NO_TGA
