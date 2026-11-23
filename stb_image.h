@@ -1658,7 +1658,6 @@ STBIDEF void   stbi_hdr_to_ldr_scale(float scale) { stbi__h2l_scale_i = 1/scale;
 enum
 {
    STBI__SCAN_load=0,
-   STBI__SCAN_type,
    STBI__SCAN_header
 };
 
@@ -3453,7 +3452,6 @@ static int stbi__decode_jpeg_header(stbi__jpeg *z, int scan)
    z->marker = STBI__MARKER_none; // initialize cached marker to empty
    m = stbi__get_marker(z);
    if (!stbi__SOI(m)) return stbi__err("no SOI","Corrupt JPEG");
-   if (scan == STBI__SCAN_type) return 1;
    m = stbi__get_marker(z);
    while (!stbi__SOF(m)) {
       if (!stbi__process_marker(z,m)) return 0;
@@ -4114,15 +4112,11 @@ static void *stbi__jpeg_load(stbi__context *s, int *x, int *y, int *comp, int re
 
 static int stbi__jpeg_test(stbi__context *s)
 {
-   int r;
-   stbi__jpeg* j = (stbi__jpeg*)stbi__malloc(sizeof(stbi__jpeg));
-   if (!j) return stbi__err("outofmem", "Out of memory");
-   memset(j, 0, sizeof(stbi__jpeg));
-   j->s = s;
-   stbi__setup_jpeg(j);
-   r = stbi__decode_jpeg_header(j, STBI__SCAN_type);
+   static const stbi_uc jpeg_sig[3] = { 0xff, 0xd8, 0xff }; // SOI marker followed by another marker
+   int i, r=1;
+   for (i=0; i < 3; ++i)
+      r &= stbi__get8(s) == jpeg_sig[i];
    stbi__rewind(s);
-   STBI_FREE(j);
    return r;
 }
 
@@ -5168,8 +5162,6 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
    z->is_iphone = 0;
 
    if (!stbi__check_png_header(s)) return 0;
-
-   if (scan == STBI__SCAN_type) return 1;
 
    for (;;) {
       stbi__pngchunk c = stbi__get_chunk_header(s);
