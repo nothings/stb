@@ -1404,55 +1404,55 @@ STBIWDEF unsigned char *stbi_write_png_to_mem(const unsigned char *pixels, ptrdi
 }
 
 #ifndef STBI_WRITE_NO_STDIO
+static int stbiw__write_png_file_internal(char const *filename, int x, int y, int comp, const void *data, ptrdiff_t stride_bytes, int bit_depth)
+{
+   stbi__write_context s;
+   int r=0;
+
+   memset(&s, 0, sizeof(s));
+   if (stbi__start_write_file(&s,filename)) {
+      int len;
+      unsigned char *png = stbiw__write_png_internal((unsigned char *) data, stride_bytes, x, y, comp, &len, bit_depth);
+      if (png) {
+         s.func(s.context, png, len);
+         r = 1;
+         STBIW_FREE(png);
+      }
+      r = stbi__end_write_file(&s, r);
+   }
+
+   return r;
+}
+
 STBIWDEF int stbi_write_png(char const *filename, int x, int y, int comp, const void *data, ptrdiff_t stride_bytes)
 {
-   FILE *f;
-   int len;
-   unsigned char *png = stbi_write_png_to_mem((const unsigned char *) data, stride_bytes, x, y, comp, &len);
-   if (png == NULL) return 0;
-
-   f = stbiw__fopen(filename, "wb");
-   if (!f) { STBIW_FREE(png); return 0; }
-   fwrite(png, 1, len, f);
-   fclose(f);
-   STBIW_FREE(png);
-   return 1;
+   return stbiw__write_png_file_internal(filename, x, y, comp, data, stride_bytes, 8);
 }
 
 STBIWDEF int stbi_write_png_16(char const *filename, int x, int y, int comp, const void *data, ptrdiff_t stride_bytes)
 {
-   FILE *f;
-   int len;
-   unsigned char *png = stbiw__write_png_internal((unsigned char *)data, stride_bytes, x, y, comp, &len, 16);
-   if (png == NULL) return 0;
-
-   f = stbiw__fopen(filename, "wb");
-   if (!f) { STBIW_FREE(png); return 0; }
-   fwrite(png, 1, len, f);
-   fclose(f);
-   STBIW_FREE(png);
-   return 1;
+   return stbiw__write_png_file_internal(filename, x, y, comp, data, stride_bytes, 16);
 }
 #endif
 
-STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, ptrdiff_t stride_bytes)
+static int stbiw__write_png_to_func_internal(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, ptrdiff_t stride_bytes, int bit_depth)
 {
    int len;
-   unsigned char *png = stbi_write_png_to_mem((const unsigned char *) data, stride_bytes, x, y, comp, &len);
+   unsigned char *png = stbiw__write_png_internal((unsigned char *) data, stride_bytes, x, y, comp, &len, bit_depth);
    if (png == NULL) return 0;
    func(context, png, len);
    STBIW_FREE(png);
    return 1;
+}
+
+STBIWDEF int stbi_write_png_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, ptrdiff_t stride_bytes)
+{
+   return stbiw__write_png_to_func_internal(func, context, x, y, comp, data, stride_bytes, 8);
 }
 
 STBIWDEF int stbi_write_png_16_to_func(stbi_write_func *func, void *context, int x, int y, int comp, const void *data, ptrdiff_t stride_bytes)
 {
-   int len;
-   unsigned char *png = stbiw__write_png_internal((unsigned char *) data, stride_bytes, x, y, comp, &len, 16);
-   if (png == NULL) return 0;
-   func(context, png, len);
-   STBIW_FREE(png);
-   return 1;
+   return stbiw__write_png_to_func_internal(func, context, x, y, comp, data, stride_bytes, 16);
 }
 
 /* ***************************************************************************
