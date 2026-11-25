@@ -7,7 +7,7 @@
 
 int main(int argc, char **argv)
 {
-   int x,y,n,i;
+   int x,y,n,i,write_res;
    stbi_info_res res;
    stbi_us *data;
 
@@ -41,9 +41,9 @@ int main(int argc, char **argv)
    for (i = 0; i < x*y*n; ++i)
       data[i] ^= 63;
 
-   stbi_write_png_16("decoded.png", x, y, 4, data, 0);
+   write_res = stbi_write_png_16("decoded.png", x, y, 4, data, 0);
    stbi_image_free(data);
-   printf("done\n");
+   printf("done, write_res=%d\n", write_res);
 
    return 0;
 }
