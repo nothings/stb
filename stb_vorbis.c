@@ -946,14 +946,17 @@ static int error(vorb *f, enum STBVorbisError e)
 // given a sufficiently large block of memory, make an array of pointers to subblocks of it
 static void *make_block_array(void *mem, int count, int size)
 {
-   int i;
-   void ** p = (void **) mem;
-   char *q = (char *) (p + count);
-   for (i=0; i < count; ++i) {
-      p[i] = q;
-      q += size;
-   }
-   return p;
+   if (mem) {
+      int i;
+      void ** p = (void **) mem;
+      char *q = (char *) (p + count);
+      for (i=0; i < count; ++i) {
+         p[i] = q;
+         q += size;
+      }
+      return p;
+   } else
+      return mem;
 }
 
 static void *setup_malloc(vorb *f, int sz)
@@ -2130,6 +2133,8 @@ static int residue_decode(vorb *f, Codebook *book, float *target, int offset, in
    return TRUE;
 }
 
+#define RESIDUE_PARTITION_LIMIT 1024 // this is generous from my testing
+
 // n is 1/2 of the blocksize --
 // specification: "Correct per-vector decode length is [n]/2"
 static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int rn, uint8 *do_not_decode)
@@ -2144,10 +2149,11 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
    int n_read = limit_r_end - limit_r_begin;
    int part_read = n_read / r->part_size;
    int temp_alloc_point = temp_alloc_save(f);
+   int separate_nchans = rtype == 2 ? 1 : f->channels;
    #ifndef STB_VORBIS_DIVIDES_IN_RESIDUE
-   uint8 ***part_classdata = (uint8 ***) temp_block_array(f,f->channels, part_read * sizeof(**part_classdata));
+   uint8 ***part_classdata;
    #else
-   int **classifications = (int **) temp_block_array(f,f->channels, part_read * sizeof(**classifications));
+   int **classifications;
    #endif
 
    CHECK(f);
@@ -2155,6 +2161,25 @@ static void decode_residue(vorb *f, float *residue_buffers[], int ch, int n, int
    for (i=0; i < ch; ++i)
       if (!do_not_decode[i])
          memset(residue_buffers[i], 0, sizeof(float) * n);
+
+   if (part_read > RESIDUE_PARTITION_LIMIT) {
+      (void) error(f, VORBIS_invalid_stream);
+      goto done;
+   }
+
+   #ifndef STB_VORBIS_DIVIDES_IN_RESIDUE
+   part_classdata = (uint8 ***) temp_block_array(f,separate_nchans, part_read * sizeof(**part_classdata));
+   if (!part_classdata) {
+      (void) error(f, VORBIS_outofmem);
+      goto done;
+   }
+   #else
+   classifications = (int **) temp_block_array(f,separate_nchans, part_read * sizeof(**classifications));
+   if (!classifications) {
+      (void) error(f, VORBIS_outofmem);
+      goto done;
+   }
+   #endif
 
    if (rtype == 2 && ch != 1) {
       for (j=0; j < ch; ++j)
