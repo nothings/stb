@@ -3023,12 +3023,13 @@ static void stbi__jpeg_reset(stbi__jpeg *j)
    j->marker = STBI__MARKER_none;
    j->todo = j->restart_interval ? j->restart_interval : 0x7fffffff;
    j->eob_run = 0;
-   // no more than 1<<31 MCUs if no restart_interal? that's plenty safe,
+   // no more than 1<<31 MCUs if no restart_interval? that's plenty safe,
    // since we don't even allow 1<<30 pixels
 }
 
 static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
 {
+   int corrupted = 0;
    stbi__jpeg_reset(z);
    if (!z->progressive) {
       if (z->scan_n == 1) {
@@ -3044,15 +3045,21 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
          for (j=0; j < h; ++j) {
             for (i=0; i < w; ++i) {
                int ha = z->img_comp[n].ha;
-               if (!stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n, z->dequant[z->img_comp[n].tq])) return 0;
+               if (!corrupted && !stbi__jpeg_decode_block(z, data, z->huff_dc+z->img_comp[n].hd, z->huff_ac+ha, z->fast_ac[ha], n, z->dequant[z->img_comp[n].tq])) return 0;
                z->idct_block_kernel(z->img_comp[n].data+z->img_comp[n].w2*j*8+i*8, z->img_comp[n].w2, data);
                // every data block is an MCU, so countdown the restart interval
                if (--z->todo <= 0) {
                   if (z->code_bits < 24) stbi__grow_buffer_unsafe(z);
-                  // if it's NOT a restart, then just bail, so we get corrupt data
-                  // rather than no data
-                  if (!STBI__RESTART(z->marker)) return 1;
-                  stbi__jpeg_reset(z);
+                  // require a restart here; if we don't get one, the stream is
+                  // corrupted. keep going to initialize full image, but stop
+                  // reading bitstream, use all-0 coeffs instead.
+                  if (STBI__RESTART(z->marker)) {
+                     stbi__jpeg_reset(z);
+                  } else {
+                     corrupted = 1;
+                     z->todo = 0x7fffffff;
+                     memset(data, 0, sizeof(data));
+                  }
                }
             }
          }
@@ -3081,8 +3088,13 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
                // so now count down the restart interval
                if (--z->todo <= 0) {
                   if (z->code_bits < 24) stbi__grow_buffer_unsafe(z);
-                  if (!STBI__RESTART(z->marker)) return 1;
-                  stbi__jpeg_reset(z);
+                  if (STBI__RESTART(z->marker)) {
+                     stbi__jpeg_reset(z);
+                  } else {
+                     corrupted = 1;
+                     z->todo = 0x7fffffff;
+                     memset(data, 0, sizeof(data));
+                  }
                }
             }
          }
