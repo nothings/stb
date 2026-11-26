@@ -117,8 +117,10 @@ RECENT REVISION HISTORY:
     Julian Raschke          Gregory Mullen     Christian Floisand   github:darealshinji
     Baldur Karlsson         Kevin Schmidt      JR Smith             github:Michaelangel007
                             Brad Weinberger    Matvey Cherevko      github:mosra
-    Luca Sas                Alexander Veselov  Zack Middleton       [reserved]
+    Luca Sas                Alexander Veselov  Zack Middleton       github:toxieainc
     Ryan C. Gordon          [reserved]                              [reserved]
+    [reserved]                                 
+                            [reserved]
                      DO NOT ADD YOUR NAME HERE
 
                      Jacko Dirks
@@ -2054,6 +2056,7 @@ typedef struct
    int            code_bits;   // number of valid bits
    unsigned char  marker;      // marker seen while filling entropy buffer
    int            nomore;      // flag if we saw a marker so must stop
+   int            pad_bits;    // zero bits appended to code_buffer after the marker (not real data)
 
    int            progressive;
    int            spec_start;
@@ -2150,6 +2153,7 @@ static void stbi__grow_buffer_unsafe(stbi__jpeg *j)
 {
    do {
       unsigned int b = j->nomore ? 0 : stbi__get8(j->s);
+      if (j->nomore) j->pad_bits += 8;
       if (b == 0xff) {
          int c = stbi__get8(j->s);
          while (c == 0xff) c = stbi__get8(j->s); // consume fill bytes
@@ -3014,6 +3018,7 @@ static void stbi__jpeg_reset(stbi__jpeg *j)
    j->code_bits = 0;
    j->code_buffer = 0;
    j->nomore = 0;
+   j->pad_bits = 0;
    j->img_comp[0].dc_pred = j->img_comp[1].dc_pred = j->img_comp[2].dc_pred = j->img_comp[3].dc_pred = 0;
    j->marker = STBI__MARKER_none;
    j->todo = j->restart_interval ? j->restart_interval : 0x7fffffff;
@@ -3097,8 +3102,10 @@ static int stbi__parse_entropy_coded_data(stbi__jpeg *z)
             for (i=0; i < w; ++i) {
                short *data = z->img_comp[n].coeff + 64 * (i + j * z->img_comp[n].coeff_w);
                // if we're out of data, just skip decoding this MCU
-               // progressive coeffs got initialized at setup so this is fine
-               if (!z->nomore) {
+               // progressive coeffs got initialized at setup so this is fine.
+               // seeing the marker is not enough: the bit buffer reads ahead, so it may
+               // still hold the real bits of the last blocks of the scan
+               if (!z->nomore || z->code_bits > z->pad_bits) {
                   if (z->spec_start == 0) {
                      if (!stbi__jpeg_decode_block_prog_dc(z, data, &z->huff_dc[z->img_comp[n].hd], n))
                         return 0;
