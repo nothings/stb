@@ -1,4 +1,3 @@
-#define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
@@ -7,7 +6,7 @@
 
 int main(int argc, char **argv)
 {
-    int x,y,n;
+    int x,y,n,write_res;
     stbi_info_res res;
     float *data;
 
@@ -35,7 +34,9 @@ int main(int argc, char **argv)
     printf("%dx%d, ncomp=%d\n", x, y, n);
     printf("stbi_is_16_bit(\"%s\") = %d\n", argv[1], stbi_is_16_bit(argv[1]));
 
-    stbi_write_hdr("decoded.hdr", x, y, 3, data);
+    write_res = stbi_write_hdr("decoded.hdr", x, y, 3, data);
     stbi_image_free(data);
+    printf("done, write_res=%d\n", write_res);
+
     return 0;
 }
